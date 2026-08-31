@@ -1,0 +1,92 @@
+{
+  "provenance": {
+    "formula": "reproduced calculation; dimensional accounting derived from slides 58-62",
+    "qualityEvidence": "course slide 63; empirical results from Shazeer 2019 and Ainslie et al. 2023"
+  },
+  "declaredConfiguration": {
+    "query_heads": 8,
+    "head_dim": 128,
+    "bytes_per_value": 2,
+    "layers": 32,
+    "sequence_tokens": 4096,
+    "batch": 1
+  },
+  "formula": "2 * n_kv_heads * d_head * bytes_per_value per cached token per layer",
+  "modelFormula": "per_token_per_layer * sequence_tokens * layers * batch",
+  "variants": [
+    {
+      "name": "MHA",
+      "queryHeads": 8,
+      "kvHeads": 8,
+      "bytesPerCachedTokenPerLayer": 4096,
+      "modelCacheBytes": 536870912,
+      "modelCacheMiB": 512.0,
+      "relativeKvTrafficVsMha": 1.0,
+      "interpretation": "one KV stream per query head"
+    },
+    {
+      "name": "MQA",
+      "queryHeads": 8,
+      "kvHeads": 1,
+      "bytesPerCachedTokenPerLayer": 512,
+      "modelCacheBytes": 67108864,
+      "modelCacheMiB": 64.0,
+      "relativeKvTrafficVsMha": 0.125,
+      "interpretation": "one shared KV stream: the capacity extreme"
+    },
+    {
+      "name": "GQA",
+      "queryHeads": 8,
+      "kvHeads": 2,
+      "bytesPerCachedTokenPerLayer": 1024,
+      "modelCacheBytes": 134217728,
+      "modelCacheMiB": 128.0,
+      "relativeKvTrafficVsMha": 0.25,
+      "interpretation": "two KV groups: an intermediate capacity/traffic setting"
+    },
+    {
+      "name": "GQA-4",
+      "queryHeads": 8,
+      "kvHeads": 4,
+      "bytesPerCachedTokenPerLayer": 2048,
+      "modelCacheBytes": 268435456,
+      "modelCacheMiB": 256.0,
+      "relativeKvTrafficVsMha": 0.5,
+      "interpretation": "four KV groups: another point on the same knob"
+    }
+  ],
+  "toyDecodeRead": [
+    {
+      "cachedTokens": 1,
+      "mhaKvReadBytesPerLayer": 4096
+    },
+    {
+      "cachedTokens": 2,
+      "mhaKvReadBytesPerLayer": 8192
+    },
+    {
+      "cachedTokens": 3,
+      "mhaKvReadBytesPerLayer": 12288
+    },
+    {
+      "cachedTokens": 4,
+      "mhaKvReadBytesPerLayer": 16384
+    }
+  ],
+  "slide63Evidence": [
+    {
+      "source": "Shazeer 2019 table shown on course slide 63",
+      "setting": "Billion Word LM; h=8 rows displayed by the course",
+      "mhaDevPpl": 29.9,
+      "mqaDevPpl": 30.2,
+      "courseCharacterization": "small perplexity hit",
+      "evidenceType": "empirical result in one cited setting"
+    },
+    {
+      "source": "Ainslie et al. 2023 plots shown on course slide 63",
+      "courseCharacterization": "low/no quality hit with GQA in the cited comparison",
+      "evidenceType": "empirical result in the paper's evaluated settings"
+    }
+  ],
+  "evidenceCaveat": "Neither cited result guarantees that more KV sharing preserves quality for every model, scale, dataset, or training recipe."
+}

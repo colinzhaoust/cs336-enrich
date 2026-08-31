@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="L01-BPE-AFTER-TRACE-V2.stepper.css" />
+    <title>BPE after-trace stepper</title>
+  </head>
+  <body>
+    <main class="bpe-stepper" aria-labelledby="state-title">
+      <div class="mode" id="mode">Training learns an ordered merge table</div>
+      <div class="panes">
+        <section class="sequence-pane" aria-live="polite">
+          <p class="eyebrow" id="state-kicker">Final training state</p>
+          <h1 id="state-title">“the cat in the hat”</h1>
+          <div class="tokens" id="tokens"></div>
+          <div class="status-row" id="status-row"></div>
+        </section>
+        <aside class="rules-pane" aria-label="Ordered merge rules">
+          <p class="eyebrow">Ordered merge rules</p>
+          <ol id="rules"></ol>
+          <span class="frozen" id="frozen">Frozen</span>
+        </aside>
+      </div>
+      <section class="ledger" id="ledger" hidden></section>
+      <p class="prediction" id="prediction" role="status"></p>
+      <nav class="controls" aria-label="Stepper controls">
+        <button id="previous" type="button">Previous</button>
+        <button id="replay" type="button">Replay transition</button>
+        <span id="progress" aria-live="polite"></span>
+        <button id="next" class="primary" type="button">Next</button>
+      </nav>
+    </main>
+    <script src="L01-BPE-AFTER-TRACE-V2.stepper.js"></script>
+  </body>
+</html>

@@ -1,0 +1,144 @@
+schemaVersion: 2
+artifactId: L01-BPE-AFTER-TRACE-V2
+lecture: 1
+owners:
+  storyboard: codex-l1-worker
+  contentReview: codex-l1-worker
+  visualReview: codex-l1-worker
+source:
+  videoUrl: https://www.youtube.com/watch?v=JuoVZkPBiKk
+  interval: 73:16-76:01
+  insertionAfter: "75:22"
+  sourcePages: []
+  sourceLines:
+    - lecture_01.py:527-564
+    - lecture_01.py:705-720
+    - lecture_01.py:729-757
+context:
+  professorBefore: "Paraphrase: Percy has just traced three training rounds on 'the cat in the hat', including pair counts, token allocation, and corpus replacement."
+  professorAfter: "Paraphrase: Percy applies the trained tokenizer to new text, verifies the decode round trip, then turns to Assignment 1 performance and special-token concerns."
+  uninterruptedRun: "73:16-75:22 training code trace remains uninterrupted; this artifact begins only after the trace."
+teachingQuestion: "During encoding of held-out text, which state changes and which state stays frozen from training?"
+additiveClaim: "The source states but does not step through the key separation: training learns an ordered merge table, while encoding only replays that frozen order on a new byte sequence."
+evidenceBoundary:
+  lectureEvidence: "Official toy corpus, held-out string, three merge rules, insertion-order replay, decode assertion, and slow-reference caveat come from lecture_01.py and the 73:16-76:01 lecture run."
+  augmentationEvidence: "All intermediate arrays, length changes, and the training-versus-encoding ledger are reproduced calculations from the checked-in fixture."
+caveat: "This illustrates Percy's deliberately slow reference encoder. Assignment-grade tokenizers optimize applicable-merge lookup and also handle pretokenization and special tokens, while preserving learned merge priority."
+medium: interactive-stepper-plus-deterministic-animatic
+rejectedMedia:
+  - "Static table alone: it cannot reveal how the same frozen rule list transforms successive sequence states."
+  - "Standalone micro-lecture: it would repeat Percy's continuous pair-count and merge trace."
+  - "Autoplay loop: exact states should remain revisitable and must not compete with lecture audio."
+audio: silent
+expectedLearnerTimeSeconds: 41
+anchors:
+  - L01-BPE-PAIR-COUNT
+  - L01-BPE-MERGE
+  - L01-BPE-TRAIN-VS-USE
+values:
+  provenance: reproduced-calculation
+  trainingCorpus: "the cat in the hat"
+  heldOutText: "the quick brown fox"
+  initialVocabularySize: 256
+  learnedRules:
+    - rank: 0
+      pair: [116, 104]
+      display: "t + h -> 256"
+    - rank: 1
+      pair: [256, 101]
+      display: "256 + e -> 257"
+    - rank: 2
+      pair: [257, 32]
+      display: "257 + space -> 258"
+beats:
+  - id: training-result
+    startSeconds: 0
+    endSeconds: 4
+    change: "Begin on the final training state Percy just produced."
+    settledState: "Corpus 18 bytes -> 12 tokens; vocabulary 256 -> 259."
+    dwellSeconds: 3
+    sourceSupport: "lecture_01.py:710-712,729-757"
+  - id: freeze-rules
+    startSeconds: 4
+    endSeconds: 9
+    change: "Separate and visibly freeze the ordered merge table."
+    settledState: "Rules 256, 257, and 258 are fixed in learned order."
+    dwellSeconds: 4
+    sourceSupport: "lecture_01.py:541-545,710-712"
+  - id: held-out-bytes
+    startSeconds: 9
+    endSeconds: 14
+    change: "Replace the training corpus with held-out UTF-8 bytes; remove pair counting."
+    settledState: "'the quick brown fox' begins as 19 byte tokens; no counts are computed."
+    dwellSeconds: 4
+    sourceSupport: "lecture_01.py:554-558,714-718"
+  - id: replay-rank-0
+    startSeconds: 14
+    endSeconds: 19
+    change: "Replay t+h -> 256 on all eligible non-overlapping matches."
+    settledState: "19 -> 18 tokens; rules and vocabulary remain frozen."
+    dwellSeconds: 4
+    sourceSupport: "lecture_01.py:527-538,557-558"
+  - id: replay-rank-1
+    startSeconds: 19
+    endSeconds: 24
+    change: "Replay 256+e -> 257."
+    settledState: "18 -> 17 tokens; earlier rank remains visible."
+    dwellSeconds: 4
+    sourceSupport: "lecture_01.py:527-538,557-558"
+  - id: replay-rank-2
+    startSeconds: 24
+    endSeconds: 29
+    change: "Replay 257+space -> 258; unmatched bytes pass through."
+    settledState: "17 -> 16 tokens; the unchanged suffix remains explicit."
+    dwellSeconds: 4
+    sourceSupport: "lecture_01.py:527-538,557-558"
+  - id: decode-round-trip
+    startSeconds: 29
+    endSeconds: 34
+    change: "Map tokens through the frozen vocabulary and decode UTF-8."
+    settledState: "Decoded string exactly equals 'the quick brown fox'."
+    dwellSeconds: 4
+    sourceSupport: "lecture_01.py:561-564,719-720"
+  - id: state-ledger
+    startSeconds: 34
+    endSeconds: 41
+    change: "Compare mutable state in training and encoding."
+    settledState: "Training changes counts, vocabulary, rules, and sequence; encoding changes only the sequence."
+    dwellSeconds: 6
+    sourceSupport: "lecture_01.py:541-558,729-757"
+wireframes:
+  desktop640: "Persistent sequence pane (68%) | ordered-rule pane (32%); compact state ledger below."
+  mobile360: "Sequence pane above frozen rule pane; controls and responsive HTML transcript remain outside the video."
+delivery:
+  width: 1920
+  height: 1080
+  fps: 30
+  codec: h264
+  pixelFormat: yuv420p
+  faststart: true
+  safeAreaPixels:
+    horizontal: 72
+    vertical: 54
+  minimumEmbeddedTextCssPixels:
+    desktop640: 18
+    mobile360: 16
+sidecars:
+  transcript: L01-BPE-AFTER-TRACE-V2.transcript.md
+  captions: L01-BPE-AFTER-TRACE-V2.vtt
+  poster: L01-BPE-AFTER-TRACE-V2-poster.png
+  contactSheet: L01-BPE-AFTER-TRACE-V2-contact-sheet.png
+reviews:
+  storyboardGate: passed
+  animaticGate: passed
+  transcriptContentGate: passed
+  visualQaGate: passed
+  productionRenderGate: passed
+  browserContextGate: integration-pending
+reviewNotes:
+  storyboardGate: "One after-trace question; source run and insertion point verified against the teaching map and official code."
+  animaticGate: "40.467 s at 854x480/15 fps; settled-state timing preserved; fast-start QA passed."
+  transcriptContentGate: "Claim ledger checked against official lines 527-564, 705-720, and 729-757; fixture assertions pass."
+  visualQaGate: "Second animatic revision removed panel overflow; persistent merge-rule colors and final ledger are stable. Responsive HTML has no horizontal overflow at 390, 768, or 1440 px."
+  productionRenderGate: "Passed automated QA: 1920x1080, 30 fps, H.264 High, yuv420p, 40.400 s, fast-start, all sidecars present. Advisory OCR warnings were manually reviewed; responsive HTML is the primary mobile delivery."
+  browserContextGate: "Standalone stepper passed 390/768/1440 px with no horizontal overflow and no console errors. Final real-site insertion remains for the parent integrator because this worker was instructed not to edit shared app files."

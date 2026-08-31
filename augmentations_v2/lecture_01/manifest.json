@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "artifactId": "L01-BPE-AFTER-TRACE-V2",
+  "status": "locally-integrated-awaiting-user-acceptance",
+  "lecture": 1,
+  "stableAnchors": [
+    "L01-BPE-PAIR-COUNT",
+    "L01-BPE-MERGE",
+    "L01-BPE-TRAIN-VS-USE"
+  ],
+  "source": {
+    "officialVideo": "https://www.youtube.com/watch?v=JuoVZkPBiKk",
+    "interval": "73:16-76:01",
+    "insertionAfter": "75:22",
+    "officialCodeLines": [
+      "lecture_01.py:527-564",
+      "lecture_01.py:705-720",
+      "lecture_01.py:729-757"
+    ]
+  },
+  "placement": {
+    "rule": "Mount once after Percy's uninterrupted BPE training trace.",
+    "professorBefore": "Paraphrase: training has just produced three ordered rules on the toy corpus.",
+    "professorAfter": "Paraphrase: the reference encoder round trip leads into Assignment 1 efficiency and special-token concerns."
+  },
+  "teachingQuestion": "During encoding of held-out text, which state changes and which state stays frozen from training?",
+  "primaryMedium": {
+    "kind": "interactive-stepper",
+    "html": "L01-BPE-AFTER-TRACE-V2.stepper.html",
+    "css": "L01-BPE-AFTER-TRACE-V2.stepper.css",
+    "javascript": "L01-BPE-AFTER-TRACE-V2.stepper.js",
+    "fixture": "L01-BPE-AFTER-TRACE-V2.fixture.json",
+    "autoplay": false,
+    "keyboard": ["ArrowLeft", "ArrowRight"],
+    "reducedMotion": true,
+    "firstPassPredictionPauseSeconds": 3
+  },
+  "fallbackVideo": {
+    "path": "../../media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2.mp4",
+    "durationSeconds": 40.4,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "codec": "h264",
+    "profile": "High",
+    "pixelFormat": "yuv420p",
+    "faststart": true,
+    "audio": "silent",
+    "bytes": 2063139,
+    "sha256": "8e1dff18beda485926edfc89973dfa9831d6260f1368af024faf37c333bcd112"
+  },
+  "sidecars": {
+    "brief": "L01-BPE-AFTER-TRACE-V2.brief.yaml",
+    "transcript": "L01-BPE-AFTER-TRACE-V2.transcript.md",
+    "descriptionTrack": "../../media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2.vtt",
+    "altText": "L01-BPE-AFTER-TRACE-V2.alt.txt",
+    "poster": "../../media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2-poster.png",
+    "contactSheet": "../../media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2-contact-sheet.png"
+  },
+  "adjacentCaption": "Why this appears here: Percy traces how BPE learns three rules, then intentionally skips the held-out encode steps. This replay shows that encoding reuses the frozen rule order; it does not train again.",
+  "posterAlt": "Side-by-side ledger: training changes pair counts, vocabulary, merge table, and corpus sequence; encoding freezes vocabulary and merge order and changes only the held-out sequence.",
+  "caveat": "This is the deliberately slow teaching encoder. Production implementations optimize applicable-merge lookup and add pretokenization and special-token handling while preserving merge priority.",
+  "reproducibility": {
+    "scene": "../../scenes/cs336_v2/lecture_01/bpe_after_trace.py",
+    "sceneSha256": "f4042097a9b49086a0fc1dc879b4d6d40b7c6d3f988cb3077edfe42f1aed75a3",
+    "fixtureSource": "../../scenes/cs336_v2/lecture_01/bpe_fixture.py",
+    "fixtureSourceSha256": "fe9b1695cf741739cdeb26848c9c183e367a35e7239d0f5351e5159204e6b044",
+    "fixtureAssertions": {
+      "rules": "pass",
+      "nonOverlappingMerge": "pass",
+      "lengths19To18To17To16": "pass",
+      "vocabulary256To259": "pass",
+      "decodeRoundTrip": "pass"
+    }
+  },
+  "reviews": {
+    "storyboard": "passed",
+    "animatic": "passed at 854x480, 15 fps, 40.467 s",
+    "contentAgainstSource": "passed",
+    "visual": "passed after rejecting and fixing one clipped byte-row render",
+    "productionAutomatedQa": "11 pass, 2 advisory OCR warnings, 0 fail",
+    "ocrDisposition": "Small secondary labels remain in the linear review video; the primary 390 px delivery is responsive HTML at 16 CSS px. Final-ledger edge warnings were manually inspected and are not clipped.",
+    "browserStandalone": {
+      "status": "passed",
+      "viewports": [390, 768, 1440],
+      "horizontalOverflow": false,
+      "minimumMobileBaseFontCssPixels": 16,
+      "consoleWarningsOrErrors": 0
+    },
+    "siteInsertion": "locally integrated; awaiting user acceptance"
+  }
+}

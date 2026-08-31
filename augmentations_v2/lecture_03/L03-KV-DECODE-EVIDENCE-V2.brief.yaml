@@ -1,0 +1,129 @@
+schemaVersion: 2
+artifactId: L03-KV-DECODE-EVIDENCE-V2
+lecture: 3
+owners:
+  storyboard: codex-l3-worker
+  contentReview: codex-l3-worker
+  visualReview: codex-l3-worker
+source:
+  videoUrl: https://www.youtube.com/watch?v=lVynu4bo1rY
+  interval: "74:06-84:59"
+  insertionAfter: "Slide 57 establishes the inference/long-context intervention unit"
+  safeDetourAfter: "85:08"
+  sourcePages: [57, 58, 59, 60, 61, 62, 63]
+  sourceLines: []
+context:
+  professorBefore: "Paraphrase: Tatsu has closed the stability section and limited the final unit to dense-attention interventions for inference and long context."
+  professorAfter: "Paraphrase: after the page 63 evidence and Q&A, Tatsu moves to local/sliding attention and long-context hybrids."
+  uninterruptedRun: "Slides 58-63 form one systems problem -> MQA extreme -> GQA compromise -> empirical evidence chain; the companion must not split it into independent cards."
+teachingQuestion: "Why does token-by-token decoding make KV sharing valuable, and what evidence limits the claim that more sharing is always better?"
+additiveClaim: "The lecture's equations and diagrams are separated across six slides; the companion keeps the growing decode read, exact cache-byte multiplier, fixed query-head count, KV-sharing knob, and page 63 evidence boundary visible as one causal chain."
+evidenceBoundary:
+  lectureEvidence: "Slides 58-60 establish poor incremental arithmetic intensity and repeated KV-cache access; slides 61-62 introduce MQA then GQA; slide 63 labels a small MQA perplexity hit and low/no GQA hit in cited results."
+  augmentationEvidence: "The 8-query-head BF16, 128-head-dimension, 32-layer, 4096-token, batch-1 byte totals are declared reproduced calculations, not lecture model measurements."
+caveat: "KV-cache bytes scale exactly with the declared dimensions, but realized latency also depends on kernels, batching, hardware, layout, and other memory traffic. Page 63 quality observations are empirical results in cited settings, not universal guarantees."
+medium: interactive-companion-plus-production-video
+rejectedMedia:
+  - "Head-family glossary: beginning with MHA/GQA/MQA would hide the decode systems problem that motivates sharing."
+  - "Standalone evidence redraw: the paper plots must remain connected to official slide 63."
+  - "Formula-only card: a static equation cannot show the cache being reread and growing at every decode step."
+audio: silent
+expectedLearnerTimeSeconds: 54.8
+anchors:
+  - L03-KV-CACHE
+  - L03-MQA
+  - L03-GQA
+declaredConfiguration:
+  provenance: declared-toy-configuration
+  queryHeads: 8
+  headDimension: 128
+  bytesPerValue: 2
+  dtype: BF16
+  layers: 32
+  sequenceTokens: 4096
+  batch: 1
+formulas:
+  perCachedTokenPerLayer: "2 * n_kv_heads * d_head * bytes_per_value"
+  modelTotal: "per_cached_token_per_layer * sequence_tokens * n_layers * batch"
+beats:
+  - id: prefill-vs-decode
+    startSeconds: 0
+    endSeconds: 5
+    change: "Contrast a parallel prefill pass with one serial decode step."
+    settledState: "Decode adds one query token while attending to the existing context."
+    dwellSeconds: 4
+    sourceSupport: "slides 58-59"
+  - id: growing-kv-read
+    startSeconds: 5
+    endSeconds: 13
+    change: "Append three tokens; each step rereads the growing K/V history."
+    settledState: "The cache avoids recomputing prior K/V, but prior K/V must be moved again for each new token."
+    dwellSeconds: 6
+    sourceSupport: "slides 59-60"
+  - id: exact-byte-ledger
+    startSeconds: 13
+    endSeconds: 21
+    change: "Freeze motion and expose the per-token/per-layer formula before multiplying across sequence, layers, and batch."
+    settledState: "MHA toy total is 4 KiB per cached token per layer and 512 MiB model-wide at 4096 tokens, 32 layers, batch 1."
+    dwellSeconds: 7
+    sourceSupport: "slides 58-60 plus declared reproduced calculation"
+  - id: mha-repeated-read
+    startSeconds: 21
+    endSeconds: 28
+    change: "Hold eight query heads fixed and show eight separate K/V streams."
+    settledState: "MHA: n_q_heads=8, n_kv_heads=8, relative KV traffic 1x."
+    dwellSeconds: 6
+    sourceSupport: "slides 60-62"
+  - id: mqa-extreme
+    startSeconds: 28
+    endSeconds: 35
+    change: "Collapse only K/V streams to one while queries remain eight."
+    settledState: "MQA: 1 KV head, 1/8 toy cache bytes; marked as an expressiveness/capacity extreme, not automatically better."
+    dwellSeconds: 5
+    sourceSupport: "slide 61"
+  - id: gqa-knob
+    startSeconds: 35
+    endSeconds: 42
+    change: "Expand to two KV groups and expose KV-head count as the capacity/traffic knob."
+    settledState: "GQA toy point: 2 KV heads, 1/4 MHA cache bytes; query heads remain eight."
+    dwellSeconds: 6
+    sourceSupport: "slide 62"
+  - id: evidence-caveat
+    startSeconds: 42
+    endSeconds: 54.8
+    change: "Stop motion and return attention to official slide 63 evidence."
+    settledState: "Course slide: small MQA PPL hit in Shazeer 2019 setting; low/no GQA hit in Ainslie 2023 setting; neither is universal."
+    dwellSeconds: 8
+    sourceSupport: "slide 63"
+delivery:
+  width: 1920
+  height: 1080
+  fps: 30
+  codec: h264
+  pixelFormat: yuv420p
+  faststart: true
+  safeAreaPixels:
+    horizontal: 72
+    vertical: 54
+  minimumEmbeddedTextCssPixels:
+    desktop640: 18
+    mobile360: 16
+sidecars:
+  transcript: L03-KV-DECODE-EVIDENCE-V2.transcript.md
+  captions: L03-KV-DECODE-EVIDENCE-V2.vtt
+  poster: L03-KV-DECODE-EVIDENCE-V2-poster.png
+  contactSheet: L03-KV-DECODE-EVIDENCE-V2-contact-sheet.png
+reviews:
+  storyboardGate: passed
+  animaticGate: passed
+  transcriptContentGate: passed
+  visualQaGate: passed
+  productionRenderGate: passed
+  browserContextGate: integration-pending
+reviewNotes:
+  storyboardGate: "Ordering follows slides 57-63 and the lecture map: decode problem -> MQA -> capacity caveat -> GQA -> page 63 evidence."
+  transcriptContentGate: "Official PDF pages 57-63 were rendered and inspected; page 60 accounting, page 61 MQA, page 62 GQA, and page 63 evidence labels are preserved without universalizing them."
+  animaticGate: "Second animatic passes at 854x480, 15 fps, 54.867 s, H.264/yuv420p and fast-start; first overflowed revision was rejected."
+  visualQaGate: "Contact-sheet review confirms stable query-head count, persistent color mapping, unclipped formula/evidence states, and a 12.8 s final empirical-caveat dwell. Responsive companion has no horizontal overflow at 390, 768, or 1440 px."
+  productionRenderGate: "Final H.264 production is 1920x1080, 30 fps, 54.800 s, yuv420p with fast-start; automated QA reports 11 pass, 1 advisory OCR warning, and 0 fail. The warning concerns intentionally secondary labels and was cleared by original-resolution contact-sheet inspection."
+  browserContextGate: "Standalone companion passed at 390, 768, and 1440 CSS pixels with no horizontal overflow or console errors. Exact placement in the shared lecture shell remains for parent integration."

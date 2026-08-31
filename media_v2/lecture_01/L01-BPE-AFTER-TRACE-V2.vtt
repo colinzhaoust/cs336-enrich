@@ -1,0 +1,25 @@
+WEBVTT
+
+00:00.000 --> 00:04.000
+Final training state: “the cat in the hat” changes from 18 bytes to 12 tokens; vocabulary grows from 256 to 259.
+
+00:04.000 --> 00:09.000
+The learned rules t plus h to 256, 256 plus e to 257, and 257 plus space to 258 are frozen in order.
+
+00:09.000 --> 00:14.000
+Held-out text “the quick brown fox” begins as 19 UTF-8 byte tokens. No pair counts are computed.
+
+00:14.000 --> 00:19.000
+Replay rank zero: t plus h becomes 256. Token count decreases from 19 to 18.
+
+00:19.000 --> 00:24.000
+Replay rank one: 256 plus e becomes 257. Token count decreases from 18 to 17.
+
+00:24.000 --> 00:29.000
+Replay rank two: 257 plus space becomes 258. Token count decreases from 17 to 16; unmatched bytes remain unchanged.
+
+00:29.000 --> 00:34.000
+The frozen vocabulary decodes the final tokens back to “the quick brown fox” exactly.
+
+00:34.000 --> 00:40.400
+Training changes pair counts, vocabulary, merge rules, and corpus sequence. Encoding changes only the held-out token sequence.

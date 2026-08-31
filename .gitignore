@@ -64,3 +64,15 @@ dist/
 !/media/lecture_03/videos/lecture_03_runtime_norm/
 !/media/lecture_03/videos/lecture_03_runtime_norm/480p15/
 !/media/lecture_03/videos/lecture_03_runtime_norm/480p15/L03RuntimeNorm.mp4
+
+# Lecture-first V2 publishes only the production playback assets. Animatics and
+# contact sheets are QA evidence kept locally and are intentionally not shipped.
+/media_v2/**
+!/media_v2/lecture_01/
+!/media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2.mp4
+!/media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2-poster.png
+!/media_v2/lecture_01/L01-BPE-AFTER-TRACE-V2.vtt
+!/media_v2/lecture_03/
+!/media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2.mp4
+!/media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2-poster.png
+!/media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2.vtt

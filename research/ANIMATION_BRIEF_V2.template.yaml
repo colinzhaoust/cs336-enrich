@@ -1,0 +1,61 @@
+schemaVersion: 2
+artifactId: L00-EXAMPLE-V2
+lecture: 0
+owners:
+  storyboard: null
+  contentReview: null
+  visualReview: null
+source:
+  videoUrl: null
+  interval: null
+  insertionAfter: null
+  sourcePages: []
+  sourceLines: []
+context:
+  professorBefore: null
+  professorAfter: null
+  uninterruptedRun: null
+teachingQuestion: null
+additiveClaim: null
+evidenceBoundary:
+  lectureEvidence: null
+  augmentationEvidence: null
+caveat: null
+medium: null
+rejectedMedia: []
+audio: silent
+expectedLearnerTimeSeconds: null
+anchors: []
+beats:
+  - id: beat-01
+    startSeconds: 0
+    endSeconds: 0
+    change: null
+    settledState: null
+    dwellSeconds: 0
+    sourceSupport: null
+delivery:
+  width: 1920
+  height: 1080
+  fps: 30
+  codec: h264
+  pixelFormat: yuv420p
+  faststart: true
+  safeAreaPixels:
+    horizontal: 72
+    vertical: 54
+  minimumEmbeddedTextCssPixels:
+    desktop640: 18
+    mobile360: 16
+sidecars:
+  transcript: null
+  captions: null
+  poster: null
+  contactSheet: null
+reviews:
+  storyboardGate: pending
+  animaticGate: pending
+  transcriptContentGate: pending
+  visualQaGate: pending
+  productionRenderGate: pending
+  browserContextGate: pending

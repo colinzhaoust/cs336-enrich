@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="L03-KV-DECODE-EVIDENCE-V2.companion.css" />
+    <title>KV decode evidence companion</title>
+  </head>
+  <body>
+    <main class="companion" aria-labelledby="state-title">
+      <div class="mode" id="mode"></div>
+      <div class="panes">
+        <section class="visual-pane" aria-live="polite">
+          <p class="eyebrow" id="kicker"></p>
+          <h1 id="state-title"></h1>
+          <div id="visual"></div>
+          <p class="state-note" id="state-note"></p>
+        </section>
+        <aside class="ledger-pane" aria-label="Declared cache byte calculator">
+          <p class="eyebrow">Declared calculator</p>
+          <label for="kv-heads">KV heads: <strong id="kv-value">8</strong></label>
+          <input id="kv-heads" type="range" min="0" max="3" step="1" value="3" />
+          <div class="formula"><code>2 × n<sub>kv</sub> × d<sub>head</sub> × bytes/value</code><span>per token · per layer</span></div>
+          <dl>
+            <div><dt>Q heads</dt><dd>8 fixed</dd></div>
+            <div><dt>Per token/layer</dt><dd id="per-layer">4 KiB</dd></div>
+            <div><dt>Model-wide</dt><dd id="model-total">512 MiB</dd></div>
+            <div><dt>KV bytes vs MHA</dt><dd id="ratio">1×</dd></div>
+          </dl>
+          <p class="config">d<sub>head</sub>=128 · BF16 · 32 layers · 4096 tokens · batch 1</p>
+        </aside>
+      </div>
+      <section class="evidence" id="evidence" hidden>
+        <article><span>Empirical · Shazeer 2019</span><h2>MQA: small PPL hit</h2><strong>29.9 → 30.2</strong><p>Billion Word LM rows shown on slide 63.</p></article>
+        <article><span>Empirical · Ainslie 2023</span><h2>GQA: low / no hit</h2><p>In the cited comparisons shown on slide 63.</p></article>
+        <p class="caveat">Neither result is a universal guarantee across models, scales, data, or training recipes.</p>
+      </section>
+      <nav class="controls" aria-label="Companion controls">
+        <button id="previous" type="button">Previous</button>
+        <button id="replay" type="button">Replay transition</button>
+        <span id="progress"></span>
+        <button id="next" class="primary" type="button">Next</button>
+      </nav>
+    </main>
+    <script src="L03-KV-DECODE-EVIDENCE-V2.companion.js"></script>
+  </body>
+</html>

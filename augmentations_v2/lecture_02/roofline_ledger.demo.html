@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lecture 2 arithmetic-intensity ledger</title>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="roofline_ledger.css">
+    <style>
+      html { background: oklch(0.965 0.01 75); }
+      body { margin: 0; }
+      main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 70px; }
+      @media (max-width: 480px) { main { width: calc(100% - 24px); padding-top: 20px; } }
+    </style>
+  </head>
+  <body>
+    <main><div id="roofline-ledger"></div></main>
+    <script src="roofline_ledger.data.js"></script>
+    <script src="roofline_ledger.js"></script>
+    <script>CS336RooflineLedger.mount("#roofline-ledger");</script>
+  </body>
+</html>

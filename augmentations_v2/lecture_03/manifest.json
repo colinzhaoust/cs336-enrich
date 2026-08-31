@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 2,
+  "artifactId": "L03-KV-DECODE-EVIDENCE-V2",
+  "status": "locally-integrated-awaiting-user-acceptance",
+  "lecture": 3,
+  "stableAnchors": [
+    "L03-KV-CACHE",
+    "L03-MQA",
+    "L03-GQA"
+  ],
+  "source": {
+    "officialVideo": "https://www.youtube.com/watch?v=lVynu4bo1rY",
+    "interval": "74:06-84:59",
+    "safeDetourAfter": "85:08",
+    "officialSlides": [57, 58, 59, 60, 61, 62, 63]
+  },
+  "placement": {
+    "rule": "Mount once after the uninterrupted slides 57-63 run and before local/sliding attention.",
+    "professorBefore": "Paraphrase: Tatsu has just connected incremental decode, KV-cache movement, MQA, GQA, and the slide 63 quality evidence.",
+    "professorAfter": "Paraphrase: the lecture moves from dense-attention inference interventions to local/sliding attention and long-context hybrids."
+  },
+  "teachingQuestion": "Why does token-by-token decoding make KV sharing valuable, and what evidence limits the claim that more sharing is always better?",
+  "primaryMedium": {
+    "kind": "interactive-companion",
+    "html": "L03-KV-DECODE-EVIDENCE-V2.companion.html",
+    "css": "L03-KV-DECODE-EVIDENCE-V2.companion.css",
+    "javascript": "L03-KV-DECODE-EVIDENCE-V2.companion.js",
+    "fixture": "L03-KV-DECODE-EVIDENCE-V2.fixture.json",
+    "autoplay": false,
+    "keyboard": ["ArrowLeft", "ArrowRight"],
+    "reducedMotion": true,
+    "kvHeadOptions": [1, 2, 4, 8]
+  },
+  "fallbackVideo": {
+    "path": "../../media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2.mp4",
+    "durationSeconds": 54.8,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "codec": "h264",
+    "profile": "High",
+    "pixelFormat": "yuv420p",
+    "faststart": true,
+    "audio": "silent",
+    "bytes": 4180318,
+    "sha256": "07ddb21d98fef79ad39b368f5164f191ed64abfbe0e1a8068492cab39b93a51b"
+  },
+  "sidecars": {
+    "brief": "L03-KV-DECODE-EVIDENCE-V2.brief.yaml",
+    "transcript": "L03-KV-DECODE-EVIDENCE-V2.transcript.md",
+    "descriptionTrack": "../../media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2.vtt",
+    "altText": "L03-KV-DECODE-EVIDENCE-V2.alt.txt",
+    "poster": "../../media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2-poster.png",
+    "contactSheet": "../../media_v2/lecture_03/L03-KV-DECODE-EVIDENCE-V2-contact-sheet.png"
+  },
+  "adjacentCaption": "Why this appears here: slides 57-63 form one causal chain—serial decode repeatedly reads a growing KV cache, fewer KV heads reduce those bytes, and slide 63 bounds the systems argument with empirical quality evidence. This companion keeps that chain together rather than reintroducing MHA, MQA, and GQA as a glossary.",
+  "posterAlt": "Two evidence cards under the heading quality is empirical: Shazeer 2019 shows the cited MQA rows changing perplexity from 29.9 to 30.2, while Ainslie 2023 is labeled low or no GQA hit in the cited comparisons; a footer says this is not a universal guarantee.",
+  "caveat": "The declared KV-cache byte totals scale exactly with head count, head dimension, dtype size, sequence, layers, and batch. Realized latency also depends on kernels, batching, hardware, layout, and other memory traffic. Slide 63 quality observations are empirical and setting-specific.",
+  "reproducibility": {
+    "scene": "../../scenes/cs336_v2/lecture_03/kv_decode_evidence.py",
+    "sceneSha256": "801b53d914dcda4ec544b1bee0a820640428d503e8ff59b3574847bb778a2ae0",
+    "fixtureSource": "../../scenes/cs336_v2/lecture_03/kv_decode_fixture.py",
+    "fixtureSourceSha256": "73d093e66185d563d080e0a489b8b2fbf393a3dc658fe6e2a83f6b0994ebd7ac",
+    "fixtureAssertions": {
+      "decodeReadGrowth": "pass",
+      "perTokenPerLayerFormula": "pass",
+      "modelTotalIncludesLayers": "pass",
+      "mha512MiB": "pass",
+      "mqa64MiBOneEighth": "pass",
+      "gqa128MiBOneQuarter": "pass",
+      "qualityClaimsMarkedEmpirical": "pass"
+    }
+  },
+  "reviews": {
+    "claimEvidenceContext": "passed against official PDF pages 57-63 and the lecture teaching map",
+    "animatic": "passed on second revision at 854x480, 15 fps, 54.867 s; first clipped revision rejected",
+    "productionAutomatedQa": "11 pass, 1 advisory OCR warning, 0 fail",
+    "ocrDisposition": "The remaining warning concerns intentionally secondary labels. Original-resolution contact-sheet and poster review confirm no clipping, safe-margin violations, or competing focal points.",
+    "browserStandalone": {
+      "status": "passed",
+      "viewports": [390, 768, 1440],
+      "horizontalOverflow": false,
+      "minimumMobileBaseFontCssPixels": 16,
+      "consoleWarningsOrErrors": 0
+    },
+    "siteInsertion": "locally integrated; awaiting user acceptance"
+  }
+}

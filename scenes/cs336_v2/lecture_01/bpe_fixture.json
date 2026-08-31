@@ -1,0 +1,145 @@
+{
+  "provenance": "reproduced calculation from official lecture_01.py:527-564,705-720,729-757",
+  "trainingCorpus": "the cat in the hat",
+  "heldOutText": "the quick brown fox",
+  "initialVocabularySize": 256,
+  "finalVocabularySize": 259,
+  "trainingInitialLength": 18,
+  "trainingFinalIndices": [
+    258,
+    99,
+    97,
+    116,
+    32,
+    105,
+    110,
+    32,
+    258,
+    104,
+    97,
+    116
+  ],
+  "rules": [
+    {
+      "rank": 0,
+      "pair": [
+        116,
+        104
+      ],
+      "newIndex": 256
+    },
+    {
+      "rank": 1,
+      "pair": [
+        256,
+        101
+      ],
+      "newIndex": 257
+    },
+    {
+      "rank": 2,
+      "pair": [
+        257,
+        32
+      ],
+      "newIndex": 258
+    }
+  ],
+  "states": [
+    {
+      "step": "held-out-bytes",
+      "active_rule": null,
+      "indices": [
+        116,
+        104,
+        101,
+        32,
+        113,
+        117,
+        105,
+        99,
+        107,
+        32,
+        98,
+        114,
+        111,
+        119,
+        110,
+        32,
+        102,
+        111,
+        120
+      ]
+    },
+    {
+      "step": "replay-rank-0",
+      "active_rule": 0,
+      "indices": [
+        256,
+        101,
+        32,
+        113,
+        117,
+        105,
+        99,
+        107,
+        32,
+        98,
+        114,
+        111,
+        119,
+        110,
+        32,
+        102,
+        111,
+        120
+      ]
+    },
+    {
+      "step": "replay-rank-1",
+      "active_rule": 1,
+      "indices": [
+        257,
+        32,
+        113,
+        117,
+        105,
+        99,
+        107,
+        32,
+        98,
+        114,
+        111,
+        119,
+        110,
+        32,
+        102,
+        111,
+        120
+      ]
+    },
+    {
+      "step": "replay-rank-2",
+      "active_rule": 2,
+      "indices": [
+        258,
+        113,
+        117,
+        105,
+        99,
+        107,
+        32,
+        98,
+        114,
+        111,
+        119,
+        110,
+        32,
+        102,
+        111,
+        120
+      ]
+    }
+  ],
+  "decoded": "the quick brown fox"
+}

@@ -1,0 +1,22 @@
+WEBVTT
+
+00:00.000 --> 00:05.000
+Prefill processes many tokens in parallel. Autoregressive decode adds one query token at a time and reads the prior K/V history.
+
+00:05.000 --> 00:13.000
+The cache grows from one to four K/V blocks. Caching avoids recomputation, but each next token rereads the growing history.
+
+00:13.000 --> 00:21.000
+Per cached token per layer: two times K/V head count times head dimension times bytes per value. Model total then multiplies sequence length, layers, and batch.
+
+00:21.000 --> 00:28.000
+MHA keeps eight query heads and eight K/V heads. The declared 512 MiB cache is the one-times reference.
+
+00:28.000 --> 00:35.000
+MQA keeps eight query heads but shares one K/V head. Declared cache bytes fall to 64 MiB, one eighth of MHA; this is a capacity extreme.
+
+00:35.000 --> 00:42.000
+GQA keeps eight query heads and uses two K/V groups. Declared cache bytes are 128 MiB, one quarter of MHA; group count is a capacity and traffic knob.
+
+00:42.000 --> 00:54.800
+Return to official slide 63. Its MQA and GQA quality observations are empirical results in cited settings, not universal guarantees.

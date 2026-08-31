@@ -1,727 +1,520 @@
 (function () {
-  const lectures = window.CS336_LECTURES || [];
-  const config = window.CS336_SITE_CONFIG || { discussions: { enabled: false } };
-  const state = { lecture: 1, filter: "all", query: "", currentSegmentId: "", videoHydrationAfter: 0 };
-  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-  const augmentations = new Map();
-  const augmentationManifestUrls = [
-    "augmentations/lecture_01/manifest.json",
-    "augmentations/lecture_02/manifest.json",
-    "augmentations/lecture_03/manifest.json"
-  ];
-  const parseMarkdownSlides = window.CS336_PARSE_MARKDOWN_SLIDES;
+  "use strict";
 
-  const elements = {
-    title: document.querySelector("#lecture-title"),
+  const model = window.CS336_LECTURE_RUNS;
+  const legacy = window.CS336_LECTURES || [];
+  const artifactRegistry = window.CS336_AUGMENTATION_REGISTRY_V2 || { artifacts: [], byId: {}, bySlot: {}, byAnchor: {}, supersededSlots: [] };
+  const config = window.CS336_SITE_CONFIG || { discussions: { enabled: false } };
+  if (!model?.lectures?.length) throw new Error("Lecture run data did not load");
+
+  const state = { lecture: 1, runId: "", anchorId: "", activeRail: null, artifactCleanup: null, scrollScheduled: false, mobile: null, settlingRunId: "", pinnedRunId: "", navigationToken: 0 };
+  const assetPromises = new Map();
+  const supersededSlots = new Set(artifactRegistry.supersededSlots || []);
+  const el = {
     kicker: document.querySelector("#lecture-kicker"),
-    summary: document.querySelector("#lecture-summary"),
+    title: document.querySelector("#lecture-title"),
+    thesis: document.querySelector("#lecture-thesis"),
     links: document.querySelector("#lecture-links"),
-    outline: document.querySelector("#outline-nav"),
-    segments: document.querySelector("#segments"),
-    search: document.querySelector("#segment-search"),
-    resultCount: document.querySelector("#result-count"),
-    empty: document.querySelector("#empty-state"),
-    clear: document.querySelector("#clear-filters"),
-    readingPosition: document.querySelector("#reading-position"),
-    readingChapter: document.querySelector("#reading-chapter"),
-    readingSegment: document.querySelector("#reading-segment"),
-    readingCount: document.querySelector("#reading-count"),
-    readingProgress: document.querySelector("#reading-progress"),
-    discussionStatus: document.querySelector("#discussion-status"),
-    toast: document.querySelector("#feedback-toast"),
+    player: document.querySelector("#official-player"),
+    runNav: document.querySelector("#run-nav"),
+    runs: document.querySelector("#lecture-runs"),
+    contextRail: document.querySelector("#context-rail"),
+    rail: document.querySelector("#rail-content"),
+    nav: document.querySelector("#course-nav"),
     navToggle: document.querySelector(".nav-toggle"),
-    nav: document.querySelector("#course-nav")
+    discussionStatus: document.querySelector("#discussion-status"),
+    toast: document.querySelector("#feedback-toast")
+  };
+
+  const anchorSlotMap = {
+    "L01-ABSTRACTION-LADDER": "L01-R02-ABSTRACTION", "L01-KNOWLEDGE-TYPES": "L01-R02-TRANSFER", "L01-EFFICIENCY-EQUATION": "L01-R02-EFFICIENCY",
+    "L01-TOKENIZER-QUIRKS": "L01-R07-TOKENIZER", "L01-COMPRESSION-RATIO": "L01-R07-RATIO", "L01-UTF8-BYTES": "L01-R08-UTF8",
+    "L01-BPE-PAIR-COUNT": "L01-R09-REPLAY", "L01-BPE-MERGE": "L01-R09-REPLAY", "L01-BPE-MERGE-CODE": "L01-R09-REPLAY", "L01-BPE-TRAIN-VS-USE": "L01-R10-TRAIN-USE",
+    "L02-FP16-UNDERFLOW": "L02-R02-UNDERFLOW", "L02-BF16-RANGE": "L02-R02-DTYPES", "L02-REARRANGE": "L02-R03-INSPECTOR",
+    "L02-MATMUL-2BDK": "L02-R04-STRIP", "L02-MFU": "L02-R04-STRIP", "L02-ROOFLINE": "L02-R05-ROOFLINE", "L02-6ND": "L02-R06-DERIVATION",
+    "L02-OPTIMIZER-MEMORY": "L02-R07-BYTE-STACK", "L02-CHECKPOINTING": "L02-R08-CHECKPOINT", "L02-CHECKPOINT-FREQUENCY": "L02-R08-CHECKPOINT",
+    "L03-PRE-POST-NORM": "L03-R02-TOPOLOGY", "L03-RMSNORM": "L03-R03-FORMULAS", "L03-NORM-RUNTIME": "L03-R03-MOVEMENT",
+    "L03-GLU-GATE": "L03-R04-GATE", "L03-POSITION-FAMILIES": "L03-R05-FAMILIES", "L03-ROPE-RELATIVE": "L03-R05-ROPE", "L03-ROPE-FREQUENCIES": "L03-R05-ROPE", "L03-ROPE-CODE": "L03-R05-ROPE",
+    "L03-GLU-DIMENSION": "L03-R06-FF", "L03-Z-LOSS": "L03-R07-STABILITY", "L03-QK-NORM": "L03-R07-STABILITY", "L03-SOFT-CAP": "L03-R07-STABILITY",
+    "L03-KV-CACHE": "L03-R08-CACHE", "L03-MQA": "L03-R09-KV", "L03-GQA": "L03-R09-KV", "L03-SLIDING-WINDOW": "L03-R10-WINDOW", "L03-INTERLEAVED-ATTN": "L03-R10-WINDOW"
+  };
+
+  const authoritativeLinks = {
+    "L01-R03-SOURCE": [["Official executable lecture", "https://github.com/stanford-cs336/lectures/blob/main/lecture_01.py"]],
+    "L01-R09-BACKGROUND": [["Gage, A New Algorithm for Data Compression", "https://dl.acm.org/doi/10.5555/177910.177914"], ["Sennrich et al., Neural Machine Translation of Rare Words", "https://arxiv.org/abs/1508.07909"], ["GPT-2 tokenizer", "https://github.com/openai/gpt-2/blob/master/src/encoder.py"]],
+    "L02-R02-LOWBITS": [["NVIDIA FP8 primer", "https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html"], ["FP8 formats paper", "https://arxiv.org/abs/2209.05433"], ["NVIDIA NVFP4 introduction", "https://developer.nvidia.com/blog/introducing-nvfp4-for-efficient-and-accurate-low-precision-inference/"]],
+    "L03-R05-QA": [["RoPE", "https://arxiv.org/abs/2104.09864"], ["Longformer", "https://arxiv.org/abs/2004.05150"]]
   };
 
   function escapeHTML(value) {
-    return String(value)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   }
 
-  function getLecture(number) {
-    return lectures.find((lecture) => lecture.number === number) || lectures[0];
+  function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}` : `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   }
 
-  function findSegment(segmentId) {
-    for (const lecture of lectures) {
-      const segment = lecture.segments.find((item) => item.id === segmentId);
-      if (segment) return { lecture, segment };
-    }
-    return null;
+  function lectureByNumber(number) { return model.lectures.find((item) => item.lecture === number) || model.lectures[0]; }
+  function runById(id) { for (const lecture of model.lectures) { const run = lecture.runs.find((item) => item.id === id); if (run) return { lecture, run }; } return null; }
+  function slotForAnchor(id) { return artifactRegistry.byAnchor?.[id]?.slotId || anchorSlotMap[id] || ""; }
+  function youtubeId(url) { return new URL(url).searchParams.get("v"); }
+  function watchUrl(lecture, seconds) { return `${lecture.videoUrl}&t=${seconds}s`; }
+  function sourceLabel(lecture) { return lecture.sourceUrl.endsWith(".pdf") ? "Official slide deck" : "Official lecture code"; }
+  function slotTypeLabel(type) { return { "formula-comparison": "Formula comparison", table: "Comparison table", "background-link": "Background", "interactive-demo": "Interactive", "slow-manim": "Slow demonstration" }[type] || type; }
+
+  function table(headers, rows) {
+    return `<div class="table-wrap"><table><thead><tr>${headers.map((item) => `<th>${escapeHTML(item)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
 
-  function segmentNumber(segment, lecture) {
-    return lecture.segments.findIndex((item) => item.id === segment.id) + 1;
+  function readySupplement(slot) {
+    const id = slot.id;
+    if (id === "L01-R02-ABSTRACTION") return table(["Level", "Fast path", "Editable surface", "If it leaks"], [["Prompt/API", "Hosted model", "Prompt, tools, context", "Change prompt or provider"], ["Fine-tune", "Released weights", "Data and selected parameters", "Change the training recipe"], ["From scratch", "Build the stack", "Tokenizer through systems", "Change the mechanism"]]);
+    if (id === "L01-R02-TRANSFER") return table(["Knowledge", "How checked", "Accessible-scale value", "Frontier caveat"], [["Mechanics", "Executable invariants", "High", "Implementations still vary"], ["Mindset", "Accounting and scaling", "High", "The binding resource can change"], ["Intuition", "Empirical behavior", "Mixed", "May not transfer across scale"]]);
+    if (id === "L01-R02-EFFICIENCY") return `<div class="formula"><code>accuracy = efficiency × resources</code><p>A framing, not a predictive law. Data, compute, memory, bandwidth, and evaluation are multidimensional.</p></div>`;
+    if (id === "L01-R04-WORKFLOW") return `<ol class="process"><li>Implement locally</li><li>Run unit tests</li><li>Run on cluster</li><li>Benchmark or train</li><li>Compare on leaderboard</li></ol>`;
+    if (id === "L01-R05-6ND") return `<div class="formula"><code>C ≈ 6ND</code><dl><div><dt>C</dt><dd>training FLOPs</dd></div><div><dt>N</dt><dd>parameters</dd></div><div><dt>D</dt><dd>training tokens</dd></div></dl><p>Lecture 2 derives the approximation. Long-context and inference costs can change the choice.</p></div>`;
+    if (id === "L01-R05-RESOURCE-MATRIX") return table(["Assignment", "Main decision", "Scarce-resource view"], [["1 · Basics", "Make the LM correct and stable", "Compute and memory"], ["2 · Systems", "Move data efficiently", "Bandwidth"], ["3 · Scaling", "Choose a recipe before the large run", "Compute budget"], ["4 · Data", "Build and evaluate the mixture", "Useful data"], ["5 · Alignment", "Learn from weaker feedback", "Samples and systems"]]);
+    if (id === "L01-R07-RATIO") return `<div class="formula"><code>compression ratio = UTF-8 bytes / emitted tokens</code><p><strong>Lecture example:</strong> 20 / 8 = 2.5 bytes per token. Shorter sequences help attention, but a larger vocabulary increases embedding cost and sparsity.</p></div>`;
+    if (id === "L01-R08-BASELINES") return table(["Atom", "Coverage", "Vocabulary", "Main failure"], [["Character", "Unicode code points", "Large, sparse", "Rare entries"], ["Byte", "Universal", "256", "Long sequences"], ["Word", "Corpus-dependent", "Large", "Unseen words collapse to UNK"], ["BPE", "Byte fallback", "Learned", "Heuristic boundaries"]]);
+    if (id === "L01-R10-PRODUCTION") return table(["Toy reference", "Assignment concern"], [["Scan every merge", "Index applicable merges"], ["One full string", "Pretokenize into chunks"], ["Ordinary bytes", "Preserve special tokens"], ["Clear Python loops", "Efficient data structures"]]);
+    if (id === "L02-R01-LEDGERS") return table(["Opening estimate", "Known now", "Still to derive"], [["70B × 15T on 1,024 H100s", "N, D, GPU count", "6ND, dense BF16 peak, MFU"], ["Model capacity on 8 × 80 GB", "HBM capacity", "2+2+4+4 bytes/parameter; activations separate"]]);
+    if (id === "L02-R02-DTYPES") return table(["Format", "S / E / F", "Bytes", "Smallest subnormal, approx.", "Lecture use"], [["FP32", "1 / 8 / 23", "4", "1.40e-45", "Range and resolution baseline"], ["FP16", "1 / 5 / 10", "2", "5.96e-8", "Fine resolution, narrow range"], ["BF16", "1 / 8 / 7", "2", "9.18e-41", "FP32-like range, coarse resolution"]]);
+    if (id === "L02-R02-UNDERFLOW") return `<div class="underflow-demo"><code>value = 1e-8</code><button type="button" data-reveal-underflow>Predict, then reveal</button><div class="demo-result" hidden><span>FP16 → <strong>0</strong></span><span>BF16 → <strong>≈ 1.0e-8</strong></span></div></div>`;
+    if (id === "L02-R03-INSPECTOR") return `<div class="stepper" data-stepper="einops"><div class="stepper-stage"><code>input: [batch, total_hidden=8]</code></div><div class="stepper-controls"><button type="button" data-step="-1">Previous</button><span>1 / 3</span><button type="button" data-step="1">Next</button></div><script type="application/json">["input: [batch, total_hidden=8]","split: [batch, heads=2, hidden1=4]","join: [batch, heads×hidden2=8]"]</script></div>`;
+    if (id === "L02-R04-STRIP") return `<div class="formula-stack"><code>work ≈ 2BDK FLOPs</code><code>rate = work / synchronized seconds</code><code>MFU = measured rate / dense dtype peak</code><p>The denominator must name dtype and dense versus sparse hardware mode.</p></div>`;
+    if (id === "L02-R04-TIMING") return `<ol class="process compact"><li>Synchronize</li><li>Run</li><li>Synchronize</li><li>Repeat</li></ol>`;
+    if (id === "L02-R07-BYTE-STACK") return table(["Persistent tensor", "Dtype", "Bytes / parameter"], [["Parameter", "BF16", "2"], ["Gradient", "BF16", "2"], ["Adam first moment", "FP32", "4"], ["Adam second moment", "FP32", "4"], ["Subtotal", "", "12"]]) + `<p class="caveat">Activation memory is a separate function of batch, sequence length, layers, and hidden sizes.</p>`;
+    if (id === "L02-R08-COMPARE") return table(["Technique", "What changes", "What persists", "Cost"], [["Gradient accumulation", "Logical batch is split", "Gradient buffer", "Sequential microbatches"], ["Checkpointing", "Some forward states discarded", "Selected checkpoints", "Recompute in backward"]]);
+    if (id === "L03-R01-BEFORE-AFTER") return table(["Original Transformer", "A1 modern baseline"], [["Post-norm", "Pre-norm"], ["Sin/cos absolute", "RoPE"], ["ReLU", "SwiGLU"], ["Bias", "No bias"]]);
+    if (id === "L03-R03-FORMULAS") return `<div class="formula-stack"><code>LayerNorm(x) = γ ⊙ (x − μ) / √(σ² + ε) + β</code><code>RMSNorm(x) = γ ⊙ x / √(mean(x²) + ε)</code><p>RMSNorm removes centering. Runtime still depends on reductions and memory movement, not FLOP count alone.</p></div>`;
+    if (id === "L03-R04-ACTIVATIONS") return table(["Function", "Expression", "Role"], [["ReLU", "max(0,x)", "Baseline nonlinearity"], ["GELU", "xΦ(x)", "Smooth gate-like weighting"], ["Swish", "xσ(x)", "Self-gated activation"]]);
+    if (id === "L03-R04-PARALLEL") return table(["Claimed win", "Evidence gap", "Observed caveat"], [["Shared norm and fused matmul", "Few clean controlled ablations", "Later adoption retreated; expressiveness/depth may trade off"]]);
+    if (id === "L03-R05-FAMILIES") return table(["Method", "Where position enters", "Behavior"], [["Sin/cos", "Input embedding", "Absolute basis"], ["Learned absolute", "Input embedding", "Learned positions"], ["Relative bias", "Attention logits", "Relative offset"], ["RoPE", "Q and K", "Relative inner product through rotation"]]);
+    if (id === "L03-R06-FF") return `<div class="calculator"><label>Model width <input type="range" min="256" max="4096" step="256" value="1024" data-ff-width></label><p><code>d_model = <span>1024</span></code></p><p>Standard 4×: <strong data-ff-standard>4096</strong><br>Parameter-matched GLU ≈8/3×: <strong data-ff-glu>2731</strong></p></div>`;
+    if (id === "L03-R06-REG") return table(["Intuition", "Observed practice", "Mechanism caveat"], [["One pass over huge data suggests little classical overfitting", "Many models still use weight decay", "Benefit may interact with optimizer and LR schedule, not train/validation gap"]]);
+    if (id === "L03-R07-STABILITY") return table(["Location", "Intervention", "Controls", "Caveat"], [["Output softmax", "z-loss", "log normalizer growth", "Regularization strength matters"], ["Attention softmax", "QK norm", "Q/K scale", "Architecture-specific adoption"], ["Attention logits", "Soft cap", "logit magnitude", "More conservative; may reduce quality"]]);
+    if (id === "L03-R08-ROADMAP") return table(["Branch now", "Cost addressed", "Deferred"], [["MQA / GQA", "Decode KV-cache traffic", ""], ["Local / sliding attention", "Long-context attention", "SSM and alternatives → Lecture 4"]]);
+    if (id === "L03-R08-CACHE") return `<div class="calculator"><label>Cached tokens <input type="range" min="256" max="8192" step="256" value="2048" data-cache-tokens></label><p>Each decoded token rereads cached K/V for <strong><span data-cache-value>2,048</span></strong> prior positions. Cache avoids recomputing K/V, but shifts the bottleneck toward memory traffic.</p></div>`;
+    if (id === "L03-R09-EVIDENCE") return table(["Structure", "KV groups", "Cache traffic", "Quality interpretation"], [["MHA", "one per Q head", "Highest", "Most KV expressiveness"], ["MQA", "one total", "Lowest", "Extreme may lose quality"], ["GQA", "intermediate", "Tunable", "Read with slide 63 latency/quality evidence"]]);
+    if (id === "L03-R10-WINDOW") return `<div class="window-demo"><label>Window <input type="range" min="1" max="6" value="2" data-window></label><label>Layers <input type="range" min="1" max="6" value="3" data-layers></label><p>Local receptive reach: <strong data-window-result>6 tokens</strong>. A periodic full-attention layer enables global mixing instead of only gradual expansion.</p></div>`;
+    const links = authoritativeLinks[id] || slot.content?.links?.map((url, index) => [`Official resource ${index + 1}`, url]);
+    if (links) return `<ul class="resource-list">${links.map(([label, url]) => `<li><a href="${url}" target="_blank" rel="noreferrer">${escapeHTML(label)} ↗</a></li>`).join("")}</ul>`;
+    if (slot.type === "table" && slot.content?.rows?.length) return `<ul class="plain-list">${slot.content.rows.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul>`;
+    return "";
   }
 
-  function sourceUrlForSegment(segment, lecture) {
-    const lineMatch = segment.source.match(/lines?\s+(\d+)(?:[–-](\d+))?/i);
-    if (!lineMatch || !/\.py(?:$|\?)/.test(lecture.sourceUrl)) return lecture.sourceUrl;
-    const start = lineMatch[1];
-    const end = lineMatch[2];
-    return `${lecture.sourceUrl}#L${start}${end ? `-L${end}` : ""}`;
+  function artifactSources(artifact) {
+    return `<ul class="artifact-sources">${artifact.sources.map((source) => `<li><a href="${escapeHTML(source.href)}" target="_blank" rel="noreferrer">${escapeHTML(source.label)} ↗</a></li>`).join("")}</ul>`;
   }
 
-  function sourceLinkLabel(segment) {
-    if (/lines?\s+\d+/i.test(segment.source)) return "Open cited lines";
-    if (/slides?\s+\d+/i.test(segment.source)) return "Open source deck";
-    return "Open source material";
+  function artifactTemplate(slot, artifact, activeSlotId) {
+    const video = artifact.optionalVideo ? `<details class="artifact-video" data-artifact-video-details="${escapeHTML(artifact.id)}">
+      <summary>${escapeHTML(artifact.optionalVideo.title)} <span>${escapeHTML(artifact.optionalVideo.durationLabel)}</span></summary>
+      <div class="artifact-video-stage" data-artifact-video-stage="${escapeHTML(artifact.id)}">
+        <img src="${escapeHTML(artifact.optionalVideo.poster)}" alt="${escapeHTML(artifact.optionalVideo.alt)}" loading="lazy" width="1920" height="1080">
+        <button type="button" data-load-artifact-video="${escapeHTML(artifact.id)}">Load video controls</button>
+      </div>
+    </details>` : "";
+    return `<section id="slot-${escapeHTML(slot.id)}" class="supplement artifact-shell is-ready${activeSlotId === slot.id ? " is-targeted" : ""}" data-slot-id="${escapeHTML(slot.id)}" data-artifact-id="${escapeHTML(artifact.id)}">
+      <div class="supplement-heading"><span>${escapeHTML(artifact.typeLabel)}</span><strong>Finished</strong></div>
+      <div class="artifact-overview" data-artifact-overview>
+        <p class="artifact-placement"><time>${escapeHTML(artifact.placement.insertionAfter)}</time> ${escapeHTML(artifact.placement.label)}</p>
+        <h4>${escapeHTML(artifact.title)}</h4>
+        <p class="artifact-caption">${escapeHTML(artifact.caption)}</p>
+        <p class="artifact-alt"><strong>Visual description.</strong> ${escapeHTML(artifact.alt)}</p>
+        <p class="artifact-provenance"><strong>Evidence.</strong> ${escapeHTML(artifact.provenance)}</p>
+        ${artifactSources(artifact)}
+      </div>
+      <button class="artifact-load" type="button" data-load-artifact="${escapeHTML(artifact.id)}">Open ${escapeHTML(artifact.typeLabel.toLowerCase())}</button>
+      <div class="artifact-mount" data-artifact-mount="${escapeHTML(artifact.id)}" aria-live="polite"></div>
+      ${video}
+      <p class="artifact-caveat"><strong>Caveat.</strong> ${escapeHTML(artifact.caveat)}</p>
+    </section>`;
   }
 
-  function formatLabel(format) {
-    return { manim: "Manim", interactive: "Interactive", slides: "Slides" }[format] || format;
+  function supplementTemplate(slot, activeSlotId) {
+    const artifact = artifactRegistry.bySlot?.[slot.id];
+    if (artifact?.status === "finished") return artifactTemplate(slot, artifact, activeSlotId);
+    const body = readySupplement(slot);
+    const planned = !body;
+    return `<section id="slot-${escapeHTML(slot.id)}" class="supplement ${planned ? "is-planned" : "is-ready"}${activeSlotId === slot.id ? " is-targeted" : ""}" data-slot-id="${escapeHTML(slot.id)}">
+      <div class="supplement-heading"><span>${slotTypeLabel(slot.type)}</span><strong>${planned ? "Planned" : "Augmentation"}</strong></div>
+      <p class="supplement-reason">${escapeHTML(slot.pedagogicalReason)}</p>
+      ${planned ? `<div class="planned-note"><strong>Not published yet.</strong><p>${slot.type === "slow-manim" ? `The former short render is intentionally hidden. Rebuild target: ${escapeHTML(slot.content?.targetSeconds || "paced, source-aligned delivery")}.` : "This slot records an approved teaching need, not finished learner material."}</p></div>` : body}
+    </section>`;
   }
 
-  function jsonSlides(data) {
-    const slides = new Map();
-    (data.slides || []).forEach((slide) => {
-      const details = [
-        slide.lede ? `<p>${escapeHTML(slide.lede)}</p>` : "",
-        slide.beats?.length ? `<ol>${slide.beats.map((beat) => `<li>${escapeHTML(beat)}</li>`).join("")}</ol>` : "",
-        slide.check ? `<p><strong>Check yourself.</strong> ${escapeHTML(slide.check)}</p>` : "",
-        slide.code ? `<pre><code>${escapeHTML(slide.code)}</code></pre>` : "",
-        slide.equation ? `<p class="slide-equation"><code>${escapeHTML(slide.equation)}</code></p>` : ""
-      ].join("");
-      slides.set(slide.id, { eyebrow: slide.eyebrow, title: slide.title, html: details });
+  function railTemplate(lecture, run, activeSlotId = "") {
+    const slots = run.augmentationSlots.filter((slot) => !supersededSlots.has(slot.id));
+    if (!slots.length) return `<div class="rail-empty"><strong>No detour here.</strong><p>This moment stays uninterrupted so the original transition remains intact.</p></div>`;
+    return `<div class="rail-run-head"><span>${escapeHTML(run.id)} · ${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)}</span><strong>${escapeHTML(run.title)}</strong></div>${slots.map((slot) => supplementTemplate(slot, activeSlotId)).join("")}`;
+  }
+
+  function sourceLinks(lecture, run) {
+    return `<div class="source-links"><a href="${watchUrl(lecture, run.startSeconds)}" target="_blank" rel="noreferrer">Watch ${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)} ↗</a><a href="${lecture.sourceUrl}" target="_blank" rel="noreferrer">${sourceLabel(lecture)} ↗</a></div>`;
+  }
+
+  function feedbackTemplate(run) {
+    const artifactAnchors = artifactRegistry.artifacts.filter((artifact) => artifact.runId === run.id).flatMap((artifact) => Object.keys(artifact.anchorTargets || {}));
+    const anchors = [...new Set([...run.anchors, ...artifactAnchors])];
+    if (!anchors.length) return `<span class="no-anchor-feedback">No legacy anchor in this transition.</span>`;
+    return `<div class="run-feedback"><button type="button" data-open-feedback="${run.id}">Comment on this run</button><div class="feedback-panel" data-feedback-panel="${run.id}" hidden><label>Closest stable anchor<select>${anchors.map((id) => `<option value="${id}">${id}</option>`).join("")}</select></label><p>Which source sentence, code line, or slide did this supplement clarify or obscure?</p><button type="button" data-mount-discussion="${run.id}">Open discussion</button><div class="giscus-slot"></div></div></div>`;
+  }
+
+  function runTemplate(lecture, run, index) {
+    const next = lecture.runs[index + 1];
+    const legacyAnchors = run.anchors.map((id) => `<span id="${escapeHTML(id)}" class="legacy-anchor" data-slot-target="${escapeHTML(slotForAnchor(id))}" aria-hidden="true"></span>`).join("");
+    const evidence = run.restoredEvidence?.length ? `<details class="restored-evidence"><summary>Original transitions and evidence restored</summary><ul>${run.restoredEvidence.map((item) => `<li>${escapeHTML(item)}</li>`).join("")}</ul></details>` : "";
+    return `<article id="${run.id}" class="lecture-run" data-run-id="${run.id}" tabindex="-1">
+      ${legacyAnchors}
+      <header class="run-heading"><p><span>Run ${String(index + 1).padStart(2, "0")}</span><time>${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)}</time></p><h3>${escapeHTML(run.title)}</h3></header>
+      <div class="source-body">
+        <p class="content-label professor-label">Professor's teaching move</p>
+        <p class="professor-intent">${escapeHTML(run.professorIntent)}</p>
+        ${sourceLinks(lecture, run)}
+        <div class="source-reference"><span>Original source position</span>${run.sourceRefs.map((ref) => `<code>${escapeHTML(ref)}</code>`).join("")}</div>
+        <div class="paraphrase"><p class="content-label">Our source-faithful paraphrase</p><p>${escapeHTML(run.originalSummary)}</p></div>
+        ${run.correctedClaim ? `<p class="live-caveat"><strong>Delivery caveat.</strong> ${escapeHTML(run.correctedClaim)}</p>` : ""}
+        ${evidence}
+        <div class="mobile-rail-slot" data-mobile-rail="${run.id}"></div>
+      </div>
+      <footer class="run-footer"><div class="transition"><span>${next ? "Transition" : "Lecture return"}</span><p>${next ? `Next, the lecture moves to “${escapeHTML(next.title)}”.` : "The lecture closes by returning to its opening frame and handing off to the next topic."}</p></div>${feedbackTemplate(run)}</footer>
+    </article>`;
+  }
+
+  function renderPlayer(lecture, run) {
+    el.player.innerHTML = `<div class="player-copy"><span>Official Stanford Online recording</span><strong>${escapeHTML(run.title)}</strong><p>${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)} · ${escapeHTML(lecture.instructor)}</p></div><button type="button" data-load-official="${lecture.lecture}" data-start="${run.startSeconds}">Load video at ${formatTime(run.startSeconds)}</button><a href="${watchUrl(lecture, run.startSeconds)}" target="_blank" rel="noreferrer">Watch on YouTube ↗</a>`;
+  }
+
+  function resolveAsset(path) { return new URL(path, document.baseURI).href; }
+
+  function loadStyle(path) {
+    const href = resolveAsset(path);
+    const key = `style:${href}`;
+    if (assetPromises.has(key)) return assetPromises.get(key);
+    const existing = [...document.styleSheets].find((sheet) => sheet.href === href);
+    if (existing) return Promise.resolve();
+    const promise = new Promise((resolve, reject) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      link.dataset.augmentationAsset = path;
+      link.addEventListener("load", resolve, { once: true });
+      link.addEventListener("error", () => reject(new Error(`Could not load ${path}`)), { once: true });
+      document.head.append(link);
     });
-    return slides;
+    assetPromises.set(key, promise);
+    return promise;
   }
 
-  function resolveAssetUrl(path, manifestUrl) {
-    if (!path) return "";
-    const base = path.startsWith("media/") || path.startsWith("augmentations/") || path.startsWith("scenes/")
-      ? document.baseURI
-      : manifestUrl;
-    return new URL(path.split("#")[0], base).href;
+  function loadScript(path) {
+    const src = resolveAsset(path);
+    const key = `script:${src}`;
+    if (assetPromises.has(key)) return assetPromises.get(key);
+    const promise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = false;
+      script.dataset.augmentationAsset = path;
+      script.addEventListener("load", resolve, { once: true });
+      script.addEventListener("error", () => reject(new Error(`Could not load ${path}`)), { once: true });
+      document.head.append(script);
+    });
+    assetPromises.set(key, promise);
+    return promise;
   }
 
-  async function fetchJSON(url) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-    return response.json();
+  function cleanupArtifact() {
+    state.artifactCleanup?.();
+    state.artifactCleanup = null;
   }
 
-  async function fetchText(url) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-    return response.text();
-  }
+  function activeRail() { return state.activeRail || el.rail; }
 
-  async function loadManifest(manifestPath) {
-    const manifestUrl = new URL(manifestPath, document.baseURI);
-    const manifest = await fetchJSON(manifestUrl);
-    let slides = new Map();
-
-    if (manifest.lecture === 1) {
-      const slidePath = Object.values(manifest.segments || {})[0]?.slides?.split("#")[0];
-      if (slidePath) slides = parseMarkdownSlides(await fetchText(resolveAssetUrl(slidePath, manifestUrl)));
-      Object.entries(manifest.segments || {}).forEach(([segmentId, asset]) => {
-        augmentations.set(segmentId, {
-          scene: asset.scene,
-          video: resolveAssetUrl(asset.video, manifestUrl),
-          poster: resolveAssetUrl(asset.poster, manifestUrl),
-          slide: slides.get(segmentId),
-          sharedWith: asset.sharedWith || [],
-          caveat: asset.caveat || "",
-          source: resolveAssetUrl(asset.source || manifest.render?.source, manifestUrl)
+  async function loadArtifact(artifactId, requestedState = "", focus = true) {
+    const artifact = artifactRegistry.byId?.[artifactId];
+    const shell = activeRail().querySelector(`[data-artifact-id="${CSS.escape(artifactId)}"]`);
+    const mount = shell?.querySelector(`[data-artifact-mount="${CSS.escape(artifactId)}"]`);
+    const button = shell?.querySelector(`[data-load-artifact="${CSS.escape(artifactId)}"]`);
+    if (!artifact || !mount || mount.dataset.loaded === "true") return;
+    const initialState = requestedState || artifact.primary.defaultState || "";
+    button?.setAttribute("aria-busy", "true");
+    if (button) button.textContent = "Loading…";
+    mount.innerHTML = `<p class="artifact-loading" role="status">Loading finished augmentation…</p>`;
+    try {
+      cleanupArtifact();
+      if (artifact.primary.kind === "iframe") {
+        const iframe = document.createElement("iframe");
+        const source = new URL(resolveAsset(artifact.primary.path));
+        if (initialState) source.searchParams.set("state", initialState);
+        iframe.src = source.href;
+        iframe.title = artifact.primary.title;
+        iframe.loading = "lazy";
+        iframe.dataset.artifactFrame = artifact.id;
+        mount.replaceChildren(iframe);
+        let detachFrameListeners = () => {};
+        await new Promise((resolve, reject) => {
+          iframe.addEventListener("load", () => {
+            const frameDocument = iframe.contentDocument;
+            const resize = () => {
+              const height = frameDocument?.documentElement?.scrollHeight;
+              if (height) iframe.style.height = `${height + 2}px`;
+            };
+            const scheduleResize = () => requestAnimationFrame(resize);
+            resize();
+            frameDocument?.addEventListener("click", scheduleResize);
+            frameDocument?.addEventListener("keydown", scheduleResize);
+            detachFrameListeners = () => {
+              frameDocument?.removeEventListener("click", scheduleResize);
+              frameDocument?.removeEventListener("keydown", scheduleResize);
+            };
+            if (focus) iframe.focus();
+            resolve();
+          }, { once: true });
+          iframe.addEventListener("error", () => reject(new Error(`Could not load ${artifact.primary.path}`)), { once: true });
         });
-      });
-      return;
+        state.artifactCleanup = () => detachFrameListeners();
+      } else if (artifact.primary.kind === "mount") {
+        await Promise.all((artifact.primary.styles || []).map(loadStyle));
+        for (const path of artifact.primary.scripts || []) await loadScript(path);
+        const api = window[artifact.primary.global];
+        if (!api || typeof api[artifact.primary.method] !== "function") throw new Error(`${artifact.primary.global}.${artifact.primary.method} is unavailable`);
+        mount.replaceChildren();
+        const instance = api[artifact.primary.method](mount, { stepId: initialState });
+        state.artifactCleanup = () => instance?.destroy?.();
+        if (artifact.selfDescribing) shell.classList.add("is-self-describing-loaded");
+        if (focus) mount.querySelector("button")?.focus();
+      }
+      mount.dataset.loaded = "true";
+      if (button) button.hidden = true;
+    } catch (error) {
+      mount.innerHTML = `<p class="artifact-error" role="alert"><strong>Could not load this augmentation.</strong> ${escapeHTML(error.message)}</p>`;
+      if (button) { button.hidden = false; button.removeAttribute("aria-busy"); button.textContent = "Try again"; }
     }
+  }
 
-    if (manifest.lecture === 2) {
-      const slidePath = manifest.assets?.[0]?.slides;
-      if (slidePath) slides = jsonSlides(await fetchJSON(resolveAssetUrl(slidePath, manifestUrl)));
-    } else if (manifest.supplement) {
-      slides = parseMarkdownSlides(await fetchText(new URL(manifest.supplement, manifestUrl)));
+  function loadArtifactVideo(artifactId) {
+    const artifact = artifactRegistry.byId?.[artifactId];
+    const stage = activeRail().querySelector(`[data-artifact-video-stage="${CSS.escape(artifactId)}"]`);
+    if (!artifact?.optionalVideo || !stage || stage.querySelector("video")) return;
+    const video = document.createElement("video");
+    video.controls = true;
+    video.preload = "metadata";
+    video.poster = resolveAsset(artifact.optionalVideo.poster);
+    video.setAttribute("aria-label", artifact.optionalVideo.alt);
+    const source = document.createElement("source");
+    source.src = resolveAsset(artifact.optionalVideo.path);
+    source.type = "video/mp4";
+    video.append(source);
+    if (artifact.optionalVideo.descriptionTrack) {
+      const track = document.createElement("track");
+      track.kind = "descriptions";
+      track.src = resolveAsset(artifact.optionalVideo.descriptionTrack);
+      track.srclang = "en";
+      track.label = "Visual description";
+      video.append(track);
     }
-
-    (manifest.assets || []).forEach((asset) => {
-      const segmentIds = asset.segmentIds || asset.segments || [];
-      segmentIds.forEach((segmentId) => {
-        augmentations.set(segmentId, {
-          scene: asset.scene,
-          video: resolveAssetUrl(asset.video, manifestUrl),
-          poster: resolveAssetUrl(asset.poster, manifestUrl),
-          alt: asset.alt,
-          slide: slides.get(segmentId),
-          sharedWith: segmentIds.filter((id) => id !== segmentId),
-          caveat: asset.caveat || "",
-          source: resolveAssetUrl(asset.source, manifestUrl)
-        });
-      });
-    });
+    stage.replaceChildren(video);
+    video.focus();
   }
 
-  async function loadAugmentations() {
-    const results = await Promise.allSettled(augmentationManifestUrls.map(loadManifest));
-    const failures = results.filter((result) => result.status === "rejected");
-    if (failures.length) console.warn("Some rendered augmentations could not be loaded.", failures.map((result) => result.reason));
-  }
-
-  function matches(segment) {
-    const text = `${segment.id} ${segment.title} ${segment.summary} ${segment.goal} ${segment.chapter}`.toLowerCase();
-    const queryMatch = !state.query || text.includes(state.query.toLowerCase());
-    const filterMatch = state.filter === "all"
-      || (state.filter === "p0" && segment.priority === "P0")
-      || segment.formats.includes(state.filter);
-    return queryMatch && filterMatch;
-  }
-
-  function visualFloat() {
-    return `
-      <div class="float-visual" aria-label="Floating point bit allocation comparison">
-        <div class="float-row"><strong>FP32</strong><span class="bit sign">1</span><span class="bit exponent wide">8 exponent</span><span class="bit mantissa widest">23 fraction</span></div>
-        <div class="float-row"><strong>FP16</strong><span class="bit sign">1</span><span class="bit exponent">5 exponent</span><span class="bit mantissa wide">10 fraction</span></div>
-        <div class="float-row"><strong>BF16</strong><span class="bit sign">1</span><span class="bit exponent wide">8 exponent</span><span class="bit mantissa">7 fraction</span></div>
-        <div class="number-range"><span>10<sup>−40</sup></span><i></i><b>10<sup>−8</sup></b><i></i><span>10<sup>0</sup></span></div>
-      </div>`;
-  }
-
-  function visualTensor() {
-    return `
-      <div class="tensor-visual" aria-label="Named four-dimensional tensor">
-        <div class="tensor-cube" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-        <dl>
-          <div><dt>B</dt><dd>batch</dd></div><div><dt>S</dt><dd>sequence</dd></div>
-          <div><dt>H</dt><dd>heads</dd></div><div><dt>D</dt><dd>head features</dd></div>
-        </dl>
-      </div>`;
-  }
-
-  function visualBPE() {
-    return `
-      <div class="bpe-visual" aria-label="BPE pair counting and merge preview">
-        <div class="token-row"><span>t</span><span class="pair">h</span><span class="pair">e</span><span>_</span><span>c</span><span>a</span><span>t</span><span>_</span><span class="pair">t</span><span class="pair">h</span><span>e</span></div>
-        <div class="merge-arrow">most frequent pair <b>→</b> new token 256</div>
-        <div class="token-row merged"><span>t</span><span>he</span><span>_</span><span>c</span><span>a</span><span>t</span><span>_</span><span>t</span><span>he</span></div>
-      </div>`;
-  }
-
-  function visualRoofline() {
-    return `
-      <div class="roofline-visual">
-        <svg viewBox="0 0 640 230" role="img" aria-label="Roofline chart with memory-bound and compute-bound regions">
-          <path class="axis" d="M55 20V190H615" />
-          <path class="roof" d="M70 178L335 45H605" />
-          <path class="knee" d="M335 45V190" />
-          <circle cx="112" cy="156" r="7"/><text x="92" y="140">ReLU</text>
-          <circle cx="190" cy="118" r="7"/><text x="170" y="102">GELU</text>
-          <circle cx="268" cy="78" r="7"/><text x="242" y="64">matvec</text>
-          <circle cx="475" cy="45" r="7"/><text x="450" y="31">matmul</text>
-          <text class="axis-label" x="255" y="220">arithmetic intensity →</text>
-          <text class="region" x="92" y="74">memory-bound</text><text class="region" x="440" y="82">compute-bound</text>
-        </svg>
-      </div>`;
-  }
-
-  function visualMemory() {
-    return `
-      <div class="memory-visual" aria-label="Per-parameter training memory ledger">
-        <span><b>2 B</b> parameter</span><span><b>2 B</b> gradient</span>
-        <span><b>4 B</b> first moment</span><span><b>4 B</b> second moment</span>
-        <strong>12 bytes / parameter</strong>
-      </div>`;
-  }
-
-  function visualCheckpoint() {
-    return `
-      <div class="checkpoint-visual" aria-label="Activation checkpointing sequence">
-        <div class="layer-row"><span class="saved">x</span><i></i><span>h1</span><i></i><span>h2</span><i></i><span class="saved">h3</span><i></i><span>h4</span><i></i><span>h5</span><i></i><span class="saved">h6</span></div>
-        <div class="recompute-line">backward recomputes only between saved checkpoints</div>
-      </div>`;
-  }
-
-  function visualRoPE() {
-    return `
-      <div class="rope-visual" aria-label="Rotary position embedding preview">
-        <svg viewBox="0 0 620 230" role="img" aria-label="Two vectors rotated by positional angles">
-          <circle cx="165" cy="116" r="80"/><path d="M165 116L223 71"/><path class="second-vector" d="M165 116L121 51"/>
-          <path class="arc" d="M197 91A42 42 0 0 0 137 82"/>
-          <circle cx="455" cy="116" r="80"/><path d="M455 116L507 61"/><path class="second-vector" d="M455 116L418 45"/>
-          <path class="arc" d="M485 84A44 44 0 0 0 431 77"/>
-          <text x="92" y="218">position i</text><text x="420" y="218">position j</text>
-        </svg>
-        <p>attention depends on the relative angle, <strong>i − j</strong></p>
-      </div>`;
-  }
-
-  function visualGQA() {
-    return `
-      <div class="gqa-visual" aria-label="Grouped-query attention preview">
-        <div class="head-group queries"><b>Q heads</b><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span><span>Q5</span><span>Q6</span><span>Q7</span><span>Q8</span></div>
-        <div class="sharing-lines"><i></i><i></i><i></i><i></i></div>
-        <div class="head-group kv"><b>shared K/V</b><span>KV1</span><span>KV2</span></div>
-        <p>fewer K/V groups → smaller cache and less memory traffic</p>
-      </div>`;
-  }
-
-  function visualWindow() {
-    const cells = Array.from({ length: 64 }, (_, index) => {
-      const row = Math.floor(index / 8);
-      const column = index % 8;
-      return `<i class="${Math.abs(row - column) <= 1 ? "visible" : "masked"}"></i>`;
-    }).join("");
-    return `<div class="window-visual" aria-label="Sliding-window attention matrix"><div class="attention-grid">${cells}</div><p>local band: O(nw) instead of a full n × n pattern</p></div>`;
-  }
-
-  function visualFlow(segment) {
-    return `<div class="storyboard" aria-label="Storyboard for ${escapeHTML(segment.title)}">${segment.beats.map((beat, index) => `
-      <div><span>${String(index + 1).padStart(2, "0")}</span><p>${escapeHTML(beat)}</p></div>`).join("")}</div>`;
-  }
-
-  function renderVisual(segment) {
-    if (segment.visual === "float") return visualFloat();
-    if (segment.visual === "tensor" || segment.visual === "einsum") return visualTensor();
-    if (segment.visual === "bpe") return visualBPE();
-    if (segment.visual === "roofline") return visualRoofline();
-    if (segment.visual === "memory") return visualMemory();
-    if (segment.visual === "checkpoint") return visualCheckpoint();
-    if (segment.visual === "rope") return visualRoPE();
-    if (segment.visual === "gqa") return visualGQA();
-    if (segment.visual === "window") return visualWindow();
-    return visualFlow(segment);
-  }
-
-  function sourceContent(segment, lecture) {
-    const sourceUrl = sourceUrlForSegment(segment, lecture);
-    return `
-      <p class="source-location"><span>Source locator</span>${escapeHTML(segment.source)}</p>
-      <p>${escapeHTML(segment.summary)}</p>
-      ${segment.code ? `<pre><code>${escapeHTML(segment.code)}</code></pre>` : ""}
-      <a class="text-link" href="${escapeHTML(sourceUrl)}" target="_blank" rel="noreferrer" aria-label="${escapeHTML(sourceLinkLabel(segment))} for ${escapeHTML(segment.title)} in a new tab">${sourceLinkLabel(segment)} <span aria-hidden="true">↗</span></a>`;
-  }
-
-  function sequenceMap(segment) {
-    return `
-      <div class="sequence-map" aria-label="Visual explanation sequence">
-        <p><span>From the source claim</span> The visual proceeds through three inspectable steps.</p>
-        <ol>${segment.beats.map((beat, index) => `<li><span>${index + 1}</span>${escapeHTML(beat)}</li>`).join("")}</ol>
-      </div>`;
-  }
-
-  function sharedSequence(segment, asset, lecture) {
-    if (!asset.sharedWith.length) return "";
-    const ids = [segment.id, ...asset.sharedWith]
-      .filter((id, index, items) => items.indexOf(id) === index)
-      .sort((a, b) => lecture.segments.findIndex((item) => item.id === a) - lecture.segments.findIndex((item) => item.id === b));
-    return `
-      <nav class="shared-sequence" aria-label="Source segments sharing this animation">
-        <div><strong>One clip, ${ids.length} source segments</strong><span>The clip is shared; each row keeps its own source claim and slide notes.</span></div>
-        <ol>${ids.map((id) => {
-          const found = findSegment(id);
-          const current = id === segment.id;
-          return `<li><a href="#${escapeHTML(id)}"${current ? ' aria-current="step"' : ""}><span>${escapeHTML(id)}</span>${escapeHTML(found?.segment.title || id)}</a></li>`;
-        }).join("")}</ol>
-      </nav>`;
-  }
-
-  function renderedAugmentation(segment, asset, lecture) {
-    const descriptionId = `${segment.id}-media-description`;
-    const slide = asset.slide ? `
-      <details class="slide-supplement">
-        <summary aria-expanded="false"><span>Segment-specific notes</span><strong>${escapeHTML(asset.slide.title || segment.title)}</strong><small>Toggle</small></summary>
-        <div class="slide-copy">
-          ${asset.slide.eyebrow ? `<p class="micro-label">${escapeHTML(asset.slide.eyebrow)}</p>` : ""}
-          ${asset.slide.html}
-        </div>
-      </details>` : "";
-
-    return `
-      ${sequenceMap(segment)}
-      ${sharedSequence(segment, asset, lecture)}
-      <figure class="augmentation-media" data-augmentation="rendered">
-        <div class="media-label"><span>Local Manim render</span><span>Silent · use controls to pause or scrub</span></div>
-        <video controls playsinline preload="none" poster="${escapeHTML(asset.poster)}" aria-describedby="${escapeHTML(descriptionId)}" data-lazy-video>
-          <source data-src="${escapeHTML(asset.video)}" type="video/mp4">
-          Your browser cannot play this MP4. <a href="${escapeHTML(asset.video)}">Open the animation directly</a>.
-        </video>
-        <figcaption id="${escapeHTML(descriptionId)}">
-          <span><strong>${escapeHTML(asset.scene)}</strong> · rendered from repository Manim code</span>
-          <span class="media-links"><a href="${escapeHTML(asset.video)}">Open MP4</a>${asset.source ? `<a href="${escapeHTML(asset.source)}">Manim source</a>` : ""}</span>
-        </figcaption>
-        ${asset.alt ? `<p class="media-description">${escapeHTML(asset.alt)}</p>` : ""}
-        ${asset.caveat ? `<p class="media-caveat"><strong>Boundary.</strong> ${escapeHTML(asset.caveat)}</p>` : ""}
-      </figure>
-      ${slide}`;
-  }
-
-  function segmentTemplate(segment, lecture) {
-    const feedbackLabel = config.discussions.enabled ? "Discuss this segment" : "Copy feedback ID";
-    const augmentation = augmentations.get(segment.id);
-    const position = segmentNumber(segment, lecture);
-    const previous = lecture.segments[position - 2];
-    const next = lecture.segments[position];
-    return `
-      <article id="${escapeHTML(segment.id)}" class="segment" data-chapter="${escapeHTML(segment.chapter)}">
-        <div class="segment-meta">
-          <p class="segment-position"><span>${String(position).padStart(2, "0")}</span> / ${String(lecture.segments.length).padStart(2, "0")}</p>
-          <a class="segment-anchor" href="#${escapeHTML(segment.id)}" aria-label="Link to ${escapeHTML(segment.title)}">${escapeHTML(segment.id)}</a>
-          <p class="segment-chapter">${escapeHTML(segment.chapter)}</p>
-          <div class="tag-row"><span class="priority ${segment.priority.toLowerCase()}">${segment.priority}</span>${segment.formats.map((format) => `<span>${formatLabel(format)}</span>`).join("")}</div>
-          <button type="button" class="copy-link-button" data-copy-link="${escapeHTML(segment.id)}">Copy stable link</button>
-          <button type="button" class="discuss-button" data-discuss="${escapeHTML(segment.id)}">${feedbackLabel}</button>
-          <nav class="segment-pager" aria-label="Adjacent lecture segments">
-            ${previous ? `<a href="#${escapeHTML(previous.id)}" aria-label="Previous segment: ${escapeHTML(previous.title)}">← Previous</a>` : `<span></span>`}
-            ${next ? `<a href="#${escapeHTML(next.id)}" aria-label="Next segment: ${escapeHTML(next.title)}">Next →</a>` : `<span></span>`}
-          </nav>
-        </div>
-        <section class="source-panel" aria-labelledby="${escapeHTML(segment.id)}-source">
-          <p class="panel-step"><span>1</span> Read the source claim</p>
-          <h3 id="${escapeHTML(segment.id)}-source">${escapeHTML(segment.title)}</h3>
-          ${sourceContent(segment, lecture)}
-        </section>
-        <section class="augmented-panel" aria-labelledby="${escapeHTML(segment.id)}-augmented">
-          <p class="panel-step"><span>2</span> Inspect the augmentation</p>
-          <div class="augmented-heading">
-            <div><p class="micro-label">Learning goal</p><h3 id="${escapeHTML(segment.id)}-augmented">${escapeHTML(segment.goal)}</h3></div>
-            <span class="status${augmentation ? " rendered" : ""}">${augmentation ? "Rendered clip" : "Planned sequence"}</span>
-          </div>
-          ${augmentation ? renderedAugmentation(segment, augmentation, lecture) : renderVisual(segment)}
-          <div class="discussion-slot" data-discussion-slot="${escapeHTML(segment.id)}" hidden></div>
-        </section>
-      </article>`;
-  }
-
-  function renderOutline(lecture) {
-    elements.outline.innerHTML = lecture.chapters.map((chapter, index) => {
-      const count = lecture.segments.filter((segment) => segment.chapter === chapter).length;
-      return `<button type="button" data-chapter-target="${escapeHTML(chapter)}"><span>${index + 1} · ${String(count).padStart(2, "0")}</span>${escapeHTML(chapter)}</button>`;
-    }).join("");
-  }
-
-  function loadVideo(video) {
-    const source = video.querySelector("source[data-src]");
-    if (!source || source.hasAttribute("src")) return;
-    source.src = source.dataset.src;
-    video.load();
-  }
-
-  let videoFrame = 0;
-  let videoDelayTimer = 0;
-
-  function hydrateNearbyVideos() {
-    const delay = state.videoHydrationAfter - performance.now();
-    if (delay > 0) {
-      window.clearTimeout(videoDelayTimer);
-      videoDelayTimer = window.setTimeout(hydrateNearbyVideos, delay + 20);
-      return;
+  function placeRail(run) {
+    const lecture = lectureByNumber(state.lecture);
+    const activeSlotId = state.anchorId ? slotForAnchor(state.anchorId) : "";
+    const html = railTemplate(lecture, run, activeSlotId);
+    const mobile = window.matchMedia("(max-width: 920px)").matches;
+    cleanupArtifact();
+    document.querySelectorAll(".mobile-rail-slot").forEach((slot) => slot.replaceChildren());
+    state.mobile = mobile;
+    if (mobile) {
+      el.rail.replaceChildren();
+      const mobileSlot = document.querySelector(`[data-mobile-rail="${run.id}"]`);
+      if (!mobileSlot) return;
+      const wrapper = document.createElement("section");
+      wrapper.className = "mobile-context";
+      wrapper.setAttribute("aria-label", "Current lecture augmentations");
+      wrapper.innerHTML = `<p class="rail-label">At this moment</p><div class="mobile-rail-content">${html}</div>`;
+      mobileSlot.append(wrapper);
+      state.activeRail = wrapper.querySelector(".mobile-rail-content");
+    } else {
+      el.rail.innerHTML = html;
+      state.activeRail = el.rail;
     }
-    window.cancelAnimationFrame(videoFrame);
-    videoFrame = window.requestAnimationFrame(() => {
-      document.querySelectorAll("video[data-lazy-video]").forEach((video) => {
-        const bounds = video.getBoundingClientRect();
-        if (bounds.top <= window.innerHeight + 600 && bounds.bottom >= -600) loadVideo(video);
-      });
-    });
+    document.querySelectorAll("[data-active-rail]").forEach((node) => node.removeAttribute("data-active-rail"));
+    state.activeRail.dataset.activeRail = "true";
+    if (activeSlotId) requestAnimationFrame(() => activeRail().querySelector(`[data-slot-id="${CSS.escape(activeSlotId)}"]`)?.scrollIntoView({ block: "nearest" }));
   }
 
-  function prepareVideos() {
-    hydrateNearbyVideos();
+  function setCurrentRun(runId, options = {}) {
+    const found = runById(runId);
+    if (!found || found.lecture.lecture !== state.lecture) return;
+    const changed = state.runId !== runId;
+    state.runId = runId;
+    document.documentElement.dataset.currentRun = runId;
+    document.querySelectorAll(".lecture-run").forEach((node) => node.classList.toggle("is-current", node.dataset.runId === runId));
+    document.querySelectorAll("[data-run-target]").forEach((node) => { const active = node.dataset.runTarget === runId; node.classList.toggle("is-current", active); active ? node.setAttribute("aria-current", "location") : node.removeAttribute("aria-current"); });
+    if (changed || options.force || state.anchorId) placeRail(found.run);
+    if (options.updatePlayer !== false) renderPlayer(found.lecture, found.run);
   }
 
-  function updateReadingPosition(segmentId) {
-    const lecture = getLecture(state.lecture);
-    const segment = lecture.segments.find((item) => item.id === segmentId);
-    if (!segment) return;
-    const position = segmentNumber(segment, lecture);
-    state.currentSegmentId = segment.id;
-    elements.readingChapter.textContent = `Lecture ${lecture.number} · ${segment.chapter}`;
-    elements.readingSegment.textContent = segment.title;
-    elements.readingCount.textContent = `${position} / ${lecture.segments.length}`;
-    elements.readingProgress.max = lecture.segments.length;
-    elements.readingProgress.value = position;
-    elements.readingProgress.setAttribute("aria-valuetext", `Segment ${position} of ${lecture.segments.length}: ${segment.title}`);
-    document.querySelectorAll("[data-chapter-target]").forEach((button) => {
-      const active = button.dataset.chapterTarget === segment.chapter;
-      button.classList.toggle("is-current", active);
-      if (active) button.setAttribute("aria-current", "location");
-      else button.removeAttribute("aria-current");
-    });
-    document.querySelectorAll(".segment").forEach((article) => article.classList.toggle("is-current", article.id === segment.id));
+  function renderLecture(number, initialRunId = "") {
+    state.lecture = number;
+    const lecture = lectureByNumber(number);
+    state.runId = "";
+    el.kicker.textContent = `Lecture ${lecture.lecture} · ${lecture.instructor}`;
+    el.title.textContent = lecture.title;
+    el.thesis.textContent = lecture.spineThesis;
+    el.links.innerHTML = `<a href="${lecture.videoUrl}" target="_blank" rel="noreferrer">Official video ↗</a><a href="${lecture.sourceUrl}" target="_blank" rel="noreferrer">${sourceLabel(lecture)} ↗</a>`;
+    el.runNav.innerHTML = lecture.runs.map((run, index) => `<a href="#${run.id}" data-run-target="${run.id}"><span>${formatTime(run.startSeconds)}</span>${String(index + 1).padStart(2, "0")} · ${escapeHTML(run.title)}</a>`).join("");
+    el.runs.innerHTML = lecture.runs.map((run, index) => runTemplate(lecture, run, index)).join("");
+    document.querySelectorAll("[data-lecture]").forEach((node) => { const active = Number(node.dataset.lecture) === number; node.classList.toggle("is-active", active); active ? node.setAttribute("aria-current", "page") : node.removeAttribute("aria-current"); });
+    document.title = `Lecture ${lecture.lecture}: ${lecture.title} · CS336 Enriched`;
+    setCurrentRun(initialRunId || lecture.runs[0].id);
+    scheduleRunSync();
   }
 
-  function revealSegment(segmentId) {
-    const reveal = () => {
-      const target = document.getElementById(segmentId);
-      if (!target) return;
-      target.scrollIntoView({ block: "start", behavior: "auto" });
-      updateReadingPosition(segmentId);
-    };
-    window.requestAnimationFrame(() => window.requestAnimationFrame(reveal));
-    document.fonts?.ready.then(() => window.requestAnimationFrame(reveal));
-    window.setTimeout(reveal, 420);
+  function syncRunFromViewport() {
+    if (state.anchorId || state.settlingRunId || state.pinnedRunId) return;
+    const marker = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) + 34;
+    const runs = [...document.querySelectorAll(".lecture-run")];
+    const containing = runs.find((node) => { const rect = node.getBoundingClientRect(); return rect.top <= marker && rect.bottom > marker; });
+    const nearest = containing || runs.sort((a, b) => Math.abs(a.getBoundingClientRect().top - marker) - Math.abs(b.getBoundingClientRect().top - marker))[0];
+    if (nearest && nearest.dataset.runId !== state.runId) setCurrentRun(nearest.dataset.runId, { updatePlayer: false });
   }
 
-  let readingFrame = 0;
-
-  function syncReadingPosition() {
-    window.cancelAnimationFrame(readingFrame);
-    readingFrame = window.requestAnimationFrame(() => {
-      const articles = [...document.querySelectorAll(".segment")];
-      if (!articles.length) return;
-      const marker = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")) * 16 + 112;
-      const current = articles.find((article) => article.getBoundingClientRect().bottom > marker) || articles.at(-1);
-      updateReadingPosition(current.id);
-    });
+  function scheduleRunSync() {
+    if (state.scrollScheduled || state.anchorId || state.settlingRunId || state.pinnedRunId) return;
+    state.scrollScheduled = true;
+    requestAnimationFrame(() => { state.scrollScheduled = false; syncRunFromViewport(); });
   }
 
-  function renderSegments(lecture) {
-    const visible = lecture.segments.filter(matches);
-    elements.segments.innerHTML = visible.map((segment) => segmentTemplate(segment, lecture)).join("");
-    elements.empty.hidden = visible.length > 0;
-    const renderedSegments = visible.filter((segment) => augmentations.has(segment.id));
-    const renderedClips = new Set(renderedSegments.map((segment) => augmentations.get(segment.id).video)).size;
-    elements.resultCount.textContent = `${visible.length} of ${lecture.segments.length} segments · ${renderedClips} rendered clip${renderedClips === 1 ? "" : "s"} cover ${renderedSegments.length} segment${renderedSegments.length === 1 ? "" : "s"}`;
-    prepareVideos();
-    const hashSegment = findSegment(window.location.hash.slice(1));
-    const initial = hashSegment?.lecture.number === lecture.number && visible.some((segment) => segment.id === hashSegment.segment.id)
-      ? hashSegment.segment.id
-      : visible[0]?.id;
-    if (initial) updateReadingPosition(initial);
-  }
-
-  function setNavState() {
-    document.querySelectorAll("[data-lecture]").forEach((button) => {
-      const active = Number(button.dataset.lecture) === state.lecture;
-      button.classList.toggle("is-active", active);
-      if (active) button.setAttribute("aria-current", "page");
-      else button.removeAttribute("aria-current");
-    });
-  }
-
-  function renderLecture(options = {}) {
-    const lecture = getLecture(state.lecture);
-    state.currentSegmentId = "";
-    elements.kicker.textContent = `Lecture ${lecture.number} · ${lecture.instructor}`;
-    elements.title.textContent = lecture.title;
-    elements.summary.textContent = lecture.summary;
-    elements.links.innerHTML = `
-      <a href="${escapeHTML(lecture.sourceUrl)}" target="_blank" rel="noreferrer">Original material ↗</a>
-      <a href="${escapeHTML(lecture.videoUrl)}" target="_blank" rel="noreferrer">Official video ↗</a>`;
-    renderOutline(lecture);
-    renderSegments(lecture);
-    setNavState();
-    document.title = `Lecture ${lecture.number}: ${lecture.title} · CS336 Enriched`;
-    if (!options.preserveScroll) window.scrollTo({ top: 0, behavior: "auto" });
+  function loadOfficial(button) {
+    const lecture = lectureByNumber(Number(button.dataset.loadOfficial));
+    const start = Number(button.dataset.start);
+    const iframe = document.createElement("iframe");
+    iframe.title = `Official Lecture ${lecture.lecture} video`;
+    iframe.loading = "lazy";
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    iframe.allowFullscreen = true;
+    iframe.src = `https://www.youtube-nocookie.com/embed/${youtubeId(lecture.videoUrl)}?start=${start}&rel=0`;
+    el.player.replaceChildren(iframe);
   }
 
   function showToast(message) {
-    elements.toast.textContent = message;
-    elements.toast.hidden = false;
-    window.clearTimeout(showToast.timer);
-    showToast.timer = window.setTimeout(() => { elements.toast.hidden = true; }, 3200);
+    el.toast.textContent = message; el.toast.hidden = false; clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { el.toast.hidden = true; }, 3000);
   }
 
-  async function copyTemplate(segment) {
-    const template = `Segment: ${segment.id}\nType: confusion | correction | visual idea\nI expected:\nI got lost when:\nA clearer visual might:`;
-    try {
-      await navigator.clipboard.writeText(template);
-      showToast(`${segment.id} feedback template copied`);
-    } catch (_error) {
-      showToast(`Use segment ID ${segment.id} in your comment`);
-    }
-  }
-
-  async function copyStableLink(segmentId) {
-    const found = findSegment(segmentId);
-    if (!found) return;
-    const url = new URL(window.location.href);
-    url.hash = segmentId;
-    try {
-      await navigator.clipboard.writeText(url.href);
-      showToast(`${segmentId} stable link copied`);
-    } catch (_error) {
-      showToast(`Stable link: ${url.href}`);
-    }
-  }
-
-  function mountGiscus(slot, segment) {
+  function mountGiscus(panel, term) {
+    const slot = panel.querySelector(".giscus-slot");
     slot.replaceChildren();
+    if (!(config.discussions.enabled && config.discussions.repoId && config.discussions.categoryId)) { slot.innerHTML = `<p class="discussion-pending">Discussion setup is not configured. Use stable anchor <code>${escapeHTML(term)}</code>.</p>`; return; }
     const script = document.createElement("script");
     script.src = "https://giscus.app/client.js";
-    script.dataset.repo = config.discussions.repo;
-    script.dataset.repoId = config.discussions.repoId;
-    script.dataset.category = config.discussions.category;
-    script.dataset.categoryId = config.discussions.categoryId;
-    script.dataset.mapping = "specific";
-    script.dataset.term = segment.id;
-    script.dataset.strict = "1";
-    script.dataset.reactionsEnabled = "1";
-    script.dataset.emitMetadata = "0";
-    script.dataset.inputPosition = "top";
-    script.dataset.theme = "light";
-    script.dataset.lang = "en";
-    script.dataset.loading = "lazy";
-    script.crossOrigin = "anonymous";
-    script.async = true;
-    slot.append(script);
+    Object.assign(script.dataset, { repo: config.discussions.repo, repoId: config.discussions.repoId, category: config.discussions.category, categoryId: config.discussions.categoryId, mapping: "specific", term, strict: "1", reactionsEnabled: "1", emitMetadata: "0", inputPosition: "top", theme: "light", lang: "en", loading: "lazy" });
+    script.crossOrigin = "anonymous"; script.async = true; slot.append(script);
   }
 
-  async function handleDiscussion(segmentId) {
-    const found = findSegment(segmentId);
-    if (!found) return;
-    await copyTemplate(found.segment);
-    const slot = document.querySelector(`[data-discussion-slot="${segmentId}"]`);
-    if (!slot) return;
-    document.querySelectorAll(".discussion-slot").forEach((item) => {
-      if (item !== slot) item.hidden = true;
-    });
-    slot.hidden = false;
-    if (config.discussions.enabled && config.discussions.repoId && config.discussions.categoryId) {
-      mountGiscus(slot, found.segment);
-    } else {
-      slot.innerHTML = `<div class="discussion-pending"><strong>Discussion linking is prepared.</strong><p>The feedback template is copied. Once the public repository and Giscus IDs are configured, this area becomes the live discussion for <code>${escapeHTML(segmentId)}</code>.</p><a href="#feedback-guide">Read the feedback workflow</a></div>`;
-    }
-    slot.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  function nextLayout() { return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); }
+
+  async function settleHashNavigation(target, artifactTarget, hash) {
+    const token = ++state.navigationToken;
+    state.settlingRunId = target.run.id;
+    state.pinnedRunId = target.run.id;
+    const alignTarget = () => document.getElementById(target.run.id)?.scrollIntoView({ block: "start", behavior: "auto" });
+    alignTarget();
+    const feedbackSelect = document.querySelector(`[data-feedback-panel="${CSS.escape(target.run.id)}"] select`);
+    if (feedbackSelect?.querySelector(`option[value="${CSS.escape(hash)}"]`)) feedbackSelect.value = hash;
+    if (artifactTarget) await loadArtifact(artifactTarget.artifactId, artifactTarget.stateId, false);
+    await document.fonts?.ready;
+    await nextLayout();
+    if (token !== state.navigationToken) return;
+    alignTarget();
+    await new Promise((resolve) => setTimeout(resolve, 140));
+    if (token !== state.navigationToken) return;
+    alignTarget();
+    await nextLayout();
+    if (token !== state.navigationToken) return;
+    state.anchorId = "";
+    state.settlingRunId = "";
+  }
+
+  function releasePinnedRun() {
+    if (!state.pinnedRunId) return;
+    state.pinnedRunId = "";
+    scheduleRunSync();
+  }
+
+  function handleHash() {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const lectureMatch = hash.match(/^lecture-(\d)$/);
+    if (lectureMatch) { state.anchorId = ""; state.settlingRunId = ""; state.pinnedRunId = ""; renderLecture(Number(lectureMatch[1])); scrollTo({ top: 0, behavior: "auto" }); return; }
+    const artifactTarget = artifactRegistry.byAnchor?.[hash];
+    const anchorRunId = artifactTarget?.runId || model.anchorToRun[hash];
+    const directRun = runById(hash);
+    const target = directRun || (anchorRunId ? runById(anchorRunId) : null);
+    if (!target) return;
+    state.anchorId = anchorRunId ? hash : "";
+    state.settlingRunId = target.run.id;
+    if (target.lecture.lecture !== state.lecture) renderLecture(target.lecture.lecture, target.run.id);
+    else setCurrentRun(target.run.id, { force: true });
+    requestAnimationFrame(() => { settleHashNavigation(target, artifactTarget, hash); });
   }
 
   document.addEventListener("click", (event) => {
     const lectureButton = event.target.closest("[data-lecture]");
-    if (lectureButton) {
-      state.lecture = Number(lectureButton.dataset.lecture);
-      state.query = "";
-      state.filter = "all";
-      elements.search.value = "";
-      document.querySelectorAll(".filter-button").forEach((button) => button.classList.toggle("is-active", button.dataset.filter === "all"));
-      history.replaceState(null, "", `#lecture-${state.lecture}`);
-      renderLecture();
-      elements.navToggle.setAttribute("aria-expanded", "false");
-      elements.nav.classList.remove("is-open");
-      return;
-    }
-
-    const filterButton = event.target.closest("[data-filter]");
-    if (filterButton) {
-      state.filter = filterButton.dataset.filter;
-      document.querySelectorAll(".filter-button").forEach((button) => button.classList.toggle("is-active", button === filterButton));
-      renderSegments(getLecture(state.lecture));
-      return;
-    }
-
-    const chapterButton = event.target.closest("[data-chapter-target]");
-    if (chapterButton) {
-      const target = document.querySelector(`[data-chapter="${CSS.escape(chapterButton.dataset.chapterTarget)}"]`);
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
-    }
-
-    const discussButton = event.target.closest("[data-discuss]");
-    if (discussButton) {
-      handleDiscussion(discussButton.dataset.discuss);
-      return;
-    }
-
-    const copyLinkButton = event.target.closest("[data-copy-link]");
-    if (copyLinkButton) copyStableLink(copyLinkButton.dataset.copyLink);
+    if (lectureButton) { event.preventDefault(); state.anchorId = ""; state.pinnedRunId = ""; history.pushState(null, "", `#lecture-${lectureButton.dataset.lecture}`); renderLecture(Number(lectureButton.dataset.lecture)); scrollTo({ top: 0, behavior: "auto" }); el.navToggle.setAttribute("aria-expanded", "false"); el.nav.classList.remove("is-open"); return; }
+    const load = event.target.closest("[data-load-official]"); if (load) { loadOfficial(load); return; }
+    const loadArtifactButton = event.target.closest("[data-load-artifact]");
+    if (loadArtifactButton) { const artifact = artifactRegistry.byId?.[loadArtifactButton.dataset.loadArtifact]; const requestedState = artifactRegistry.byAnchor?.[state.anchorId]?.stateId || artifact?.primary.defaultState || ""; loadArtifact(loadArtifactButton.dataset.loadArtifact, requestedState); return; }
+    const loadArtifactVideoButton = event.target.closest("[data-load-artifact-video]");
+    if (loadArtifactVideoButton) { loadArtifactVideo(loadArtifactVideoButton.dataset.loadArtifactVideo); return; }
+    const openFeedback = event.target.closest("[data-open-feedback]");
+    if (openFeedback) { const panel = document.querySelector(`[data-feedback-panel="${CSS.escape(openFeedback.dataset.openFeedback)}"]`); const opening = panel.hidden; document.querySelectorAll(".feedback-panel").forEach((item) => { item.hidden = true; }); panel.hidden = !opening; if (opening) panel.querySelector("select")?.focus(); return; }
+    const discuss = event.target.closest("[data-mount-discussion]");
+    if (discuss) { const panel = document.querySelector(`[data-feedback-panel="${CSS.escape(discuss.dataset.mountDiscussion)}"]`); const term = panel.querySelector("select").value; mountGiscus(panel, term); showToast(`Discussion anchored to ${term}`); return; }
+    const reveal = event.target.closest("[data-reveal-underflow]"); if (reveal) { reveal.nextElementSibling.hidden = false; reveal.textContent = "Result revealed"; reveal.disabled = true; return; }
+    const step = event.target.closest("[data-step]");
+    if (step) { const root = step.closest("[data-stepper]"); const states = JSON.parse(root.querySelector("script").textContent); const label = root.querySelector(".stepper-controls span"); let index = Number(root.dataset.index || 0); index = Math.max(0, Math.min(states.length - 1, index + Number(step.dataset.step))); root.dataset.index = index; root.querySelector(".stepper-stage code").textContent = states[index]; label.textContent = `${index + 1} / ${states.length}`; root.querySelector('[data-step="-1"]').disabled = index === 0; root.querySelector('[data-step="1"]').disabled = index === states.length - 1; }
   });
 
-  elements.search.addEventListener("input", (event) => {
-    state.query = event.target.value.trim();
-    renderSegments(getLecture(state.lecture));
+  document.addEventListener("input", (event) => {
+    if (event.target.matches("[data-ff-width]")) { const root = event.target.closest(".calculator"); const width = Number(event.target.value); root.querySelector("p span").textContent = width.toLocaleString(); root.querySelector("[data-ff-standard]").textContent = (width * 4).toLocaleString(); root.querySelector("[data-ff-glu]").textContent = Math.round(width * 8 / 3).toLocaleString(); }
+    if (event.target.matches("[data-cache-tokens]")) event.target.closest(".calculator").querySelector("[data-cache-value]").textContent = Number(event.target.value).toLocaleString();
+    if (event.target.matches("[data-window], [data-layers]")) { const root = event.target.closest(".window-demo"); const reach = Number(root.querySelector("[data-window]").value) * Number(root.querySelector("[data-layers]").value); root.querySelector("[data-window-result]").textContent = `${reach} tokens`; }
   });
 
-  elements.clear.addEventListener("click", () => {
-    state.query = "";
-    state.filter = "all";
-    elements.search.value = "";
-    document.querySelectorAll(".filter-button").forEach((button) => button.classList.toggle("is-active", button.dataset.filter === "all"));
-    renderSegments(getLecture(state.lecture));
-    elements.search.focus();
-  });
-
-  elements.navToggle.addEventListener("click", () => {
-    const open = elements.navToggle.getAttribute("aria-expanded") === "true";
-    elements.navToggle.setAttribute("aria-expanded", String(!open));
-    elements.nav.classList.toggle("is-open", !open);
-  });
-
+  el.navToggle.addEventListener("click", () => { const open = el.navToggle.getAttribute("aria-expanded") === "true"; el.navToggle.setAttribute("aria-expanded", String(!open)); el.nav.classList.toggle("is-open", !open); });
   document.addEventListener("keydown", (event) => {
-    const summary = event.target.closest?.(".slide-supplement summary");
-    if (summary && (event.key === "Enter" || event.key === " ")) {
-      event.preventDefault();
-      const details = summary.closest("details");
-      details.open = !details.open;
-      summary.setAttribute("aria-expanded", String(details.open));
-      return;
-    }
-    if (event.key !== "Escape" || elements.navToggle.getAttribute("aria-expanded") !== "true") return;
-    elements.navToggle.setAttribute("aria-expanded", "false");
-    elements.nav.classList.remove("is-open");
-    elements.navToggle.focus();
+    if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) releasePinnedRun();
+    if (event.key === "Escape" && el.navToggle.getAttribute("aria-expanded") === "true") { el.navToggle.setAttribute("aria-expanded", "false"); el.nav.classList.remove("is-open"); el.navToggle.focus(); }
   });
-
-  document.addEventListener("toggle", (event) => {
-    if (!event.target.matches?.(".slide-supplement")) return;
-    event.target.querySelector("summary")?.setAttribute("aria-expanded", String(event.target.open));
-  }, true);
-
-  window.addEventListener("scroll", () => {
-    syncReadingPosition();
-    hydrateNearbyVideos();
-  }, { passive: true });
+  window.addEventListener("hashchange", handleHash);
+  window.addEventListener("scroll", scheduleRunSync, { passive: true });
+  window.addEventListener("wheel", releasePinnedRun, { passive: true });
+  window.addEventListener("touchstart", releasePinnedRun, { passive: true });
+  window.addEventListener("pointerdown", releasePinnedRun, { passive: true });
   window.addEventListener("resize", () => {
-    syncReadingPosition();
-    hydrateNearbyVideos();
+    const mobile = window.matchMedia("(max-width: 920px)").matches;
+    const found = runById(state.runId);
+    if (found && mobile !== state.mobile) placeRail(found.run);
+    scheduleRunSync();
   });
 
-  window.addEventListener("hashchange", () => {
-    const hash = window.location.hash.slice(1);
-    const segmentMatch = findSegment(hash);
+  function initialize() {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const anchorRunId = artifactRegistry.byAnchor?.[hash]?.runId || model.anchorToRun[hash] || "";
+    const runId = anchorRunId || (runById(hash) ? hash : "");
+    const target = runId ? runById(runId) : null;
     const lectureMatch = hash.match(/^lecture-(\d)$/);
-
-    if (segmentMatch) {
-      state.videoHydrationAfter = performance.now() + 800;
-      const mustRender = state.lecture !== segmentMatch.lecture.number || state.query || state.filter !== "all" || !document.getElementById(hash);
-      if (mustRender) {
-        state.lecture = segmentMatch.lecture.number;
-        state.query = "";
-        state.filter = "all";
-        elements.search.value = "";
-        document.querySelectorAll(".filter-button").forEach((button) => button.classList.toggle("is-active", button.dataset.filter === "all"));
-        renderLecture({ preserveScroll: true });
-      }
-      window.setTimeout(() => {
-        revealSegment(hash);
-      }, 120);
-      return;
-    }
-
-    if (lectureMatch && Number(lectureMatch[1]) !== state.lecture) {
-      state.lecture = Number(lectureMatch[1]);
-      state.query = "";
-      state.filter = "all";
-      elements.search.value = "";
-      renderLecture();
-    }
-  });
-
-  async function initialize() {
-    const hash = window.location.hash.slice(1);
-    const segmentMatch = findSegment(hash);
-    const lectureMatch = hash.match(/^lecture-(\d)$/);
-    if (segmentMatch) state.lecture = segmentMatch.lecture.number;
-    else if (lectureMatch) state.lecture = Number(lectureMatch[1]);
-    if (segmentMatch) state.videoHydrationAfter = performance.now() + 800;
-
-    const configured = Boolean(config.discussions.enabled && config.discussions.repoId && config.discussions.categoryId);
-    elements.discussionStatus.innerHTML = configured
-      ? `<strong>Live:</strong> comments are stored in GitHub Discussions, one discussion per segment.`
-      : `<strong>Setup pending:</strong> create the public repository, enable Discussions, install Giscus, then add the repository and category IDs in <code>config.js</code>.`;
-
-    renderLecture({ preserveScroll: Boolean(segmentMatch) });
-    if (segmentMatch) window.setTimeout(() => {
-      revealSegment(hash);
-    }, 50);
-    await loadAugmentations();
-    renderSegments(getLecture(state.lecture));
-    if (segmentMatch) window.setTimeout(() => {
-      revealSegment(hash);
-    }, 160);
+    state.anchorId = anchorRunId ? hash : "";
+    state.settlingRunId = target?.run.id || "";
+    state.pinnedRunId = target?.run.id || "";
+    renderLecture(target?.lecture.lecture || Number(lectureMatch?.[1]) || 1, target?.run.id || "");
+    el.discussionStatus.innerHTML = config.discussions.enabled ? `<strong>Live:</strong> comments are stored in GitHub Discussions under the selected legacy anchor.` : `<strong>Prepared:</strong> stable anchors work now; Giscus can be enabled in <code>config.js</code>.`;
+    if (target) setTimeout(handleHash, 0);
   }
 
   initialize();
