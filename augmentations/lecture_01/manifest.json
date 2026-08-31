@@ -1,0 +1,80 @@
+{
+  "lecture": 1,
+  "title": "Overview and tokenization",
+  "style": {
+    "family": "CS336 source-adjacent",
+    "background": "#FAFAF7",
+    "accent": "#8C1515",
+    "bodyFont": "Roboto (website) / Helvetica Neue (local Manim fallback)",
+    "codeFont": "Menlo"
+  },
+  "render": {
+    "engine": "Manim Community 0.19.0",
+    "source": "scenes/cs336/lecture_01/lecture_01_tokenization.py",
+    "quality": "low",
+    "resolution": "854x480",
+    "fps": 15,
+    "contactSheet": "augmentations/lecture_01/contact-sheet-train-use-tradeoff.png"
+  },
+  "segments": {
+    "L01-UTF8-BYTES": {
+      "scene": "CS336UTF8Bytes",
+      "video": "media/lecture_01/L01-UTF8-BYTES.mp4",
+      "poster": "media/lecture_01/L01-UTF8-BYTES-poster.png",
+      "slides": "augmentations/lecture_01/slides.md#l01-utf8-bytes",
+      "durationTargetSeconds": 11,
+      "status": "rendered"
+    },
+    "L01-BPE-PAIR-COUNT": {
+      "scene": "CS336BPEPairCountAndMerge",
+      "video": "media/lecture_01/L01-BPE-PAIR-COUNT--L01-BPE-MERGE.mp4",
+      "poster": "media/lecture_01/L01-BPE-PAIR-COUNT--L01-BPE-MERGE-poster.png",
+      "slides": "augmentations/lecture_01/slides.md#l01-bpe-pair-count",
+      "durationTargetSeconds": 13,
+      "durationSeconds": 12.866667,
+      "status": "rendered",
+      "sharedWith": ["L01-BPE-MERGE"]
+    },
+    "L01-BPE-MERGE": {
+      "scene": "CS336BPEPairCountAndMerge",
+      "video": "media/lecture_01/L01-BPE-PAIR-COUNT--L01-BPE-MERGE.mp4",
+      "poster": "media/lecture_01/L01-BPE-PAIR-COUNT--L01-BPE-MERGE-poster.png",
+      "slides": "augmentations/lecture_01/slides.md#l01-bpe-merge",
+      "durationTargetSeconds": 13,
+      "durationSeconds": 12.866667,
+      "status": "rendered",
+      "sharedWith": ["L01-BPE-PAIR-COUNT"],
+      "continuesTo": ["L01-BPE-TRAIN-VS-USE"]
+    },
+    "L01-BPE-TRAIN-VS-USE": {
+      "scene": "CS336BPETrainVsUse",
+      "video": "media/lecture_01/L01-BPE-TRAIN-VS-USE.mp4",
+      "poster": "media/lecture_01/L01-BPE-TRAIN-VS-USE-poster.png",
+      "slides": "augmentations/lecture_01/slides.md#l01-bpe-train-vs-use",
+      "durationTargetSeconds": 7,
+      "durationSeconds": 7.0,
+      "status": "rendered",
+      "sourceLines": ["lecture_01.py:549-564", "lecture_01.py:705-720"],
+      "continuesFrom": ["L01-BPE-PAIR-COUNT", "L01-BPE-MERGE"],
+      "takeaway": "Training counts pairs and freezes an ordered merge map; encoding new text only replays those rules."
+    },
+    "L01-TOKENIZER-PARETO": {
+      "scene": "CS336TokenizerTradeoffToy",
+      "video": "media/lecture_01/L01-TOKENIZER-PARETO.mp4",
+      "poster": "media/lecture_01/L01-TOKENIZER-PARETO-poster.png",
+      "slides": "augmentations/lecture_01/slides.md#l01-tokenizer-pareto",
+      "data": "scenes/cs336/lecture_01/reproduce_tokenizer_tradeoff.py",
+      "durationTargetSeconds": 6,
+      "durationSeconds": 6.6,
+      "status": "rendered",
+      "sourceLines": ["lecture_01.py:505-571", "lecture_01.py:676-720"],
+      "provenance": {
+        "trainingText": "the cat in the hat",
+        "heldOutText": "the quick brown fox",
+        "bpeMerges": 3,
+        "wordVocabulary": "five distinct training chunks plus UNK"
+      },
+      "caveat": "Exact toy counts, not a measured tokenizer benchmark or a mathematical Pareto frontier."
+    }
+  }
+}

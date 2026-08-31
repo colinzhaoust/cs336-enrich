@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "lecture": 2,
+  "generated": "2026-08-31",
+  "style": {
+    "reference": "CS336 course site",
+    "background": "#FAFAF7",
+    "accent": "#8C1515",
+    "type": "Roboto on the site; Helvetica Neue local Manim fallback; Menlo for code and quantities"
+  },
+  "assets": [
+    {
+      "scene": "FloatingPointRange",
+      "segmentIds": ["L02-FP16-UNDERFLOW", "L02-BF16-RANGE"],
+      "source": "scenes/cs336/lecture_02/lecture_02_augmented.py",
+      "video": "media/lecture_02/FloatingPointRange.mp4",
+      "poster": "media/lecture_02/FloatingPointRange.png",
+      "slides": "augmentations/lecture_02/slides.json"
+    },
+    {
+      "scene": "EinopsRearrangeHeads",
+      "segmentIds": ["L02-REARRANGE"],
+      "source": "scenes/cs336/lecture_02/lecture_02_augmented.py",
+      "video": "media/lecture_02/EinopsRearrangeHeads.mp4",
+      "poster": "media/lecture_02/EinopsRearrangeHeads.png",
+      "slides": "augmentations/lecture_02/slides.json"
+    },
+    {
+      "scene": "RooflineModel",
+      "segmentIds": ["L02-ROOFLINE"],
+      "data": {
+        "hardware": "H100",
+        "dtype": "BF16",
+        "memoryBandwidthTBps": 3.35,
+        "peakComputeTFLOPs": 989.5,
+        "kneeFLOPsPerByte": 295.373,
+        "geluIntensity": 5,
+        "matmul1024Intensity": 341
+      },
+      "source": "scenes/cs336/lecture_02/lecture_02_augmented.py",
+      "video": "media/lecture_02/RooflineModel.mp4",
+      "poster": "media/lecture_02/RooflineModel.png",
+      "slides": "augmentations/lecture_02/slides.json"
+    },
+    {
+      "scene": "ActivationCheckpointingTradeoff",
+      "segmentIds": [
+        "L02-ACTIVATION-MEMORY",
+        "L02-CHECKPOINTING",
+        "L02-CHECKPOINT-FREQUENCY"
+      ],
+      "data": {
+        "sourceExample": {
+          "batchSize": 64,
+          "hiddenDimension": 1024,
+          "layers": 16,
+          "bytesPerActivationElement": 2,
+          "simplifiedActivationMemoryBytes": 2097152
+        },
+        "frequencyTradeoff": {
+          "everyLayer": {"memory": "O(L)", "recomputation": "none"},
+          "noLayers": {"memory": "O(1)", "recomputation": "O(L^2)"},
+          "everySqrtL": {"memory": "O(sqrt(L))", "recomputation": "O(L)"}
+        }
+      },
+      "source": "scenes/cs336/lecture_02/lecture_02_checkpointing.py",
+      "video": "media/lecture_02/ActivationCheckpointingTradeoff.mp4",
+      "poster": "media/lecture_02/ActivationCheckpointingTradeoff.png",
+      "contactSheet": "media/lecture_02/contact-sheets/ActivationCheckpointingTradeoff.png",
+      "slides": "augmentations/lecture_02/slides.json",
+      "alt": "A nine-layer network first retains every activation, then retains only h3, h6, and h9 while missing activations are recomputed during backward; a final table compares checkpoint frequency tradeoffs.",
+      "caveat": "The 2 MiB figure is the lecture's simplified BF16 activation term 2 × B × D × L for B=64, D=1024, L=16, not total framework peak memory."
+    }
+  ]
+}

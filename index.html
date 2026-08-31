@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="An independent, visual companion to Stanford CS336: Language Modeling from Scratch.">
+    <meta name="theme-color" content="#8c1515">
+    <title>CS336 Enriched</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to course content</a>
+
+    <header class="site-header">
+      <a class="site-brand" href="#lecture-1" data-lecture="1" aria-label="CS336 Enriched home">
+        <span>CS336</span> Enriched
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="course-nav">
+        Lectures
+      </button>
+      <nav id="course-nav" class="course-nav" aria-label="Course navigation">
+        <button class="nav-link" type="button" data-lecture="1">Lecture 1</button>
+        <button class="nav-link" type="button" data-lecture="2">Lecture 2</button>
+        <button class="nav-link" type="button" data-lecture="3">Lecture 3</button>
+        <a class="nav-link" href="#feedback-guide">How feedback works</a>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="course-intro" aria-labelledby="course-title">
+        <div>
+          <p class="eyebrow">Spring 2026 · Independent companion</p>
+          <h1 id="course-title">Language Modeling from Scratch, inspected visually</h1>
+          <p class="intro-copy">
+            Follow a cited location in the original CS336 material, then inspect the corresponding visual explanation.
+            Rendered clips are labeled separately from planned sequences.
+          </p>
+        </div>
+        <div class="intro-note">
+          <strong>Source-faithful, not official.</strong>
+          <span>This project is not affiliated with or endorsed by Stanford University.</span>
+        </div>
+      </section>
+
+      <section class="lecture-shell">
+        <aside class="lecture-outline" aria-label="Lecture outline">
+          <div class="outline-sticky">
+            <p class="outline-label">Lecture outline</p>
+            <nav id="outline-nav"></nav>
+          </div>
+        </aside>
+
+        <div class="lecture-main">
+          <header class="lecture-header">
+            <div>
+              <p id="lecture-kicker" class="eyebrow"></p>
+              <h2 id="lecture-title"></h2>
+              <p id="lecture-summary" class="lecture-summary"></p>
+            </div>
+            <div id="lecture-links" class="lecture-links" aria-label="Original lecture links"></div>
+          </header>
+
+          <div class="filter-bar" aria-label="Filter lecture segments">
+            <label class="search-field">
+              <span>Find a concept</span>
+              <input id="segment-search" type="search" autocomplete="off" placeholder="e.g. bf16, BPE, GQA">
+            </label>
+            <div class="format-filters" role="group" aria-label="Filter by output format">
+              <button type="button" class="filter-button is-active" data-filter="all">All</button>
+              <button type="button" class="filter-button" data-filter="manim">Manim</button>
+              <button type="button" class="filter-button" data-filter="interactive">Interactive</button>
+              <button type="button" class="filter-button" data-filter="p0">P0</button>
+            </div>
+            <p id="result-count" class="result-count" aria-live="polite"></p>
+          </div>
+
+          <div id="reading-position" class="reading-position" aria-label="Current reading position">
+            <div class="reading-copy">
+              <span id="reading-chapter">Lecture position</span>
+              <strong id="reading-segment">Choose a segment below</strong>
+            </div>
+            <span id="reading-count" class="reading-count"></span>
+            <progress id="reading-progress" value="0" max="1" aria-label="Lecture segment progress"></progress>
+          </div>
+
+          <div class="column-labels" aria-hidden="true">
+            <span>Position</span>
+            <span>1 · Read the CS336 source</span>
+            <span>2 · Inspect the augmentation</span>
+          </div>
+
+          <div id="segments" class="segments"></div>
+          <div id="empty-state" class="empty-state" hidden>
+            <h3>No matching concepts</h3>
+            <p>Clear the search or choose another format.</p>
+            <button id="clear-filters" type="button">Show every segment</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="feedback-guide" class="feedback-guide" aria-labelledby="feedback-title">
+        <div class="feedback-heading">
+          <p class="eyebrow">Shared improvement loop</p>
+          <h2 id="feedback-title">How to leave useful feedback</h2>
+          <p>
+            Every concept has a stable segment ID. Use it to connect a learner's confusion to the exact source,
+            storyboard, animation, and revision.
+          </p>
+        </div>
+
+        <ol class="feedback-steps">
+          <li><span>1</span><strong>Read the source</strong><p>Start from the left column and note the source line or slide.</p></li>
+          <li><span>2</span><strong>Inspect the augmentation</strong><p>Play, scrub, or step through the explanation on the right.</p></li>
+          <li><span>3</span><strong>Discuss the segment</strong><p>Say what you expected, where you lost the thread, and what visual change might help.</p></li>
+          <li><span>4</span><strong>Follow the revision</strong><p>The maintainer replies with the updated page and commit after a change lands.</p></li>
+        </ol>
+
+        <div class="feedback-template">
+          <div>
+            <h3>Comment template</h3>
+            <p>Segment buttons copy the correct ID before opening its GitHub Discussion.</p>
+          </div>
+          <pre><code>Segment: L02-FLOATING-POINT
+Type: confusion | correction | visual idea
+I expected:
+I got lost when:
+A clearer visual might:</code></pre>
+          <p id="discussion-status" class="discussion-status"></p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>CS336 Enriched is an independent educational companion.</p>
+      <a href="https://cs336.stanford.edu/">Visit the official CS336 course</a>
+    </footer>
+
+    <div id="feedback-toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="config.js"></script>
+    <script src="data/lectures.js"></script>
+    <script src="slide_parser.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

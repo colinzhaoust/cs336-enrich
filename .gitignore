@@ -1,0 +1,66 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*.tmp
+*.temp
+*.log
+
+# Python and local environments
+**/__pycache__/
+*.py[cod]
+.venv/
+.venv-*/
+
+# Local render/test output
+build/
+dist/
+**/partial_movie_files/
+**/Tex/
+**/texts/
+/scenes/**/media/
+
+# Augmentation directories contain text only; QA image/video sheets stay local.
+/augmentations/**/*.png
+/augmentations/**/*.jpg
+/augmentations/**/*.jpeg
+/augmentations/**/*.gif
+/augmentations/**/*.mp4
+
+# Published media is an explicit allowlist: 12 MP4 files and 12 posters.
+/media/**
+!/media/lecture_01/
+!/media/lecture_01/L01-UTF8-BYTES.mp4
+!/media/lecture_01/L01-UTF8-BYTES-poster.png
+!/media/lecture_01/L01-BPE-PAIR-COUNT--L01-BPE-MERGE.mp4
+!/media/lecture_01/L01-BPE-PAIR-COUNT--L01-BPE-MERGE-poster.png
+!/media/lecture_01/L01-BPE-TRAIN-VS-USE.mp4
+!/media/lecture_01/L01-BPE-TRAIN-VS-USE-poster.png
+!/media/lecture_01/L01-TOKENIZER-PARETO.mp4
+!/media/lecture_01/L01-TOKENIZER-PARETO-poster.png
+!/media/lecture_02/
+!/media/lecture_02/FloatingPointRange.mp4
+!/media/lecture_02/FloatingPointRange.png
+!/media/lecture_02/EinopsRearrangeHeads.mp4
+!/media/lecture_02/EinopsRearrangeHeads.png
+!/media/lecture_02/RooflineModel.mp4
+!/media/lecture_02/RooflineModel.png
+!/media/lecture_02/ActivationCheckpointingTradeoff.mp4
+!/media/lecture_02/ActivationCheckpointingTradeoff.png
+!/media/lecture_03/
+!/media/lecture_03/posters/
+!/media/lecture_03/posters/L03PrePostNorm.jpg
+!/media/lecture_03/posters/L03RuntimeNorm.jpg
+!/media/lecture_03/posters/L03KVSharing.jpg
+!/media/lecture_03/posters/L03SlidingWindow.jpg
+!/media/lecture_03/videos/
+!/media/lecture_03/videos/lecture_03_scenes/
+!/media/lecture_03/videos/lecture_03_scenes/480p15/
+!/media/lecture_03/videos/lecture_03_scenes/480p15/L03PrePostNorm.mp4
+!/media/lecture_03/videos/lecture_03_scenes/480p15/L03KVSharing.mp4
+!/media/lecture_03/videos/lecture_03_scenes/480p15/L03SlidingWindow.mp4
+!/media/lecture_03/videos/lecture_03_runtime_norm/
+!/media/lecture_03/videos/lecture_03_runtime_norm/480p15/
+!/media/lecture_03/videos/lecture_03_runtime_norm/480p15/L03RuntimeNorm.mp4

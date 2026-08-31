@@ -1,0 +1,107 @@
+{
+  "lecture": 2,
+  "title": "Systems and resource accounting",
+  "slides": [
+    {
+      "id": "L02-FP16-UNDERFLOW",
+      "pairedWith": "L02-BF16-RANGE",
+      "eyebrow": "Tensors and number formats",
+      "title": "Why 1e-8 disappears in FP16",
+      "lede": "A 16-bit type is not automatically a safe training type. The exponent budget decides whether a small gradient is representable at all.",
+      "beats": [
+        "FP16: 1 sign + 5 exponent + 10 fraction bits.",
+        "The smallest positive FP16 subnormal is about 5.96e-8, so 1e-8 rounds to zero.",
+        "Once a gradient becomes exactly zero, no later optimizer step can recover that signal."
+      ],
+      "check": "Predict what happens to 1e-7, 1e-8, and 1e-9 before running the torch expression from the lecture.",
+      "video": "media/lecture_02/FloatingPointRange.mp4"
+    },
+    {
+      "id": "L02-BF16-RANGE",
+      "pairedWith": "L02-FP16-UNDERFLOW",
+      "eyebrow": "Tensors and number formats",
+      "title": "BF16 spends its bits on range",
+      "lede": "BF16 keeps FP32's eight exponent bits and reduces the fraction to seven bits. It preserves dynamic range, not FP32-level resolution.",
+      "beats": [
+        "FP32: 1 / 8 / 23 sign, exponent, fraction bits.",
+        "BF16: 1 / 8 / 7; FP16: 1 / 5 / 10.",
+        "BF16 represents 1e-8 as nonzero, but nearby values are quantized more coarsely than in FP16."
+      ],
+      "check": "Range and precision are different axes: ask first whether a value survives, then how accurately it is rounded.",
+      "video": "media/lecture_02/FloatingPointRange.mp4"
+    },
+    {
+      "id": "L02-REARRANGE",
+      "eyebrow": "Named tensor operations",
+      "title": "Expose a hidden sub-dimension, transform it, then join",
+      "lede": "The lecture uses rearrange to split total_hidden into heads × hidden1, einsum to apply w: hidden1 → hidden2 inside every head, then rearrange to join the heads again.",
+      "beats": [
+        "Input x has shape [sequence, total_hidden=8], where 8 = 2 heads × hidden1=4.",
+        "Pattern ... (heads hidden1) -> ... heads hidden1 makes hidden1 independently addressable; einsum with w[4,3] changes it to hidden2=3.",
+        "Pattern ... heads hidden2 -> ... (heads hidden2) joins the heads, producing total_hidden=6."
+      ],
+      "check": "Rearrange itself preserves values. The intervening einsum, not rearrange, is what changes each head from width 4 to width 3.",
+      "code": "x = rearrange(x, '... (heads hidden1) -> ... heads hidden1', heads=2); x = einsum(x, w, '... hidden1, hidden1 hidden2 -> ... hidden2'); x = rearrange(x, '... heads hidden2 -> ... (heads hidden2)')",
+      "video": "media/lecture_02/EinopsRearrangeHeads.mp4"
+    },
+    {
+      "id": "L02-ROOFLINE",
+      "eyebrow": "FLOPs and hardware",
+      "title": "One plot, two bottlenecks",
+      "lede": "For H100 BF16, the roofline predicts attainable throughput as the lower of 3.35 TB/s times arithmetic intensity and 989.5 TFLOP/s peak compute.",
+      "beats": [
+        "Both axes are logarithmic; arithmetic intensity I is useful work divided by bytes moved.",
+        "The H100 BF16 knee is 989.5 / 3.35 ≈ 295 FLOP/byte; GELU at about 5 remains memory-bound.",
+        "A 1024² BF16 matmul has intensity about 341, just beyond the knee, so it reaches the compute-bound plateau."
+      ],
+      "check": "Optimizing FLOP count cannot rescue a bandwidth-bound kernel if it moves the same bytes.",
+      "equation": "performance = min(3.35 TB/s × I, 989.5 TFLOP/s); knee ≈ 295 FLOP/byte",
+      "video": "media/lecture_02/RooflineModel.mp4"
+    },
+    {
+      "id": "L02-ACTIVATION-MEMORY",
+      "pairedWith": "L02-CHECKPOINTING, L02-CHECKPOINT-FREQUENCY",
+      "eyebrow": "Memory optimizations",
+      "title": "Why training fills an activation shelf",
+      "lede": "Backward needs intermediate layer outputs, so an ordinary forward pass retains activations that inference can discard after each layer.",
+      "beats": [
+        "In the lecture's simplified BF16 term, activation memory is 2 × B × D × L bytes.",
+        "For B=64, D=1024, and L=16, that term is 2,097,152 bytes = 2 MiB.",
+        "This is one accounting term, not total peak memory: parameters, gradients, optimizer state, temporary buffers, and framework overhead are separate."
+      ],
+      "check": "If only L doubles while B and D stay fixed, which part of this simplified memory term doubles?",
+      "equation": "M_activations = 2 bytes × B × D × L = 2 MiB",
+      "video": "media/lecture_02/ActivationCheckpointingTradeoff.mp4"
+    },
+    {
+      "id": "L02-CHECKPOINTING",
+      "pairedWith": "L02-ACTIVATION-MEMORY, L02-CHECKPOINT-FREQUENCY",
+      "eyebrow": "Memory optimizations",
+      "title": "Discard now, rematerialize during backward",
+      "lede": "Activation checkpointing, gradient checkpointing, and rematerialization name the same core exchange: save a subset of activations and recompute missing ones from the latest saved checkpoint.",
+      "beats": [
+        "The forward pass keeps selected boundaries such as h3, h6, and h9 instead of every intermediate activation.",
+        "During backward, the program reruns the needed forward layers inside each interval before computing gradients.",
+        "Saved activation memory falls, but the additional forward work means checkpointing is not free."
+      ],
+      "check": "To recover h8 while backpropagating from h9, which saved checkpoint is the natural restart point?",
+      "code": "x = torch.utils.checkpoint.checkpoint(layer, x)",
+      "video": "media/lecture_02/ActivationCheckpointingTradeoff.mp4"
+    },
+    {
+      "id": "L02-CHECKPOINT-FREQUENCY",
+      "pairedWith": "L02-ACTIVATION-MEMORY, L02-CHECKPOINTING",
+      "eyebrow": "Memory optimizations",
+      "title": "Checkpoint placement is a resource schedule",
+      "lede": "The source closes Lecture 2 by comparing three regimes. Selective placement between the extremes gives a useful memory/compute balance.",
+      "beats": [
+        "Store every layer: O(L) saved activation memory and no recomputation.",
+        "Store no layer activations: O(1) saved activation memory but O(L²) recomputation when restarting from the beginning for each layer.",
+        "Store every √L layers: O(√L) saved activation memory and O(L) recomputation in the lecture's schedule."
+      ],
+      "check": "For L=16, every √L layers means an interval of four layers; compare the number of saved boundaries with storing all 16.",
+      "equation": "every layer: [O(L), 0] · none: [O(1), O(L²)] · every √L: [O(√L), O(L)]",
+      "video": "media/lecture_02/ActivationCheckpointingTradeoff.mp4"
+    }
+  ]
+}

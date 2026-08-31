@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "lecture": 3,
+  "title": "Architecture and hyperparameters",
+  "style": {
+    "family": "CS336 course-site",
+    "background": "#FAFAF7",
+    "accent": "#8C1515",
+    "type": "Roboto on the site; Helvetica Neue local Manim fallback; Menlo for code and quantities"
+  },
+  "supplement": "slides.md",
+  "assets": [
+    {
+      "id": "l03-pre-post-norm",
+      "segments": ["L03-PRE-POST-NORM"],
+      "scene": "L03PrePostNorm",
+      "source": "scenes/cs336/lecture_03/lecture_03_scenes.py",
+      "video": "../../media/lecture_03/videos/lecture_03_scenes/480p15/L03PrePostNorm.mp4",
+      "poster": "../../media/lecture_03/posters/L03PrePostNorm.jpg",
+      "beats": [
+        "Draw post-norm and pre-norm topologies side by side",
+        "Mark which operations touch the identity residual route",
+        "Trace the direct backward route"
+      ],
+      "alt": "Side-by-side post-norm and pre-norm residual blocks. Post-norm places LayerNorm after the merge; pre-norm leaves a green identity path around the normalized learned branch."
+    },
+    {
+      "id": "l03-runtime-norm",
+      "segments": ["L03-RMSNORM", "L03-NORM-RUNTIME", "L03-NO-BIAS"],
+      "scene": "L03RuntimeNorm",
+      "source": "scenes/cs336/lecture_03/lecture_03_runtime_norm.py",
+      "video": "../../media/lecture_03/videos/lecture_03_runtime_norm/480p15/L03RuntimeNorm.mp4",
+      "poster": "../../media/lecture_03/posters/L03RuntimeNorm.jpg",
+      "sourcePages": [14, 15, 16, 17, 18, 19],
+      "normalizationAccounting": {
+        "layerNorm": "mean and variance work; learned scale γ and shift β, or 2d learned values",
+        "rmsNorm": "one second-moment reduction; learned scale γ only, or d learned values",
+        "formula": "RMSNorm(x) = x / sqrt(mean(x²) + ε) × γ"
+      },
+      "biasAccounting": {
+        "scope": "ungated FFN example with W1: d_model→d_ff and W2: d_ff→d_model",
+        "removedParametersPerLayer": "d_ff + d_model bias values",
+        "kernelEffect": "removes the two logical bias loads/adds; realized wall-clock gain depends on implementation fusion, tensor shape, and hardware"
+      },
+      "runtimeCaveat": "Matrix multiplies dominate Transformer FLOPs, but FLOPs are not runtime: normalization reductions and activation movement can still affect wall-clock time. Treat runtime and quality outcomes as empirical, not universal laws.",
+      "beats": [
+        "Compare LayerNorm mean/variance work and γ+β with RMSNorm's second-moment reduction and γ-only parameterization",
+        "Separate the schematic FLOP share from wall-clock data movement and reductions",
+        "Remove FFN bias terms, account for d_ff+d_model values per layer, and close on an empirical verification boundary"
+      ],
+      "alt": "A three-step engineering comparison. LayerNorm's mean, centering, variance, scale, and shift simplify to RMSNorm's second-moment reduction and scale. A schematic runtime panel distinguishes FLOPs from activation movement. An ungated FFN then drops its two bias terms, with a caveat that quality and wall-clock effects must be measured."
+    },
+    {
+      "id": "l03-kv-sharing",
+      "segments": ["L03-KV-CACHE", "L03-MQA", "L03-GQA"],
+      "scene": "L03KVSharing",
+      "source": "scenes/cs336/lecture_03/lecture_03_scenes.py",
+      "video": "../../media/lecture_03/videos/lecture_03_scenes/480p15/L03KVSharing.mp4",
+      "poster": "../../media/lecture_03/posters/L03KVSharing.jpg",
+      "sourcePages": [58, 59, 60, 61, 62, 63],
+      "resourceFormula": "KV bytes/token/layer = 2 × n_kv_heads × d_head × bytes/value; multiply by n_layers for the model-wide cache per token",
+      "arithmeticIntensity": {
+        "notation": "b = batch, n = sequence length, d = hidden dimension, h = query heads, k = d/h",
+        "incrementalMHA": {
+          "sourcePages": [59, 60],
+          "arithmeticOperations": "O(b n d²)",
+          "memoryAccesses": "O(b n² d + n d²)",
+          "intensity": "O((n/d + 1/b)^−1)",
+          "motivation": "Step-by-step generation repeatedly reads the growing KV cache, so incremental attention has poor arithmetic intensity at small batch or long sequence length."
+        },
+        "mqa": {
+          "sourcePage": 61,
+          "memoryAccesses": "O(b n d + b n² k + n d²)",
+          "intensity": "O((1/d + n/(d h) + 1/b)^−1)",
+          "motivation": "Sharing one K/V stream reduces the head-dependent KV-cache movement."
+        }
+      },
+      "qualityEvidence": {
+        "sourcePage": 63,
+        "summary": "The course reports that MQA can have a small perplexity hit, while the cited GQA result reports low or no hit; this is empirical evidence, not a guarantee for every model or setting."
+      },
+      "beats": [
+        "Start from incremental decoding and the eight-head KV-cache traffic",
+        "Collapse to one shared KV stream with MQA",
+        "Move back to grouped sharing with GQA as a capacity/efficiency knob"
+      ],
+      "alt": "Incremental decoding begins with eight query and KV streams. The KV side collapses to one shared stream for MQA, then expands to two grouped streams for GQA while query-head count remains eight."
+    },
+    {
+      "id": "l03-sliding-window",
+      "segments": ["L03-SLIDING-WINDOW"],
+      "scene": "L03SlidingWindow",
+      "source": "scenes/cs336/lecture_03/lecture_03_scenes.py",
+      "video": "../../media/lecture_03/videos/lecture_03_scenes/480p15/L03SlidingWindow.mp4",
+      "poster": "../../media/lecture_03/posters/L03SlidingWindow.jpg",
+      "beats": [
+        "Fill the full causal triangle",
+        "Crop it to a width-four diagonal band",
+        "Move one query row, compare counts, then motivate periodic full-attention layers"
+      ],
+      "alt": "A 12 by 12 causal attention matrix changes from a full lower triangle to a four-cell-wide diagonal band; counters compare 78 full cells with 42 local cells."
+    }
+  ]
+}
