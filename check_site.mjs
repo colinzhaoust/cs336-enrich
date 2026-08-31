@@ -102,6 +102,7 @@ for (const lecture of model.lectures) {
 }
 
 const html = fs.readFileSync("index.html", "utf8");
+if (!html.includes("A source-aligned companion to Stanford CS336") || html.includes("Keep the lecture. Add the missing view.")) throw new Error("The course header must describe the companion rather than use the retired slogan");
 for (const ref of ["styles.css", "config.js", "data/lectures.js", "data/lecture_runs.js", "data/augmentation_registry_v2.js", "app.js"]) if (!html.includes(ref)) throw new Error(`index.html does not reference ${ref}`);
 for (const id of ["run-nav", "lecture-runs", "context-rail", "rail-content", "discussion-status"]) if (!html.includes(`id="${id}"`)) throw new Error(`index.html is missing ${id}`);
 if (!html.includes("lecture-media-note")) throw new Error("The lecture intro must explain transcript-timed official excerpts");
