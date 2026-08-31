@@ -81,15 +81,16 @@ The stable ID is also the GitHub Discussion term. Do not rename an ID after feed
 
 ## Enable GitHub Discussions and Giscus
 
-The public repository and Discussions are already enabled. `config.js` contains the
-verified repository ID and the ID of the default `General` category.
+The public repository, Discussions, and the Giscus GitHub App are enabled.
+`config.js` contains the verified repository ID and the ID of the default
+`General` category.
 
-To finish the embedded comment setup:
+The embedded comment setup uses:
 
-1. Install the [Giscus GitHub App](https://github.com/apps/giscus) for `colinzhaoust/cs336-enrich`.
-2. Confirm the repository passes the checks on [giscus.app](https://giscus.app/).
-3. Keep **Discussion title contains a specific term**, strict matching, and the `General` category.
-4. Set `enabled: true` in `config.js` and redeploy.
+- **Discussion title contains a specific term**
+- strict matching
+- the `General` category
+- each stable segment ID as its term
 
 Each segment button then mounts one Giscus thread using the segment ID as its specific term. Before Giscus is configured, the same button copies a structured feedback template and explains the pending setup instead of opening a dead link.
 

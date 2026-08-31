@@ -1,6 +1,6 @@
 window.CS336_SITE_CONFIG = {
   discussions: {
-    enabled: false,
+    enabled: true,
     repo: "colinzhaoust/cs336-enrich",
     repoId: "R_kgDOUKBs0w",
     category: "General",
