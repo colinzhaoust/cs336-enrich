@@ -103,11 +103,13 @@ for (const lecture of model.lectures) {
 
 const html = fs.readFileSync("index.html", "utf8");
 for (const ref of ["styles.css", "config.js", "data/lectures.js", "data/lecture_runs.js", "data/augmentation_registry_v2.js", "app.js"]) if (!html.includes(ref)) throw new Error(`index.html does not reference ${ref}`);
-for (const id of ["official-player", "run-nav", "lecture-runs", "context-rail", "rail-content", "discussion-status"]) if (!html.includes(`id="${id}"`)) throw new Error(`index.html is missing ${id}`);
+for (const id of ["run-nav", "lecture-runs", "context-rail", "rail-content", "discussion-status"]) if (!html.includes(`id="${id}"`)) throw new Error(`index.html is missing ${id}`);
+if (!html.includes("lecture-media-note")) throw new Error("The lecture intro must explain transcript-timed official excerpts");
 if (/<video\b/i.test(html)) throw new Error("Legacy local MP4s must not appear in the primary HTML path");
 
 const app = fs.readFileSync("app.js", "utf8");
-for (const behavior of ["CS336_LECTURE_RUNS", "CS336_AUGMENTATION_REGISTRY_V2", "model.anchorToRun", "data-mobile-rail", "data-active-rail", "data-load-official", "mountGiscus", "loadArtifact", "loadStyle", "loadScript", "syncRunFromViewport", "renderLecture(number, initialRunId", "loading = \"lazy\""]) if (!app.includes(behavior)) throw new Error(`app.js is missing lecture-first behavior: ${behavior}`);
+for (const behavior of ["CS336_LECTURE_RUNS", "CS336_AUGMENTATION_REGISTRY_V2", "model.anchorToRun", "data-mobile-rail", "data-active-rail", "originalMaterials", "Transcript-indexed excerpt", "Stop at", "mountGiscus", "loadArtifact", "loadStyle", "loadScript", "syncRunFromViewport", "renderLecture(number, initialRunId", "loading = \"lazy\""]) if (!app.includes(behavior)) throw new Error(`app.js is missing lecture-first behavior: ${behavior}`);
+if (/youtube(?:-nocookie)?\.com\/embed/.test(app)) throw new Error("Stanford Online disables third-party playback; excerpt cards must link to the official timestamp instead of presenting a broken embed");
 for (const removed of ["Learning goal", "Storyboard", "One clip,", "Segment-specific notes", "data-lazy-video", "augmentationManifestUrls"]) if (app.includes(removed)) throw new Error(`Old repeated segment UI remains in app.js: ${removed}`);
 if (app.includes("relocateRail")) throw new Error("The desktop sticky rail must not be reparented into a short mobile run container");
 if (/media\/lecture_|RooflineModel\.mp4|L01-BPE-TRAIN-VS-USE\.mp4/i.test(app + fs.readFileSync("data/augmentation_registry_v2.js", "utf8"))) throw new Error("The V2 loader must not restore retired or rebuild MP4s");

@@ -15,7 +15,6 @@
     title: document.querySelector("#lecture-title"),
     thesis: document.querySelector("#lecture-thesis"),
     links: document.querySelector("#lecture-links"),
-    player: document.querySelector("#official-player"),
     runNav: document.querySelector("#run-nav"),
     runs: document.querySelector("#lecture-runs"),
     contextRail: document.querySelector("#context-rail"),
@@ -60,7 +59,6 @@
   function lectureByNumber(number) { return model.lectures.find((item) => item.lecture === number) || model.lectures[0]; }
   function runById(id) { for (const lecture of model.lectures) { const run = lecture.runs.find((item) => item.id === id); if (run) return { lecture, run }; } return null; }
   function slotForAnchor(id) { return artifactRegistry.byAnchor?.[id]?.slotId || anchorSlotMap[id] || ""; }
-  function youtubeId(url) { return new URL(url).searchParams.get("v"); }
   function watchUrl(lecture, seconds) { return `${lecture.videoUrl}&t=${seconds}s`; }
   function sourceLabel(lecture) { return lecture.sourceUrl.endsWith(".pdf") ? "Official slide deck" : "Official lecture code"; }
   function slotTypeLabel(type) { return { "formula-comparison": "Formula comparison", table: "Comparison table", "background-link": "Background", "interactive-demo": "Interactive", "slow-manim": "Slow demonstration" }[type] || type; }
@@ -153,8 +151,22 @@
     return `<div class="rail-run-head"><span>${escapeHTML(run.id)} · ${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)}</span><strong>${escapeHTML(run.title)}</strong></div>${slots.map((slot) => supplementTemplate(slot, activeSlotId)).join("")}`;
   }
 
-  function sourceLinks(lecture, run) {
-    return `<div class="source-links"><a href="${watchUrl(lecture, run.startSeconds)}" target="_blank" rel="noreferrer">Watch ${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)} ↗</a><a href="${lecture.sourceUrl}" target="_blank" rel="noreferrer">${sourceLabel(lecture)} ↗</a></div>`;
+  function originalMaterials(lecture, run) {
+    const sourceKind = lecture.sourceUrl.endsWith(".pdf") ? "Official slides" : "Official executable lecture";
+    return `<div class="original-materials">
+      <section class="run-clip" data-run-clip="${run.id}" aria-label="Transcript-indexed official video excerpt ${formatTime(run.startSeconds)} to ${formatTime(run.endSeconds)}">
+        <div class="material-heading"><span>Transcript-indexed excerpt</span><time>${formatTime(run.startSeconds)} → ${formatTime(run.endSeconds)}</time></div>
+        <strong>${escapeHTML(run.title)}</strong>
+        <p>Boundary reconstructed from the public caption timeline. The official recording opens at the start; return or stop at <strong>${formatTime(run.endSeconds)}</strong>.</p>
+        <div class="run-clip-actions"><a class="clip-primary-link" href="${watchUrl(lecture, run.startSeconds)}" target="_blank" rel="noreferrer">Watch from ${formatTime(run.startSeconds)} ↗</a><span>Stop at ${formatTime(run.endSeconds)}</span></div>
+      </section>
+      <aside class="source-material">
+        <div class="material-heading"><span>${sourceKind}</span><span>Original</span></div>
+        <p>${run.sourceRefs.map((ref) => `<code>${escapeHTML(ref)}</code>`).join("")}</p>
+        <a href="${lecture.sourceUrl}" target="_blank" rel="noreferrer">Open ${sourceKind.toLowerCase()} ↗</a>
+        <small>${lecture.sourceUrl.endsWith(".pdf") ? "Use the listed slide range in the official deck." : "The lecture itself is generated from this executable source."}</small>
+      </aside>
+    </div>`;
   }
 
   function feedbackTemplate(run) {
@@ -174,8 +186,7 @@
       <div class="source-body">
         <p class="content-label professor-label">Professor's teaching move</p>
         <p class="professor-intent">${escapeHTML(run.professorIntent)}</p>
-        ${sourceLinks(lecture, run)}
-        <div class="source-reference"><span>Original source position</span>${run.sourceRefs.map((ref) => `<code>${escapeHTML(ref)}</code>`).join("")}</div>
+        ${originalMaterials(lecture, run)}
         <div class="paraphrase"><p class="content-label">Our source-faithful paraphrase</p><p>${escapeHTML(run.originalSummary)}</p></div>
         ${run.correctedClaim ? `<p class="live-caveat"><strong>Delivery caveat.</strong> ${escapeHTML(run.correctedClaim)}</p>` : ""}
         ${evidence}
@@ -183,10 +194,6 @@
       </div>
       <footer class="run-footer"><div class="transition"><span>${next ? "Transition" : "Lecture return"}</span><p>${next ? `Next, the lecture moves to “${escapeHTML(next.title)}”.` : "The lecture closes by returning to its opening frame and handing off to the next topic."}</p></div>${feedbackTemplate(run)}</footer>
     </article>`;
-  }
-
-  function renderPlayer(lecture, run) {
-    el.player.innerHTML = `<div class="player-copy"><span>Official Stanford Online recording</span><strong>${escapeHTML(run.title)}</strong><p>${formatTime(run.startSeconds)}–${formatTime(run.endSeconds)} · ${escapeHTML(lecture.instructor)}</p></div><button type="button" data-load-official="${lecture.lecture}" data-start="${run.startSeconds}">Load video at ${formatTime(run.startSeconds)}</button><a href="${watchUrl(lecture, run.startSeconds)}" target="_blank" rel="noreferrer">Watch on YouTube ↗</a>`;
   }
 
   function resolveAsset(path) { return new URL(path, document.baseURI).href; }
@@ -357,7 +364,6 @@
     document.querySelectorAll(".lecture-run").forEach((node) => node.classList.toggle("is-current", node.dataset.runId === runId));
     document.querySelectorAll("[data-run-target]").forEach((node) => { const active = node.dataset.runTarget === runId; node.classList.toggle("is-current", active); active ? node.setAttribute("aria-current", "location") : node.removeAttribute("aria-current"); });
     if (changed || options.force || state.anchorId) placeRail(found.run);
-    if (options.updatePlayer !== false) renderPlayer(found.lecture, found.run);
   }
 
   function renderLecture(number, initialRunId = "") {
@@ -382,25 +388,13 @@
     const runs = [...document.querySelectorAll(".lecture-run")];
     const containing = runs.find((node) => { const rect = node.getBoundingClientRect(); return rect.top <= marker && rect.bottom > marker; });
     const nearest = containing || runs.sort((a, b) => Math.abs(a.getBoundingClientRect().top - marker) - Math.abs(b.getBoundingClientRect().top - marker))[0];
-    if (nearest && nearest.dataset.runId !== state.runId) setCurrentRun(nearest.dataset.runId, { updatePlayer: false });
+    if (nearest && nearest.dataset.runId !== state.runId) setCurrentRun(nearest.dataset.runId);
   }
 
   function scheduleRunSync() {
     if (state.scrollScheduled || state.anchorId || state.settlingRunId || state.pinnedRunId) return;
     state.scrollScheduled = true;
     requestAnimationFrame(() => { state.scrollScheduled = false; syncRunFromViewport(); });
-  }
-
-  function loadOfficial(button) {
-    const lecture = lectureByNumber(Number(button.dataset.loadOfficial));
-    const start = Number(button.dataset.start);
-    const iframe = document.createElement("iframe");
-    iframe.title = `Official Lecture ${lecture.lecture} video`;
-    iframe.loading = "lazy";
-    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-    iframe.allowFullscreen = true;
-    iframe.src = `https://www.youtube-nocookie.com/embed/${youtubeId(lecture.videoUrl)}?start=${start}&rel=0`;
-    el.player.replaceChildren(iframe);
   }
 
   function showToast(message) {
@@ -466,7 +460,6 @@
   document.addEventListener("click", (event) => {
     const lectureButton = event.target.closest("[data-lecture]");
     if (lectureButton) { event.preventDefault(); state.anchorId = ""; state.pinnedRunId = ""; history.pushState(null, "", `#lecture-${lectureButton.dataset.lecture}`); renderLecture(Number(lectureButton.dataset.lecture)); scrollTo({ top: 0, behavior: "auto" }); el.navToggle.setAttribute("aria-expanded", "false"); el.nav.classList.remove("is-open"); return; }
-    const load = event.target.closest("[data-load-official]"); if (load) { loadOfficial(load); return; }
     const loadArtifactButton = event.target.closest("[data-load-artifact]");
     if (loadArtifactButton) { const artifact = artifactRegistry.byId?.[loadArtifactButton.dataset.loadArtifact]; const requestedState = artifactRegistry.byAnchor?.[state.anchorId]?.stateId || artifact?.primary.defaultState || ""; loadArtifact(loadArtifactButton.dataset.loadArtifact, requestedState); return; }
     const loadArtifactVideoButton = event.target.closest("[data-load-artifact-video]");

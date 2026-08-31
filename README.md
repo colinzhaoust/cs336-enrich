@@ -2,7 +2,7 @@
 
 An independent visual companion to Stanford CS336: Language Modeling from Scratch.
 
-The site keeps the original lecture sequence as its spine, then places source-faithful formulas, comparisons, interactives, and optional slow demonstrations at the exact moment they add something. It currently covers Lectures 1–3 as 28 continuous teaching runs. Three reviewed V2 artifacts are integrated on demand; the former 12 short renders remain out of the primary learning path. The repository is a self-contained static site that works at the repository root locally and under the GitHub Pages project path `/cs336-enrich/`.
+The site keeps the original lecture sequence as its spine. Each of its 28 continuous teaching runs combines a transcript-timed excerpt from the original Stanford Online embed, the exact official slide or executable-source location, and only then our formulas, comparisons, interactives, or optional slow demonstrations. Video is never downloaded, cut, or rehosted. Three reviewed V2 artifacts are integrated on demand; the former 12 short renders remain out of the primary learning path. The repository is a self-contained static site that works at the repository root locally and under the GitHub Pages project path `/cs336-enrich/`.
 
 ## Preview locally
 
@@ -68,6 +68,8 @@ Before publishing changed media, review representative frames, generate a poster
 ## Content model
 
 `data/lecture_runs.js` groups the 88 legacy IDs into the professor's continuous teaching runs: 10 for Lecture 1, 8 for Lecture 2, and 10 for Lecture 3. Each run preserves the time range, professor intent, official source location, source-faithful paraphrase, and transition. Augmentations live only in declared slots inside those runs.
+
+The run start/end times were reconstructed from public caption timelines and checked against the official recording and source. Stanford Online disables playback on third-party websites, so each excerpt card opens the official YouTube recording at `start` and keeps `end` visible as the stop/return cue; it does not create or publish a derivative video file. Lecture 3 links the corresponding official slide ranges, while Lectures 1–2 link the executable lecture source that generated the on-screen material.
 
 `data/augmentation_registry_v2.js` maps a finished artifact to one slot, its internal deep-link state, source interval, caption, visual description, provenance, caveat, and lazy assets. Planned slots remain labels rather than simulated content. The 88 stable IDs are also GitHub Discussion terms; do not rename one after feedback exists unless the related Discussion is migrated deliberately.
 
