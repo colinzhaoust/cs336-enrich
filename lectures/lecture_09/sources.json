@@ -29,13 +29,13 @@
     "title": "Training Compute-Optimal Large Language Models (Hoffmann et al., 2022; 'Chinchilla')",
     "kind": "paper",
     "url": "https://arxiv.org/abs/2203.15556",
-    "note": "Spelled 'Hoffman' on p45. Source of the three fitting methods (p46-p49) and the 20 tokens/parameter figure (p54). Chinchilla's own fitted exponents (a, b near 0.5) are not printed in the deck's text layer."
+    "note": "Spelled 'Hoffman' on p45. Source of the three fitting methods (p46-p49) and the 20 tokens/parameter figure (p54). Chinchilla's own fitted exponents (a, b near 0.5) are not in the deck's text layer, but p46's image prints the paper's Table 2 (0.50/0.50, 0.49/0.51, 0.46/0.54; Kaplan 0.73/0.27) and p47-p49 print the Gopher-budget projections (67B/1.5T, 63B/1.4T, 40B)."
   },
   "hestness_2017": {
     "title": "Deep Learning Scaling is Predictable, Empirically (Hestness et al., 2017)",
     "kind": "paper",
     "url": "https://arxiv.org/abs/1712.00409",
-    "note": "p10-p11 (earliest large-scale neural scaling study; MT, LM, speech; 'emergence', compute scaling), p14 (logistic-like curve shape), p18 (measured exponents, figure only), p32 (Adam vs SGD on RHNs)."
+    "note": "p10-p11 (earliest large-scale neural scaling study; MT, LM, speech; 'emergence', compute scaling), p14 (logistic-like curve shape), p18 (measured exponents, printed on the figure: MT −0.13, speech −0.30), p32 (Adam vs SGD on RHNs)."
   },
   "banko_brill_2001": {
     "title": "Scaling to Very Very Large Corpora for Natural Language Disambiguation (Banko & Brill, 2001)",

@@ -227,6 +227,6 @@
     }
   ],
   "builds": "../build/",
-  "widgets_v": 3,
+  "widgets_v": 4,
   "figure_base": "https://raw.githubusercontent.com/stanford-cs336/lectures/main/"
 }

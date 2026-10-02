@@ -509,5 +509,26 @@
   "end": 245,
   "text": "    def trace_func(frame, event, arg):\n        \"\"\"\n        trace_func and local_trace_func are called on various lines of code when executed.\n        - trace_func is called *before* a line of code is executed.\n        - local_trace_func is called *after* a line of code has been executed\n          and will have the values of the variables.\n        We generally keep the local_trace_func version.  However, when you have\n        a function call that you're tracing through, you want to keep both\n        versions.\n\n        We don't care about all the events, so here are the rules:\n        - In local_trace_func, if the previous event was the same line (presumably the trace_func)\n        - Remove all trace_func(return)\n        \"\"\"",
   "sha256": "9393a2f6529e"
+ },
+ "tools/edtrace/README.md:L13-L22": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/README.md",
+  "start": 13,
+  "end": 22,
+  "text": "1. Create a simple Python program `hello.py`:\n\n```python\nfrom edtrace import text\n\ndef main():\n    x = 3  # @inspect x\n    text(\"Welcome!\")\n    x += 1  # @inspect x\n```",
+  "sha256": "da0c327d0f38"
+ },
+ "execute.py:L370-L387": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 370,
+  "end": 387,
+  "text": "if __name__ == \"__main__\":\n    parser = argparse.ArgumentParser()\n    parser.add_argument(\"-m\", \"--module\", help=\"List of modules to execute (e.g., lecture_01)\", type=str, nargs=\"+\")\n    parser.add_argument(\"-o\", \"--output_path\", help=\"Path to save the trace\", type=str, default=\"var/traces\")\n    parser.add_argument(\"-I\", \"--inspect-all-variables\", help=\"Inspect all variables (default: only inspect variables mentioned in @inspect comments)\", action=\"store_true\")\n    args = parser.parse_args()\n\n    os.makedirs(args.output_path, exist_ok=True)\n\n    for module in args.module:\n        module = module.replace(\".py\", \"\")  # Just in case\n        print(f\"Executing {module}...\")\n        trace = execute(module_name=module, inspect_all_variables=args.inspect_all_variables)\n        print(f\"{len(trace.steps)} steps\")\n        output_path = os.path.join(args.output_path, f\"{module}.json\")\n        print(f\"Saving trace to {output_path}...\")\n        with open(output_path, \"w\") as f:\n            json.dump(asdict(trace), f, indent=2)",
+  "sha256": "9393a2f6529e"
+ },
+ "lecture_07.py:L557-L591": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 557,
+  "end": 591,
+  "text": "class DisableDistributed:\n    \"\"\"\n    Context manager that temporarily disables distributed functions (replaces with no-ops).\n    This is for when we're tracing the lecture, since we can't trace through\n    multiprocessing, so we just want to run the function directly without\n    distributed communication.\n    \"\"\"\n    def __enter__(self):\n        self.old_functions = {}\n        for name in dir(dist):\n            value = getattr(dist, name, None)\n            if isfunction(value):\n                self.old_functions[name] = value\n                setattr(dist, name, lambda *args, **kwargs: None)\n\n    def __exit__(self, exc_type, exc_value, traceback):\n        for name in self.old_functions:\n            setattr(dist, name, self.old_functions[name])\n\n\ndef spawn(func: Callable, world_size: int, *args, **kwargs):\n    \"\"\"\n    Launches `world_size` processes that each calls `func` on world_size, args, kwargs.\n    Note: if we are being traced (inside edtrace), we just run the function directly without multiprocessing and disable distributed functions.\n    \"\"\"\n    # Note: assume kwargs are in the same order as what main needs\n    if not sys.gettrace():\n        # This is the normal code path for multiprocessing\n        args = (world_size,) + args + tuple(kwargs.values())\n        mp.spawn(func, args=args, nprocs=world_size, join=True)\n    else:\n        # If we're being traced (inside edtrace), just run the function directly.\n        with DisableDistributed():  # @stepover\n            args = (0, world_size,) + args + tuple(kwargs.values())\n            func(*args)",
+  "sha256": "7cdec6c6e2b7"
  }
 }

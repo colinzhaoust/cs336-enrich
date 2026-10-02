@@ -107,7 +107,7 @@ WIDGETS["fixture:lecture_11--sweep-cost"] = (root) => {
 // ====================================================== 2. StepFun laws in N and D vs a compute law ==
 // Fitted Step Law (arXiv:2503.04715, recorded in the stepfun-laws-along-chinchilla-path anchors and filtering note, author's check):
 //   η_opt = 1.79 · N^-0.713 · D^0.307,   B_opt = 0.58 · D^0.571 (tokens).
-// The deck prints no exponent (p36, txt L228-L230: batch "primarily dependent on dataset size", "higher optimal LR with D (for fixed M)").
+// The exponents are printed on the slide images (p33, p36: η = 1.79 N^-0.713 D^0.307, B = 0.58 D^0.571); the text layer has only (p36, txt L228-L230: batch "primarily dependent on dataset size", "higher optimal LR with D (for fixed M)").
 // Spoken: batch "roughly square root of the number of data", LR up with data, down with model size (video 38:08-38:27); along a
 // Chinchilla path N and D are both driven by compute and the result looks like DeepSeek's law, LR down and batch up with compute
 // (38:27-39:03). A compute-only law fitted on runs along N, D ∝ C^0.5 is η ∝ C^((aN+bD)/2), B ∝ C^(bB/2) (the KP's reduction).
@@ -180,7 +180,7 @@ WIDGETS["fixture:lecture_11--hp-laws"] = (root) => {
       compute-only law fitted along the path: LR ∝ C^${fmt(m.cExpLR, 3)} → × ${fmt(m.lrComputeLaw, 3)} · batch ∝ C^${fmt(m.cExpB, 3)} → × ${fmt(m.batchComputeLaw, 3)}<br>
       <b style="color:${m.onPath || agree ? "var(--ok)" : "var(--bad)"}">${verdict}</b><br>
       absolute (Step Law fit, exponents fixed at the fitted values): η ≈ ${fmt(m.eta0 * a.nx ** -0.713 * a.dx ** 0.307, 3)} (base ${fmt(m.eta0, 3)}), B ≈ ${fmt(m.B, 3)} tokens (base ${fmt(m.B0, 3)})<br>
-      <span class="muted small">provenance: fixture:lecture_11--hp-laws · fitted η = 1.79 N^-0.713 D^0.307 and B = 0.58 D^0.571 are the Step Law paper's (arXiv:2503.04715), recorded in the stepfun-laws-along-chinchilla-path KP (author's check); the deck prints no exponent: lecture_11.pdf:p36 (L228-L230: batch primarily depends on D; LR rises with D at fixed M, "likely more fragile if swapping to WSD"). Video 36:15-36:37 (LR down with model size, up with data, "counterintuitive"), 38:08-39:03 (batch ~ sqrt(D); along a Chinchilla path LR falls and batch grows with compute, like DeepSeek's law with different exponents); base point 1B / 100B from 34:25-34:46. DeepSeek's own exponents are figure-only (p21) and not used. The numbers are "likely contingent" on the data (37:43).</span>`;
+      <span class="muted small">provenance: fixture:lecture_11--hp-laws · fitted η = 1.79 N^-0.713 D^0.307 and B = 0.58 D^0.571 are the Step Law paper's (arXiv:2503.04715), recorded in the stepfun-laws-along-chinchilla-path KP (author's check), and printed on the slide images p33 and p36: lecture_11.pdf:p36 (L228-L230: batch primarily depends on D; LR rises with D at fixed M, "likely more fragile if swapping to WSD"). Video 36:15-36:37 (LR down with model size, up with data, "counterintuitive"), 38:08-39:03 (batch ~ sqrt(D); along a Chinchilla path LR falls and batch grows with compute, like DeepSeek's law with different exponents); base point 1B / 100B from 34:25-34:46. DeepSeek's own fits are printed on p20-p21 and not used here. The numbers are "likely contingent" on the data (37:43).</span>`;
   };
   const sl = () => {
     ctl.replaceChildren(...(s.mode === "path"

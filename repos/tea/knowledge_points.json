@@ -590,7 +590,7 @@
       "id": "rag-plugin-detection-and-stores",
       "label": "RAG setup: helper model picks plugins; one Chroma store per doc corpus",
       "kind": "mechanism",
-      "statement": "With --use_rag, RAGVectorStore builds or loads a Chroma collection 'manim_core' from manim_docs_path/manim_core and one 'manim_plugin_<name>' collection per folder under manim_docs_path/plugin_docs, splitting .md and .py files with LangChain's recursive splitters and embedding via litellm; before planning, detect_relevant_plugins asks the helper model to choose from plugin_docs/plugins.json and the chosen names are threaded into every later prompt and query.",
+      "statement": "With --use_rag, RAGVectorStore builds or loads a Chroma collection 'manim_core' from manim_docs_path/manim_core and one 'manim_plugin_<name>' collection per folder under manim_docs_path/plugin_docs, splitting .md and .py files with LangChain's recursive splitters and embedding via litellm; before planning, detect_relevant_plugins asks the helper model to choose from plugin_docs/plugins.json and the chosen names are threaded into the planning prompts and their RAG queries, but not into generate_manim_code or fix_code_errors, whose query generators are called without relevant_plugins (code_generator.py L291-L297, L358-L365) and whose prompts say 'No plugins are relevant.'",
       "provenance": {
         "status": "implemented",
         "basis": "evidence",
@@ -706,7 +706,7 @@
           },
           {
             "q": "With --use_rag, which vector stores does TEA build, and how are plugin stores chosen for a run?",
-            "answer": "One Chroma collection of core Manim docs plus one per plugin folder; before planning, the helper model picks the relevant plugins from a list, and those names are passed into every later prompt and query."
+            "answer": "One Chroma collection of core Manim docs plus one per plugin folder; before planning, the helper model picks the relevant plugins from a list, and those names are passed into the planning prompts and queries (not into code generation or error fixing)."
           }
         ],
         "self_explain": "Why does TEA detect relevant plugins once per topic (before the outline) rather than per scene, and what does that cost when only one scene needs a plugin?"
@@ -1606,7 +1606,7 @@
             "quote": "Evaluation\nNote that Gemini and GPT4o is required for evaluation.\n\nCurrently, evaluation requires a video file and a subtitle file (SRT format)."
           }
         ],
-        "filtering_note": "Scores are integers 1-5 enforced by convert_score_fields (eval_suite/utils.py L52-L58), which raises on anything else, so a '4.5' from the judge is a retry. The video judge only gets the theorem description and the chunk, not the transcript (video_utils.py L148-L149: the transcript argument is accepted but unused in the prompt). overall_score averages the five criterion means with equal weight, so one 1 in element_layout pulls a 5,5,5,5 video to about 3.6. The research notes list the same five metric names (atlas_research_02 L5)."
+        "filtering_note": "Scores must be integers: convert_score_fields (eval_suite/utils.py L52-L58) accepts an int or a digit string and raises on anything else, so a '4.5' from the judge is a retry; the 1-5 range is never checked, and a 0 would zero every geometric mean it enters. The video judge gets the folder name title-cased by process_topic_name (evaluate.py L312-L313, L327) in the 'description' slot, not the dataset's theorem description, and the chunk, not the transcript (video_utils.py L148-L149: the transcript argument is accepted but unused in the prompt). overall_score averages the five criterion means with equal weight, so one 1 in element_layout pulls a 5,5,5,5 video to about 3.6. The research notes list the same five metric names (atlas_research_02 L5)."
       },
       "prerequisites": [
         {
@@ -2011,7 +2011,7 @@
       "id": "silent-degradation-points",
       "label": "Where a run degrades without an error: swallowed exceptions and regex fallbacks",
       "kind": "mechanism",
-      "statement": "Several places turn failures into ordinary-looking data: LiteLLMWrapper.__call__ catches every exception and returns str(e) as the model's text; generate_scene_outline keeps the whole response when the <SCENE_OUTLINE> regex misses, so an API error string can become the saved outline with zero scenes; RAG query generators return [] on JSON errors; and two call sites are statically wrong (the single-topic --only_gen_vid path calls an async method without await, and the batch --only_gen_vid path omits two positional arguments), so those modes do nothing or crash before rendering.",
+      "statement": "Several places turn failures into ordinary-looking data: LiteLLMWrapper.__call__ catches every exception and returns str(e) as the model's text; generate_scene_outline keeps the whole response when the <SCENE_OUTLINE> regex misses, so an API error string can become the saved outline with zero scenes; plugin detection and the error-fix query generator return [] on errors (the storyboard, technical, narration and code query generators catch only JSONDecodeError, so a reply with no fence raises AttributeError); and both --only_gen_vid call sites omit two required positional arguments of the async render_video_fix_code, so they raise TypeError at call time (the single-topic one also lacks await, which would matter only once the arguments were fixed), so those modes do nothing or crash before rendering.",
       "provenance": {
         "status": "implemented",
         "basis": "evidence",
@@ -2089,7 +2089,7 @@
             "quote": "if not args.only_plan and not args.only_render:\n                video_generator.combine_videos(args.topic)"
           }
         ],
-        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L938 creates a coroutine object that is never awaited (Python prints a RuntimeWarning at exit, nothing renders); L800 passes 2 positional arguments to a method needing 4, raising TypeError. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do."
+        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L938 creates a coroutine object that is never awaited (Python prints a RuntimeWarning at exit, nothing renders); L800 passes 2 positional arguments to a method needing 4, raising TypeError. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do. Correction (read-through pass, checked in Python): calling an async function with missing positional arguments raises TypeError immediately, so the single-topic --only_gen_vid path fails like the batch one rather than creating and discarding a coroutine."
       },
       "prerequisites": [
         {
@@ -2115,7 +2115,7 @@
         },
         {
           "belief": "A JSON parsing failure in RAG query generation aborts the scene.",
-          "why_wrong": "It returns [] (code_generator.py L143; rag_integration.py L332), so the stage proceeds with no retrieved docs, only a print."
+          "why_wrong": "It depends on the generator: plugin detection (rag_integration.py L332) and the error-fix query generator (code_generator.py L143) return [] and the stage proceeds with no retrieved docs, only a print; the storyboard, technical, narration and code query generators catch only JSONDecodeError, so a reply with no ```json fence raises AttributeError."
         }
       ],
       "prompts": {
@@ -2159,11 +2159,11 @@
           },
           {
             "q": "Why does 'python generate_video.py --topic T --context C --only_gen_vid' render nothing?",
-            "answer": "render_video_fix_code is async and is called without await at L938, so the coroutine is created and discarded; the batch variant at L800 instead raises TypeError for missing scene_outline and implementation_plans."
+            "answer": "render_video_fix_code(topic, description, scene_outline, implementation_plans, ...) is called at L938 with only topic and context, so Python raises TypeError for the two missing arguments before any coroutine runs (the batch variant at L800 fails the same way); the missing await would matter only after that."
           },
           {
             "q": "What does a RAG query generator return when the model's reply is not valid JSON?",
-            "answer": "An empty list, so that stage proceeds without retrieved documents."
+            "answer": "Plugin detection and the error-fix generator return []; the storyboard, technical, narration and code generators catch only JSONDecodeError, so a reply without a ```json fence raises AttributeError."
           }
         ],
         "self_explain": "Why does 'never raise, always return a string' at the model-wrapper layer push every failure downstream into regex fallbacks, and what single change would make the failures loud again?"

@@ -129,7 +129,7 @@
   "mup_for_babies": {
     "title": "'muP for babies' paper (unnamed on p46)",
     "kind": "paper",
-    "note": "p46 says only '(this is a very accessible muP for babies paper)' next to a screenshot. The spectral-norm derivation on p47-p49 (operator norm sqrt(n_{l-1}) + sqrt(n_l), condition on ||Delta W||_* sqrt(n_{l-1}) = Theta(sqrt(n_l))) matches Yang, Simon & Bernstein, 'A Spectral Condition for Feature Learning' (2023, https://arxiv.org/abs/2310.17813), but the deck does not say so; this identification is the atlas author's inference."
+    "note": "p46 says only '(this is a very accessible muP for babies paper)' next to a screenshot. The spectral-norm derivation on p47-p49 (operator norm sqrt(n_{l-1}) + sqrt(n_l), condition on ||Delta W||_* sqrt(n_{l-1}) = Theta(sqrt(n_l))) matches Yang, Simon & Bernstein, 'A Spectral Condition for Feature Learning' (2023, https://arxiv.org/abs/2310.17813), which the text layer does not say; slide image audit: p46's screenshot shows that title and its authors, so the identification is on the slide."
   },
   "lion_2023": {
     "title": "Symbolic Discovery of Optimization Algorithms (Chen et al., 2023; 'Lion')",
@@ -140,6 +140,6 @@
   "mup_replication_unnamed": {
     "title": "muP replication study behind p52-p57 ('Replicating muP', 'In our arch')",
     "kind": "paper",
-    "note": "p52-p57 report a replication (optimal LR vs width, robustness to SwiGLU/squared ReLU, batch size, zero-attention init, RMSNorm gains, Lion, regularizers; failures for RMSNorm gains and 0.1 weight decay). The text layer gives no title, author or link ('In our arch' on p54 suggests the lecturer's own group); the study is not identified here and all its curves are figure only. Spoken (1:12:43-1:13:28): the lecturer attributes it to 'an independent researcher' ('he found'), so 'In our arch' is the paper's phrase, not the lecturer's group. A likely match is Lingle 2024 (arXiv:2404.05728, an independent researcher's muP learning-rate transfer study). That is the author's identification and is not checked against the figures."
+    "note": "p52-p57 report a replication (optimal LR vs width, robustness to SwiGLU/squared ReLU, batch size, zero-attention init, RMSNorm gains, Lion, regularizers; failures for RMSNorm gains and 0.1 weight decay). The text layer gives no title, author or link ('In our arch' on p54 suggests the lecturer's own group). Spoken (1:12:43-1:13:28): the lecturer attributes it to 'an independent researcher' ('he found'), so 'In our arch' is the paper's phrase, not the lecturer's group. A likely match is Lingle 2024 (arXiv:2404.05728, an independent researcher's muP learning-rate transfer study). Slide image audit: p51's image names it, Lucas Dax Lingle, 'A Large-Scale Exploration of μ-Transfer', and p52-p57 print its tables (optimal base LR per width, with ✔/✗ transfer marks: ✗ for RMSNorm gains, Lion and decoupled weight decay)."
   }
 }

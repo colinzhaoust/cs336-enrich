@@ -28,7 +28,7 @@
       "id": "execute-settrace-loop",
       "label": "How a lecture module is executed and traced",
       "kind": "mechanism",
-      "statement": "execute() imports the module, puts only that module's own file into visible_paths, installs trace_func with sys.settrace, calls module.main(), and records a step for every 'call' or 'line' event whose frame lives in that file, dropping 'return' events and comprehension/lambda frames.",
+      "statement": "execute() imports the module, puts only that module's own file into visible_paths, installs trace_func with sys.settrace, calls module.main(), and records a step for every 'call' or 'line' event whose frame lives in that file, dropping 'return' events and steps whose innermost frame is a <listcomp> or <lambda> (dict/set comprehensions and generator expressions are still recorded, and functions called from a list comprehension are recorded with the <listcomp> frame in their stack).",
       "provenance": {
         "status": "implemented",
         "basis": "evidence",
@@ -110,7 +110,11 @@
           ],
           "answer": "Append lecture_util.py's path to visible_paths before sys.settrace is called",
           "why": "trace_func returns early for any frame whose co_filename is not in visible_paths (execute.py L249-L251), and execute() puts only the lecture module's own file there (L344-L345). Adding the helper file to that list is the only switch that lets its frames reach the step-recording code. Trace.files is built after the run from visible_paths (L350) and is never used to decide what is recorded; @stepover suppresses recording of frames below a line (L276-L278), the opposite effect.",
-          "distractor_from": {"None: trace_func already records every frame that the lecture's calls enter": "Misconception: the trace follows execution into every function the lecture calls, including library code.", "Add lecture_util.py's source text to Trace.files so its lines get parsed": "Misconception: the tracer works statically from source text like an outline tool, rather than recording a live run filtered by visible_paths.", "Put @stepover on the calling line so the helper's frame is entered instead": "Confuses the stepover directive (which prunes frames called from a line) with a 'step into' switch."},
+          "distractor_from": {
+            "None: trace_func already records every frame that the lecture's calls enter": "Misconception: the trace follows execution into every function the lecture calls, including library code.",
+            "Add lecture_util.py's source text to Trace.files so its lines get parsed": "Misconception: the tracer works statically from source text like an outline tool, rather than recording a live run filtered by visible_paths.",
+            "Put @stepover on the calling line so the helper's frame is entered instead": "Confuses the stepover directive (which prunes frames called from a line) with a 'step into' switch."
+          },
           "targets_misconception": "The trace follows execution into every function the lecture calls, including library code.",
           "varies": "The question moves from 'what disappears when code moves out' to 'what must change to bring another file's frames in' (functional: inverse direction, a design change instead of a prediction).",
           "invariant": "Recording is gated solely by the frame's co_filename being in visible_paths, which holds only the lecture file.",
@@ -123,7 +127,7 @@
           },
           {
             "q": "Which two kinds of frames are deliberately skipped even inside the lecture file?",
-            "answer": "Comprehension and lambda frames (<listcomp>, <lambda>), plus all 'return' events.",
+            "answer": "Innermost <listcomp> and <lambda> frames (by name; <dictcomp>, <setcomp> and <genexpr> are not skipped), plus all 'return' events.",
             "layer": "detail"
           }
         ],
@@ -607,7 +611,11 @@
           ],
           "answer": "A nested list of 3 lists with 50000 numbers each, from h.tolist()",
           "why": "to_serializable_value's torch.Tensor branch always sets contents=value.tolist() alongside dtype and shape (execute.py L165-L166); no size check exists anywhere in the function (L147-L192). The str(value) fallback (L192) is only reached by objects matching no earlier branch, which a Tensor never is.",
-          "distractor_from": {"Nothing (null): tensors this large keep only their dtype and shape": "Misconception: large tensors are summarized (shape only) in the trace.", "The string str(h), torch's abbreviated printout with '...' in it": "Assumes tensors fall to the generic str(value) fallback, which only unmatched types reach.", "The first and last three numbers of each row, with the rest elided": "Misconception variant: the serializer truncates large arrays the way torch's print does."},
+          "distractor_from": {
+            "Nothing (null): tensors this large keep only their dtype and shape": "Misconception: large tensors are summarized (shape only) in the trace.",
+            "The string str(h), torch's abbreviated printout with '...' in it": "Assumes tensors fall to the generic str(value) fallback, which only unmatched types reach.",
+            "The first and last three numbers of each row, with the rest elided": "Misconception variant: the serializer truncates large arrays the way torch's print does."
+          },
           "targets_misconception": "Large tensors are summarized (shape only) in the trace.",
           "varies": "A large torch tensor instead of a dict holding an unrecognised object (domain: a different branch of the type dispatch).",
           "invariant": "Serialization dispatches on type with no size limit; tensors store dtype, shape and the full tolist().",
@@ -638,9 +646,23 @@
           "ref": "example:value-record-tensor",
           "example": {
             "type": "torch.Tensor",
-            "contents": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "contents": [
+              [
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0
+              ]
+            ],
             "dtype": "torch.float32",
-            "shape": [2, 3]
+            "shape": [
+              2,
+              3
+            ]
           },
           "steps": [
             {
@@ -669,7 +691,7 @@
       "id": "stepover-hide",
       "label": "@stepover prunes recorded steps; @hide only prunes display",
       "kind": "mechanism",
-      "statement": "When trace_func reaches a line carrying @stepover it pushes (path, line) onto a stepovers stack and skips every event whose caller chain contains that location, so calls made from that line are executed but not recorded; reaching the same line again pops it. @hide is computed afterwards by scanning the saved file text, producing hidden_line_numbers that the viewer skips while the line's steps still exist.",
+      "statement": "When trace_func reaches a line carrying @stepover it pushes (path, line) onto a stepovers stack and skips every event whose caller chain contains that location, so calls made from that line are executed but not recorded; reaching the same line again pops it, but only if that location is on top of the stack; a @stepover line reached only once stays pushed, and such stale entries can flip later push/pop behaviour (in the published lecture_07 trace the `with DisableDistributed(): # @stepover` line records __exit__ for the first spawn only). @hide is computed afterwards by scanning the saved file text, producing hidden_line_numbers that the viewer skips while the line's steps still exist.",
       "provenance": {
         "status": "implemented",
         "basis": "evidence",
@@ -705,7 +727,7 @@
             "quote": "x = layer(x)  # @stepover"
           }
         ],
-        "filtering_note": "Basis inference, from reading L267-L274 only: because the pop happens on the next visit of the same line (not on return), a @stepover line inside a loop alternates between skipping and recording the calls beneath it on successive iterations (lecture_02 L598 is such a line, though layer() is a torch module so little lecture code sits beneath it). Confirmed by execution (2026-10-02, the student-line pass): running the local edtrace on a 4-iteration loop records the callee only on iterations 2 and 4, and the edtrace--trace-run widget reproduces the real step stream for all 720 variants it offers. The examples.py pattern (L29-L30) uses @hide on the continuation line of a multi-line statement because the tracer reports the statement's first line, so only the continuation is hidden."
+        "filtering_note": "Basis inference, from reading L267-L274 only: because the pop happens on the next visit of the same line (not on return), a @stepover line inside a loop alternates between skipping and recording the calls beneath it on successive iterations (lecture_02 L598 is such a line, and Block.forward beneath it is lecture code, which the published lecture_02 trace records only on alternating passes). Confirmed by execution (2026-10-02, the student-line pass): running the local edtrace on a 4-iteration loop records the callee only on iterations 2 and 4, and the edtrace--trace-run widget reproduces the real step stream for all 720 variants it offers. The examples.py pattern (L29-L30) uses @hide on the continuation line of a multi-line statement because the tracer reports the statement's first line, so only the continuation is hidden."
       },
       "prerequisites": [
         {
@@ -880,7 +902,11 @@
           ],
           "answer": "The raw string 'http://arxiv.org/abs/2104.09864'",
           "why": "link(str) calls url_reference (execute_util.py L122-L124), which uses arxiv_reference only if is_arxiv_link(url), i.e. url.startswith('https://arxiv.org/') (arxiv_util.py L15-L16). An http URL fails that test, so Reference(url=url) is built (execute_util.py L98-L99). With no authors and no title, Reference.label returns self.url (reference.py L28-L31).",
-          "distractor_from": {"'[Su+ 2021]', built from the scraped abs page": "Misconception: any arXiv-looking (or any paper) URL gets its metadata scraped.", "'RoFormer: Enhanced Transformer with Rotary...'": "Misconception: the arXiv API is queried for the title, and the title is used as the label.", "'[2104.09864 ?]', built from the captured id": "Confuses the regex id capture (used only inside arxiv_reference) with the label rule."},
+          "distractor_from": {
+            "'[Su+ 2021]', built from the scraped abs page": "Misconception: any arXiv-looking (or any paper) URL gets its metadata scraped.",
+            "'RoFormer: Enhanced Transformer with Rotary...'": "Misconception: the arXiv API is queried for the title, and the title is used as the label.",
+            "'[2104.09864 ?]', built from the captured id": "Confuses the regex id capture (used only inside arxiv_reference) with the label rule."
+          },
           "targets_misconception": "Any paper URL gets its metadata scraped.",
           "varies": "A URL that looks like arXiv but fails the exact prefix test, instead of a label computed from given authors (domain: the routing branch rather than the label branch).",
           "invariant": "Scraping happens only for URLs starting with https://arxiv.org/; otherwise Reference(url) and the label falls back authors -> title -> url.",
@@ -1438,7 +1464,11 @@
           ],
           "answer": "No lecture_09.json at all, because the error escapes main() before writing",
           "why": "execute() calls module.main() directly with no try/except (execute.py L346-L347); the exception propagates out of execute() and the __main__ loop, so json.dump (L384-L387) is never reached. There is no partial save and no per-line error capture, and the trace is a recording of a live run, not a static parse.",
-          "distractor_from": {"A lecture_09.json holding the steps recorded before line 300 was reached": "Assumes the steps recorded so far are flushed to disk incrementally.", "A lecture_09.json whose step for line 300 is marked as failed, then the rest": "Misconception: a line that fails is recorded as failed and tracing continues.", "A lecture_09.json built from the source alone, with no values in any env": "Misconception: a trace is a description of the program, independent of running it on a machine."},
+          "distractor_from": {
+            "A lecture_09.json holding the steps recorded before line 300 was reached": "Assumes the steps recorded so far are flushed to disk incrementally.",
+            "A lecture_09.json whose step for line 300 is marked as failed, then the rest": "Misconception: a line that fails is recorded as failed and tracing continues.",
+            "A lecture_09.json built from the source alone, with no values in any env": "Misconception: a trace is a description of the program, independent of running it on a machine."
+          },
           "targets_misconception": "A line that fails is recorded as failed and tracing continues.",
           "varies": "A hardware-dependent failure on a different machine instead of a size problem (domain: the 'one run on one machine' limit rather than the size limit).",
           "invariant": "A trace exists only as the output of one complete successful execution of main() on the machine that ran it.",
@@ -1451,7 +1481,7 @@
           },
           {
             "q": "Which code paths of the lecture produce no steps even though they execute inside the lecture file?",
-            "answer": "List comprehensions and lambdas (frames named <listcomp>/<lambda>), plus 'return' events; also anything beneath a @stepover line."
+            "answer": "Innermost list-comprehension and lambda frames (<listcomp>/<lambda>; dict/set comprehensions and generator expressions are still recorded), plus 'return' events; also anything beneath a @stepover line."
           }
         ],
         "self_explain": "Given these limits, which kind of lecture claim is better verified by re-running the lecture than by reading its official trace, and why?"

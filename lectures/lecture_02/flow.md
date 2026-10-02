@@ -153,7 +153,7 @@ PyTorch creates tensors in CPU memory. To use the GPU's parallelism you must mov
 
 ::figure official/lectures/images/cpu-gpu.png | CPU and GPU each have their own memory; data must be moved across
 ::code lecture_02.py:L186-L199 | move a tensor, or create it on the GPU directly
-::note aside 17:27 | The lecture was executed on the professor's laptop, which has no GPU. GPU-dependent results (the timings, the measured MFU, the checkpointing memory) were shown but not run, so the numbers in the trace are not meaningful.
+::note aside 17:27 | In class the lecture was executed on the professor's laptop, which has no GPU, so the GPU-dependent results he showed (the timings, the measured MFU, the checkpointing memory) were not meaningful. The published trace in the course repo has since been regenerated on an H100 (it records "NVIDIA H100 80GB HBM3"), and its code differs from the current lecture_02.py on a few lines; see [edtrace](#/read/edtrace).
 ::kp dtype-bytes
 ::kp mixed-precision
 
@@ -290,7 +290,7 @@ How good is good? The code says only that MFU of at least 0.5 is "quite good". A
 ::video 37:52-38:21 | the three MFU bands: about 0.1 broken, 0.5 good, 0.8 for a bare matmul
 ::note spoken 38:53 | A student asked which number is "promised": the spec-sheet figure already divided by 2 (989), and "on top of that, you only get 0.5 of that in general".
 ::note spoken 40:00 | The dtype dependence has a practical edge: "if you try to do float32 nowadays, it's going to be really, really slow", because hardware is optimized for bf16 and fp8.
-::note aside 34:46 | The timing and MFU in the lecture's trace came from a laptop CPU, so the professor called them "not very meaningful".
+::note aside 34:46 | The timing and MFU shown in class came from a laptop CPU, so the professor called them "not very meaningful" (the published trace was later regenerated on an H100).
 
 Why is a good MFU only 0.5 and not close to 1? The professor deferred that question ("I'll come back to that when we talk about memory bottlenecks"), and the next section answers it.
 

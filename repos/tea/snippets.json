@@ -104,6 +104,20 @@
   "text": "        session_file = os.path.join(self.output_dir, \"session_id.txt\")\n\n        if os.path.exists(session_file):\n            with open(session_file, 'r') as f:\n                session_id = f.read().strip()\n                print(f\"Loaded existing session ID: {session_id}\")\n                return session_id",
   "sha256": "d2017f7daaec"
  },
+ "generate_video.py:L314-L329": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 314,
+  "end": 329,
+  "text": "        for i, implementation_plan in enumerate(implementation_plans):\n            # Try to load scene trace id, or generate new one if it doesn't exist\n            scene_dir = os.path.join(self.output_dir, file_prefix, f\"scene{i+1}\")\n            subplan_dir = os.path.join(scene_dir, \"subplans\")\n            os.makedirs(subplan_dir, exist_ok=True)  # Create directories if they don't exist\n            \n            scene_trace_id_path = os.path.join(subplan_dir, \"scene_trace_id.txt\")\n            try:\n                with open(scene_trace_id_path, 'r') as f:\n                    scene_trace_id = f.read().strip()\n            except FileNotFoundError:\n                scene_trace_id = str(uuid.uuid4())\n                with open(scene_trace_id_path, 'w') as f:\n                    f.write(scene_trace_id)\n\n            task = self.process_scene(i, scene_outline, implementation_plan, topic, description, max_retries, file_prefix, session_id, scene_trace_id)",
+  "sha256": "d2017f7daaec"
+ },
+ "generate_video.py:L350-L356": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 350,
+  "end": 356,
+  "text": "        curr_scene = i + 1\n        curr_version = 0\n        # scene_trace_id = str(uuid.uuid4()) # Remove uuid generation\n        rag_queries_cache = {}  # Initialize RAG queries cache\n\n        # Create necessary directories\n        code_dir = os.path.join(self.output_dir, file_prefix, f\"scene{curr_scene}\", \"code\")",
+  "sha256": "d2017f7daaec"
+ },
  "generate_video.py:L489-L569": {
   "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
   "start": 489,
@@ -1042,6 +1056,27 @@
   "text": "Q: Plans / Scenes are missing? <br>\nA: It could be API-related issues. Make sure your `.env` file is properly configured (fill in your API keys), or you can enable litellm debug mode to figure out the issues. <br>",
   "sha256": "1d9de48f369f"
  },
+ "src/core/video_renderer.py:L235-L237": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/core/video_renderer.py",
+  "start": 235,
+  "end": 237,
+  "text": "        with open(scene_outline_path) as f:\n            plan = f.read()\n        scene_outline = re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', plan, re.DOTALL).group(1)",
+  "sha256": "cfe7a778d2b5"
+ },
+ "src/rag/rag_integration.py:L160-L163": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/rag/rag_integration.py",
+  "start": 160,
+  "end": 163,
+  "text": "        try: # add try-except block to handle potential json decode errors\n            queries = re.search(r'```json(.*)```', queries, re.DOTALL).group(1)\n            queries = json.loads(queries)\n        except json.JSONDecodeError as e:",
+  "sha256": "69409f39dcf2"
+ },
+ "generate_video.py:L950-L951": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 950,
+  "end": 951,
+  "text": "            if not args.only_plan and not args.only_render:\n                video_generator.combine_videos(args.topic)",
+  "sha256": "d2017f7daaec"
+ },
  "mllm_tools/litellm.py:L154-L193": {
   "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/mllm_tools/litellm.py",
   "start": 154,
@@ -1054,6 +1089,146 @@
   "start": 934,
   "end": 951,
   "text": "        # Process single topic with context\n        print(f\"Processing topic: {args.topic}\")\n\n        if args.only_gen_vid:\n            video_generator.render_video_fix_code(args.topic, args.context, max_retries=args.max_retries)\n            exit()\n\n        if args.only_combine:\n            video_generator.combine_videos(args.topic)\n        else:\n            asyncio.run(video_generator.generate_video_pipeline(\n                args.topic,\n                args.context,\n                max_retries=args.max_retries,\n                only_plan=args.only_plan,\n            ))\n            if not args.only_plan and not args.only_render:\n                video_generator.combine_videos(args.topic)",
+  "sha256": "d2017f7daaec"
+ },
+ "generate_video.py:L92-L133": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 92,
+  "end": 133,
+  "text": "        self.output_dir = output_dir\n        self.verbose = verbose\n        self.use_visual_fix_code = use_visual_fix_code\n        self.session_id = self._load_or_create_session_id()  # Modified to load existing or create new\n        self.scene_semaphore = asyncio.Semaphore(max_scene_concurrency)\n        self.banned_reasonings = get_banned_reasonings()\n\n        # Initialize separate modules\n        self.planner = VideoPlanner(\n            planner_model=planner_model,\n            helper_model=helper_model,\n            output_dir=output_dir,\n            print_response=verbose,\n            use_context_learning=use_context_learning,\n            context_learning_path=context_learning_path,\n            use_rag=use_rag,\n            session_id=self.session_id,\n            chroma_db_path=chroma_db_path,\n            manim_docs_path=manim_docs_path,\n            embedding_model=embedding_model,\n            use_langfuse=use_langfuse\n        )\n        self.code_generator = CodeGenerator(\n            scene_model=scene_model if scene_model is not None else planner_model,\n            helper_model=helper_model if helper_model is not None else planner_model,\n            output_dir=output_dir,\n            print_response=verbose,\n            use_rag=use_rag,\n            use_context_learning=use_context_learning,\n            context_learning_path=context_learning_path,\n            chroma_db_path=chroma_db_path,\n            manim_docs_path=manim_docs_path,\n            embedding_model=embedding_model,\n            use_visual_fix_code=use_visual_fix_code,\n            use_langfuse=use_langfuse,\n            session_id=self.session_id\n        )\n        self.video_renderer = VideoRenderer(\n            output_dir=output_dir,\n            print_response=verbose,\n            use_visual_fix_code=use_visual_fix_code\n        )",
+  "sha256": "d2017f7daaec"
+ },
+ "generate_video.py:L489-L500": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 489,
+  "end": 500,
+  "text": "        session_id = self._load_or_create_session_id()\n        self._save_topic_session_id(topic, session_id)\n        \n        file_prefix = topic.lower()\n        file_prefix = re.sub(r'[^a-z0-9_]+', '_', file_prefix)\n        \n        # Load or generate scene outline\n        scene_outline_path = os.path.join(self.output_dir, file_prefix, f\"{file_prefix}_scene_outline.txt\")\n        if os.path.exists(scene_outline_path):\n            with open(scene_outline_path, \"r\") as f:\n                scene_outline = f.read()\n            print(f\"Loaded existing scene outline for topic: {topic}\")",
+  "sha256": "d2017f7daaec"
+ },
+ "generate_video.py:L556-L569": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 556,
+  "end": 569,
+  "text": "            if os.path.exists(code_dir):\n                if any(f.endswith('.py') for f in os.listdir(code_dir)):\n                    has_code = True\n            \n            # For only_render mode, only process scenes without code\n            if args.only_render:\n                if not has_code:\n                    scenes_to_process.append((i+1, implementation_plan))\n                    print(f\"Scene {i+1} has no code, will process\")\n                else:\n                    print(f\"Scene {i+1} already has code, skipping\")\n            # For normal mode, process scenes that haven't been successfully rendered\n            elif not os.path.exists(os.path.join(scene_dir, \"succ_rendered.txt\")):\n                scenes_to_process.append((i+1, implementation_plan))",
+  "sha256": "d2017f7daaec"
+ },
+ "generate_video.py:L835-L845": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 835,
+  "end": 845,
+  "text": "            print(\"-\" * 160)\n            for status in all_statuses:\n                # Create status string showing plan/code/render completion for each scene\n                scene_status_str = \"\"\n                for scene in status['scene_status']:\n                    scene_str = (\n                        (\"P\" if scene['has_plan'] else \"-\") +\n                        (\"C\" if scene['has_code'] else \"-\") +\n                        (\"R\" if scene['has_render'] else \"-\") + \" \"\n                    )\n                    scene_status_str += scene_str",
+  "sha256": "d2017f7daaec"
+ },
+ "task_generator/prompts_raw/__init__.py:L219-L231": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/task_generator/prompts_raw/__init__.py",
+  "start": 219,
+  "end": 231,
+  "text": "**Spatial Constraints:**\n*   **Safe area margins:** 0.5 units on all sides from the scene edges. *All objects must be positioned within these margins.*\n*   **Minimum spacing:** 0.3 units between any two Manim objects (measured edge to edge). *Ensure adequate spacing to prevent overlaps and maintain visual clarity.*\n\nRequirements:\n1. Scenes must build progressively, starting from foundational concepts and advancing to more complex ideas to ensure a logical flow of understanding for the viewer. Each scene should naturally follow from the previous one, creating a cohesive learning narrative. Start with simpler scene layouts and progressively increase complexity in later scenes.\n2. The total number of scenes should be between 3 and 7.\n3. Learning objectives should be distributed evenly across the scenes.\n4. The total video duration must be under 15 minutes.\n5. It is essential to use the exact output format, tags, and headers as specified in the prompt.\n6. Maintain consistent formatting throughout the entire scene plan.\n7. **No External Assets:** Do not import any external files (images, audio, video). *Use only Manim built-in elements and procedural generation.\n8. **Focus on in-depth explanation of the theorem. Do not include any promotional elements (like YouTube channel promotion, subscribe messages, or external resources) or quiz sessions. Detailed example questions are acceptable and encouraged.**",
+  "sha256": "0f76bb3408ca"
+ },
+ "src/core/video_planner.py:L161-L175": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/core/video_planner.py",
+  "start": 161,
+  "end": 175,
+  "text": "        response_text = self.planner_model(\n            _prepare_text_inputs(prompt),\n            metadata={\"generation_name\": \"scene_outline\", \"tags\": [topic, \"scene-outline\"], \"session_id\": session_id}\n        )\n        # extract scene outline <SCENE_OUTLINE> ... </SCENE_OUTLINE>\n        scene_outline_match = re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', response_text, re.DOTALL)\n        scene_outline = scene_outline_match.group(1) if scene_outline_match else response_text\n\n        # replace all spaces and special characters with underscores for file path compatibility\n        file_prefix = topic.lower()\n        file_prefix = re.sub(r'[^a-z0-9_]+', '_', file_prefix)\n        # save plan to file\n        os.makedirs(os.path.join(self.output_dir, file_prefix), exist_ok=True) # Ensure directory exists\n        with open(os.path.join(self.output_dir, file_prefix, f\"{file_prefix}_scene_outline.txt\"), \"w\") as f:\n            f.write(scene_outline)",
+  "sha256": "c214753b2878"
+ },
+ "generate_video.py:L515-L535": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 515,
+  "end": 535,
+  "text": "            scene_outline_content = extract_xml(scene_outline)\n            scene_numbers = len(re.findall(r'<SCENE_(\\d+)>[^<]', scene_outline_content))\n            implementation_plans_dict = {i: None for i in range(1, scene_numbers + 1)}\n\n        # Generate missing implementation plans for specified scenes or all missing scenes\n        missing_scenes = []\n        for scene_num, plan in implementation_plans_dict.items():\n            if plan is None and (specific_scenes is None or scene_num in specific_scenes):\n                missing_scenes.append(scene_num)\n\n        if missing_scenes:\n            print(f\"Generating implementation plans for missing scenes: {missing_scenes}\")\n            for scene_num in missing_scenes:\n                scene_outline_content = extract_xml(scene_outline)\n                scene_match = re.search(f'<SCENE_{scene_num}>(.*?)</SCENE_{scene_num}>', scene_outline_content, re.DOTALL)\n                if scene_match:\n                    scene_outline_i = scene_match.group(1)\n                    scene_trace_id = str(uuid.uuid4())\n                    implementation_plan = await self._generate_scene_implementation_single(\n                        topic, description, scene_outline_i, scene_num, file_prefix, session_id, scene_trace_id)\n                    implementation_plans_dict[scene_num] = implementation_plan",
+  "sha256": "d2017f7daaec"
+ },
+ "src/core/video_planner.py:L241-L248": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/core/video_planner.py",
+  "start": 241,
+  "end": 248,
+  "text": "        vision_storyboard_plan = self.planner_model(\n            _prepare_text_inputs(prompt_vision_storyboard),\n            metadata={\"generation_name\": \"scene_vision_storyboard\", \"trace_id\": scene_trace_id, \"tags\": [topic, f\"scene{i}\"], \"session_id\": session_id}\n        )\n        # extract vision storyboard plan <SCENE_VISION_STORYBOARD_PLAN> ... </SCENE_VISION_STORYBOARD_PLAN>\n        vision_match = re.search(r'(<SCENE_VISION_STORYBOARD_PLAN>.*?</SCENE_VISION_STORYBOARD_PLAN>)', vision_storyboard_plan, re.DOTALL)\n        vision_storyboard_plan = vision_match.group(1) if vision_match else vision_storyboard_plan\n        implementation_plan += vision_storyboard_plan + \"\\n\\n\"",
+  "sha256": "c214753b2878"
+ },
+ "task_generator/prompts_raw/__init__.py:L1450-L1457": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/task_generator/prompts_raw/__init__.py",
+  "start": 1450,
+  "end": 1457,
+  "text": "    - Propose modular functions for creating and animating common objects to promote code reusability.\n    - Organize the overall code structure into logical sections: dependencies, object definitions, individual layout stages, and the main `construct` method.\n    - Include inline comments to document the rationale for configuration choices, referencing the Manim Documentation *and the plugin documentation where applicable*.\n    \n***Mandatory Safety Checks***:\n    - **Safe Area Enforcement**: All objects, including text bounding boxes, must remain within 0.5 unit margins.\n    - **Minimum Spacing Validation**: Confirm a minimum of 0.3 units spacing between every pair of objects.\n    - **Transition Buffers**: Use explicit `Wait()` calls to separate animation steps and sub-scenes.",
+  "sha256": "0f76bb3408ca"
+ },
+ "src/rag/vector_store.py:L66-L85": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/rag/vector_store.py",
+  "start": 66,
+  "end": 85,
+  "text": "        core_path = os.path.join(self.chroma_db_path, \"manim_core\")\n        \n        # Load or create core vector store\n        if os.path.exists(core_path):\n            print(\"Loading existing core ChromaDB...\")\n            self.core_vector_store = Chroma(\n                collection_name=\"manim_core\",\n                persist_directory=core_path,\n                embedding_function=self._get_embedding_function()\n            )\n        else:\n            print(\"Creating new core ChromaDB...\")\n            self.core_vector_store = self._create_core_store()\n        \n        # Fix: Use correct path construction for plugin_docs\n        plugin_docs_path = os.path.join(self.manim_docs_path, \"plugin_docs\")\n        print(f\"Plugin docs path: {plugin_docs_path}\")\n        if os.path.exists(plugin_docs_path):\n            for plugin_name in os.listdir(plugin_docs_path):\n                plugin_store_path = os.path.join(self.chroma_db_path, f\"manim_plugin_{plugin_name}\")",
+  "sha256": "f3494b430b7d"
+ },
+ "src/rag/rag_integration.py:L79-L97": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/rag/rag_integration.py",
+  "start": 79,
+  "end": 97,
+  "text": "        try:\n            response = self.helper_model(\n                _prepare_text_inputs(prompt),\n                metadata={\"generation_name\": \"detect-relevant-plugins\", \"tags\": [topic, \"plugin-detection\"], \"session_id\": self.session_id}\n            )\n            # Clean the response to ensure it only contains the JSON array\n            response = re.search(r'```json(.*)```', response, re.DOTALL).group(1)\n            try:\n                relevant_plugins = json.loads(response)\n            except json.JSONDecodeError as e:\n                print(f\"JSONDecodeError when parsing relevant plugins: {e}\")\n                print(f\"Response text was: {response}\")\n                return []\n\n            print(f\"LLM detected relevant plugins: {relevant_plugins}\")\n            return relevant_plugins\n        except Exception as e:\n            print(f\"Error detecting plugins with LLM: {e}\")\n            return []",
+  "sha256": "69409f39dcf2"
+ },
+ "src/rag/vector_store.py:L277-L291": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/rag/vector_store.py",
+  "start": 277,
+  "end": 291,
+  "text": "        manim_core_queries = [query for query in queries if query[\"type\"] == \"manim-core\"]\n        manim_plugin_queries = [query for query in queries if query[\"type\"] != \"manim-core\" and query[\"type\"] in self.plugin_stores]\n        \n        if len([q for q in queries if q[\"type\"] != \"manim-core\"]) != len(manim_plugin_queries):\n            print(\"Warning: Some plugin queries were skipped because their types weren't found in available plugin stores\")\n        \n        # Search in core manim docs\n        for query in manim_core_queries:\n            query_text = query[\"query\"]\n            self.core_vector_store._embedding_function.parent_observation_id = span.id\n            manim_core_results = self.core_vector_store.similarity_search_with_relevance_scores(\n                query=query_text,\n                k=k,\n                score_threshold=0.5\n            )",
+  "sha256": "f3494b430b7d"
+ },
+ "generate_video.py:L362-L372": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 362,
+  "end": 372,
+  "text": "            code, log = self.code_generator.generate_manim_code(\n                topic=topic,\n                description=description,\n                scene_outline=scene_outline,\n                scene_implementation=scene_implementation,\n                scene_number=curr_scene,\n                additional_context=[_prompt_manim_cheatsheet, _code_font_size, _code_limit, _code_disable],\n                scene_trace_id=scene_trace_id, # Use passed scene_trace_id\n                session_id=session_id,\n                rag_queries_cache=rag_queries_cache  # Pass the cache\n            )",
+  "sha256": "d2017f7daaec"
+ },
+ "task_generator/prompts_raw/__init__.py:L1735-L1744": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/task_generator/prompts_raw/__init__.py",
+  "start": 1735,
+  "end": 1744,
+  "text": "from manim import config as global_config\nfrom manim_voiceover import VoiceoverScene\nfrom src.utils.kokoro_voiceover import KokoroService # You MUST import like this as this is our custom voiceover service.\n\n# plugins imports, don't change the import statements\nfrom manim_circuit import *\nfrom manim_physics import *\nfrom manim_chemistry import *\nfrom manim_dsa import *\nfrom manim_ml import *",
+  "sha256": "0f76bb3408ca"
+ },
+ "src/core/video_renderer.py:L113-L124": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/core/video_renderer.py",
+  "start": 113,
+  "end": 124,
+  "text": "            except Exception as e:\n                print(f\"Error: {e}\")\n                print(f\"Retrying {retries+1} of {max_retries}...\")\n\n                with open(os.path.join(code_dir, f\"{file_prefix}_scene{curr_scene}_v{curr_version}_error.log\"), \"a\") as f:\n                    f.write(f\"\\nError in attempt {retries}:\\n{str(e)}\\n\")\n                retries += 1\n                return code, str(e) # Indicate failure and return error message\n            \n        print(f\"Successfully rendered {file_path}\")\n        with open(os.path.join(self.output_dir, file_prefix, f\"scene{curr_scene}\", \"succ_rendered.txt\"), \"w\") as f:\n            f.write(\"\")",
+  "sha256": "cfe7a778d2b5"
+ },
+ "generate_video.py:L383-L422": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 383,
+  "end": 422,
+  "text": "            while True: # Retry loop controlled by break statements\n                code, error_message = await self.video_renderer.render_scene(\n                    code=code,\n                    file_prefix=file_prefix,\n                    curr_scene=curr_scene,\n                    curr_version=curr_version,\n                    code_dir=code_dir,\n                    media_dir=media_dir,\n                    max_retries=max_retries, # Pass max_retries here if needed in render_scene\n                    use_visual_fix_code=self.use_visual_fix_code,\n                    visual_self_reflection_func=self.code_generator.visual_self_reflection, # Pass visual_self_reflection function\n                    banned_reasonings=self.banned_reasonings, # Pass banned reasonings\n                    scene_trace_id=scene_trace_id,\n                    topic=topic,\n                    session_id=session_id\n                )\n                if error_message is None: # Render success if error_message is None\n                    break\n\n                if curr_version >= max_retries: # Max retries reached\n                    print(f\"Max retries reached for scene {curr_scene}, error: {error_message}\")\n                    break # Exit retry loop\n\n                curr_version += 1\n                # if program runs this, it means that the code is not rendered successfully\n                code, log = self.code_generator.fix_code_errors(\n                    implementation_plan=scene_implementation,\n                    code=code,\n                    error=error_message,\n                    scene_trace_id=scene_trace_id,\n                    topic=topic,\n                    scene_number=curr_scene,\n                    session_id=session_id,\n                    rag_queries_cache=rag_queries_cache\n                )\n\n                with open(os.path.join(code_dir, f\"{file_prefix}_scene{curr_scene}_v{curr_version}_fix_log.txt\"), \"w\") as f:\n                    f.write(log)\n                with open(os.path.join(code_dir, f\"{file_prefix}_scene{curr_scene}_v{curr_version}.py\"), \"w\") as f:\n                    f.write(code)",
+  "sha256": "d2017f7daaec"
+ },
+ "src/core/video_renderer.py:L250-L276": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/src/core/video_renderer.py",
+  "start": 250,
+  "end": 276,
+  "text": "        for scene_num in range(1, scene_count + 1):\n            folders = [f for f in scene_folders if int(f.split(\"scene\")[-1].split(\"_\")[0]) == scene_num]\n            if not folders:\n                print(f\"Warning: Missing scene {scene_num}\")\n                continue\n\n            folders.sort(key=lambda f: int(f.split(\"_v\")[-1]))\n            folder = folders[-1]\n\n            video_found = False\n            subtitles_found = False\n            for filename in os.listdir(os.path.join(folder, \"1080p60\")):\n                if filename.endswith('.mp4'):\n                    scene_videos.append(os.path.join(folder, \"1080p60\", filename))\n                    video_found = True\n                elif filename.endswith('.srt'):\n                    scene_subtitles.append(os.path.join(folder, \"1080p60\", filename))\n                    subtitles_found = True\n\n            if not video_found:\n                print(f\"Warning: Missing video for scene {scene_num}\")\n            if not subtitles_found:\n                scene_subtitles.append(None)\n\n        if len(scene_videos) != scene_count:\n            print(\"Not all videos/subtitles are found, aborting video combination.\")\n            return",
+  "sha256": "cfe7a778d2b5"
+ },
+ "eval_suite/image_utils.py:L28-L38": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/eval_suite/image_utils.py",
+  "start": 28,
+  "end": 38,
+  "text": "    clip = VideoFileClip(video_path)\n    frames = list(clip.iter_frames(fps=1))  # one frame every second\n    \n    total_frames = len(frames)\n    if total_frames == 0:\n        print(\"No frames extracted from the video.\")\n        return []\n    \n    # Determine the number of frames per chunk\n    frames_per_chunk = total_frames // num_chunks\n    num_chunks = min(num_chunks, (total_frames + frames_per_chunk - 1) // frames_per_chunk)",
+  "sha256": "dc702196245c"
+ },
+ "eval_suite/utils.py:L49-L58": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/eval_suite/utils.py",
+  "start": 49,
+  "end": 58,
+  "text": "    # Create a new dictionary with the converted values\n    converted_data = {}\n    for key, value in data.items():\n        if key == \"score\":\n            if isinstance(value, int):\n                converted_data[key] = value\n            elif isinstance(value, str) and value.isdigit():\n                converted_data[key] = int(value)\n            else:\n                raise ValueError(f\"Invalid score value: {value!r}\")",
+  "sha256": "854667556195"
+ },
+ "generate_video.py:L934-L939": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main/generate_video.py",
+  "start": 934,
+  "end": 939,
+  "text": "        # Process single topic with context\n        print(f\"Processing topic: {args.topic}\")\n\n        if args.only_gen_vid:\n            video_generator.render_video_fix_code(args.topic, args.context, max_retries=args.max_retries)\n            exit()",
   "sha256": "d2017f7daaec"
  }
 }

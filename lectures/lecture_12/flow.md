@@ -339,7 +339,7 @@ Humans are slow and expensive. The alternative is **LLM-as-a-judge**: let a stro
 
 ### AlpacaEval: win rate, length bias, and a regression fix
 
-**AlpacaEval** (2023) uses a fixed set of 805 instructions from various sources. For each one, the model under test answers, a baseline model (GPT-4 preview) answers, and a judge (also GPT-4 preview) picks the better answer. The metric is the **win rate against the baseline**.
+**AlpacaEval** (2023) uses a fixed set of 805 instructions from various sources. For each one, the model under test answers, a baseline model answers, and a judge picks the better answer. The metric is the **win rate against the baseline**. The lecture's baseline and judge, both GPT-4 preview, are those of **AlpacaEval 2.0**, the version selected on the leaderboard screenshot below; the original 2023 AlpacaEval compared against text-davinci-003.
 
 The professor immediately flags a "potential bias": the judge is the same model as the baseline it compares against. One mitigation is "multiple judges and ensembling". "But let's put that aside for now."
 
@@ -355,7 +355,7 @@ The widget's curve is a toy (its coefficients are demo values, not AlpacaEval's)
 
 ### How do you evaluate a metric?
 
-This raises a question "not necessarily specific to AlpacaEval": we evaluate models with metrics, but how do you know a *metric* is any good? "This is a hard problem. And there's no answer here." One sanity check is **correlation with another metric** you trust. The professor read AlpacaEval's correlation with Chatbot Arena off the AlpacaEval figure: 0.98. So if you want an Arena-like ranking but do not want to wait for human votes (or are "too shy to put your model" on Arena), AlpacaEval is a cheap stand-in.
+This raises a question "not necessarily specific to AlpacaEval": we evaluate models with metrics, but how do you know a *metric* is any good? "This is a hard problem. And there's no answer here." One sanity check is **correlation with another metric** you trust. The professor read AlpacaEval's correlation with Chatbot Arena off the AlpacaEval figure: 0.98. So if you want an Arena-like ranking but do not want to wait for human votes (or are "too shy to put your model" on Arena), AlpacaEval is a cheap stand-in. The 0.98 is the length-controlled figure: the cited regression paper reports that length control raises the Spearman correlation with Arena from 0.94 to 0.98.
 
 ::code lecture_12.py:L189-L192 | how do we evaluate the metric? correlation with Chatbot Arena is high
 ::figure https://github.com/tatsu-lab/alpaca_eval/raw/main/figures/chat_correlations_no_ae.png | how well each automatic benchmark's ranking agrees with Chatbot Arena's human ranking

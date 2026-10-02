@@ -627,5 +627,24 @@
   "course": {
     "source": "lecture_16",
     "status": "atlas/lectures/lecture_16/knowledge_points.json exists; knowledge_points.json carries a course_path mapping onto lecture_16:policy-gradient-variance (p5), ppo-ratio-clip (p7), per-token-kl-reward-shaping (p14), grpo-group-zscore-advantage (p18-p20), rl-rollout-cost (p45). The course never states importance sampling, ESS or P3O."
-  }
+  },
+  "inconsistencies": [
+    {
+      "what": "Fig. 2 temperature robustness",
+      "a": "caption and §4.3: P3O robust to varied sampling temperature, matches or exceeds standard-temperature performance",
+      "b": "Fig. 2(a): at T = 0.6 P3O collapses with GRPO (~0 by step 20); only T = 1.2 supports the claim; no T = 1.0 curve is plotted",
+      "refs": [
+        "feynrl:fig2",
+        "feynrl:§4.3"
+      ]
+    },
+    {
+      "what": "Fig. 4(b) baseline",
+      "a": "text: P3O keeps performance under FP8 at iteration 30",
+      "b": "Fig. 4(b): the 'Baseline' curve is above both trained models at every k",
+      "refs": [
+        "feynrl:fig4"
+      ]
+    }
+  ]
 }

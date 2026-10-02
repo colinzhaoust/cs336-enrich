@@ -929,5 +929,208 @@
   "end": 152,
   "text": "                            \"policy_version\": int(policy_version),",
   "sha256": "d07c226e518f"
+ },
+ "main_rl.py:L14-L26": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/main_rl.py",
+  "start": 14,
+  "end": 26,
+  "text": "    config = cfg.load_and_verify(method=\"rl\",\n                                 input_yaml=args.config_file,\n                                 experiment_id=args.experiment_id,\n                                 rank=0)\n\n    # Dispatch to async (overlap) or sync engine based on config.\n    if config.overlap and config.overlap.enabled:\n        from run_rl_async import main\n        main(args, config)\n\n    else:\n        from run_rl_sync import main\n        main(args, config)",
+  "sha256": "417dc4f8e41d"
+ },
+ "train_sync.yaml:L27-L47": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/examples/llm/rl/gsm8k/qwen2.5-1.5b-instruct/train_sync.yaml",
+  "start": 27,
+  "end": 47,
+  "text": "overlap:\n  enabled: False\n  max_lag: 1\n  behave_imp_weight_cap: 5.0\n\ntrain:\n  alg_name: \"grpo\"\n  optimizer_name: \"adamw\"\n  lr: 1e-5\n  adam_epsilon: 1e-8\n  betas: [0.9, 0.95]\n  weight_decay: 0.01\n  warmup_steps_ratio: 0.1\n  clip_grad_norm: 1.0\n  lr_scheduler: \"WarmupCosineLR\"\n\n  kl_coeff: 0.0\n  clip_low: 0.4\n  clip_high: 0.4\n  entropy_coeff: 0.0\n  update_after_full_replay: True",
+  "sha256": "8fde7229f656"
+ },
+ "train_sync.yaml:L55-L82": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/examples/llm/rl/gsm8k/qwen2.5-1.5b-instruct/train_sync.yaml",
+  "start": 55,
+  "end": 82,
+  "text": "  total_number_of_epochs: 100\n  train_steps_per_epoch: 1\n  dynamic_ratio_every_step: False\n\n  train_batch_size_per_gpu: 8\n  gradient_accumulation_steps: 1\n  val_batch_size_per_gpu: 8\n  normalize_loss: True\n\nreward:\n  broadcast: True\n  reward_func: math_verify_reward_func\n\nrollout:\n  temperature: 1.0\n  max_tokens: 1024\n  n_samples: 4\n  top_p: 1.0\n  top_k: -1\n  ignore_eos: False\n  stop: \"\"\n  gpu_memory_utilization: 0.9\n  stop_token_ids: []\n  prompt_logprobs: False\n  force_strict_on_policy: True\n  tensor_parallel_size: 1\n  rollout_batch_size_per_gpu: 64\n  rollout_samples_per_epoch: 512",
+  "sha256": "8fde7229f656"
+ },
+ "run_rl_sync.py:L34-L47": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/run_rl_sync.py",
+  "start": 34,
+  "end": 47,
+  "text": "    # 1. Reset replay buffer\n    replay_buffer.reset()\n\n    # 2. all engines must finish before we proceed. collect_rollouts is blocking call.\n    logger.info(f\"[Epoch {epoch+1}] Starting rollout generation...\")\n    rollout_dataloader.batch_sampler.set_epoch(epoch)\n    rollout_metrics = collect_rollouts(dataloader=rollout_dataloader,\n                                       rollout_engines=rollout_engines,\n                                       epoch=epoch,\n                                       policy_version=policy_version,\n                                       replay_buffer=replay_buffer,\n                                       n_samples=n_samples,\n                                       logger=logger,\n                                       rollout_timeout=rollout_timeout)",
+  "sha256": "3ed5141e510e"
+ },
+ "run_rl_sync.py:L68-L90": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/run_rl_sync.py",
+  "start": 68,
+  "end": 90,
+  "text": "    shard_refs = shard_and_put(train_batches_padded, num_engines=num_engines)\n\n    # 4. Training loop\n    epoch_metrics = {}\n    for step in range(steps_per_epoch):\n        train_metrics = run_training_step(engines=training_engines,\n                                          shard_refs=shard_refs,\n                                          logger=logger,\n                                          train_step_timeout=train_step_timeout)\n        # collect the metrics\n        for k, v in train_metrics.items():\n            epoch_metrics.setdefault(k, []).append(v)\n\n        global_step += 1\n        if step % 10 == 0:\n            metric_str = \", \".join(f\"{k}={v:.4f}\" for k, v in train_metrics.items())\n            logger.info(f\"[Epoch {epoch+1}][Step {step+1}/{steps_per_epoch}] {metric_str}\")\n\n        if tracker:\n            tracker.log_metrics({f\"train/{k}\": v for k, v in train_metrics.items()}, step=global_step)\n\n    # 5. Post-training\n    policy_version += 1",
+  "sha256": "3ed5141e510e"
+ },
+ "data_feeds/mixed_sampler.py:L126-L129": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/data_feeds/mixed_sampler.py",
+  "start": 126,
+  "end": 129,
+  "text": "                # sample from the dataset\n                # self.rng.integers implies sampling with replacement.\n                local_indices = self.rng.integers(low=0, high=self.len_datasets[current_dataset_name], size=count)\n                global_indices = [self.offsets[current_dataset_name] + i  for i in local_indices]",
+  "sha256": "847daade3d32"
+ },
+ "core/rl_engines.py:L378-L403": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/core/rl_engines.py",
+  "start": 378,
+  "end": 403,
+  "text": "    for rollout_batch in dataloader:\n        # 1. split data across rollout engines\n        rollout_shards = shard_batch_for_engines(rollout_batch, num_rollout_engines)\n        if not rollout_shards:\n            continue\n\n        # 2. schedule rollout generation\n        rollout_samples = []\n        for i, shard in enumerate(rollout_shards):\n            rollout_samples.append(rollout_engines[i].generate.remote(prompts=shard,\n                                                                      current_iter=epoch,\n                                                                      policy_version=policy_version))\n\n        # 3. gather rollouts. This is a blocking call means all engines must\n        # finish generating rollouts before we can proceed.\n        rollout_lists = ray_get_with_timeout(refs=rollout_samples,\n                                             timeout=rollout_timeout,\n                                             description=f\"rollout generation (epoch {epoch+1})\",\n                                             logger=logger)\n\n        # 4. merge rollouts across all engines and collect stats\n        rollout_merged, stats = merge_rollout_with_stats(rollout_lists)\n        rollout_stats.accumulate(acc, stats)\n\n        # 5. now add them to replay buffer\n        replay_buffer.add_batch_seqs(rollout_merged)",
+  "sha256": "87c8545899c7"
+ },
+ "rollouts/vllm_engine.py:L436-L441": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/vllm_engine.py",
+  "start": 436,
+  "end": 441,
+  "text": "                            pred_start = prompt_len - 1\n                            pred_end   = seq_len - 1\n                            pred_masks[pred_start:pred_end] = 1\n                            pred_masks[pred_start:pred_end] = pred_masks[pred_start:pred_end] * (~nan_mask).to(pred_masks.dtype)\n                            pred_old_logprobs[pred_start:pred_end] = response_logprobs\n                            pred_rewards[pred_start:pred_end] = rewards[prompt_len:]",
+  "sha256": "60f2477921de"
+ },
+ "rewards/gsm8k_reward_func.py:L39-L50": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rewards/gsm8k_reward_func.py",
+  "start": 39,
+  "end": 50,
+  "text": "    r = torch.zeros((len(response_data.token_ids),), dtype=torch.float32)\n    answer = extract_solution(solution_str=solution_str)\n\n    if answer is None:\n        return r, is_per_token, correct_threshold\n    else:\n        if answer == ground_truth:\n            r[-1] = score\n            return r, is_per_token, correct_threshold\n        else:\n            r[-1] = format_score\n            return r, is_per_token, correct_threshold",
+  "sha256": "fce1a33c4d6d"
+ },
+ "rollouts/base.py:L174-L181": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py",
+  "start": 174,
+  "end": 181,
+  "text": "        if isinstance(rewards, torch.Tensor):\n            rewards = rewards.to(dtype=torch.float32, device='cpu')\n\n        else:\n            rewards = torch.tensor(rewards, dtype=torch.float32, device='cpu')\n\n        if rewards.numel() != len(response.token_ids):\n            raise ValueError(f\"score_response must return len={len(response.token_ids)} rewards, got {rewards.numel()}\")",
+  "sha256": "570ce155411a"
+ },
+ "rollouts/base.py:L131-L155": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py",
+  "start": 131,
+  "end": 155,
+  "text": "        denom = len(samples) # number of samples in the group\n        if len(samples) > 1:\n            rewards_array = np.array(stats['rewards'])\n            mean_scores = rewards_array.sum() / denom\n            # Bessel's correction (n-1) for unbiased sample std with small n_samples\n            std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))\n\n        else:\n            # For a single sample, we don't normalize (i.e. advantage is 0 if we subtract mean)\n            # but usually for n=1 we keep the raw reward.\n            mean_scores = 0.0\n            std_scores  = 1.0\n\n        if is_per_token:\n            raise ValueError(\"per token rewards are not supported yet as normalization is done assuming per response rewards\")\n\n        # now update the rewards in the samples\n        for i, sample in enumerate(samples):\n            # sample['reward']: [T] where prompt tokens would get 0\n            # sample['reward'][-1]: means the last token reward\n            zscore = torch.zeros_like(sample['token_rewards'], dtype=torch.float)\n            zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)\n            sample[\"token_zscores\"] = zscore\n            if self.reward_broadcast:\n                sample[\"token_zscores\"][prompt_len:] = zscore[-1]",
+  "sha256": "570ce155411a"
+ },
+ "rollouts/replay_buffer.py:L73-L82": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/replay_buffer.py",
+  "start": 73,
+  "end": 82,
+  "text": "        for sample in samples:\n            if sample[\"response_len\"] == 0:\n                continue\n\n            seq_len = sample[\"input_ids\"].numel()\n            # samples which are longer than max_seq_len are truncated,\n            # otherwise there would be issuues with done, reward, mask, etc.\n            if seq_len > self.max_seq_len:\n                truncated_count += 1\n                continue",
+  "sha256": "d07c226e518f"
+ },
+ "core/rl_engines.py:L469-L482": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/core/rl_engines.py",
+  "start": 469,
+  "end": 482,
+  "text": "    # Pad to ensure equal batches per engine, unequal shard sizes across\n    # engines deadlock ZeRO-3 collectives.\n    num_batches = len(train_batches)\n    batches_per_engine = (num_batches + num_engines - 1) // num_engines\n    total_needed       = batches_per_engine * num_engines\n\n    if total_needed > num_batches:\n        padding = [train_batches[-1]] * (total_needed - num_batches)\n        batches_padded = train_batches + padding\n\n    else:\n        batches_padded = train_batches\n\n    return batches_padded",
+  "sha256": "87c8545899c7"
+ },
+ "algs/GRPO/grpo.py:L301-L307": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 301,
+  "end": 307,
+  "text": "            # If update_only_after_full_replay is True, we only update at the very end\n            # of the shard. Otherwise, we respect ga_pi.\n            if self.update_only_after_full_replay:\n                is_boundary = is_last\n\n            else:\n                is_boundary = (((step + 1) % ga_pi) == 0) or is_last",
+  "sha256": "ae8a5bf841ff"
+ },
+ "configs/load.py:L388-L389": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/configs/load.py",
+  "start": 388,
+  "end": 389,
+  "text": "                if self.train.update_after_full_replay:\n                    optimizer_steps_per_epoch = self.train.train_steps_per_epoch",
+  "sha256": "a394c249e63b"
+ },
+ "algs/RL/common.py:L59-L64": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/common.py",
+  "start": 59,
+  "end": 64,
+  "text": "        # [B, T, V] -> [B, T-1, V]\n        logits = output.logits[:, :-1, :].contiguous()\n        B, T_minus_1, vocab_size = logits.shape\n\n        # [B, T] -> [B, T-1]\n        target_ids = input_ids[:, 1:].contiguous()",
+  "sha256": "593d1ce02e77"
+ },
+ "algs/GRPO/grpo.py:L316-L318": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 316,
+  "end": 318,
+  "text": "            advs      = micro_batch['zscore'][:, :-1].to(device, non_blocking=True)\n            mask      = micro_batch['mask'][:, :-1].to(device, non_blocking=True)\n            old_logprobs = micro_batch['old_logprobs'][:, :-1].to(device, non_blocking=True)",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/GRPO/grpo.py:L188-L196": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 188,
+  "end": 196,
+  "text": "        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum\n\n        # 5. useful metrics. Here per-token means using local denom for interpretability.\n        with torch.no_grad():\n            # first term too large ==> policy changed too much upward\n            # second term too small ==> policy changed too much downward\n            clipped_mask = (ratio > (1.0 + self.clip_high)) | (ratio < (1.0 - self.clip_low))\n            # fraction of masked tokens that ratio out of ranges\n            clipfrac = (clipped_mask.to(dtype=dtype) * mask).sum() / denom",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/PPO/ppo.py:L211-L225": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/PPO/ppo.py",
+  "start": 211,
+  "end": 225,
+  "text": "        for t in reversed(range(T)): # [T-1, 0]\n            # Done is 1 if EOS/Terminal, we do NOT bootstrap from t+1.\n            not_done = 1.0 - done[:, t]\n            is_valid = mask[:, t]\n\n            # GAE: A[t] = delta[t] + gamma * tau * A[t+1] * (1 - done[t])\n            delta = rewards[:, t] + (self.gamma * next_val * not_done) - values[:, t]\n            last_adv   = is_valid * (delta + (self.gamma * self.tau * last_adv * not_done))\n            advs[:, t] = last_adv\n\n            # At valid positions use v(s_t) and at padding keep next_val\n            # so the bootstrap survives through padding to the last valid token.\n            next_val = torch.where(is_valid > 0.5, values[:, t], next_val)\n\n        rets = advs + values",
+  "sha256": "06f91f9c3acc"
+ },
+ "algs/PPO/ppo.py:L439-L459": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/PPO/ppo.py",
+  "start": 439,
+  "end": 459,
+  "text": "                rewards = mb['rewards'][:, :-1].to(device, non_blocking=True)\n                done    = mb['done'][:, :-1].to(device, non_blocking=True)\n                mask    = mb['mask'][:, :-1].to(device, non_blocking=True)\n\n                rets, advs = self.compute_advantages(rewards=rewards,\n                                                     values=vals,\n                                                     done=done,\n                                                     mask=mask,\n                                                     last_val=last_v)\n                mask_bool = (mask.to(device=device) > 0.5)\n                if mask_bool.any():\n                    all_valid_advs.append(advs[mask_bool].cpu())\n                unnormalized_data.append((rets.cpu(), advs.cpu()))\n\n        if len(all_valid_advs) > 0:\n            # normalize it across all ranks. Each rank computes its own mean/std from ~1/N of the data\n            # which biases the gradient aggregation so we need aggregate them across all ranks.\n            mean, std = self.get_global_stats(all_valid_advs, device)\n            normalized_data = []\n            for rets, advs in unnormalized_data:\n                normalized_data.append((rets, (advs - mean) / std))",
+  "sha256": "06f91f9c3acc"
+ },
+ "algs/P3O/p3o.py:L192-L208": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 192,
+  "end": 208,
+  "text": "        # 2. calculate ratio = pi / pi_old = exp(logprobs - old_logprobs)\n        raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n        # Ignore invalid (padded) positions before exp to avoid inf * 0 -> nan.\n        logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n        ratio        = torch.exp(logratio)\n        ess_factor   = self.calculate_ess(ratio=ratio, mask_bool=mask_bool)\n\n        # 3. calculate the KL between policy and old model (behavioral policy) for the KL term in the loss\n        kl_dist_behavioral = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=old_logprobs)\n        kl_dist_behavioral = torch.where(mask_bool, kl_dist_behavioral, torch.zeros_like(kl_dist_behavioral))\n        kl_sum_behavioral  = (kl_dist_behavioral * mask).sum()\n\n        # 4. P3O loss as raw sum: rho.detach() * log(pi) * advantage\n        # Unlike PPO, P3O clips the importance ratio and uses it as a weighting\n        # coefficient for the policy's log-probability more like policy gradient.\n        rho = torch.clamp(ratio, min=0, max=ess_factor)\n        pi_sum = -(rho.detach() * logprobs * adv * mask).sum()",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/p3o.py:L223": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 223,
+  "end": 223,
+  "text": "        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum_ref +  (1 - ess_factor) * kl_sum_behavioral",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/RL/common.py:L131-L138": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/common.py",
+  "start": 131,
+  "end": 138,
+  "text": "        log_ratio = logprobs - ref_logprobs\n        # pi_ref/pi = exp(ref_logprobs - logprobs)\n        exponent = torch.clamp(ref_logprobs - logprobs, min=-10.0, max=10.0)\n        #if exponent.max().item() > 10.0:\n        #    print(f\"[WARNING] compute_kl_distance: extreme divergence detected, max exponent={exponent.max().item():.1f}\")\n\n        ratio_inv = torch.exp(exponent)\n        kl_dist = log_ratio + ratio_inv - 1",
+  "sha256": "593d1ce02e77"
+ },
+ "run_rl_sync.py:L417-L433": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/run_rl_sync.py",
+  "start": 417,
+  "end": 433,
+  "text": "        if not sync_success and not is_last_epoch and weight_sync_method == \"direct\":\n            logger.info(f\"[Epoch {epoch+1}] Syncing weights directly to rollout engines \"\n                        f\"(v{rollout_policy_version} -> v{policy_version})...\")\n\n            try:\n                sync_success = sync_weights_direct(training_engines=training_engines,\n                                                   rollout_engines=rollout_engines,\n                                                   version=policy_version,\n                                                   logger=logger,\n                                                   sync_timeout=sync_timeout)\n            except Exception as e:\n                logger.warning(f\"[Epoch {epoch+1}] Direct sync raised {e}, falling back to disk\")\n                sync_success = False\n\n            if sync_success:\n                rollout_policy_version = policy_version\n                logger.info(f\"[Epoch {epoch+1}] Direct sync successful\")",
+  "sha256": "3ed5141e510e"
+ },
+ "run_rl_async.py:L236-L239": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/run_rl_async.py",
+  "start": 236,
+  "end": 239,
+  "text": "    bsz_rollout        = num_rollout_engines * rollout_batch_size_per_gpu\n    prompt_per_pass    = math.ceil(rollout_samples_per_epoch / bsz_rollout) * bsz_rollout\n    replay_buffer_size = prompt_per_pass * n_samples * max_lag\n    items_per_round_theoretical = prompt_per_pass * n_samples",
+  "sha256": "10488907b7f1"
+ },
+ "core/rl_engines.py:L653-L654": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/core/rl_engines.py",
+  "start": 653,
+  "end": 654,
+  "text": "    num_rollout_engines = len(rollout_engines)\n    world_size = 1 + num_rollout_engines * tp_size",
+  "sha256": "87c8545899c7"
+ },
+ "rollouts/weight_sync.py:L115-L116": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/weight_sync.py",
+  "start": 115,
+  "end": 116,
+  "text": "        tp_rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0\n        my_rank = rank_offset + tp_rank",
+  "sha256": "05feef5175ec"
+ },
+ "unit_tests/unit/test_replay_buffer.py:L138-L156": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/unit_tests/unit/test_replay_buffer.py",
+  "start": 138,
+  "end": 156,
+  "text": "def test_replay_buffer_max_size_evict_stale_preserves_cap():\n    '''After evict_stale, the buffer must remain a deque with the same maxlen.\n    Otherwise the next add_batch_seqs would silently grow unbounded.'''\n    from collections import deque\n    rb = ReplayBuffer(pad_token_id=0, max_seq_len=10, max_size=10)\n    for v in range(10):\n        rb.add_batch_seqs([_mk_sample(version=v)])\n    # Evict everything older than version 5\n    evicted = rb.evict_stale(min_version=5)\n    assert evicted == 5\n    assert len(rb) == 5\n    # Crucially: the deque maxlen is preserved\n    assert isinstance(rb.items, deque)\n    assert rb.items.maxlen == 10\n    # And new inserts still respect the cap\n    for v in range(20, 30):\n        rb.add_batch_seqs([_mk_sample(version=v)])\n    assert len(rb) == 10\n    assert rb.items.maxlen == 10",
+  "sha256": "36333006d13b"
+ },
+ "unit_tests/integration/test_grpo_step.py:L40-L47": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/unit_tests/integration/test_grpo_step.py",
+  "start": 40,
+  "end": 47,
+  "text": "        reduction='none'\n    ).reshape(B, T-1)\n\n    # Clipped loss (same formula as GRPO.compute_policy_loss)\n    ratio = torch.exp(logprobs - old_logprobs)\n    clip_eps = 0.2\n    unclipped = ratio * zscores\n    clipped = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * zscores",
+  "sha256": "5f26f658384a"
  }
 }
