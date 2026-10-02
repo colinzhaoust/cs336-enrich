@@ -2,9 +2,9 @@
   "fixture": "flash-forward-tiles",
   "family": "tile-sweep",
   "scene": "TilingScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
-    "flash-attention-forward"
+    "lecture_05:flash-attention-forward"
   ],
   "video": "video.mp4",
   "probe": {

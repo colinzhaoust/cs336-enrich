@@ -2,9 +2,9 @@
   "fixture": "online-softmax-blocks",
   "family": "block-pass",
   "scene": "OnlineSoftmaxScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
-    "online-softmax"
+    "lecture_05:online-softmax"
   ],
   "video": "video.mp4",
   "probe": {

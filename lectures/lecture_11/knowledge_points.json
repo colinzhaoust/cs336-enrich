@@ -333,11 +333,13 @@
         "retrieval": [
           {
             "q": "What four muP constants does MiniCPM use, with values?",
-            "answer": "scale_emb = 12, scale_depth = 1.4, init_std = 0.1, lr = 0.01.", "layer": "detail"
+            "answer": "scale_emb = 12, scale_depth = 1.4, init_std = 0.1, lr = 0.01.",
+            "layer": "detail"
           },
           {
             "q": "Roughly how far does MiniCPM extrapolate from its largest study model to the model it actually trains?",
-            "answer": "About 5x in size.", "layer": "detail"
+            "answer": "About 5x in size.",
+            "layer": "detail"
           },
           {
             "q": "Which three quantities does MiniCPM fit directly from its scaling analysis rather than copying?",
@@ -475,7 +477,8 @@
         "retrieval": [
           {
             "q": "What three model sizes does MiniCPM use in its optimal-batch sweep?",
-            "answer": "9M, 30M and 170M parameters.", "layer": "detail"
+            "answer": "9M, 30M and 170M parameters.",
+            "layer": "detail"
           },
           {
             "q": "In which direction does optimal batch size move as final loss decreases, and what is the shape of the trend?",
@@ -785,7 +788,8 @@
           },
           {
             "q": "How does DeepSeek's schedule differ from MiniCPM's WSD, and how does it compare with cosine?",
-            "answer": "Fast warmup plus two step decays of 10% each; it generally matches cosine performance.", "layer": "detail"
+            "answer": "Fast warmup plus two step decays of 10% each; it generally matches cosine performance.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does the loss stay flat during a long stable phase and then drop sharply once the LR decays, and what does that say about what 'current loss' measures mid-run?"
@@ -820,7 +824,7 @@
       "id": "minicpm-high-data-ratio",
       "label": "MiniCPM's Chinchilla analysis (methods 1 and 3) finds very high data-to-model ratios",
       "kind": "comparison",
-      "statement": "With WSD-branched runs in hand, MiniCPM applies Chinchilla method 1 (lower envelope, one colour per model size, trends 'fairly clear though maybe not linear') and method 3 (the joint parametric fit, their primary approach), and both point to relatively low diminishing returns from data and hence very high optimal data-to-model ratios, far above the 20 tokens per parameter of Chinchilla.",
+      "statement": "With WSD-branched runs in hand, MiniCPM applies Chinchilla method 1 (lower envelope, one colour per model size, trends 'fairly clear though maybe not linear') and method 3 (the joint parametric fit, their primary approach), and finds very high optimal data-to-model ratios: the joint fit gives about 95 tokens per parameter at C = 1e21, far above Chinchilla's 20; the deck glosses this as low diminishing returns from data, though the fit's two exponents are equal and the ratio comes from the coefficients.",
       "provenance": {
         "status": "shown",
         "basis": "evidence",
@@ -873,7 +877,7 @@
             "quote": "They also want to replicate a Chinchilla analysis, much less important to us now"
           }
         ],
-        "filtering_note": "The actual ratio MiniCPM reports is not printed ('very high'); the method-1 envelope plot and the method-3 fitted surface and exponents are figures only. The deck does not say why the ratio is so much higher than Chinchilla's (WSD decay points, small models, or data distribution are all candidates) and does not connect it to inference-cost overtraining; the 20 tokens/parameter comparison is from lecture 9. Spoken evidence (15:07-15:33), partly answering 'the deck does not say why the ratio is so much higher': he does not explain it, he doubts it: 'It is highly unclear to me whether this is a really true or whether their Chinchilla fits are a little bit strange relative to the Chinchilla paper', so a fitting artefact is his candidate. He also calls methods 1 and 3 'the least reliable of the Chinchilla methods' (14:31) and reads the p17 envelopes as 'mostly linear' (14:44), milder than p17's 'maybe not linear?'. The disagreement is recorded, and the statement keeps the slide's wording. The ratio itself is not said aloud."
+        "filtering_note": "Slide image audit: the ratio and the fit are printed on p18's image (absent from the text layer): L = 7.54e-2/N^0.30 + 2.92e-1/D^0.30 + 0.25 on Ultratext, K² = 0.01, η = −0.00, and D_opt/N_opt at C = 1e21 = 95.60. The two exponents are equal, so the high ratio does not come from a smaller data exponent: minimizing A/N^α + B/D^α at fixed 6ND gives A/N^α = B/D^α, so D/N = (B/A)^(1/α) = 3.87^(1/0.3) ≈ 91 (95.6 with unrounded constants), the same at every budget (η = 0). The data term's coefficient is about 3.9× the parameter term's, and that sets the ratio. p17's 'relatively low diminishing returns due to data' is the deck's gloss of the method-1 envelopes; the method-3 fit does not show different rates. The deck does not say why the ratio is so much higher than Chinchilla's (WSD decay points, small models, or data distribution are all candidates) and does not connect it to inference-cost overtraining; the 20 tokens/parameter comparison is from lecture 9. Spoken evidence (15:07-15:33), partly answering 'the deck does not say why the ratio is so much higher': he does not explain it, he doubts it: 'It is highly unclear to me whether this is a really true or whether their Chinchilla fits are a little bit strange relative to the Chinchilla paper', so a fitting artefact is his candidate. He also calls methods 1 and 3 'the least reliable of the Chinchilla methods' (14:31) and reads the p17 envelopes as 'mostly linear' (14:44), milder than p17's 'maybe not linear?'. The disagreement is recorded, and the statement keeps the slide's wording. The ratio itself is not said aloud."
       },
       "prerequisites": [
         {
@@ -900,7 +904,7 @@
       "misconceptions": [
         {
           "belief": "'Low diminishing returns due to data' means more data always helps equally, so the optimal ratio is unbounded.",
-          "why_wrong": "It means the data exponent is small in magnitude relative to the parameter exponent, which pushes the compute-optimal ratio D/N up (p17-p18); the fit still yields a finite optimum for each budget."
+          "why_wrong": "It means extra data keeps lowering the loss, which pushes the compute-optimal D/N up, but the fit still yields a finite optimum. In MiniCPM's own joint fit (p18) the exponents are equal (0.30 and 0.30), and the ratio, about 95 tokens per parameter at every budget, comes from the data term's coefficient being about 3.9× the parameter term's: D/N = (B/A)^(1/α)."
         }
       ],
       "prompts": {
@@ -914,7 +918,7 @@
             "Cannot tell without the budget"
           ],
           "answer": "Lab B",
-          "why": "Slide 17-18: low diminishing returns from data (data keeps paying off) is exactly what makes MiniCPM's joint fit recommend very high data-to-model ratios: at a fixed budget you shift compute from parameters to tokens.",
+          "why": "If extra data keeps paying off longer than extra parameters, a fixed budget is better spent on tokens, so the optimal tokens-per-parameter ratio rises (and with a smaller data exponent it keeps rising with budget). This is the hypothetical's logic; MiniCPM's own fit (p18) reaches its very high ratio, ~95, differently: equal exponents, with a data coefficient about 3.9× the parameter one.",
           "targets_misconception": "'Low diminishing returns due to data' means more data always helps equally, so the optimal ratio is unbounded.",
           "distractor_from": "Option 3 treats 20 tokens/parameter as universal (the lecture-9 rule applied blindly); option 1 reverses the direction; option 4 assumes the ratio is budget-only."
         },
@@ -932,7 +936,7 @@
           "format": "trend",
           "answer": "down: when extra data stops helping quickly, compute is better spent on parameters, so the ratio falls",
           "value": "down",
-          "why": "The optimal ratio follows the relative returns: MiniCPM found low diminishing returns from data and hence a very high ratio (p18); the opposite finding pushes compute toward parameters and lowers it.",
+          "why": "The optimal ratio follows the relative returns: when the data term's loss falls off quickly, compute is better spent on parameters and the ratio falls. MiniCPM's high ratio (95.6 at C = 1e21, p18) is the opposite case in coefficient form: equal exponents, a data coefficient about 3.9× the parameter one.",
           "varies": "direction (faster-diminishing data returns, the opposite of MiniCPM's finding)",
           "invariant": "the compute-optimal data-to-model ratio is set by how fast returns from data diminish relative to returns from parameters",
           "transfer_distance": "near"
@@ -940,14 +944,15 @@
         "retrieval": [
           {
             "q": "Which two Chinchilla methods does MiniCPM use, and which is primary?",
-            "answer": "Method 1 (lower envelope) and method 3 (joint parametric fit); the joint fit is primary.", "layer": "detail"
+            "answer": "Method 1 (lower envelope) and method 3 (joint parametric fit); the joint fit is primary.",
+            "layer": "detail"
           },
           {
             "q": "What qualitative finding about data does the deck attribute to MiniCPM's runs, and what does it imply for the data-to-model ratio?",
-            "answer": "Relatively low diminishing returns due to data, implying very high optimal data-to-model ratios."
+            "answer": "Relatively low diminishing returns due to data (p17's gloss), and from the joint fit a very high optimal ratio: D_opt/N_opt = 95.6 at C = 1e21 (p18), about five times Chinchilla's 20."
           }
         ],
-        "self_explain": "Why would a smaller data exponent (in magnitude) in L(N, D) push the compute-optimal ratio D/N upward?"
+        "self_explain": "MiniCPM's joint fit has equal exponents (0.30 for N and for D) yet recommends about 95 tokens per parameter at every budget. Where does the ratio come from, and why does it not change with compute?"
       },
       "presentations": [
         {
@@ -1111,7 +1116,8 @@
         "retrieval": [
           {
             "q": "How does DeepSeek define a 'near optimal' run when fitting batch and LR laws?",
-            "answer": "A run whose loss is within 0.25% of the minimum.", "layer": "detail"
+            "answer": "A run whose loss is within 0.25% of the minimum.",
+            "layer": "detail"
           },
           {
             "q": "State the two bullets of the 'DeepSeek recipe' that concern hyperparameters.",
@@ -1470,11 +1476,13 @@
           },
           {
             "q": "Which recent model's report is described as using a sparsity scaling law, and for what decision?",
-            "answer": "Kimi K2, to choose the MoE sparsity level.", "layer": "detail"
+            "answer": "Kimi K2, to choose the MoE sparsity level.",
+            "layer": "detail"
           },
           {
             "q": "What does MiniMax-01's scaling work combine?",
-            "answer": "Architecture scaling laws with Chinchilla method 1 (lower envelope).", "layer": "detail"
+            "answer": "Architecture scaling laws with Chinchilla method 1 (lower envelope).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would a compute-optimal fit on an MoE naturally be reported per active parameter, and what does that hide about memory cost?"
@@ -1833,7 +1841,8 @@
           },
           {
             "q": "Which StepFun trend does the deck call fragile, and under what change?",
-            "answer": "Optimal LR rising with D at fixed model size; fragile when swapping to a WSD schedule (per InternLM, Zhou+ 2026).", "layer": "detail"
+            "answer": "Optimal LR rising with D at fixed model size; fragile when swapping to a WSD schedule (per InternLM, Zhou+ 2026).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would convexity of loss in LR and batch be a precondition for fitting any hyperparameter scaling law at all?"
@@ -2160,7 +2169,8 @@
           },
           {
             "q": "What example does the lecture give of an optimizer scaling that looked good but blew up, and how was it fixed?",
-            "answer": "Cautious AdamC with sqrt batch-size scaling of learning rates; fixed with more careful parametrization / scaling / optimizer changes.", "layer": "detail"
+            "answer": "Cautious AdamC with sqrt batch-size scaling of learning rates; fixed with more careful parametrization / scaling / optimizer changes.",
+            "layer": "detail"
           },
           {
             "q": "Why is optimizer hyperparameter tuning 'often off' in optimizer comparisons?",
@@ -2312,7 +2322,8 @@
           },
           {
             "q": "Besides Kimi K2, what two pieces of evidence does the lecture show that Muon works at scale?",
-            "answer": "The NanoGPT speedrun (very small) and a scaling study.", "layer": "detail"
+            "answer": "The NanoGPT speedrun (very small) and a scaling study.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does setting all singular values of the update to 1 change the update's direction in parameter space, not just its length?"
@@ -2784,7 +2795,7 @@
       "id": "mup-lr-derivation-and-recap",
       "label": "muP's learning rate: η = Θ(n_l/n_{l-1}) for SGD, Θ(1/n_{l-1}) for Adam, vs Θ(1) in SP",
       "kind": "mechanism",
-      "statement": "For SGD on a linear layer the update ΔW_l = -η_l ∇_{h_l}ℓ h_{l-1}^T is rank one, so condition A2 (Δh_l = Θ(sqrt(n_l))) requires ||ΔW_l||_* sqrt(n_{l-1}) = Θ(sqrt(n_l)); combining this with a loss change Δℓ = O(1), written as Θ(||ΔW||_* ||∇_W ℓ||_*), gives ||∇_{W_l} ℓ||_* = Θ(sqrt(n_{l-1}/n_l)) and hence η_l = Θ(n_l/n_{l-1}), while for Adam (where ||ΔW||_* sqrt(n_{l-1}) = Θ(η_l) directly) η_l = Θ(1/n_{l-1}); the recap contrasts this with standard parametrization's init 1/sqrt(n_{l-1}) and LR Θ(1), so muP differs in the Adam LR and in the init when fan-out is less than fan-in.",
+      "statement": "For SGD on a linear layer the update ΔW_l = -η_l ∇_{h_l}ℓ h_{l-1}^T is rank one, so condition A2 (Δh_l = Θ(sqrt(n_l))) requires ||ΔW_l||_* sqrt(n_{l-1}) = Θ(sqrt(n_l)); combining this with a loss change Δℓ = O(1), written as Θ(||ΔW||_* ||∇_W ℓ||_*), gives ||∇_{W_l} ℓ||_* = Θ(sqrt(n_{l-1}/n_l)) and hence η_l = Θ(n_l/n_{l-1}), while for Adam, whose normalized update has entries of size about η_l, so a rank-one step has ||ΔW_l||_* ≈ η_l sqrt(n_l n_{l-1}), the same A2 condition gives η_l = Θ(1/n_{l-1}); the recap contrasts this with standard parametrization's init 1/sqrt(n_{l-1}) and LR Θ(1), so muP differs in the Adam LR and in the init when fan-out is less than fan-in.",
       "provenance": {
         "status": "computed",
         "basis": "evidence",
@@ -2861,7 +2872,7 @@
             "quote": "The learning rate normally you would set to be a constant as a function of your model size, but you would want to set this to the ratio of fanout and fanin. ... you get 1 over the fanin as the layer specific learning rate. And so basically, layers that have big fanins for Adam get smaller learning rates."
           }
         ],
-        "filtering_note": "p48-p50's formulas are mostly lost to layout extraction (the text layer shows 'Δ𝑊𝑙 = −𝜂𝑙 ∇ℎ𝑙 ℓ ℎ𝑙−1' with a detached '⊤', 'Δhl = Wl Δℎ𝑙−1 + Δ𝑊𝑙 (ℎ𝑙−1 + Δℎ𝑙−1 )', '𝜂𝑙 = Θ' above a stacked 'n_l / n_{l-1}', '[with Adam, Δ𝑊𝑙 ∗ 𝑛𝑙−1 = Θ 𝜂𝑙 ]', and on p50 scattered '1', 'n_l', 'n_{l-1}' fragments for the init and LR table). The statement's formulas are the atlas author's reconstruction of the stacked fractions. The deck does not derive the Adam case (one bracketed line) and does not treat the embedding, attention or output layers (p51 table is a figure). Which norm '∗' denotes (operator/spectral norm, with 'F' for Frobenius) is inferred from the derivation. Spoken evidence (1:07:25-1:07:45, 1:08:50-1:09:14): the derivation is 'physicists math' that tracks orders of magnitude and assumes 'no cancelations'. He calls Δℓ = Θ(1) 'the least palatable of the assumptions' ('Not quite sure that's palatable to me'). It is the step that sets the gradient's size (1:09:15-1:09:47). Spoken evidence (1:11:24): the Adam case is 'not ... even touch[ed]', as the note says, and his one-line takeaway is 'layers that have big fanins for Adam get smaller learning rates'. Spoken evidence (1:11:54-1:12:24): the general method is to take a scaling limit, assert invariants, add assumptions and read off constraints on the hyperparameters. Spoken slip (1:10:49-1:11:08), not imported: the muP init is described as '1 over square root nl minus 1 times a component that is 1 over the square root fanout over fanin', and 'if this ratio is not smaller than 1, then you get basically something different'. p50 prints min(1, sqrt(n_l/n_{l-1})) and 'init diffs when fanout n_l < fanin': the factor is sqrt(fan-out/fan-in), not its inverse, and it changes the init only when that ratio is below 1. His next words ('closer to the square root fanout over fanin') agree with p50."
+        "filtering_note": "p48-p50's formulas are mostly lost to layout extraction (the text layer shows 'Δ𝑊𝑙 = −𝜂𝑙 ∇ℎ𝑙 ℓ ℎ𝑙−1' with a detached '⊤', 'Δhl = Wl Δℎ𝑙−1 + Δ𝑊𝑙 (ℎ𝑙−1 + Δℎ𝑙−1 )', '𝜂𝑙 = Θ' above a stacked 'n_l / n_{l-1}', '[with Adam, Δ𝑊𝑙 ∗ 𝑛𝑙−1 = Θ 𝜂𝑙 ]', and on p50 scattered '1', 'n_l', 'n_{l-1}' fragments for the init and LR table). The statement's formulas are the atlas author's reconstruction of the stacked fractions. The deck does not derive the Adam case (one bracketed line) and does not treat the embedding, attention or output layers (p51 table is a figure). Which norm '∗' denotes (operator/spectral norm, with 'F' for Frobenius) is inferred from the derivation. Spoken evidence (1:07:25-1:07:45, 1:08:50-1:09:14): the derivation is 'physicists math' that tracks orders of magnitude and assumes 'no cancelations'. He calls Δℓ = Θ(1) 'the least palatable of the assumptions' ('Not quite sure that's palatable to me'). It is the step that sets the gradient's size (1:09:15-1:09:47). Spoken evidence (1:11:24): the Adam case is 'not ... even touch[ed]', as the note says, and his one-line takeaway is 'layers that have big fanins for Adam get smaller learning rates'. Spoken evidence (1:11:54-1:12:24): the general method is to take a scaling limit, assert invariants, add assumptions and read off constraints on the hyperparameters. Spoken slip (1:10:49-1:11:08), not imported: the muP init is described as '1 over square root nl minus 1 times a component that is 1 over the square root fanout over fanin', and 'if this ratio is not smaller than 1, then you get basically something different'. p50 prints min(1, sqrt(n_l/n_{l-1})) and 'init diffs when fanout n_l < fanin': the factor is sqrt(fan-out/fan-in), not its inverse, and it changes the init only when that ratio is below 1. His next words ('closer to the square root fanout over fanin') agree with p50. Slide image audit (p49): the Adam case is one bracketed line, printed as '[with Adam, ||ΔW_l||_* sqrt(n_{l-1}) = Θ(sqrt(η_l))]', which does not by itself yield 1/n_{l-1} (setting it equal to A2's Θ(sqrt(n_l)) would give η = Θ(n_l)). The statement replaces it with the spectral-condition derivation: Adam's update entries are about η, so for a rank-one gradient ||ΔW||_* ≈ η sqrt(n_l n_{l-1}), and A2 then gives η = Θ(1/n_{l-1}), the value the slide's own recap (p50) and the professor ('1 over nl minus 1', 1:10:13) state."
       },
       "prerequisites": [
         {
@@ -2897,7 +2908,7 @@
             "Multiply by 1/2: η shrinks like the init std, as 1/sqrt(n)"
           ],
           "answer": "Unchanged: η = Θ(n_l/n_{l-1}) = Θ(1) for square layers",
-          "why": "For SGD the update is η times the gradient, and the gradient's spectral norm already shrinks like sqrt(n_{l-1}/n_l) when Δℓ = O(1), so η need not shrink. Adam normalizes the gradient away, so ||ΔW||_* sqrt(n_{l-1}) = Θ(η) and η itself must carry the 1/n_{l-1}.",
+          "why": "For SGD the update is η times the gradient, and the gradient's spectral norm already shrinks like sqrt(n_{l-1}/n_l) when Δℓ = O(1), so η need not shrink. Adam normalizes the gradient away: its entries are about η, so a rank-one step has ||ΔW||_* ≈ η sqrt(n_l n_{l-1}), and A2 (||ΔW||_* sqrt(n_{l-1}) = Θ(sqrt(n_l))) makes η itself carry the 1/n_{l-1}.",
           "varies": "functional: the optimizer changes from Adam to SGD with everything else fixed",
           "invariant": "A2 fixes the size of ΔW's effect on activations; what differs is how much of that size the optimizer already normalizes",
           "transfer_distance": "near",
@@ -2918,7 +2929,8 @@
           },
           {
             "q": "What two scaling assumptions combine to pin down muP's SGD learning rate?",
-            "answer": "A2 in the form ||ΔW_l||_* sqrt(n_{l-1}) = Θ(sqrt(n_l)), and that the loss change per step is O(1).", "layer": "detail"
+            "answer": "A2 in the form ||ΔW_l||_* sqrt(n_{l-1}) = Θ(sqrt(n_l)), and that the loss change per step is O(1).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does assuming the per-step loss change is O(1) give you information about the size of the gradient, and why is that the missing piece for the learning rate?"
@@ -3160,7 +3172,8 @@
           },
           {
             "q": "What range of model sizes did CerebrasGPT train, with what recipe, and what was its core finding about muP?",
-            "answer": "0.1B to 13B with the Chinchilla recipe; muP parametrization makes scaling more stable.", "layer": "detail"
+            "answer": "0.1B to 13B with the Chinchilla recipe; muP parametrization makes scaling more stable.",
+            "layer": "detail"
           },
           {
             "q": "What is the deck's overall verdict on muP, and what is the comparison that justifies it?",

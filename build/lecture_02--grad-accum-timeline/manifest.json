@@ -2,7 +2,7 @@
   "fixture": "lecture_02--grad-accum-timeline",
   "family": "accum-trace",
   "scene": "AccumTraceScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "gradient-accumulation"
   ],

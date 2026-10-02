@@ -34,13 +34,6 @@
   "text": "    text(\"- GB200/GB300 NVL72: 8 GPUs per tray, 9 trays per rack -> 72 GPUs in one NVLink domain\")",
   "sha256": "7cdec6c6e2b7"
  },
- "lecture_07.py:L23": {
-  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
-  "start": 23,
-  "end": 23,
-  "text": "    image(\"images/gpu-node-overview.png\", width=700)",
-  "sha256": "7cdec6c6e2b7"
- },
  "lecture_07.py:L76-L79": {
   "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
   "start": 76,
@@ -74,13 +67,6 @@
   "start": 91,
   "end": 137,
   "text": "    text(\"**Broadcast**: copy from rank 0 to all ranks\")\n    # Input\n    rank0 = tensor([0., 1, 2, 3])\n\n    # Output\n    rank0 = tensor([0., 1, 2, 3])\n    rank1 = tensor([0., 1, 2, 3])\n    rank2 = tensor([0., 1, 2, 3])\n    rank3 = tensor([0., 1, 2, 3])\n\n    text(\"Minor use case: rank 0 loads initial checkpoint and broadcasts to all ranks\")\n\n    text(\"**Scatter** tensor on rank 0 to all ranks\")\n    # Input\n    rank0 = tensor([0., 1, 2, 3])\n\n    # Output\n    rank0 = tensor([0.])\n    rank1 = tensor([1.])\n    rank2 = tensor([2.])\n    rank3 = tensor([3.])\n\n    text(\"Note: stepping stone to understanding reduce-scatter\")\n\n    text(\"**Gather** pieces from all ranks to rank 0 (opposite of scatter)\")\n    # Input\n    rank0 = tensor([0.])\n    rank1 = tensor([1.])\n    rank2 = tensor([2.])\n    rank3 = tensor([3.])\n\n    # Output\n    rank0 = tensor([0., 1, 2, 3])\n\n    text(\"Note: stepping stone to understanding all-gather\")\n\n    text(\"**Reduce** pieces from all ranks to rank 0, applying some operation (e.g., sum, min, max)\")\n    # Input\n    rank0 = tensor([0.])\n    rank1 = tensor([1.])\n    rank2 = tensor([2.])\n    rank3 = tensor([3.])\n\n    # Output\n    rank0 = tensor([6.])  # Sum of all ranks (0 + 1 + 2 + 3)\n\n    text(\"Note: stepping stone to understanding all-reduce\")",
-  "sha256": "7cdec6c6e2b7"
- },
- "lecture_07.py:L82": {
-  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
-  "start": 82,
-  "end": 82,
-  "text": "    image(\"images/ranks.png\", width=500)",
   "sha256": "7cdec6c6e2b7"
  },
  "lecture_07.py:L139-L150": {
@@ -244,13 +230,6 @@
   "text": "    text(\"Bypassing the CPU:\")\n    text(\"- Ethernet requires passing through the CPU (copying data to kernel socket buffer, build TCP packets, copy to NIC ring buffer)\")\n    text(\"- Remote Direct Memory Access (RDMA): allows one GPU to directly read/write another GPU's memory without involving the CPU\")\n    text(\"- Infiniband supports RDMA, but standard Ethernet does not\")\n\n    text(\"Advancements:\")\n    text(\"- GB200/GB300 NVL72: 8 GPUs per tray, 9 trays per rack -> 72 GPUs in one NVLink domain\")\n    text(\"- RDMA over Converged Ethernet (RoCE): Ethernet bypasses CPU, similar but cheaper/weaker than Infiniband, used by Meta\")",
   "sha256": "7cdec6c6e2b7"
  },
- "lecture_07.py:L216": {
-  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
-  "start": 216,
-  "end": 216,
-  "text": "    image(\"images/gpu-node-overview.png\", width=700)",
-  "sha256": "7cdec6c6e2b7"
- },
  "lecture_07.py:L540-L549": {
   "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
   "start": 540,
@@ -405,13 +384,6 @@
   "text": "def data_parallelism_main(rank: int, world_size: int, data: tensor, num_layers: int, num_steps: int):\n    setup(rank, world_size)  # @stepover\n\n    # Get the slice of data for this rank (in practice, each rank should load only its own data)\n    # --- B0 ---\n    # --- B1 ---\n    # --- B2 ---\n    # --- B3 ---\n    batch_size = data.size(0)  # @inspect batch_size\n    num_dim = data.size(1)  # @inspect num_dim\n    local_batch_size = int_divide(batch_size, world_size)  # @inspect local_batch_size @stepover\n    start_index = rank * local_batch_size  # @inspect start_index\n    end_index = start_index + local_batch_size  # @inspect end_index\n    data = data[start_index:end_index].to(cuda_if_available(rank))\n\n    # Create MLP parameters params[0], ..., params[num_layers - 1] (each rank has all parameters)\n    params = [get_init_params(num_dim, num_dim, rank) for layer in range(num_layers)]\n    optimizer = torch.optim.AdamW(params, lr=1e-3)  # Each rank has own optimizer state\n\n    for step in range(num_steps):\n        # Forward pass\n        x = data\n        for param in params:\n            x = x @ param\n            x = F.gelu(x)\n        loss = x.square().mean()  # Loss function is average squared magnitude\n\n        # Backward pass\n        loss.backward()\n\n        # Sync gradients across workers (ONLY difference between standard training and DDP)\n        for param in params:\n            dist.all_reduce(tensor=param.grad, op=dist.ReduceOp.AVG, async_op=False)\n\n        # Update parameters\n        optimizer.step()\n\n        print(f\"[data_parallelism] Rank {rank}: step = {step}, loss = {loss.item()}, params = {[summarize_tensor(params[layer]) for layer in range(num_layers)]}\", flush=True)  # @stepover\n\n    cleanup()  # @stepover",
   "sha256": "7cdec6c6e2b7"
  },
- "lecture_07.py:L376": {
-  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
-  "start": 376,
-  "end": 376,
-  "text": "    image(\"images/data-parallelism.png\", width=300)",
-  "sha256": "7cdec6c6e2b7"
- },
  "lecture_07.py:L387": {
   "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
   "start": 387,
@@ -475,13 +447,6 @@
   "text": "def tensor_parallelism_main(rank: int, world_size: int, data: tensor, num_layers: int):\n    setup(rank, world_size)  # @stepover\n\n    data = data.to(cuda_if_available(rank))  # All ranks get the data (batch_size x num_dim)\n    batch_size = data.size(0)  # @inspect batch_size\n    num_dim = data.size(1)  # @inspect num_dim\n    local_num_dim = int_divide(num_dim, world_size)  # Shard `num_dim`  @inspect local_num_dim @stepover\n\n    # Create model (each rank gets 1/world_size of the parameters)\n    #  |  |  |  |\n    # W0 W1 W2 W3\n    #  |  |  |  |\n    params = [get_init_params(num_dim, local_num_dim, rank) for layer in range(num_layers)]\n\n    # Forward pass\n    x = data\n    for layer in range(num_layers):\n        # Compute activations (batch_size x local_num_dim)\n        x = x @ params[layer]  # Note: this is only on a slice of the parameters\n        x = F.gelu(x)\n\n        # Allocate memory for activations (world_size x batch_size x local_num_dim)\n        activations = [torch.empty(batch_size, local_num_dim, device=cuda_if_available(rank)) for _ in range(world_size)]\n\n        # Send activations via all gather\n        dist.all_gather(tensor_list=activations, tensor=x, async_op=False)\n\n        # Concatenate them to get batch_size x num_dim\n        x = torch.cat(activations, dim=1)\n\n    print(f\"[tensor_parallelism] Rank {rank}: forward pass produced activations {summarize_tensor(x)}\", flush=True)  # @stepover\n\n    # Backward pass: homework exercise\n\n    cleanup()  # @stepover",
   "sha256": "7cdec6c6e2b7"
  },
- "lecture_07.py:L440": {
-  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
-  "start": 440,
-  "end": 440,
-  "text": "    image(\"images/tensor-parallelism.png\", width=300)",
-  "sha256": "7cdec6c6e2b7"
- },
  "lecture_07.py:L486": {
   "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
   "start": 486,
@@ -531,13 +496,6 @@
   "text": "def pipeline_parallelism_main(rank: int, world_size: int, data: tensor, num_layers: int, num_micro_batches: int):\n    setup(rank, world_size)  # @stepover\n\n    # Use all the data\n    data = data.to(cuda_if_available(rank))\n    batch_size = data.size(0)  # @inspect batch_size\n    num_dim = data.size(1)  # @inspect num_dim\n\n    # Split up layers\n    local_num_layers = int_divide(num_layers, world_size)  # @inspect local_num_layers @stepover\n\n    # Each rank gets a subset of layers\n    local_params = [get_init_params(num_dim, num_dim, rank) for layer in range(local_num_layers)]  # @stepover\n\n    # Forward pass\n\n    # Break up into micro batches to minimize the bubble\n    micro_batch_size = int_divide(batch_size, num_micro_batches)  # @inspect micro_batch_size @stepover\n    if rank == 0:\n        # The data\n        micro_batches = data.chunk(chunks=num_micro_batches, dim=0)\n    else:\n        # Allocate memory for activations\n        micro_batches = [torch.empty(micro_batch_size, num_dim, device=cuda_if_available(rank)) for _ in range(num_micro_batches)]\n\n    for x in micro_batches:\n        # Get activations from previous rank\n        if rank - 1 >= 0:\n            dist.recv(tensor=x, src=rank - 1)\n\n        # Compute layers assigned to this rank\n        for param in local_params:\n            x = x @ param\n            x = F.gelu(x)\n\n        # Send to the next rank\n        if rank + 1 < world_size:\n            print(f\"[pipeline_parallelism] Rank {rank}: sending {summarize_tensor(x)} to rank {rank + 1}\", flush=True)  # @stepover\n            dist.send(tensor=x, dst=rank + 1)\n\n    text(\"Not handled: overlapping communication/computation to eliminate pipeline bubbles\")\n\n    # Backward pass: homework exercise\n\n    cleanup()  # @stepover",
   "sha256": "7cdec6c6e2b7"
  },
- "lecture_07.py:L485": {
-  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
-  "start": 485,
-  "end": 485,
-  "text": "    image(\"images/pipeline-parallelism.png\", width=300)",
-  "sha256": "7cdec6c6e2b7"
- },
  "lecture_07.py:L508": {
   "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
   "start": 508,
@@ -578,6 +536,90 @@
   "start": 66,
   "end": 72,
   "text": "    text(\"### Summary\")\n    text(\"- Many ways to parallelize: data (batch), tensor/expert (width), pipeline (depth), sequence (length)\")\n    text(\"- Data parallelism: DDP (all-reduce), FSDP/ZeRO (all-gather + reduce-scatter)\")\n    text(\"- Tensor parallelism: requires very fast interconnects (e.g., NVLink)\")\n    text(\"- Pipeline parallelism: can work with slow interconnects, but need to work to reduce pipeline bubbles\")\n    text(\"- Can **re-compute** or store in **memory** or store in another GPUs memory and **communicate**\")\n    text(\"- Hardware is getting faster, but will always want bigger models, so will have this hierarchical structure\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L25-L35": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 25,
+  "end": 35,
+  "text": "    text(\"In both cases, **compute** (arithmetic logic units) is far from inputs/outputs (**data**).\")\n    text(\"Unifying theme: orchestrate computation to avoid data transfer bottlenecks\")\n\n    text(\"Generalized hierarchy:\")\n    text(\"- Single node, single GPU: L1 cache / shared memory (fastest)\")\n    text(\"- Single node, single GPU: HBM\")\n    text(\"- Single node, multi-GPU: NVLink/NVSwitch\")\n    text(\"- Multi-node, multi-GPU: Infiniband/Ethernet (slowest)\")\n\n    text(\"Last week: reduce memory accesses via fusion/tiling\")\n    text(\"This week: reduce communication across GPUs/nodes via replication/sharding\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L115-L135": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 115,
+  "end": 135,
+  "text": "    text(\"**Gather** pieces from all ranks to rank 0 (opposite of scatter)\")\n    # Input\n    rank0 = tensor([0.])\n    rank1 = tensor([1.])\n    rank2 = tensor([2.])\n    rank3 = tensor([3.])\n\n    # Output\n    rank0 = tensor([0., 1, 2, 3])\n\n    text(\"Note: stepping stone to understanding all-gather\")\n\n    text(\"**Reduce** pieces from all ranks to rank 0, applying some operation (e.g., sum, min, max)\")\n    # Input\n    rank0 = tensor([0.])\n    rank1 = tensor([1.])\n    rank2 = tensor([2.])\n    rank3 = tensor([3.])\n\n    # Output\n    rank0 = tensor([6.])  # Sum of all ranks (0 + 1 + 2 + 3)",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L139-L152": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 139,
+  "end": 152,
+  "text": "    text(\"**All-gather**: perform gather to all ranks, not just rank 0\")\n    # Input\n    rank0 = tensor([0.])\n    rank1 = tensor([1.])\n    rank2 = tensor([2.])\n    rank3 = tensor([3.])\n\n    # Output\n    rank0 = tensor([0., 1, 2, 3])\n    rank1 = tensor([0., 1, 2, 3])\n    rank2 = tensor([0., 1, 2, 3])\n    rank3 = tensor([0., 1, 2, 3])\n\n    text(\"Use case: each rank holds parameter shard, gather to get full parameters for forward pass\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L154-L167": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 154,
+  "end": 167,
+  "text": "    text(\"**Reduce-scatter**: perform reduce on each dimension, scatter results\")\n    # Input\n    rank0 = tensor([0., 1, 2, 3])\n    rank1 = tensor([1., 2, 3, 4])\n    rank2 = tensor([2., 3, 4, 5])\n    rank3 = tensor([3., 4, 5, 6])\n\n    # Output\n    rank0 = tensor([6.])  # Sum along dim 0 (0 + 1 + 2 + 3)\n    rank1 = tensor([10.]) # Sum along dim 1 (1 + 2 + 3 + 4)\n    rank2 = tensor([14.]) # Sum along dim 2 (2 + 3 + 4 + 5)\n    rank3 = tensor([18.]) # Sum along dim 3 (3 + 4 + 5 + 6)\n\n    text(\"Use case: after backward pass, sum gradients from different data shards, but distribute storage\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L185-L201": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 185,
+  "end": 201,
+  "text": "    text(\"**All-to-all**: each rank sends each other rank some tensor (most general)\")\n    # Input\n    rank0 = tensor([0., 1, 2, 3])      # send  0 to rank 0,  1 to rank 1,  2 to rank 2,  3 to rank 3\n    rank1 = tensor([4., 5, 6, 7])      # send  4 to rank 0,  5 to rank 1,  6 to rank 2,  7 to rank 3\n    rank2 = tensor([8., 9, 10, 11])    # send  8 to rank 0,  9 to rank 1, 10 to rank 2, 11 to rank 3\n    rank3 = tensor([12., 13, 14, 15])  # send 12 to rank 0, 13 to rank 1, 14 to rank 2, 15 to rank 3\n\n    # Output\n    rank0 = tensor([0, 4, 8, 12])\n    rank1 = tensor([1, 5, 9, 13])\n    rank2 = tensor([2, 6, 10, 14])\n    rank3 = tensor([3, 7, 11, 15])\n\n    text(\"Notes:\")\n    text(\"- Useful for MoEs: each rank has split of data and subset of experts; need to route data to experts\")\n    text(\"- For balanced splits, all-to-all looks like transpose\")\n    text(\"- Also handles unbalanced splits (but want splits to be as balanced as possible)\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L232-L236": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 232,
+  "end": 236,
+  "text": "    text(\"### NVIDIA Collective Communication Library (NCCL)\")\n    text(\"NCCL translates collective operations into low-level packets that are sent between GPUs. \"), link(title=\"talk\", url=\"https://www.nvidia.com/en-us/on-demand/session/gtcspring21-s31880/\")\n    text(\"- Detects topology of hardware (e.g., number of nodes, switches, NVLink/PCIe)\")\n    text(\"- Optimizes the path between GPUs\")\n    text(\"- Launches GPU kernels to send/receive data\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L253-L260": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 253,
+  "end": 260,
+  "text": "    ### All-reduce (dist = torch.distributed)\n    dist.barrier()  # Waits for all processes to get to this point (in this case, for print statements)\n\n    data = tensor([0., 1, 2, 3], device=cuda_if_available(rank)) + rank  # Both input and output\n\n    print(f\"Rank {rank} [before all-reduce]: {data}\", flush=True)\n    dist.all_reduce(tensor=data, op=dist.ReduceOp.SUM, async_op=False)  # Modifies tensor in place\n    print(f\"Rank {rank} [after all-reduce]: {data}\", flush=True)",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L272-L282": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 272,
+  "end": 282,
+  "text": "    ### All-gather\n    dist.barrier()\n\n    input = output  # Input is the output of reduce-scatter\n    output = torch.empty(world_size, device=cuda_if_available(rank))  # Allocate output\n\n    print(f\"Rank {rank} [before all-gather]: input = {input}, output = {output}\", flush=True)\n    dist.all_gather_into_tensor(output_tensor=output, input_tensor=input, async_op=False)\n    print(f\"Rank {rank} [after all-gather]: input = {input}, output = {output}\", flush=True)\n\n    text(\"Indeed, all-reduce = reduce-scatter + all-gather!\")",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L405-L414": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 405,
+  "end": 414,
+  "text": "    batch_size = data.size(0)  # @inspect batch_size\n    num_dim = data.size(1)  # @inspect num_dim\n    local_batch_size = int_divide(batch_size, world_size)  # @inspect local_batch_size @stepover\n    start_index = rank * local_batch_size  # @inspect start_index\n    end_index = start_index + local_batch_size  # @inspect end_index\n    data = data[start_index:end_index].to(cuda_if_available(rank))\n\n    # Create MLP parameters params[0], ..., params[num_layers - 1] (each rank has all parameters)\n    params = [get_init_params(num_dim, num_dim, rank) for layer in range(num_layers)]\n    optimizer = torch.optim.AdamW(params, lr=1e-3)  # Each rank has own optimizer state",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L416-L432": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 416,
+  "end": 432,
+  "text": "    for step in range(num_steps):\n        # Forward pass\n        x = data\n        for param in params:\n            x = x @ param\n            x = F.gelu(x)\n        loss = x.square().mean()  # Loss function is average squared magnitude\n\n        # Backward pass\n        loss.backward()\n\n        # Sync gradients across workers (ONLY difference between standard training and DDP)\n        for param in params:\n            dist.all_reduce(tensor=param.grad, op=dist.ReduceOp.AVG, async_op=False)\n\n        # Update parameters\n        optimizer.step()",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L509-L515": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 509,
+  "end": 515,
+  "text": "    micro_batch_size = int_divide(batch_size, num_micro_batches)  # @inspect micro_batch_size @stepover\n    if rank == 0:\n        # The data\n        micro_batches = data.chunk(chunks=num_micro_batches, dim=0)\n    else:\n        # Allocate memory for activations\n        micro_batches = [torch.empty(micro_batch_size, num_dim, device=cuda_if_available(rank)) for _ in range(num_micro_batches)]",
+  "sha256": "7cdec6c6e2b7"
+ },
+ "lecture_07.py:L59-L64": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_07.py",
+  "start": 59,
+  "end": 64,
+  "text": "    text(\"What's missing?\")\n    text(\"- Communication/computation overlap\")\n    text(\"- More general models (with attention, etc.)\")\n    text(\"- Other forms of parallelism (e.g., sequence parallelism, expert parallelism, combinations)\")\n    text(\"- Jax/TPUs: just define the model, the sharding strategy, and the Jax compiler handles the rest \"), link(title=\"levanter\", url=\"https://crfm.stanford.edu/2023/06/16/levanter-1_0-release.html\")\n    text(\"- But we're doing PyTorch so you can see how one builds up from the primitives\")",
   "sha256": "7cdec6c6e2b7"
  }
 }

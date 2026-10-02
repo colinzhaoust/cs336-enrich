@@ -2,7 +2,7 @@
   "fixture": "grpo--alg1-iterations",
   "family": "iter-grpo",
   "scene": "IterGrpoScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "grpo:iterative-grpo"
   ],

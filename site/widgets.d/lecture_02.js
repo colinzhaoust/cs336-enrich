@@ -12,7 +12,7 @@ const H100_BF16 = 1979e12 / 2;   // lecture_02.py:L74, L815 (dense = half the sp
 const H100_FP32 = 67.5e12;       // lecture_02.py:L813
 const H100_BW = 3.35e12;         // lecture_02.py:L351 (facts.py h100_bytes_per_sec)
 const DTYPES = { bf16: { bytes: 2, peak: H100_BF16 }, fp32: { bytes: 4, peak: H100_FP32 } }; // L141-L151 sizes
-const GELU_FLOPS = 20;           // lecture_02.py:L405 ("flops = 20 * n")
+const GELU_FLOPS = 20;           // lecture_02.py:L406 ("flops = 20 * n")
 
 const NS = "http://www.w3.org/2000/svg";
 const sv = (tag, attrs = {}, text) => {
@@ -167,7 +167,7 @@ WIDGETS["fixture:lecture_02--checkpoint-tradeoff"] = (root) => {
 // FLOPs and bytes follow the lecture lines; elementwise and dot intensities do not depend on n.
 const OPS = {
   relu: n => ({ flops: n, elems: 2 * n }),                      // L368-L369: read x, write y; n comparisons
-  gelu: n => ({ flops: GELU_FLOPS * n, elems: 2 * n }),         // L404-L405
+  gelu: n => ({ flops: GELU_FLOPS * n, elems: 2 * n }),         // L405-L406
   dot: n => ({ flops: 2 * n - 1, elems: 2 * n + 1 }),           // L424-L425
   matvec: n => ({ flops: n * (2 * n - 1), elems: n * n + 2 * n }), // L440-L441
   matmul: n => ({ flops: n * n * (2 * n - 1), elems: 3 * n * n }), // L455-L456
@@ -278,8 +278,8 @@ WIDGETS["fixture:lecture_02--mfu"] = (root) => {
 };
 
 // ========================================================= elementwise-share ==
-// h = x·W (B×D · D×D) then GELU. FLOPs: matmul 2·B·D² (L314), GELU 20 per element (L405).
-// Time: each op as max(FLOPs ÷ peak, bytes ÷ bandwidth) (L371-L376), unfused, bf16 bytes (L368, L455).
+// h = x·W (B×D · D×D) then GELU. FLOPs: matmul 2·B·D² (L314), GELU 20 per element (L406).
+// Time: each op as max(FLOPs ÷ peak, bytes ÷ bandwidth) (L371-L375), unfused, bf16 bytes (L368, L455).
 function elementwiseShare({ D, B = 4096 }) {
   const fG = GELU_FLOPS * B * D, fM = 2 * B * D * D;
   const tM = Math.max(fM / H100_BF16, 2 * (B * D + D * D + B * D) / H100_BW);
@@ -316,7 +316,7 @@ WIDGETS["fixture:lecture_02--elementwise-share"] = (root) => {
     box.replaceChildren(g);
     read.innerHTML = `<span class="big">D = ${D}: ${fmt(100 * m.flop_share, 2)}% of FLOPs</span>20·B·D ÷ (20·B·D + 2·B·D²) = 20 ÷ (20 + 2·${D})<br>
       but ${fmt(100 * m.time_share, 1)}% of the time: GELU is memory-bound; the matmul is <b>${m.matmul_compute_bound ? "compute" : "memory"}-bound</b> at this D<br>
-      <span class="muted small">batch B = 4096 · lecture_02.py:L314, L405, L371-L376 · H100 L74, L351 · video 32:31-32:58</span>`;
+      <span class="muted small">batch B = 4096 · lecture_02.py:L314, L406, L371-L375 · H100 L74, L351 · video 32:31-32:58</span>`;
   };
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("hidden size D (log₂)", 4, 14, s.lg, 1, v => { s.lg = v; draw(); }, v => `2^${v} = ${2 ** v}`), read), box));

@@ -530,5 +530,222 @@
   "end": 293,
   "text": "    text(\"Training stability\")\n    text(\"- Text tokens have low entropy, image tokens have high entropy, leads to norm growth, logit drift problem\")\n    text(\"- Fixes: QK norm, z-loss regularization\")",
   "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L15-L20": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 15,
+  "end": 20,
+  "text": "    text(\"Where we are today:\")\n    text(\"- Transformers work really well. So we gotta use them.\")\n    text(\"- Transformers speak tokens (discrete or continuous), where a token represents some ~semantic unit of information.\")\n    text(\"- Therefore, we must convert everything into tokens.\")\n    text(\"- Note: we had to do this with text (recall the tokenization lecture).\")\n    text(\"- For non-text modalities, this is more challenging...\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L22-L24": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 22,
+  "end": 24,
+  "text": "    text(\"Questions:\")\n    text(\"1. How do we input non-text data (e.g., understand images)?\")\n    text(\"2. How do we output non-text data (e.g., generate audio)?\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L56-L60": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 56,
+  "end": 60,
+  "text": "    text(\"Method:\")\n    text(\"- Get a batch of (image, text) examples (e.g., 32768)\")\n    text(\"- Encode each image and each text\")\n    text(\"- For each image, prefer its aligned text over other texts\")\n    text(\"- For each text, prefer its aligned image over other images\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L63-L67": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 63,
+  "end": 67,
+  "text": "    text(\"Data:\")\n    text(\"- Searched for 500K queries, get ~20K (image, text) pairs per query\")\n    text(\"- Trained on 400M image-text pairs\")\n    text(\"- Didn't release the dataset\")\n    text(\"- Reproduced in OpenCLIP (using LAION-5B dataset, which used CLIP for filtering) \"), link(\"https://arxiv.org/abs/2212.07143\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L69-L72": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 69,
+  "end": 72,
+  "text": "    text(\"Data processing \"), link(title=\"code\", url=\"https://github.com/openai/CLIP/blob/main/clip/clip.py#L79\")\n    text(\"- Images come in all resolutions (arbitrary W x H)\")\n    text(\"- Resize using bicubic interpolation so shorter side is 336 pixels\")\n    text(\"- Center crop (cuts off borders to get 336 x 336)\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L74-L78": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 74,
+  "end": 78,
+  "text": "    text(\"Vision encoder:\")\n    text(\"- Experimented with ResNet-50 and Vision Transformers \"), link(\"https://arxiv.org/pdf/2010.11929\")\n    image(\"images/vit.png\", width=600)\n    text(\"- Attention pooling: do QKV with query = global average of activations\")\n    text(\"- Best model: ViT-L/14@336px (L = large, 14x14 patches, 3 channels, trained on 336x336 resolution images)\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L80-L82": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 80,
+  "end": 82,
+  "text": "    text(\"Text encoder:\")\n    text(\"- GPT-2 Transformer (63M parameters, 12 layers)\")\n    text(\"- Encode [BOS] ... [EOS], return [EOS] activation at highest layer\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L84-L85": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 84,
+  "end": 85,
+  "text": "    text(\"Headline result:\")\n    text(\"- On ImageNet, zero-shot CLIP outperformed ResNet-50 trained on 1.2M ImageNet images\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L87-L89": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 87,
+  "end": 89,
+  "text": "    text(\"Ablation:\")\n    text(\"- Alternative: predict text from images directly\")\n    text(\"- Much less compute efficient compared to CLIP-style ranking\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L92-L95": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 92,
+  "end": 95,
+  "text": "    text(\"Summary:\")\n    text(\"- Encoding of images captures semantics given by (noisy) text\")\n    text(\"- Design decisions chosen based on image classification (not very fine-grained)\")\n    text(\"- Technical: requires large batch sizes, softmax operation over full batch\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L101-L103": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 101,
+  "end": 103,
+  "text": "    text(\"Objective:\")\n    text(\"- CLIP: multiclass classification for (text, image) versus (text, image') for all image'\")\n    text(\"- SigLIP: binary classification for (text, image) - aligned or not?\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L106-L111": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 106,
+  "end": 111,
+  "text": "    text(\"Data:\")\n    text(\"- WebLI dataset: O(billion) (image, text) pairs \"), link(\"https://arxiv.org/pdf/2209.06794\")\n    text(\"- Scraped from the Internet\")\n    text(\"- Used automatic OCR to extract text from images\")\n    text(\"- Keep 10% highest quality\")\n    text(\"- Supports 100 languages\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L113-L116": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 113,
+  "end": 116,
+  "text": "    text(\"Efficiency:\")\n    text(\"- CLIP: 10 days on 256 TPUv3\")\n    text(\"- SigLIP: 5 days on 32 TPUv4 (lower FLOP/s than TPUv3) - much faster!\")\n    image(\"images/siglip-parallelism.png\", width=800)",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L118-L121": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 118,
+  "end": 121,
+  "text": "    text(\"Batch size:\")\n    text(\"- Decouple batch size from loss\")\n    text(\"- Better than CLIP for <16K batch sizes\")\n    text(\"- Go up to 1M batch size, but 32K is enough\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L137-L139": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 137,
+  "end": 139,
+  "text": "    text(\"Model:\")\n    text(\"- Encode images with CLIP (ViT-L/14)\")\n    text(\"- Linear projection (W) into embedding space (Flamingo and Q-former are more complex)\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L130-L134": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 130,
+  "end": 134,
+  "text": "    text(\"Data:\")\n    text(\"- MS COCO has images annotated with bounding boxes and Mechanical Turk captions\")\n    text(\"- Prompt GPT-4 with captions or detected objects and generate questions or conversations\")\n    text(\"- Pair generations with original images\")\n    text(\"- 158K examples\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L153-L156": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 153,
+  "end": 156,
+  "text": "    image(\"images/llava-onevision.png\", width=600)\n    text(\"- Vision encoder: SigLIP (use grid features before and after last Transformer layer)\")\n    text(\"- Text decoder: Qwen-2 72B\")\n    text(\"- Projector: 2-layer MLP\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L158-L163": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 158,
+  "end": 163,
+  "text": "    text(\"Data processing:\")\n    text(\"- Preserving high resolution is important (e.g., for OCR)\")\n    text(\"- CLIP resizes and crops to 336x336, which loses information\")\n    text(\"- Solution: AnyRes, introduced in LLaVA 1.5 \"), link(title=\"paper\", url=\"https://static.hliu.cc/files/llava/improved_llava.pdf\")\n    text(\"- Break up image into a x b pieces (matching resolution of vision encoder), encode, concatenate\")\n    text(\"- If too many tokens (original image is too high resolution), then use bilinear interpolation\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L172-L175": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 172,
+  "end": 175,
+  "text": "    text(\"Data:\")\n    text(\"- Philosophy: quality over quantity\")\n    image(\"images/llava-onevision-data-1.png\", width=700)\n    image(\"images/llava-onevision-data-2.png\", width=700)",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L177-L179": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 177,
+  "end": 179,
+  "text": "    text(\"Training:\")\n    text(\"- Philosophy: easier to harder\")\n    image(\"images/llava-onevision-training.png\", width=700)",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L189-L192": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 189,
+  "end": 192,
+  "text": "    text(\"Summary:\")\n    text(\"- Standard VLM template: vision encoder + projector + LM\")\n    text(\"- Most work goes into data curation (heavy on synthesized, task-specific data)\")\n    text(\"- Open-source (released model weights and data)\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L223-L224": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 223,
+  "end": 224,
+  "text": "    text(\"Multimodal Rotary Position Embedding (MRoPE):\")\n    image(\"images/qwen2-vl-mrope.png\", width=600)",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L240-L245": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 240,
+  "end": 245,
+  "text": "    text(\"Language model:\")\n    text(\"- Qwen-3 models (dense and MoE models up to 235B-A22B)\")\n    text(\"- Long context understanding (256K)\")\n\n    text(\"Vision encoder:\")\n    text(\"- SigLIP-2 (same architecture as SigLIP) \"), link(\"https://arxiv.org/pdf/2502.14786\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L251-L252": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 251,
+  "end": 252,
+  "text": "    text(\"Adapter:\")\n    text(\"- DeepStack: cross-layer fusion to inject visual information into multiple layers \"), link(\"https://arxiv.org/abs/2406.04334\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L254-L257": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 254,
+  "end": 257,
+  "text": "    text(\"Training:\")\n    text(\"- Pre-training has 4 stages (train adapter, train all parameters on 8K, 32K, 256K lengths)\")\n    image(\"images/qwen3-vl-pretraining.png\", width=600)\n    text(\"- Post-training: SFT on long CoT data, knowledge distillation, RL\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L261-L265": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 261,
+  "end": 265,
+  "text": "    text(\"Summary:\")\n    text(\"- SOTA performance\")\n    text(\"- Lots of data work, but not many details\")\n    text(\"- Minor but potentially important architectural improvements\")\n    text(\"- Scale up\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L271-L272": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 271,
+  "end": 272,
+  "text": "    text(\"So far: VLMs encode images (via CLIP or SigLIP), inject into LM\")\n    text(\"Disadvantage: can't generate images (need diffusion)\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L279-L285": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 279,
+  "end": 285,
+  "text": "    text(\"Vision encoder \"), link(\"https://arxiv.org/pdf/2203.13131\")\n    text(\"- Key difference: encoder needs to map to discrete tokens (so we can generate them)\")\n    text(\"- VQ-VAE (Vector Quantized Variational Autoencoder) \"), link(\"https://arxiv.org/pdf/1711.00937\")\n    text(\"- Idea: map image to a discrete codebook, decode back to image and minimize reconstruction loss\")\n    image(\"images/vq-vae.png\", width=600)\n    text(\"- Encodes 512 x 512 image into 1024 tokens (codebook of size 8192)\")\n    text(\"- Train a new BPE tokenizer\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L287-L289": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 287,
+  "end": 289,
+  "text": "    text(\"Training:\")\n    text(\"- Stage 1 (80%): large-scale, unsupervised (2.9T text tokens, 1.5T text/image tokens, 400B text/image interleaved tokens)\")\n    text(\"- Stage 2 (20%): 50% of stage 1 data, 50% of high quality data\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L295-L298": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 295,
+  "end": 298,
+  "text": "    text(\"Summary:\")\n    text(\"- Elegant (just autoregressive modeling of discrete tokens)\")\n    text(\"- Not as performant (discretization loses information - think OCR)\")\n    text(\"- Training with multiple modalities is tricky\")",
+  "sha256": "d8c3054ecce4"
+ },
+ "lecture_17.py:L40-L45": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_17.py",
+  "start": 40,
+  "end": 45,
+  "text": "    text(\"Summary:\")\n    text(\"- Frontier models are expected to be multimodal (natively multimodal, omni)\")\n    text(\"- Fundamental challenge: how to encode non-text modalities?\")\n    text(\"- Comprehension and generation might demand different things (semantics versus finer-grained details)\")\n    text(\"- Balance images + video (lower information density) and text for training stability\")\n    text(\"- Continuous encoders + Transformer + diffusion models for generation\")",
+  "sha256": "d8c3054ecce4"
  }
 }

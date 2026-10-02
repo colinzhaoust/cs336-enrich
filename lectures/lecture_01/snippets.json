@@ -334,5 +334,54 @@
   "end": 646,
   "text": "    text(\"Problem 2: many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary.\")",
   "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L188-L195": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 188,
+  "end": 195,
+  "text": "def what_is_this_program():\n    text(\"This is an *executable lecture*, a program whose execution delivers the content of a lecture.\")\n    text(\"Executable lectures make it possible to:\")\n    text(\"- view and run code (since everything is code!),\")\n    total = 0  # @inspect total\n    for x in [1, 2, 3]:  # @inspect x\n        total += x  # @inspect total\n    text(\"- see the hierarchical structure of the lecture\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L242-L253": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 242,
+  "end": 253,
+  "text": "    text(\"Remember it's all about **efficiency**:\")\n    text(\"- Resources: data + hardware (compute, memory, communication bandwidth)\")\n    text(\"- How do you train the best model given a fixed set of resources?\")\n\n    text(\"Today, we are compute-constrained, so design decisions will reflect squeezing the most out of given hardware.\")\n    text(\"- Systems: clearly about efficiency\")\n    text(\"- Tokenization: working with raw bytes is elegant, but compute-inefficient with today's model architectures\")\n    text(\"- Model architecture: many changes motivated by reducing memory or FLOPs (e.g., sharing KV caches, sliding window attention)\")\n    text(\"- Data filtering: avoid wasting precious compute updating on bad / irrelevant data\")\n    text(\"- Scaling laws: use less compute on smaller models to do hyperparameter tuning\")\n\n    text(\"Tomorrow, we will become data-constrained...\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L599-L606": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 599,
+  "end": 606,
+  "text": "    text(\"Here's the GPT-5 tokenizer from OpenAI (tiktoken) in action.\")\n    tokenizer = get_gpt5_tokenizer()  # @stepover\n    string = \"Hello, 🌍! 你好!\"  # @inspect string\n\n    text(\"Check that encode() and decode() roundtrip:\")\n    indices = tokenizer.encode(string)  # @inspect indices\n    reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string\n    assert string == reconstructed_string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L678-L680": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 678,
+  "end": 680,
+  "text": "    string = \"I'll say supercalifragilisticexpialidocious!\"\n\n    chunks = regex.findall(r\"\\w+|.\", string)  # @inspect chunks",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L686-L695": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 686,
+  "end": 695,
+  "text": "    text(\"What's good: each token is meaningful (since humans invented words).\")\n\n    vocabulary_size = \"Number of distinct chunks in the training data\"\n    compression_ratio = get_compression_ratio(string, chunks)  # @inspect compression_ratio @stepover\n    text(\"Compression ratio is good, but vocabulary size can be huge.\")\n\n    text(\"Moreover:\")\n    text(\"- Many words are rare and the model won't learn much about them.\")\n    text(\"- This doesn't obviously provide a fixed vocabulary size.\")\n    text(\"- New words we haven't seen during training get a special UNK token, which is ugly and can mess up perplexity calculations.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L735-L746": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 735,
+  "end": 746,
+  "text": "    for i in range(num_merges):\n        # Count the number of occurrences of each pair of tokens\n        counts = count_adjacent_pairs(indices)  # @inspect counts @stepover\n\n        # Find the most common pair\n        pair = max(counts, key=counts.get)  # @inspect pair\n\n        # Merge that pair\n        new_index = 256 + i  # @inspect new_index\n        merges[pair] = new_index  # @inspect merges\n        vocab[new_index] = vocab[pair[0]] + vocab[pair[1]]  # @inspect vocab\n        indices = merge(indices, pair, new_index)  # @inspect indices @stepover",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L541-L545": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 541,
+  "end": 545,
+  "text": "@dataclass(frozen=True)\nclass BPETokenizerParams:\n    \"\"\"All you need to specify a BPETokenizer.\"\"\"\n    vocab: dict[int, bytes]     # index -> bytes\n    merges: dict[tuple[int, int], int]  # index1,index2 -> new_index",
+  "sha256": "a7d47339eab8"
  }
 }

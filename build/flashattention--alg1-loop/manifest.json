@@ -2,7 +2,7 @@
   "fixture": "flashattention--alg1-loop",
   "family": "alg1-loop",
   "scene": "Alg1LoopScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "flashattention:fa-forward-loop-structure",
     "flashattention:fa-io-complexity"

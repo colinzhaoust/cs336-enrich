@@ -2241,6 +2241,49 @@
         "chinchilla:§abstract",
         "chinchilla:§1"
       ]
+    },
+    {
+      "what": "Table A3 Approach 3, 175B row FLOPs",
+      "a": "1.26e24 FLOPs (printed)",
+      "b": "6ND with the row's tokens gives 1.26e25",
+      "refs": [
+        "chinchilla:tableA3"
+      ]
+    },
+    {
+      "what": "Table A3 Approach 3, 280B row tokens",
+      "a": "20.1T tokens (printed)",
+      "b": "3.52e25 FLOPs / (6 x 280e9) = 20.95T",
+      "refs": [
+        "chinchilla:tableA3"
+      ]
+    },
+    {
+      "what": "Gopher Natural Questions closed-book accuracy",
+      "a": "21% (5-shot) and 28% (64-shot) in §4.2.6 prose",
+      "b": "24.5% and 28.2% in the results table",
+      "refs": [
+        "chinchilla:§4.2.6",
+        "chinchilla:table9"
+      ]
+    },
+    {
+      "what": "1e26 FLOPs as a multiple of Gopher's compute",
+      "a": "'over 250x the compute used to train Gopher' (§3.4)",
+      "b": "1e26 / 5.76e23 = 174x by the paper's own Gopher budget; Table 3's 1T row is 221 Gopher units",
+      "refs": [
+        "chinchilla:§3.4",
+        "chinchilla:table3"
+      ]
+    },
+    {
+      "what": "Less than one epoch",
+      "a": "§5: all analysis runs trained on less than an epoch",
+      "b": "Table A1: Chinchilla's mixture uses MassiveWeb for 1.24 epochs and Wikipedia for 3.40",
+      "refs": [
+        "chinchilla:§5",
+        "chinchilla:tableA1"
+      ]
     }
   ]
 }

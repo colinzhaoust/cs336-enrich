@@ -2,7 +2,7 @@
   "fixture": "lecture_03--swa-reach",
   "family": "swa-reach",
   "scene": "SwaReachScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "lecture_03:swa-reach-through-depth"
   ],

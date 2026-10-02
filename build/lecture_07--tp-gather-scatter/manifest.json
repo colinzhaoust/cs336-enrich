@@ -2,7 +2,7 @@
   "fixture": "lecture_07--tp-gather-scatter",
   "family": "rank-ring",
   "scene": "RankRingScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "lecture_07:tp-backward-reduce-scatter"
   ],

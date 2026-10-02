@@ -2,7 +2,7 @@
   "fixture": "rollout-train-timeline",
   "family": "timeline",
   "scene": "TimelineScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "feynrl:sync-epoch-loop",
     "feynrl:weight-sync-nccl-async",

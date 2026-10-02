@@ -1674,7 +1674,7 @@
       "id": "aspect-ratio",
       "label": "Aspect ratio d_model / n_layers: wide range, set by systems concerns",
       "kind": "rule-of-thumb",
-      "statement": "Models cluster at d_model / n_layers between roughly 100 and 200 (GPT-3/OPT/Mistral/Qwen/OLMo 3 at 128, LLaMA at 102, PaLM 540B at 156, BLOOM at 205), with Gemma 3 (87), Gemma 4 (61) and T5 11B (33) deeper; Kaplan 2020 and Tay 2021 show loss is insensitive over a wide range, so the choice is dictated by systems concerns since very deep models are harder to parallelise and have higher latency.",
+      "statement": "Models cluster at d_model / n_layers between roughly 100 and 200 (GPT-3/OPT/Mistral/Qwen/OLMo 3 at 128, LLaMA at 102, PaLM 540B at 156, BLOOM at 205), with Gemma 3 (87), Gemma 4 (61) and T5 11B (43; slide p44 prints 33, which is GPT-2's 1600/48, while p51 lists 43) deeper; Kaplan 2020 and Tay 2021 show loss is insensitive over a wide range, so the choice is dictated by systems concerns since very deep models are harder to parallelise and have higher latency.",
       "provenance": {
         "status": "said",
         "basis": "evidence",

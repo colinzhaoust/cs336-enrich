@@ -2,9 +2,9 @@
   "fixture": "tiling-sweep",
   "family": "tile-sweep",
   "scene": "TilingScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
-    "tiling-shared-memory"
+    "lecture_05:tiling-shared-memory"
   ],
   "video": "video.mp4",
   "probe": {

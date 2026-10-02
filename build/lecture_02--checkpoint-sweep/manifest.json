@@ -2,7 +2,7 @@
   "fixture": "lecture_02--checkpoint-sweep",
   "family": "checkpoint-strip",
   "scene": "CheckpointStripScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "activation-checkpointing"
   ],

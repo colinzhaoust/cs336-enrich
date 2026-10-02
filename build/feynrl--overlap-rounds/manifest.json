@@ -2,7 +2,7 @@
   "fixture": "feynrl--overlap-rounds",
   "family": "async-rounds",
   "scene": "AsyncRoundsScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "feynrl:weight-sync-nccl-async",
     "feynrl:staleness-budget-max-lag"

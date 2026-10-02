@@ -2,7 +2,7 @@
   "fixture": "lecture_02--sync-timeline",
   "family": "timeline",
   "scene": "TimelineScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "gpu-timing-synchronize"
   ],

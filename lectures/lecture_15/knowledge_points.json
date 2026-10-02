@@ -157,7 +157,8 @@
           },
           {
             "q": "The lecture poses three questions about post-training data: what the data looks like, how best to make use of it, and a third. What is the third?",
-            "answer": "Whether we need scale for this.", "layer": "detail"
+            "answer": "Whether we need scale for this.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would a lab bother collecting a small amount of behaviour data when it already has trillions of pretraining tokens?"
@@ -333,7 +334,8 @@
           },
           {
             "q": "Which two 'less visible, but important' aspects of SFT data does the lecture list?",
-            "answer": "Scale and safety.", "layer": "detail"
+            "answer": "Scale and safety.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does the style of the demonstration data (not just its correctness) end up being what the fine-tuned model reproduces?"
@@ -823,7 +825,7 @@
             "quote": "Main safety approach – extract scenarios from users"
           }
         ],
-        "filtering_note": "Spoken only. The safety slides (p23-p25) are screenshots whose text layer keeps only 'Details are pretty sparse', '# Examples? ~ few thousand in Llama 2', 'Pipeline with most details' and 'extract scenarios from users'. Neither metric is in the text layer, though it may appear inside the screenshots. Aloud (29:31-30:11), every safety-tuning approach balances the violation rate ('how often am I allowing bad queries to get through') against the false-refusal rate, with 'how do I kill a Python process' as the over-refusal example, aiming for 'a good Pareto trade between the two' with tailored data. The Tulu 3 / OLMo recipe (30:32-31:50) mines unsafe requests and jailbreak attempts from WildChat logs and writes the preferred response (resist the jailbreak, or say no), about '50,000-ish' examples (spoken number, not cross-checked); closed labs similarly mine usage logs and 'play whack-a-mole' (31:53-32:13). That benign look-alike prompts with helpful answers are the usual lever against false refusals is the author's reading of 'tailored data'; the professor does not name it. The rates in the prompts are the author's. small-data-big-behavior-change's p26 result (about 500 examples) concerns the violation side."
+        "filtering_note": "Spoken only. The safety slides (p23-p25) are screenshots whose text layer keeps only 'Details are pretty sparse', '# Examples? ~ few thousand in Llama 2', 'Pipeline with most details' and 'extract scenarios from users'. Neither metric is in the text layer, but p23's image plots exactly these two: the Llama 3 report's Figure 18, violation rate (%) against false refusal rate (%) for Llama 3 8B and 70B across safety/helpfulness mixes (violation falls from ~70% to ~12-20% as false refusal rises from ~1.7% to ~3%; 8B needs a higher share of safety data than 70B), and its excerpt introduces 'borderline prompts' to cut false refusals. Aloud (29:31-30:11), every safety-tuning approach balances the violation rate ('how often am I allowing bad queries to get through') against the false-refusal rate, with 'how do I kill a Python process' as the over-refusal example, aiming for 'a good Pareto trade between the two' with tailored data. The Tulu 3 / OLMo recipe (30:32-31:50) mines unsafe requests and jailbreak attempts from WildChat logs and writes the preferred response (resist the jailbreak, or say no), about '50,000-ish' examples (spoken number, not cross-checked); closed labs similarly mine usage logs and 'play whack-a-mole' (31:53-32:13). That benign look-alike prompts with helpful answers are the usual lever against false refusals is the author's reading of 'tailored data'; the professor does not name it. The rates in the prompts are the author's. small-data-big-behavior-change's p26 result (about 500 examples) concerns the violation side."
       },
       "prerequisites": [
         {
@@ -886,7 +888,8 @@
           },
           {
             "q": "Where did the Tulu 3 / OLMo pipeline get the prompts for its safety SFT data?",
-            "answer": "From WildChat usage logs: unsafe requests and jailbreak attempts mined at scale, each given a preferred response (resist the jailbreak, or refuse).", "layer": "detail"
+            "answer": "From WildChat usage logs: unsafe requests and jailbreak attempts mined at scale, each given a preferred response (resist the jailbreak, or refuse).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why is a model that refuses every request mentioning 'kill' a safety-tuning failure, even though its violation rate may be near zero?"
@@ -980,7 +983,7 @@
             "quote": "we don't really know per se. We can know what things aren't in pre-training. ... We can't show necessarily that, for example, safety is something that's in pre-training per se."
           }
         ],
-        "filtering_note": "p26's two plots ('(Hate speech)', '(Anthropic HH)') are images; the harmfulness scores at 0/100/300/500/1000/2000 added safety examples, and the slide's implicit observation that too many safety examples make the model over-refuse, are not in the text layer. The paper behind p26 (Bianchi et al.) is not named on the slide (inference). p22-p25 (misinformation and scams motivation, 'Details are pretty sparse', the Llama 2 pipeline screenshots, 'extract scenarios from users') are context. The deck never names LIMA ('less is more for alignment'); the LIMA-style claim is stated as point 3 of p27 and supported by the safety result, Alpaca's small distilled set and the agentic-SFT trend, with the explicit hedge about the long tail. No number is given for 'the long tail'. Spoken evidence (32:14-33:07): the p26 plots are read aloud: with 'as little as 500 examples' of refusals, compliance with malicious and hate-speech instructions 'drops dramatically', a 'very small push' that gives an across-the-board reduction, because models already have a safe/unsafe axis after pretraining. Spoken evidence (33:21-33:40): the 'long tail' is given a concrete meaning: a lab that wants 'really fine grained distinctions about what is safe and not safe' still needs 'very large scale data collection'. Spoken evidence (34:06): 'factually correct can hurt' is tied to hallucination (sft-tail-knowledge-hallucination). Spoken evidence (34:33-34:57, Q&A): whether a behaviour is 'already in pre-training' cannot be checked directly; one can show what is not there (generalization to very rare programming languages is hard with SFT) but not that safety is, so 'extracting' is a working hypothesis. Spoken evidence (30:11-31:05): safety sets are 'a few thousand or tens of thousands of examples'; Llama 2 'about a few thousand' (matching p23), although he also says the Llama 2 report does not 'even talk about how many examples' (29:25); Tulu 3 / OLMo's safety component is 'something like 50,000-ish examples' (spoken number, not cross-checked). Correction from the audio: the note calls p22-p25 'the Llama 2 pipeline screenshots'. Aloud only p23 is Llama 2; p24 ('Pipeline with most details') is Ai2's Tulu 3 post-training pipeline for OLMo ('two or three' in the captions, 30:32-30:57), and p25's 'extract scenarios from users' is its WildChat mining (31:12-31:50). The note also says the over-refusal side of p26 is not in the text layer: that is still true, but the trade-off is said aloud in general terms (29:31-30:11, safety-violation-vs-false-refusal)."
+        "filtering_note": "p26's two plots ('(Hate speech)', '(Anthropic HH)') are images; the harmfulness scores at 0/100/300/500/1000/2000 added safety examples, and the slide's implicit observation that too many safety examples make the model over-refuse, are not in the text layer. The paper behind p26 (Bianchi et al.) is not named on the slide (inference). p22-p25 (misinformation and scams motivation, 'Details are pretty sparse', the Llama 2 pipeline screenshots, 'extract scenarios from users') are context. The deck never names LIMA ('less is more for alignment'); the LIMA-style claim is stated as point 3 of p27 and supported by the safety result, Alpaca's small distilled set and the agentic-SFT trend, with the explicit hedge about the long tail. No number is given for 'the long tail'. Spoken evidence (32:14-33:07): the p26 plots are read aloud: with 'as little as 500 examples' of refusals, compliance with malicious and hate-speech instructions 'drops dramatically', a 'very small push' that gives an across-the-board reduction, because models already have a safe/unsafe axis after pretraining. Spoken evidence (33:21-33:40): the 'long tail' is given a concrete meaning: a lab that wants 'really fine grained distinctions about what is safe and not safe' still needs 'very large scale data collection'. Spoken evidence (34:06): 'factually correct can hurt' is tied to hallucination (sft-tail-knowledge-hallucination). Spoken evidence (34:33-34:57, Q&A): whether a behaviour is 'already in pre-training' cannot be checked directly; one can show what is not there (generalization to very rare programming languages is hard with SFT) but not that safety is, so 'extracting' is a working hypothesis. Spoken evidence (30:11-31:05): safety sets are 'a few thousand or tens of thousands of examples'; Llama 2 'about a few thousand' (matching p23), although he also says the Llama 2 report does not 'even talk about how many examples' (29:25); Tulu 3 / OLMo's safety component is 'something like 50,000-ish examples' (spoken number, not cross-checked). Correction from the audio: the note calls p22-p25 'the Llama 2 pipeline screenshots'. Aloud only p23 is Llama 2; p24 ('Pipeline with most details') is Ai2's Tulu 3 post-training pipeline for OLMo ('two or three' in the captions, 30:32-30:57), and p25's 'extract scenarios from users' is its WildChat mining (31:12-31:50). The note also says the over-refusal side of p26 is not in the text layer: that is still true, but the trade-off is said aloud in general terms (29:31-30:11, safety-violation-vs-false-refusal). Slide image audit (p23): the screenshot is from the Llama 3 report (its Figure 18, legend 'Llama 3 8B / 70B', plus the 'Finetuning data' paragraph on borderline prompts and synthetic adversarial data); only the slide's corner annotation '# Examples? ~ few thousand in Llama 2' is about Llama 2. So the few-thousand figure is the slide's claim about Llama 2, while calling the screenshot 'Llama 2' (29:18) is a slip."
       },
       "prerequisites": [
         {
@@ -1050,7 +1053,8 @@
           },
           {
             "q": "About how many safety examples did Llama 2 use?",
-            "answer": "A few thousand.", "layer": "detail"
+            "answer": "A few thousand.",
+            "layer": "detail"
           },
           {
             "q": "Complete the rule: SFT works best when we are just ___ pretraining behaviours, not ___ new ones.",
@@ -1211,7 +1215,8 @@
           },
           {
             "q": "Which two models does the lecture name as having publicized the two-phase recipe?",
-            "answer": "MiniCPM and JetMoE.", "layer": "detail"
+            "answer": "MiniCPM and JetMoE.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would the same instruction tokens cause forgetting when shown after pretraining but not when mixed into it?"
@@ -1487,7 +1492,8 @@
           },
           {
             "q": "Finish the lecture's line: 'LMs are policies, not ...'",
-            "answer": "...a model of some distribution.", "layer": "detail"
+            "answer": "...a model of some distribution.",
+            "layer": "detail"
           },
           {
             "q": "What does the G-V gap say about people's writing versus their preferences?",
@@ -1665,11 +1671,13 @@
           },
           {
             "q": "Besides the scarcity of high-quality verifiable annotators, what two crowdsourcing complications does the lecture list?",
-            "answer": "Getting annotators to actually check correctness, and having to be careful about their use of AI.", "layer": "detail"
+            "answer": "Getting annotators to actually check correctness, and having to be careful about their use of AI.",
+            "layer": "detail"
           },
           {
             "q": "What shift in the annotation market does the lecture report?",
-            "answer": "Lots of growth in expert annotation (the slide also notes large variation in compensation).", "layer": "detail"
+            "answer": "Lots of growth in expert annotation (the slide also notes large variation in compensation).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does 'pick the better of two' not automatically produce a correctness signal, even when both answers are fully visible?"
@@ -1799,7 +1807,8 @@
           },
           {
             "q": "According to the lecture, what matters 'a lot' in RLHF style, and what is the hedge?",
-            "answer": "Annotators matter a lot; true for many annotators but not all.", "layer": "detail"
+            "answer": "Annotators matter a lot; true for many annotators but not all.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does optimizing against a learned reward amplify a bias that each annotator only mildly expressed?"
@@ -2090,7 +2099,8 @@
           },
           {
             "q": "Name the AI-feedback preference dataset the lecture shows and two open models that used it.",
-            "answer": "UltraFeedback; used in Zephyr and OLMo (also Tulu 3).", "layer": "detail"
+            "answer": "UltraFeedback; used in Zephyr and OLMo (also Tulu 3).",
+            "layer": "detail"
           },
           {
             "q": "Which paper does the lecture cite for self-training with AI feedback?",
@@ -2233,7 +2243,8 @@
           },
           {
             "q": "DPO reuses the pairwise reward-model loss of an earlier RLHF paper. Whose objective does the lecture name it after?",
-            "answer": "Stiennon's: 'the Stiennon objective', from 'Learning to summarize from human feedback' (the Bradley-Terry pairwise loss).", "layer": "detail"
+            "answer": "Stiennon's: 'the Stiennon objective', from 'Learning to summarize from human feedback' (the Bradley-Terry pairwise loss).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does a loss built from sigmoid of a difference stop learning from a pair once the reward gap is large, and what does that do to the hardest-to-judge pairs?"
@@ -2430,11 +2441,13 @@
           },
           {
             "q": "What adjective does the lecture use for the InstructGPT PPO objective, a description its later warnings about overoptimization and mode collapse undercut?",
-            "answer": "'Very innocuous looking'.", "layer": "detail"
+            "answer": "'Very innocuous looking'.",
+            "layer": "detail"
           },
           {
             "q": "How does the lecture characterize PPO relative to DPO?",
-            "answer": "PPO: the original and very finicky approach; DPO: the new, very accessible approach.", "layer": "detail"
+            "answer": "PPO: the original and very finicky approach; DPO: the new, very accessible approach.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does a method that only clips how far probabilities move per step count as the fix for a variance problem?"
@@ -2588,7 +2601,8 @@
           {
             "q": "How many LM outputs does the lecture's best-of-n option sample?",
             "answer": "1024",
-            "format": "number", "layer": "detail"
+            "format": "number",
+            "layer": "detail"
           },
           {
             "q": "What does 'RL' mean in the lecture's question 'can we avoid doing any RL?'",

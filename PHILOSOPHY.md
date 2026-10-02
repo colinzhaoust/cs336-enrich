@@ -25,7 +25,7 @@ attach to the same node.
 
 ## What the evidence says (see research/03-learning-science.md)
 
-1. **Commit before reveal.** A prediction typed before the answer is the
+1. **Commit before reveal, offered, not enforced.** (Colin, 2026-10-02: nothing is locked; a prediction is an optional pause, and the closed-book changed case is an opt-in self-test.) A prediction typed before the answer is the
    single largest lever (Crouch 2004; Brod 2021; ICAP Active vs Constructive).
    Sliders alone do not teach.
 2. **Retrieval is the unit.** Delayed recall beats rereading by ~20 points at a

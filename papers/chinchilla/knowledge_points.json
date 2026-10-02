@@ -1748,7 +1748,7 @@
             "quote": "This suggests that our results are independent of the dataset as long as one does not train for more than one epoch."
           }
         ],
-        "filtering_note": "The paper's own list (§5) is the evidence here. Two things the paper does not list but which later work and Lecture 9 raise: the sensitivity of Approach 3's fit (Lecture 9 p53: data forensics re-fit it closer to Approaches 1-2) and the train-versus-deploy objective (Lecture 9 p54). The single-epoch caveat connects to lecture_09:data-repetition-effective-data. Fig. A5's three-segment fits are the only quantitative evidence for the curvature, and no slopes are printed."
+        "filtering_note": "The paper's own list (§5) is the evidence here. Two things the paper does not list but which later work and Lecture 9 raise: the sensitivity of Approach 3's fit (Lecture 9 p53: data forensics re-fit it closer to Approaches 1-2) and the train-versus-deploy objective (Lecture 9 p54). The single-epoch caveat connects to lecture_09:data-repetition-effective-data. Fig. A5's three-segment fits are the only quantitative evidence for the curvature, and no slopes are printed. The single-epoch claim is the paper's (§5), but its own Table A1 shows Chinchilla's mixture repeating MassiveWeb (1.24 epochs) and Wikipedia (3.40 epochs); the claim holds for the analysis runs as stated, not for every subset of Chinchilla's data."
       },
       "prerequisites": [
         {
@@ -1779,7 +1779,7 @@
         },
         {
           "belief": "The 400 runs give many independent checks of the large-scale prediction.",
-          "why_wrong": "The runs span 70M to 16B and under 3e21 FLOPs; the prediction at Gopher's 5.76e23 is an extrapolation checked by a single pair of large runs."
+          "why_wrong": "The runs span 70M to 16B parameters and the largest IsoFLOP budget is 3e21 FLOPs; the prediction at Gopher's 5.76e23 is an extrapolation checked by a single pair of large runs."
         },
         {
           "belief": "The results apply when data is repeated for several epochs.",

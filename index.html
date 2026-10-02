@@ -33,12 +33,12 @@ a { color: var(--accent); }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
 ol.flow { padding-left: 20px; } ol.flow li { margin: 4px 0; }
 .toc { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
-.toc a.row { display:grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); color: var(--ink); text-decoration: none; }
-.toc a.row:last-child { border-bottom: none; }
-.toc a.row:hover { background: rgba(36,102,141,.06); }
+.toc .row { display:grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); color: var(--ink); text-decoration: none; }
+.toc .row:last-child { border-bottom: none; }
+.toc .row:hover { background: rgba(36,102,141,.06); }
 .toc .num { font-weight: 700; color: var(--accent); text-align: center; }
-.toc .t { font-weight: 600; } .toc .meta { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-@media (max-width: 640px) { .toc a.row { grid-template-columns: 36px 1fr; } .toc .meta { grid-column: 2; } }
+.toc .t { font-weight: 600; color: var(--ink); text-decoration: none; } .toc a.t:hover { color: var(--accent); } .toc .go { font-size: 13px; } .toc .meta { font-size: 13px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .toc .row { grid-template-columns: 36px 1fr; } .toc .meta { grid-column: 2; } }
 .threads { display:flex; flex-wrap: wrap; gap: 8px; }
 .threads a { font-size: 14px; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--card); text-decoration: none; }
 .small { font-size: 14px; color: var(--muted); }
@@ -48,9 +48,9 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
 </head>
 <body>
 <main>
-  <h1>Atlas: CS336 as knowledge points you predict, then see</h1>
-  <p class="lede">Stanford CS336 (all 17 lectures), five papers and three repositories, cut into 418 knowledge points. Each one carries where it comes from, including what the professor said but did not write; a prediction you commit before anything is revealed; a mechanism you can drive or watch; and a changed case you answer closed book.</p>
-  <a class="cta" href="#course">Lecture by lecture</a>
+  <h1>Atlas: CS336, read through once and understood</h1>
+  <p class="lede">Stanford CS336 (all 17 lectures), five papers and three repositories. Each has a read-through: the lecture's own slides or code in order, with what the professor said aloud, Manim animations, widgets you can drive and worked examples laid between them, so you don't need to go back to the video. Behind it, 418 knowledge points to practise, each with its sources, an optional prediction, and spaced review.</p>
+  <a class="cta" href="#course">Read lecture by lecture</a>
   <a class="cta ghost" href="site/#/map">Course map by unit</a>
   <a class="cta ghost" href="site/#/session/l5-gpu">Try a 30-minute session (GPUs)</a>
   <a class="cta ghost" href="site/#/t/lecture_08/_gallery">See one lecture's widgets</a>
@@ -65,47 +65,47 @@ footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px
   </div>
 
   <h2 id="course">Course by course</h2>
-  <p class="small">Each title opens that lecture's page: what it builds on, its animations, and its knowledge points in teaching order. ▶ animations · ⚙ widget uses · 🎙 knowledge points that exist only in the lecture audio.</p>
+  <p class="small">Each title opens the read-through (slides or code, explanation, animations, examples). "Practice" opens the lecture's knowledge points in teaching order. ▶ animations · ⚙ widget uses · 🎙 knowledge points that exist only in the lecture audio.</p>
   <div class="toc">
-    <a class="row" href="site/#/t/lecture_01"><span class="num">L1</span><span><span class="t">Tokenization</span><div class="small">Executable lecture → BPE from the professor&#x27;s own example</div></span><span class="meta">16 KPs · ▶1 · ⚙14</span></a>
-    <a class="row" href="site/#/t/lecture_02"><span class="num">L2</span><span><span class="t">Resource accounting</span><div class="small">Executable lecture → knowledge points with line-level provenance</div></span><span class="meta">19 KPs · ▶5 · ⚙14 · 🎙3</span></a>
-    <a class="row" href="site/#/t/lecture_03"><span class="num">L3</span><span><span class="t">Architecture and hyperparameters</span><div class="small">Slide deck → what the field converged on and why</div></span><span class="meta">21 KPs · ▶1 · ⚙11 · 🎙3</span></a>
-    <a class="row" href="site/#/t/lecture_04"><span class="num">L4</span><span><span class="t">Attention alternatives and MoE</span><div class="small">Slide deck → KV cache, GQA, routing, load balance</div></span><span class="meta">23 KPs · ⚙15 · 🎙5</span></a>
-    <a class="row" href="site/#/t/lecture_05"><span class="num">L5</span><span><span class="t">GPUs</span><div class="small">Slide deck → knowledge points with page-level provenance</div></span><span class="meta">21 KPs · ▶4 · ⚙13 · 🎙5</span></a>
-    <a class="row" href="site/#/t/lecture_06"><span class="num">L6</span><span><span class="t">Kernels and Triton</span><div class="small">Executable lecture → kernels line by line</div></span><span class="meta">17 KPs · ▶4 · ⚙9 · 🎙1</span></a>
-    <a class="row" href="site/#/t/lecture_07"><span class="num">L7</span><span><span class="t">Parallelism (collectives, ZeRO, TP, PP)</span><div class="small">Executable lecture → what each parallelism costs in bytes</div></span><span class="meta">17 KPs · ▶4 · ⚙12 · 🎙1</span></a>
-    <a class="row" href="site/#/t/lecture_08"><span class="num">L8</span><span><span class="t">Parallelism basics (systems view)</span><div class="small">Slide deck → bandwidth hierarchy, comm/compute ratios, 3D parallelism</div></span><span class="meta">19 KPs · ▶1 · ⚙13 · 🎙3</span></a>
-    <a class="row" href="site/#/t/lecture_09"><span class="num">L9</span><span><span class="t">Scaling laws</span><div class="small">Slide deck → power laws, compute-optimal allocation, how to run a study</div></span><span class="meta">20 KPs · ▶1 · ⚙16 · 🎙4</span></a>
-    <a class="row" href="site/#/t/lecture_10"><span class="num">L10</span><span><span class="t">Inference</span><div class="small">Executable lecture → why decode is memory-bound and what to do about it</div></span><span class="meta">18 KPs · ▶2 · ⚙20 · 🎙2</span></a>
-    <a class="row" href="site/#/t/lecture_11"><span class="num">L11</span><span><span class="t">Scaling: case study and details</span><div class="small">Slide deck → how labs actually run a scaling study</div></span><span class="meta">19 KPs · ⚙7 · 🎙3</span></a>
-    <a class="row" href="site/#/t/lecture_12"><span class="num">L12</span><span><span class="t">Evaluation</span><div class="small">Executable lecture → what a benchmark number can and cannot mean</div></span><span class="meta">18 KPs · ⚙8 · 🎙2</span></a>
-    <a class="row" href="site/#/t/lecture_13"><span class="num">L13</span><span><span class="t">Data: sources and datasets</span><div class="small">Executable lecture → where the tokens come from and what each dataset dropped</div></span><span class="meta">17 KPs · ⚙6 · 🎙1</span></a>
-    <a class="row" href="site/#/t/lecture_14"><span class="num">L14</span><span><span class="t">Data: filtering, dedup, mixing</span><div class="small">Executable lecture → every filter is a bias; MinHash and LSH by the numbers</div></span><span class="meta">17 KPs · ⚙10 · 🎙1</span></a>
-    <a class="row" href="site/#/t/lecture_15"><span class="num">L15</span><span><span class="t">Mid/post-training: SFT and RLHF</span><div class="small">Slide deck → from preference data to a policy, and what goes wrong</div></span><span class="meta">20 KPs · ⚙9 · 🎙4</span></a>
-    <a class="row" href="site/#/t/lecture_16"><span class="num">L16</span><span><span class="t">RL from verifiable rewards</span><div class="small">Slide deck → policy gradients, GRPO, what R1 actually did</div></span><span class="meta">19 KPs · ⚙12 · 🎙3</span></a>
-    <a class="row" href="site/#/t/lecture_17"><span class="num">L17</span><span><span class="t">Alignment and multimodality</span><div class="small">Executable lecture → images as tokens, encoders as adapters</div></span><span class="meta">15 KPs · ⚙9 · 🎙1</span></a>
+    <div class="row"><span class="num">L1</span><span><a class="t" href="site/#/read/lecture_01">Tokenization</a><div class="small">Executable lecture → BPE from the professor&#x27;s own example</div></span><span class="meta">16 KPs · ▶1 · ⚙14<br><span class="go"><a href="site/#/read/lecture_01">Read</a> · <a href="site/#/t/lecture_01">Practice</a></span></span></div>
+    <div class="row"><span class="num">L2</span><span><a class="t" href="site/#/read/lecture_02">Resource accounting</a><div class="small">Executable lecture → knowledge points with line-level provenance</div></span><span class="meta">19 KPs · ▶5 · ⚙14 · 🎙3<br><span class="go"><a href="site/#/read/lecture_02">Read</a> · <a href="site/#/t/lecture_02">Practice</a></span></span></div>
+    <div class="row"><span class="num">L3</span><span><a class="t" href="site/#/read/lecture_03">Architecture and hyperparameters</a><div class="small">Slide deck → what the field converged on and why</div></span><span class="meta">21 KPs · ▶1 · ⚙11 · 🎙3<br><span class="go"><a href="site/#/read/lecture_03">Read</a> · <a href="site/#/t/lecture_03">Practice</a></span></span></div>
+    <div class="row"><span class="num">L4</span><span><a class="t" href="site/#/read/lecture_04">Attention alternatives and MoE</a><div class="small">Slide deck → KV cache, GQA, routing, load balance</div></span><span class="meta">23 KPs · ⚙15 · 🎙5<br><span class="go"><a href="site/#/read/lecture_04">Read</a> · <a href="site/#/t/lecture_04">Practice</a></span></span></div>
+    <div class="row"><span class="num">L5</span><span><a class="t" href="site/#/read/lecture_05">GPUs</a><div class="small">Slide deck → knowledge points with page-level provenance</div></span><span class="meta">21 KPs · ▶4 · ⚙13 · 🎙5<br><span class="go"><a href="site/#/read/lecture_05">Read</a> · <a href="site/#/t/lecture_05">Practice</a></span></span></div>
+    <div class="row"><span class="num">L6</span><span><a class="t" href="site/#/read/lecture_06">Kernels and Triton</a><div class="small">Executable lecture → kernels line by line</div></span><span class="meta">17 KPs · ▶4 · ⚙9 · 🎙1<br><span class="go"><a href="site/#/read/lecture_06">Read</a> · <a href="site/#/t/lecture_06">Practice</a></span></span></div>
+    <div class="row"><span class="num">L7</span><span><a class="t" href="site/#/read/lecture_07">Parallelism (collectives, ZeRO, TP, PP)</a><div class="small">Executable lecture → what each parallelism costs in bytes</div></span><span class="meta">17 KPs · ▶4 · ⚙12 · 🎙1<br><span class="go"><a href="site/#/read/lecture_07">Read</a> · <a href="site/#/t/lecture_07">Practice</a></span></span></div>
+    <div class="row"><span class="num">L8</span><span><a class="t" href="site/#/read/lecture_08">Parallelism basics (systems view)</a><div class="small">Slide deck → bandwidth hierarchy, comm/compute ratios, 3D parallelism</div></span><span class="meta">19 KPs · ▶1 · ⚙13 · 🎙3<br><span class="go"><a href="site/#/read/lecture_08">Read</a> · <a href="site/#/t/lecture_08">Practice</a></span></span></div>
+    <div class="row"><span class="num">L9</span><span><a class="t" href="site/#/read/lecture_09">Scaling laws</a><div class="small">Slide deck → power laws, compute-optimal allocation, how to run a study</div></span><span class="meta">20 KPs · ▶1 · ⚙16 · 🎙4<br><span class="go"><a href="site/#/read/lecture_09">Read</a> · <a href="site/#/t/lecture_09">Practice</a></span></span></div>
+    <div class="row"><span class="num">L10</span><span><a class="t" href="site/#/read/lecture_10">Inference</a><div class="small">Executable lecture → why decode is memory-bound and what to do about it</div></span><span class="meta">18 KPs · ▶2 · ⚙20 · 🎙2<br><span class="go"><a href="site/#/read/lecture_10">Read</a> · <a href="site/#/t/lecture_10">Practice</a></span></span></div>
+    <div class="row"><span class="num">L11</span><span><a class="t" href="site/#/read/lecture_11">Scaling: case study and details</a><div class="small">Slide deck → how labs actually run a scaling study</div></span><span class="meta">19 KPs · ⚙7 · 🎙3<br><span class="go"><a href="site/#/read/lecture_11">Read</a> · <a href="site/#/t/lecture_11">Practice</a></span></span></div>
+    <div class="row"><span class="num">L12</span><span><a class="t" href="site/#/read/lecture_12">Evaluation</a><div class="small">Executable lecture → what a benchmark number can and cannot mean</div></span><span class="meta">18 KPs · ⚙8 · 🎙2<br><span class="go"><a href="site/#/read/lecture_12">Read</a> · <a href="site/#/t/lecture_12">Practice</a></span></span></div>
+    <div class="row"><span class="num">L13</span><span><a class="t" href="site/#/read/lecture_13">Data: sources and datasets</a><div class="small">Executable lecture → where the tokens come from and what each dataset dropped</div></span><span class="meta">17 KPs · ⚙6 · 🎙1<br><span class="go"><a href="site/#/read/lecture_13">Read</a> · <a href="site/#/t/lecture_13">Practice</a></span></span></div>
+    <div class="row"><span class="num">L14</span><span><a class="t" href="site/#/read/lecture_14">Data: filtering, dedup, mixing</a><div class="small">Executable lecture → every filter is a bias; MinHash and LSH by the numbers</div></span><span class="meta">17 KPs · ⚙10 · 🎙1<br><span class="go"><a href="site/#/read/lecture_14">Read</a> · <a href="site/#/t/lecture_14">Practice</a></span></span></div>
+    <div class="row"><span class="num">L15</span><span><a class="t" href="site/#/read/lecture_15">Mid/post-training: SFT and RLHF</a><div class="small">Slide deck → from preference data to a policy, and what goes wrong</div></span><span class="meta">20 KPs · ⚙9 · 🎙4<br><span class="go"><a href="site/#/read/lecture_15">Read</a> · <a href="site/#/t/lecture_15">Practice</a></span></span></div>
+    <div class="row"><span class="num">L16</span><span><a class="t" href="site/#/read/lecture_16">RL from verifiable rewards</a><div class="small">Slide deck → policy gradients, GRPO, what R1 actually did</div></span><span class="meta">19 KPs · ⚙12 · 🎙3<br><span class="go"><a href="site/#/read/lecture_16">Read</a> · <a href="site/#/t/lecture_16">Practice</a></span></span></div>
+    <div class="row"><span class="num">L17</span><span><a class="t" href="site/#/read/lecture_17">Alignment and multimodality</a><div class="small">Executable lecture → images as tokens, encoders as adapters</div></span><span class="meta">15 KPs · ⚙9 · 🎙1<br><span class="go"><a href="site/#/read/lecture_17">Read</a> · <a href="site/#/t/lecture_17">Practice</a></span></span></div>
   </div>
   <h2>Papers</h2>
   <div class="toc">
-    <a class="row" href="site/#/t/chinchilla"><span class="num">📄</span><span><span class="t">Chinchilla (compute-optimal scaling)</span><div class="small">Three ways to fit the same law; pairs with Lecture 9</div></span><span class="meta">12 KPs · ▶1 · ⚙6</span></a>
-    <a class="row" href="site/#/t/feynrl_paper"><span class="num">📄</span><span><span class="t">FeynRL (P3O)</span><div class="small">Trust the batch: adaptive policy optimization, paired with the FeynRL repo thread</div></span><span class="meta">12 KPs · ▶2 · ⚙10</span></a>
-    <a class="row" href="site/#/t/flashattention"><span class="num">📄</span><span><span class="t">FlashAttention</span><div class="small">IO-aware exact attention; pairs with Lecture 5</div></span><span class="meta">12 KPs · ▶3 · ⚙7</span></a>
-    <a class="row" href="site/#/t/grpo"><span class="num">📄</span><span><span class="t">DeepSeekMath (GRPO)</span><div class="small">Group-relative advantages; the equations FeynRL implements</div></span><span class="meta">12 KPs · ▶1 · ⚙7</span></a>
-    <a class="row" href="site/#/t/rope"><span class="num">📄</span><span><span class="t">RoFormer (RoPE)</span><div class="small">Paper argument vs course teaching order</div></span><span class="meta">12 KPs · ▶1 · ⚙7</span></a>
+    <div class="row"><span class="num">📄</span><span><a class="t" href="site/#/read/chinchilla">Chinchilla (compute-optimal scaling)</a><div class="small">Three ways to fit the same law; pairs with Lecture 9</div></span><span class="meta">12 KPs · ▶1 · ⚙6<br><span class="go"><a href="site/#/read/chinchilla">Read</a> · <a href="site/#/t/chinchilla">Practice</a></span></span></div>
+    <div class="row"><span class="num">📄</span><span><a class="t" href="site/#/t/feynrl_paper">FeynRL (P3O)</a><div class="small">Trust the batch: adaptive policy optimization, paired with the FeynRL repo thread</div></span><span class="meta">12 KPs · ▶2 · ⚙10<br><span class="go"><a href="site/#/t/feynrl_paper">Practice</a></span></span></div>
+    <div class="row"><span class="num">📄</span><span><a class="t" href="site/#/read/flashattention">FlashAttention</a><div class="small">IO-aware exact attention; pairs with Lecture 5</div></span><span class="meta">12 KPs · ▶3 · ⚙7<br><span class="go"><a href="site/#/read/flashattention">Read</a> · <a href="site/#/t/flashattention">Practice</a></span></span></div>
+    <div class="row"><span class="num">📄</span><span><a class="t" href="site/#/read/grpo">DeepSeekMath (GRPO)</a><div class="small">Group-relative advantages; the equations FeynRL implements</div></span><span class="meta">12 KPs · ▶1 · ⚙7<br><span class="go"><a href="site/#/read/grpo">Read</a> · <a href="site/#/t/grpo">Practice</a></span></span></div>
+    <div class="row"><span class="num">📄</span><span><a class="t" href="site/#/read/rope">RoFormer (RoPE)</a><div class="small">Paper argument vs course teaching order</div></span><span class="meta">12 KPs · ▶1 · ⚙7<br><span class="go"><a href="site/#/read/rope">Read</a> · <a href="site/#/t/rope">Practice</a></span></span></div>
   </div>
   <h2>Projects: codebases traced end to end</h2>
   <div class="toc">
-    <a class="row" href="site/#/t/edtrace"><span class="num">⌘</span><span><span class="t">edtrace</span><div class="small">The tracer behind the executable lectures: what it records and what it cannot</div></span><span class="meta">12 KPs · ⚙12</span></a>
-    <a class="row" href="site/#/t/feynrl"><span class="num">⌘</span><span><span class="t">FeynRL</span><div class="small">One RL training step traced through the code</div></span><span class="meta">16 KPs · ▶4 · ⚙16</span></a>
-    <a class="row" href="site/#/t/tea"><span class="num">⌘</span><span><span class="t">TheoremExplainAgent</span><div class="small">An agentic Manim pipeline traced end to end; where quality is and is not checked</div></span><span class="meta">14 KPs · ⚙10</span></a>
+    <div class="row"><span class="num">⌘</span><span><a class="t" href="site/#/t/edtrace">edtrace</a><div class="small">The tracer behind the executable lectures: what it records and what it cannot</div></span><span class="meta">12 KPs · ⚙12<br><span class="go"><a href="site/#/t/edtrace">Practice</a></span></span></div>
+    <div class="row"><span class="num">⌘</span><span><a class="t" href="site/#/t/feynrl">FeynRL</a><div class="small">One RL training step traced through the code</div></span><span class="meta">16 KPs · ▶4 · ⚙16<br><span class="go"><a href="site/#/t/feynrl">Practice</a></span></span></div>
+    <div class="row"><span class="num">⌘</span><span><a class="t" href="site/#/t/tea">TheoremExplainAgent</a><div class="small">An agentic Manim pipeline traced end to end; where quality is and is not checked</div></span><span class="meta">14 KPs · ⚙10<br><span class="go"><a href="site/#/t/tea">Practice</a></span></span></div>
   </div>
   <h2>One knowledge point, five moves</h2>
   <div class="two">
     <div class="card">
       <ol class="flow">
-        <li><b>Predict.</b> Commit a number, a trend or a sentence before anything is shown.</li>
+        <li><b>Predict (optional).</b> Pause and commit a number, a trend or a sentence; nothing is locked.</li>
         <li><b>See the mechanism.</b> A widget whose control is the quantity the question varies, a stepped animation with one thing to notice, a worked derivation whose last step you write yourself the second time.</li>
-        <li><b>Changed case, closed book.</b> The mechanism, the sources and the cards hide while you answer a new case. Mastery needs it and an auto-graded check.</li>
+        <li><b>Changed case.</b> Answer a new case, closed book if you choose to test yourself.</li>
         <li><b>Retrieve later.</b> Core cards come back on an FSRS schedule; detail cards (identifiers, exact constants) wait until the core is remembered twice.</li>
         <li><b>Provenance.</b> Every claim is anchored to a line of the lecture code, a slide page, a paper section or a timestamp in the lecture video.</li>
       </ol>

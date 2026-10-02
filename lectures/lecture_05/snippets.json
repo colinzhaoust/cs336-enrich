@@ -75,5 +75,12 @@
   "end": 112,
   "text": "    num_threads_per_block = 128\n    num_registers_per_thread = 160\n\n    # What hardware offers\n    max_registers = 65536  # Registers allowed per SM\n    max_warps = 64         # Concurrent warps allowed per SM\n\n    # What we can run at once\n    assert num_registers_per_thread <= 255\n    num_registers_per_block = num_threads_per_block * num_registers_per_thread  # @inspect num_registers_per_block\n    num_blocks = max_registers // num_registers_per_block  # Limited by registers @inspect num_blocks\n    num_warps = num_blocks * num_threads_per_block / 32  # @inspect num_warps\n    occupancy = num_warps / max_warps  # @inspect occupancy",
   "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L42-L54": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 42,
+  "end": 54,
+  "text": "    text(\"| Accelerator                        | A100      | H100      | B200      |\", verbatim=True)\n    text(\"+------------------------------------+-----------+-----------+-----------+\", verbatim=True)\n    text(\"| # SMs                              |       108 |       132 |       148 |\", verbatim=True)\n    text(\"+------------------------------------+-----------+-----------+-----------+\", verbatim=True)\n    text(\"| Register size (per SM)             |    256 KB |    256 KB |    256 KB |\", verbatim=True)\n    text(\"| L1 cache + shared memory (per SM)  |    192 KB |    256 KB |    256 KB |\", verbatim=True)\n    text(\"| L2 cache size                      |     40 MB |     50 MB | 96-126 MB |\", verbatim=True)\n    text(\"| HBM size                           |     80 GB |     80 GB |    192 GB |\", verbatim=True)\n    text(\"+------------------------------------+-----------+-----------+-----------+\", verbatim=True)\n    text(\"| Register bandwidth                 | ~116 TB/s | ~401 TB/s | ~447 TB/s |\", verbatim=True)\n    text(\"| L1 cache + shared memory bandwidth |  ~19 TB/s |  ~33 TB/s |  ~19 TB/s |\", verbatim=True)\n    text(\"| L2 cache bandwidth                 | ~5-8 TB/s |  ~12 TB/s |   ~9 TB/s |\", verbatim=True)\n    text(\"| HBM bandwidth                      |    2 TB/s | 3.35 TB/s |    8 TB/s |\", verbatim=True)",
+  "sha256": "d21a54725f5b"
  }
 }

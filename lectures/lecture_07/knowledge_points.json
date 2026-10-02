@@ -128,7 +128,8 @@
             "q": "How many GPUs share one NVLink domain in a GB200 NVL72 rack? Type only the number.",
             "answer": "72. NVIDIA's published GB200 NVL72 layout is 18 compute trays × 4 GPUs; the lecture (L229, and aloud at 31:41) says 8 per tray × 9 trays, which gives the same total.",
             "format": "number",
-            "tolerance": 0.01, "layer": "detail"
+            "tolerance": 0.01,
+            "layer": "detail"
           }
         ],
         "self_explain": "The professor says last week was 'fusion/tiling' and this week is 'replication/sharding'. What is the shared enemy, and why does the remedy change name as you move down the hierarchy?"
@@ -414,7 +415,8 @@
         "retrieval": [
           {
             "q": "Which torch.distributed call does the lecture use for all-gather into a preallocated tensor, and how long must the output be relative to the input?",
-            "answer": "all_gather_into_tensor; world_size × the input length (L276, L279).", "layer": "detail"
+            "answer": "all_gather_into_tensor; world_size × the input length (L276, L279).",
+            "layer": "detail"
           },
           {
             "q": "State the sharded-training use case the professor attaches to all-gather.",
@@ -1091,7 +1093,8 @@
           },
           {
             "q": "Why does the lecture's spawn() run the function directly with distributed calls disabled when traced?",
-            "answer": "edtrace cannot trace through multiprocessing, so DisableDistributed replaces every dist function with a no-op and the function runs as rank 0 (L557-L562, L588-L591).", "layer": "detail"
+            "answer": "edtrace cannot trace through multiprocessing, so DisableDistributed replaces every dist function with a no-op and the function runs as rank 0 (L557-L562, L588-L591).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Every rank runs the same program. What goes wrong if rank 2 skips one collective call that the other three make?"
@@ -1307,7 +1310,7 @@
             "quote": "as world size increases, this world size minus 1 divided by world size essentially converges to 1. ... Notice that this is independent of the world size, which is good. ... It is also independent of the topology"
           }
         ],
-        "filtering_note": "The reduce-scatter benchmark's input is world_size × num_elements (L342), i.e. 4× the all-reduce tensor, so under the lecture's own formulas it moves 2× the bytes of the all-reduce — the professor's note 'all-reduce moves 2x the data' (L370) is per unit of *output*, not per benchmark. The trace's millisecond and GB/s values are from one run on 4 unspecified GPUs and are not restated; only the ratio is used. The 2·(W−1)/W factor is nccl-tests' bus-bandwidth convention. Spoken evidence (49:29-50:21): the factors are justified aloud: W - 1 steps because there are W - 1 'addition operations', a 2 'because you need to both send and reduce', and W in the denominator because it is 'the total amount that all the ranks have waited'; the whole thing is presented as the communication analogue of MFU (48:30). Spoken evidence (50:45-51:08): 'independent of world_size' (L331) is the large-W limit: (W - 1)/W 'essentially converges to 1', so at W = 4 the expression is 0.75 of 2·S/duration; the statement's '≈' covers this. Spoken slip (49:51): the 2 is said to be 'send and reduce' where L325 says 'send + receive'; not imported. The bandwidths read aloud ('about 400 gigabytes per second', 50:30; 'in the kind of 400s' for reduce-scatter, 52:29) round the trace's single-run values and are not restated."
+        "filtering_note": "The reduce-scatter benchmark's input is world_size × num_elements (L342), i.e. 4× the all-reduce tensor, so under the lecture's own formulas it moves 2× the bytes of the all-reduce — the professor's note 'all-reduce moves 2x the data' (L370) is per unit of *output*, not per benchmark. The trace's millisecond and GB/s values are from one run on 4 unspecified GPUs and are not restated; only the ratio is used. The 2·(W−1)/W factor is nccl-tests' bus-bandwidth convention. Spoken evidence (49:29-50:21): the factors are justified aloud: W - 1 steps because there are W - 1 'addition operations', a 2 'because you need to both send and reduce', and W in the denominator because it is 'the total amount that all the ranks have waited'; the whole thing is presented as the communication analogue of MFU (48:30). Spoken evidence (50:45-51:08): 'independent of world_size' (L332) is the large-W limit: (W - 1)/W 'essentially converges to 1', so at W = 4 the expression is 0.75 of 2·S/duration; the statement's '≈' covers this. Spoken slip (49:51): the 2 is said to be 'send and reduce' where L325 says 'send + receive'; not imported. The bandwidths read aloud ('about 400 gigabytes per second', 50:30; 'in the kind of 400s' for reduce-scatter, 52:29) round the trace's single-run values and are not restated."
       },
       "prerequisites": [
         {
@@ -1364,7 +1367,8 @@
           {
             "q": "In the recorded run (world_size 4), how many times larger was the reduce-scatter input than the all-reduce tensor, and what does that make the ratio of sent_bytes under the two formulas?",
             "answer": "4× (world_size × num_elements vs num_elements, L342 vs L305); reduce-scatter sends 4S·3 = 12S vs all-reduce 2S·3 = 6S, i.e. 2× (L325, L363).",
-            "format": "short", "layer": "detail"
+            "format": "short",
+            "layer": "detail"
           }
         ],
         "self_explain": "The reduce-scatter run moved twice the bytes of the all-reduce run and reported a similar bandwidth. What does that tell you about which quantity the link actually limits?"
@@ -1509,7 +1513,7 @@
         {
           "kp": "lecture_02:optimizer-state-memory",
           "basis": "author-inference",
-          "note": "Each rank replicates the full 16 bytes/parameter of lecture 2; DDP shrinks only the activation term."
+          "note": "Each rank replicates the full 12 bytes/parameter of lecture 2 (16 in this lecture's fp32 toy and in the ZeRO paper, which adds an fp32 master copy); DDP shrinks only the activation term."
         },
         {
           "kp": "lecture_02:six-nd",
@@ -1629,7 +1633,7 @@
             "quote": "We looked at data parallelism. ... We only did DDP. ... Next time we'll do FSDP and 0."
           }
         ],
-        "filtering_note": "The professor names ZeRO/FSDP only as the next lecture's topic and in the summary; nothing stage-wise is said or computed here. The formulas and the K = 12 accounting come from the ZeRO paper (Rajbhandari et al. 2019, §5, Fig. 1). The paper's 16 bytes/param counts an fp32 master copy of the weights plus two moments; lecture 2's 16 (2 + 2 + 4 + 4) reaches the same total without a master copy, so the totals agree but the breakdown differs. ZeRO-3's extra communication (1.5× DDP's all-reduce volume in the paper) is not covered. Spoken evidence (16:25-16:41, 1:02:32-1:02:59): aloud, ZeRO/FSDP gets a one-line motive each time: all-reduce keeps every parameter on every rank, and splitting it into reduce-scatter + all-gather lets you 'intervene'. Nothing stage-wise is said; the stage formulas remain the paper's. It is deferred to the next lecture three times (16:25, 1:02:32, 1:19:28); see the lecture_08 thread's ZeRO KPs."
+        "filtering_note": "The professor names ZeRO/FSDP only as the next lecture's topic and in the summary; nothing stage-wise is said or computed here. The formulas and the K = 12 accounting come from the ZeRO paper (Rajbhandari et al. 2019, §5, Fig. 1). The paper's 16 bytes/param counts an fp32 master copy of the weights plus two moments; lecture 2's 12 (2 + 2 + 4 + 4) leaves out that master copy, so lecture 2 totals 12 bytes per parameter and the paper 16. ZeRO-3's extra communication (1.5× DDP's all-reduce volume in the paper) is not covered. Spoken evidence (16:25-16:41, 1:02:32-1:02:59): aloud, ZeRO/FSDP gets a one-line motive each time: all-reduce keeps every parameter on every rank, and splitting it into reduce-scatter + all-gather lets you 'intervene'. Nothing stage-wise is said; the stage formulas remain the paper's. It is deferred to the next lecture three times (16:25, 1:02:32, 1:19:28); see the lecture_08 thread's ZeRO KPs."
       },
       "prerequisites": [
         {
@@ -1654,7 +1658,7 @@
         {
           "kp": "lecture_02:optimizer-state-memory",
           "basis": "author-inference",
-          "note": "The 16 bytes/parameter being sharded."
+          "note": "The bytes per parameter being sharded (12 in lecture 2, 16 in the ZeRO paper)."
         },
         {
           "kp": "lecture_02:mixed-precision",
@@ -1850,7 +1854,8 @@
         "retrieval": [
           {
             "q": "After the per-layer all-gather in the lecture's TP, what is the shape of x and which torch op assembles it?",
-            "answer": "batch_size × num_dim; torch.cat(activations, dim=1) (L474-L475).", "layer": "detail"
+            "answer": "batch_size × num_dim; torch.cat(activations, dim=1) (L474-L475).",
+            "layer": "detail"
           },
           {
             "q": "Why does the summary say TP needs NVLink-class interconnect while PP can live with slower links?",
@@ -1858,7 +1863,8 @@
           },
           {
             "q": "Which pass does the lecture leave as a homework exercise for tensor parallelism?",
-            "answer": "The backward pass (L479).", "layer": "detail"
+            "answer": "The backward pass (L479).",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why must the activations be gathered before the next matmul in this scheme, and what would a row-split of the next layer let you skip?"
@@ -2245,7 +2251,8 @@
           },
           {
             "q": "What does the lecture say is 'not handled' in its pipeline code, and which quantity would handling it reduce?",
-            "answer": "Overlapping communication and computation; the pipeline bubble (L532).", "layer": "detail"
+            "answer": "Overlapping communication and computation; the pipeline bubble (L532).",
+            "layer": "detail"
           },
           {
             "q": "As m grows, what stays fixed per stage and what shrinks?",

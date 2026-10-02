@@ -330,7 +330,8 @@
           },
           {
             "q": "What does Part 1 of the deck call the 'new unit of compute'?",
-            "answer": "The datacenter.", "layer": "detail"
+            "answer": "The datacenter.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would a hardware vendor stop at 8 (or 72, or 384) GPUs in one high-speed domain instead of connecting everything?"
@@ -806,7 +807,8 @@
           },
           {
             "q": "Write the deck's memory formulas for naive DDP and ZeRO stage 1 in bytes per parameter.",
-            "answer": "DDP: (4+K) * #params. ZeRO-1: (4+K/N_gpu) * #params.", "layer": "detail"
+            "answer": "DDP: (4+K) * #params. ZeRO-1: (4+K/N_gpu) * #params.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why can ZeRO-2 shard gradients even though every worker, being data parallel, has to compute a full gradient?"
@@ -1997,7 +1999,8 @@
           },
           {
             "q": "Besides having no bubble, what two advantages of tensor parallel over pipeline parallel does the deck list?",
-            "answer": "Low complexity (simple to wrap models) and no need for large batch sizes.", "layer": "detail"
+            "answer": "Low complexity (simple to wrap models) and no need for large batch sizes.",
+            "layer": "detail"
           },
           {
             "q": "Which link does the deck assign to pipeline parallel and which to tensor parallel?",
@@ -2188,7 +2191,8 @@
           },
           {
             "q": "What makes up the 10 sbh of activation memory that tensor parallel cannot reduce?",
-            "answer": "LayerNorm (4sbh), dropout (2sbh), inputs to attention and MLP (4sbh).", "layer": "detail"
+            "answer": "LayerNorm (4sbh), dropout (2sbh), inputs to attention and MLP (4sbh).",
+            "layer": "detail"
           },
           {
             "q": "Which parts of a layer's activations does tensor parallel split?",
@@ -2320,7 +2324,13 @@
           "note": "all-reduce = all-gather + reduce-scatter is why SP costs no extra bandwidth."
         }
       ],
-      "external_prerequisites": [{"kp": "lecture_07:tp-backward-reduce-scatter", "basis": "author-inference", "note": "Lecture 7 pairs the forward all-gather with a backward reduce-scatter; sequence parallelism uses the same pair around the TP region."}],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_07:tp-backward-reduce-scatter",
+          "basis": "author-inference",
+          "note": "Lecture 7 pairs the forward all-gather with a backward reduce-scatter; sequence parallelism uses the same pair around the TP region."
+        }
+      ],
       "misconceptions": [
         {
           "belief": "Sequence parallel adds two new collectives per block, so it trades memory for extra communication.",
@@ -2678,7 +2688,8 @@
           },
           {
             "q": "Which two parallelism groupings does Megatron separate for MoE models?",
-            "answer": "TP/CP/DP for attention and ETP/EP/EDP for the MLP experts.", "layer": "detail"
+            "answer": "TP/CP/DP for attention and ETP/EP/EDP for the MLP experts.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would routing tokens (an all-to-all) be more efficient than slicing the expert matmuls, given that both move activation-sized data?"
@@ -2756,7 +2767,7 @@
             "role": "paper"
           }
         ],
-        "filtering_note": "Spoken only. Slide p56 is the pasted TPU-book figure (scaling_book_training) with only 'Key quantity / Global batch size (divided by GPU)' in the text layer, and the path note treats p56 as context. The rule is in the audio (1:04:04-1:06:10): compute must outlast communication for it to be hidden, FSDP alone is compute-bound at about '2,000 per chip', it becomes communication-bound as the batch shrinks, and adding 'MP, in this case, is tensor parallel' pushes the curve to smaller batches. The 2,000 is his reading of the plot (TPU numbers, figure-only). The derivation is the author's, following the scaling book: compute about 6 x N x tokens FLOPs, FSDP traffic about 3 collectives x N x 2 bytes, so the ratio is tokens per chip x W / C, and with t-way tensor parallelism each chip gathers only N/t. So are the example hardware numbers (C = 1e15 FLOP/s; W = 4.5e11 or 5e10 bytes/s). They ignore the (M-1)/M factor, latency, and tensor parallelism's own activation traffic, which runs on the fast in-node link. The professor defers this kind of compute and communication math to the assignment (1:03:58)."
+        "filtering_note": "The rule is spoken; slide p56 is the pasted TPU-book figure (scaling_book_training). Its text layer has only 'Key quantity / Global batch size (divided by GPU)', but the image carries the per-layer compute/comms table for DP, FSDP, MP and FSDP + MP and the plot of FLOPs time / comms time against B/N on a 4x4x4 mesh: FSDP-only crosses the compute-bound line at about 850 per chip, FSDP + MP at about 400 ('No scheme works when B < 400', 'Only mixed FSDP + MP works when B < 850', 'Both ... work when B > 850'). The rule is in the audio (1:04:04-1:06:10): compute must outlast communication for it to be hidden, FSDP alone is compute-bound at '2,000 per chip' (an example point at the plot's right edge, not the threshold, which the plot puts at about 850), it becomes communication-bound as the batch shrinks, and adding 'MP, in this case, is tensor parallel' pushes the curve to smaller batches. The 850 and 400 are the TPU book's numbers for its mesh; the threshold scales with chip FLOP/s over link bytes/s. The derivation is the author's, following the scaling book: compute about 6 x N x tokens FLOPs, FSDP traffic about 3 collectives x N x 2 bytes, so the ratio is tokens per chip x W / C, and with t-way tensor parallelism each chip gathers only N/t. So are the example hardware numbers (C = 1e15 FLOP/s; W = 4.5e11 or 5e10 bytes/s). They ignore the (M-1)/M factor, latency, and tensor parallelism's own activation traffic, which runs on the fast in-node link. The professor defers this kind of compute and communication math to the assignment (1:03:58)."
       },
       "prerequisites": [
         {
@@ -2809,7 +2820,7 @@
           "answer": "2.17",
           "value": 2.17,
           "tolerance": 0.03,
-          "why": "Communication / compute = (6N/W) / (6N x 1024 / C) = C / (1024 x W) = 1e15 / 4.608e14, about 2.17. The threshold is C/W, about 2,222 tokens per chip, so at 1,024 the job waits on the network, in line with the professor's 'about 2,000 per chip' reading.",
+          "why": "Communication / compute = (6N/W) / (6N x 1024 / C) = C / (1024 x W) = 1e15 / 4.608e14, about 2.17. The threshold is C/W, about 2,222 tokens per chip, so at 1,024 the job waits on the network (on the TPU book's mesh the plotted threshold is about 850; it depends on the hardware's C/W).",
           "targets_misconception": "Once the model fits, FSDP's communication is always hidden by overlapping it with compute.",
           "varies": "diagnosing how far below the threshold a job sits, on fast links, instead of deciding a fix",
           "invariant": "communication/compute = C / (tokens per chip x W) for FSDP alone",
@@ -2818,7 +2829,7 @@
         "retrieval": [
           {
             "q": "What one quantity decides whether FSDP alone can hide its communication, and what is the threshold?",
-            "answer": "Tokens (batch) per chip. FSDP is compute-bound when tokens per chip exceed chip FLOP/s divided by link bytes/s; the professor's plot puts it at about 2,000 per chip."
+            "answer": "Tokens (batch) per chip. FSDP is compute-bound when tokens per chip exceed chip FLOP/s divided by link bytes/s; on the plot the professor shows (the TPU book's 4x4x4 mesh) that is about 850 per chip, and about 400 with FSDP + MP."
           },
           {
             "q": "What did the professor say to add when the per-chip batch falls below FSDP's threshold, and why does it help?",
@@ -3006,11 +3017,13 @@
           },
           {
             "q": "In Narayanan 2021, at what value does tensor parallel cap, and what happens to DP for the largest model?",
-            "answer": "TP caps at 8; DP falls to 6 for the largest model.", "layer": "detail"
+            "answer": "TP caps at 8; DP falls to 6 for the largest model.",
+            "layer": "detail"
           },
           {
             "q": "On 64 GPUs for a 162B GPT, which (pipeline, tensor) configuration does the deck call best?",
-            "answer": "8 x 8.", "layer": "detail"
+            "answer": "8 x 8.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why does TP stop at 8 in the Narayanan table even though the models keep growing, and what grows instead?"
@@ -3242,7 +3255,8 @@
           },
           {
             "q": "What EP degree and pipeline depth does the deck report for DeepSeek-V3?",
-            "answer": "EP 64-way (across 8 nodes), PP 16.", "layer": "detail"
+            "answer": "EP 64-way (across 8 nodes), PP 16.",
+            "layer": "detail"
           }
         ],
         "self_explain": "Why would a 7B model (Dolma) use plain FSDP while a 405B model needs TP and PP, if FSDP's communication is only 1.5x DDP's?"

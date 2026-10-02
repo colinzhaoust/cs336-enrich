@@ -2,9 +2,9 @@
   "fixture": "fusion-timeline",
   "family": "timeline",
   "scene": "TimelineScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
-    "lecture_06:naive-vs-compiled-gelu",
+    "lecture_06:gelu-fusion",
     "lecture_05:operator-fusion"
   ],
   "video": "video.mp4",

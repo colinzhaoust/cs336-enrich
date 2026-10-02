@@ -2,7 +2,7 @@
   "fixture": "bpe-merge-tree",
   "family": "merge-tree",
   "scene": "MergeTreeScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
     "lecture_01:bpe-merge-step"
   ],

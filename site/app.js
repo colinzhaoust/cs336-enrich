@@ -73,6 +73,7 @@ function route() {
   if (a === "review") return renderReview(app);
   if (a === "data") return renderData(app);
   if (a === "session") return renderSession(app, b);
+  if (a === "read" && state.data[b]) return renderFlow(app, b);
   if (a === "map") return b === "all" ? renderMapAll(app) : renderMap(app, b, c);
   if (a === "t" && state.data[b]) return renderThread(app, b, c);
   renderHome(app);
@@ -99,7 +100,7 @@ function tocSection(title, kind) {
       el("div", { class: "tnum" }, num),
       el("div", {}, el("a", { class: "ttitle", href: `#/t/${t.id}` }, shortTitle(t).replace(/^L\d+ · /, "")), t.subtitle ? el("div", { class: "small muted" }, t.subtitle) : null, after),
       el("div", { class: "tmeta small muted" }, progressBar(s.st, s.n), `${s.n} KPs`, el("span", { class: "icons" }, [s.anim ? `▶${s.anim}` : "", s.widgets ? `⚙${s.widgets}` : "", s.spoken ? `🎙${s.spoken}` : ""].filter(Boolean).join("  "))),
-      el("div", { class: "tlinks small" }, el("a", { href: `#/t/${t.id}/${nk}` }, started ? "continue" : "start"), kind === "lecture" ? el("a", { href: `#/t/${t.id}/_spoken` }, "video") : null, el("a", { href: `#/t/${t.id}/_gallery` }, "widgets")));
+      el("div", { class: "tlinks small" }, el("a", { href: `#/read/${t.id}` }, "read"), el("a", { href: `#/t/${t.id}/${nk}` }, started ? "practise" : "practise"), kind === "lecture" ? el("a", { href: `#/t/${t.id}/_spoken` }, "video") : null, el("a", { href: `#/t/${t.id}/_gallery` }, "widgets")));
   });
   return el("div", {}, el("h2", {}, title), el("div", { class: "toc" }, ...rows));
 }
@@ -233,19 +234,19 @@ function renderKP(main, tid, kp, kps) {
   if (!prereqsMet(tid, kp, kps)) {
     const missing = [...(kp.prerequisites || []).filter(p => kps.find(k => k.id === p.kp) && masteryOf(tid, p.kp) !== "mastered").map(p => [tid, p.kp]),
       ...(kp.external_prerequisites || []).map(e => String(e.kp || e).split(":")).filter(([t2, k2]) => state.data[t2] && masteryOf(t2, k2) !== "mastered")];
-    main.append(el("div", { class: "warn" }, "Prerequisites not yet mastered: ", ...missing.map(([t2, k2]) => el("a", { href: `#/t/${t2}/${k2}`, style: "margin-right:8px" }, `${t2 === tid ? "" : t2 + " · "}${k2}`)), el("span", { class: "muted" }, " — you can continue; the gate is advisory in this demo.")));
+    main.append(el("div", { class: "small muted", style: "margin:2px 0 8px" }, "builds on: ", ...missing.map(([t2, k2]) => el("a", { href: `#/t/${t2}/${k2}`, style: "margin-right:8px" }, `${t2 === tid ? "" : t2 + " · "}${k2}`))));
   }
 
   // 1. predict gate
-  const rest = el("div", { class: prog.predict ? "" : "locked-rest" });
+  const rest = el("div", {});  // nothing is locked: predicting first is optional (Colin, 2026-10-02)
   const unlock = () => { rest.querySelectorAll(".block.locked").forEach(b => b.classList.remove("locked")); statement.style.display = ""; };
-  const predict = promptBlock(tid, kp, "predict", kp.prompts.predict, { eyebrow: "1 · predict before anything is revealed", onCommit: () => { unlock(); setTimeout(route, 0); } });
+  const predict = promptBlock(tid, kp, "predict", kp.prompts.predict, { eyebrow: "1 · predict first (optional)", onCommit: () => { unlock(); setTimeout(route, 0); } });
   main.append(predict);
-  const statement = el("div", { class: "block", style: prog.predict ? "" : "display:none" }, el("div", { class: "eyebrow" }, "the claim"), el("div", { class: "statement" }, kp.statement));
+  const statement = el("div", { class: "block" }, el("div", { class: "eyebrow" }, "the claim"), el("div", { class: "statement" }, kp.statement));
   main.append(statement);
 
   // 2. mechanism: presentations
-  const locked = prog.predict ? "" : "locked";
+  const locked = "";
   const mech = el("div", { class: `block ${locked}` }, el("div", { class: "eyebrow" }, "2 · mechanism"));
   const interactiveRefs = new Set((kp.presentations || []).filter(p => p.type === "interactive").map(p => p.ref));
   for (const p of kp.presentations || []) mech.append(renderPresentation(tid, kp, p, d, interactiveRefs));
@@ -262,9 +263,9 @@ function renderKP(main, tid, kp, kps) {
   const answered = n => !kp.prompts[n] || prog[`${n}_given`] !== undefined;
   const caseDone = answered("transfer") && answered("check");
   const closedBook = !caseDone && !!prog.closed_book;
-  const caseLocked = !prog.predict || (!caseDone && !prog.closed_book);
+  const caseLocked = false;
   if (closedBook) { mech.style.display = "none"; rest.append(el("div", { class: "block notice" }, "Mechanism hidden: answer the changed case from what you understood. It comes back once you have answered.")); }
-  else if (prog.predict && !caseDone) rest.append(el("div", { class: "block" }, el("button", { onclick: () => { prog.closed_book = Date.now(); saveProgress(); logEvent("closed_book", { thread: tid, kp: kp.id }); route(); } }, "Start the changed case"), el("span", { class: "muted small", style: "margin-left:8px" }, "the mechanism above is hidden while you answer")));
+  else if (!caseDone) rest.append(el("div", { class: "block small" }, el("button", { onclick: () => { prog.closed_book = Date.now(); saveProgress(); logEvent("closed_book", { thread: tid, kp: kp.id }); route(); } }, "Test yourself closed book"), el("span", { class: "muted", style: "margin-left:8px" }, "optional: hides the mechanism, sources and cards until you answer the changed case below")));
   rest.append(promptBlock(tid, kp, "transfer", kp.prompts.transfer, { eyebrow: kp.prompts.check ? "3a · changed case (you grade it)" : "3 · changed case (counts for mastery)", locked: caseLocked, onGrade: () => route() }));
   if (kp.prompts.check) rest.append(promptBlock(tid, kp, "check", kp.prompts.check, { eyebrow: "3b · quick check (graded automatically; mastery needs 3a and 3b)", locked: caseLocked, onGrade: () => route() }));
 
@@ -285,8 +286,7 @@ function renderKP(main, tid, kp, kps) {
 
   // provenance
   // the teacher line quotes the source, which states the answer: hidden before the prediction and while the changed case is open
-  if (!prog.predict) main.append(el("div", { class: "block prov muted small" }, "Provenance (teacher line: sources, quotes, what the professor filtered) opens after you commit a prediction."));
-  else if (closedBook) main.append(el("div", { class: "block prov muted small" }, "Provenance is hidden while you answer the changed case."));
+  if (closedBook) main.append(el("div", { class: "block prov muted small" }, "Provenance is hidden while you answer the changed case."));
   else main.append(renderProvenance(kp, d.sources, t));
 
   // next up: outer fringe
@@ -665,6 +665,135 @@ function renderMapAll(app) {
 }
 
 
+
+// ------------------------------------------------------------ flow (read) --
+// An enriched lecture to read straight through: our prose in the source's order, with the lecture's code,
+// figures, formulas, worked steps, widgets, animations, the professor's spoken asides and inline
+// predictions placed where they are needed. Source: <thread folder>/flow.md (format: research/FLOW_SPEC.md).
+function parseFlow(md) {
+  const out = { meta: {}, sections: [] }; let lines = md.split("\n"), i = 0;
+  if (lines[0]?.trim() === "---") { i = 1; for (; i < lines.length && lines[i].trim() !== "---"; i++) { const m = /^(\w+):\s*(.*)$/.exec(lines[i]); if (m) out.meta[m[1]] = m[2]; } i++; }
+  let sec = null, para = [];
+  const flush = () => { if (para.length && sec) sec.blocks.push({ type: "p", text: para.join(" ") }); para = []; };
+  for (; i < lines.length; i++) {
+    const L = lines[i], t = L.trim();
+    let m;
+    if ((m = /^##\s+(.*?)\s*(?:\{#([\w-]+)\})?\s*$/.exec(t)) && !t.startsWith("###")) { flush(); sec = { title: m[1], id: m[2] || `s${out.sections.length + 1}`, blocks: [] }; out.sections.push(sec); continue; }
+    if (!sec) { if (t && !t.startsWith("#")) { (out.meta.intro ||= []).push(t); } continue; }
+    if ((m = /^###\s+(.*)$/.exec(t))) { flush(); sec.blocks.push({ type: "h3", text: m[1] }); continue; }
+    if (/^source:\s*/i.test(t) && !sec.blocks.length && !para.length) { sec.source = t.replace(/^source:\s*/i, ""); continue; }
+    if (t.startsWith("$$")) { flush(); let tex = t.slice(2); if (tex.trim().endsWith("$$") && tex.trim().length > 2) tex = tex.trim().slice(0, -2); else { const acc = [tex]; for (i++; i < lines.length && !lines[i].trim().endsWith("$$"); i++) acc.push(lines[i]); acc.push((lines[i] || "").replace(/\$\$\s*$/, "")); tex = acc.join("\n"); } sec.blocks.push({ type: "math", tex: tex.trim() }); continue; }
+    if ((m = /^::(\w+)\s*(.*)$/.exec(t))) { flush(); const [head, ...rest] = m[2].split(" | "); const args = head.trim().split(/\s+/).filter(Boolean); sec.blocks.push({ type: m[1], args, text: rest.join(" | ").trim() }); continue; }
+    if (t.startsWith("|") && t.endsWith("|")) {  // pipe table; a |---| line marks the header
+      flush(); const cells = t.slice(1, -1).split("|").map(c => c.trim()); const last = sec.blocks[sec.blocks.length - 1];
+      if (/^[-:\s|]+$/.test(t)) { if (last?.type === "table") last.header = true; continue; }
+      if (last?.type === "table") last.rows.push(cells); else sec.blocks.push({ type: "table", rows: [cells] });
+      continue;
+    }
+    if ((m = /^[-*]\s+(.*)$/.exec(t))) { flush(); const last = sec.blocks[sec.blocks.length - 1]; if (last?.type === "ul") last.items.push(m[1]); else sec.blocks.push({ type: "ul", items: [m[1]] }); continue; }
+    if (!t) { flush(); continue; }
+    para.push(t);
+  }
+  flush(); return out;
+}
+// inline markdown: **bold**, *italic*, `code`, $math$, [text](url)
+function inlineMd(text) {
+  const frag = document.createDocumentFragment(); const re = /(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|\$[^$]+\$|\[[^\]]+\]\([^)]+\))/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) frag.append(text.slice(last, m.index));
+    const tok = m[0];
+    if (tok.startsWith("**")) frag.append(el("b", {}, tok.slice(2, -2)));
+    else if (tok.startsWith("`")) frag.append(el("code", {}, tok.slice(1, -1)));
+    else if (tok.startsWith("$")) { const sp = el("span", { class: "latex-inline" }); sp.textContent = tok.slice(1, -1); frag.append(sp); }
+    else if (tok.startsWith("[")) { const mm = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok); frag.append(el("a", { href: mm[2], target: mm[2].startsWith("#") ? "" : "_blank" }, mm[1])); }
+    else frag.append(el("i", {}, tok.slice(1, -1)));
+    last = m.index + tok.length;
+  }
+  if (last < text.length) frag.append(text.slice(last));
+  return frag;
+}
+function renderInlineMath(root) {
+  if (!window.katex) { setTimeout(() => renderInlineMath(root), 300); return; }
+  root.querySelectorAll(".latex-inline:not([data-done])").forEach(n => { try { window.katex.render(n.textContent, n, { throwOnError: false, displayMode: false }); } catch {} n.dataset.done = "1"; });
+}
+const kpRef = (tid, ref) => { const [t2, k2] = ref.includes(":") ? ref.split(":") : [tid, ref]; const kp = state.data[t2]?.kp.knowledge_points.find(k => k.id === k2); return kp ? { t2, kp } : null; };
+async function renderFlow(app, tid) {
+  app.className = "";
+  const t = state.threads.threads.find(x => x.id === tid), d = state.data[tid];
+  const md = await fetch(t.kp.replace(/knowledge_points\.json$/, "flow.md")).then(r => r.ok ? r.text() : null).catch(() => null);
+  const wrap = el("div", { class: "flowwrap" }); app.append(wrap);
+  if (!md) { wrap.append(el("div", { class: "main" }, el("h1", {}, shortTitle(t)), el("p", { class: "muted" }, "No reading version for this thread yet. "), el("a", { href: `#/t/${tid}` }, "Open its knowledge points"))); return; }
+  const flow = parseFlow(md), toc = el("nav", { class: "flowtoc small" }), body = el("article", { class: "flow" });
+  wrap.append(toc, body);
+  const unit = unitOf(tid);
+  body.append(el("div", { class: "crumbs small" }, el("a", { href: "#/" }, "Atlas"), " / ", unit ? [el("a", { href: `#/map/${unit.id}` }, unit.title), " / "] : null, el("a", { href: `#/t/${tid}` }, shortTitle(t)), " / read"),
+    el("h1", {}, flow.meta.title || shortTitle(t)), flow.meta.minutes ? el("div", { class: "small muted" }, `about ${flow.meta.minutes} minutes · predictions are optional and stay on this device`) : null);
+  (flow.meta.intro || []).forEach(x => body.append(el("p", { class: "lede" }, inlineMd(x))));
+  toc.append(el("div", { class: "tochead" }, "Contents"));
+  for (const sec of flow.sections) {
+    toc.append(el("a", { href: `#/read/${tid}`, onclick: e => { e.preventDefault(); document.getElementById(`sec-${sec.id}`)?.scrollIntoView({ behavior: "smooth" }); } }, sec.title));
+    const S = el("section", { id: `sec-${sec.id}` }, el("h2", {}, sec.title), sec.source ? el("div", { class: "src small muted" }, "source: ", sec.source) : null);
+    for (const b of sec.blocks) S.append(flowBlock(tid, d, b));
+    body.append(S);
+  }
+  body.append(el("div", { class: "flowend" }, el("p", {}, "Done reading? Practise each knowledge point (prediction, changed case, spaced cards) from ", el("a", { href: `#/t/${tid}` }, "the thread page"), ".")));
+  renderMath(body); renderInlineMath(body);
+}
+function flowBlock(tid, d, b) {
+  const a0 = b.args?.[0];
+  if (b.type === "p") return el("p", {}, inlineMd(b.text));
+  if (b.type === "h3") return el("h3", { class: "flowh3" }, inlineMd(b.text));
+  if (b.type === "ul") return el("ul", {}, ...b.items.map(x => el("li", {}, inlineMd(x))));
+  if (b.type === "table") { const [head, ...body] = b.header ? b.rows : [null, ...b.rows];
+    return el("div", { class: "flowtable" }, el("table", {}, head ? el("tr", {}, ...head.map(c => el("th", {}, inlineMd(c)))) : null, ...body.map(r => el("tr", {}, ...r.map(c => el("td", {}, inlineMd(c))))))); }
+  if (b.type === "math") { const t = el("div", { class: "latex" }); t.textContent = b.tex; return el("div", { class: "latex-block" }, t); }
+  if (b.type === "code") {
+    const sn = d.snippets?.[a0];
+    return el("div", { class: "flowcode" }, sn ? el("pre", {}, numbered(sn)) : el("div", { class: "muted small" }, a0), el("div", { class: "small muted" }, refLink(d.sources, { provenance: { anchors: [] } }, a0), b.text ? [" · ", inlineMd(b.text)] : null));
+  }
+  if (b.type === "figure") {
+    const fb = state.threads.figure_base, ref = a0;
+    if (/\.(png|jpe?g|gif|svg|webp)$/i.test(ref || "")) { const src = ref.startsWith("http") ? ref : fb && ref.startsWith("official/lectures/") ? fb + ref.slice(18) : `../../${ref}`; return el("figure", {}, el("img", { src, loading: "lazy" }), b.text ? el("figcaption", { class: "small muted" }, inlineMd(b.text)) : null); }
+    return el("div", { class: "small" }, "figure in the source: ", refLink(d.sources, { provenance: { anchors: [] } }, ref), b.text ? [" · ", inlineMd(b.text)] : null);
+  }
+  if (b.type === "slide") {
+    // ::slide 21 | caption   (this thread's deck)   or   ::slide lecture_05:21 | caption
+    const [t2, pg] = String(a0).includes(":") ? String(a0).split(":") : [tid, a0];
+    if (state.threads.slides_pdf_base) {  // published builds without slide images: link the page of the course's PDF
+      const href = `${state.threads.slides_pdf_base}${t2}.pdf#page=${pg}`;
+      return el("div", { class: "flownote" }, el("div", { class: "eyebrow" }, el("a", { href, target: "_blank" }, `slide ${pg} (opens the course PDF)`)), b.text ? el("div", {}, inlineMd(b.text)) : null);
+    }
+    const src = `${state.threads.builds}slides/${t2}/p-${String(pg).padStart(2, "0")}.jpg`;
+    return el("figure", { class: "slide" }, el("img", { src, loading: "lazy", alt: `slide ${pg}` }), el("figcaption", { class: "small muted" }, `slide ${pg}`, b.text ? [" · ", inlineMd(b.text)] : null));
+  }
+  if (b.type === "widget" || b.type === "animation") {
+    const p = { type: b.type === "widget" ? "interactive" : "animation", action: "trace", ref: a0, notice: b.text };
+    const box = renderPresentation(tid, { id: "flow", provenance: { anchors: [] } }, p, d); box.classList.add("flowpres"); return box;
+  }
+  if (b.type === "worked") {
+    const r = kpRef(tid, a0); if (!r) return el("div", { class: "warn" }, `unknown knowledge point ${a0}`);
+    const ws = (r.kp.presentations || []).filter(p => p.steps?.length); const p = ws[+(b.args[1] || 0)] || ws[0];
+    if (!p) return el("div", { class: "muted small" }, `no worked steps for ${a0}`);
+    return el("div", { class: "flowworked" }, el("div", { class: "eyebrow" }, p.faded ? "worked example · write the last step yourself" : "worked example"), workedSteps(r.t2, r.kp, p));
+  }
+  if (b.type === "predict") {
+    const r = kpRef(tid, a0); if (!r) return el("div", { class: "warn" }, `unknown knowledge point ${a0}`);
+    return el("div", { class: "flowpredict" }, promptBlock(r.t2, r.kp, "predict", r.kp.prompts.predict, { eyebrow: "pause: predict before reading on (optional)" }));
+  }
+  if (b.type === "kp") {
+    const r = kpRef(tid, a0); if (!r) return el("div", { class: "warn" }, `unknown knowledge point ${a0}`);
+    return el("a", { class: "flowkp small", href: `#/t/${r.t2}/${r.kp.id}` }, el("span", { class: `dot ${masteryOf(r.t2, r.kp.id)}` }), " knowledge point: ", el("b", {}, r.kp.label), el("span", { class: "muted" }, " · practise it"));
+  }
+  if (b.type === "note" || b.type === "video") {
+    const kind = b.type === "video" ? "listen" : (a0 || "note"), at = b.type === "video" ? a0 : b.args?.[1];
+    const url = videoUrl(d), secs = at ? videoSecs(at.split("-")[0]) : null;
+    const label = { spoken: "said in lecture", skip: "skipped in lecture", slip: "careful: the lecture misspeaks", aside: "aside", deferred: "deferred", why: "why", listen: "listen", warning: "watch out" }[kind] || kind;
+    return el("aside", { class: `flownote ${kind}` }, el("div", { class: "eyebrow" }, label, at && url ? [" · ", el("a", { href: `${url}&t=${secs}s`, target: "_blank" }, at)] : at ? ` · ${at}` : null), el("div", {}, inlineMd(b.text || "")));
+  }
+  return el("div", { class: "warn" }, `unknown block ::${b.type}`);
+}
+
 // ---------------------------------------------------------- layered map --
 // Level 1: units of the course. Level 2: the threads in a unit. Level 3: one thread's path of knowledge
 // points. Level 4 is the knowledge point page. The dense all-edges view stays at #/map/all.
@@ -772,7 +901,7 @@ function threadOverview(main, tid) {
     progressBar(s.st, s.n), el("div", { class: "small muted" }, `${s.n} knowledge points · ${s.st.secured + s.st.mastered} mastered`),
     el("div", { class: "chips", style: "margin:8px 0" }, ...mediaChips(s)),
     linkList("builds on: ", links.on), linkList("used by: ", links.by),
-    el("div", { class: "actions", style: "margin:12px 0" }, el("a", { class: "btn primary", href: `#/t/${tid}/${nk}` }, started ? `Continue: ${byId[nk]?.label.split(":")[0]}` : "Start at the first knowledge point"),
+    el("div", { class: "actions", style: "margin:12px 0" }, el("a", { class: "btn primary", href: `#/read/${tid}` }, "Read it as one enriched lecture"), el("a", { class: "btn", href: `#/t/${tid}/${nk}` }, started ? `Practise: ${byId[nk]?.label.split(":")[0]}` : "Practise knowledge point by knowledge point"),
       el("a", { class: "btn", href: `#/t/${tid}/_gallery` }, "widgets"), t.kind === "lecture" ? el("a", { class: "btn", href: `#/t/${tid}/_spoken` }, "video index") : null,
       el("a", { class: "btn", href: `#/t/${tid}/_graph` }, "prerequisite graph"), el("a", { class: "btn", href: `#/t/${tid}/_filter` }, "what the source filtered")));
   // animations of this thread, as thumbnails that open their knowledge point

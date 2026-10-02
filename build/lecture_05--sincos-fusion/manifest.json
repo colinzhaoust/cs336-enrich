@@ -2,7 +2,7 @@
   "fixture": "lecture_05--sincos-fusion",
   "family": "timeline",
   "scene": "TimelineScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "lecture_05:operator-fusion"
   ],

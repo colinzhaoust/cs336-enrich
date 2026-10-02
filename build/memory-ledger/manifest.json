@@ -2,10 +2,10 @@
   "fixture": "memory-ledger",
   "family": "bar-ledger",
   "scene": "MemoryLedgerScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
-    "optimizer-state-memory",
-    "gradient-accumulation"
+    "lecture_02:optimizer-state-memory",
+    "lecture_02:gradient-accumulation"
   ],
   "video": "video.mp4",
   "probe": {

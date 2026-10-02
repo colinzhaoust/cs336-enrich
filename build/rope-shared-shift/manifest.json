@@ -2,9 +2,9 @@
   "fixture": "rope-shared-shift",
   "family": "planar-rotation",
   "scene": "RotaryShiftScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
-    "rope-relative-position"
+    "rope:rope-relative-position"
   ],
   "video": "video.mp4",
   "probe": {

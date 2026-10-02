@@ -2,7 +2,7 @@
   "fixture": "feynrl_paper--overlap-loss",
   "family": "timeline",
   "scene": "TimelineScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "feynrl_paper:feynrl-same-loss-sync-async"
   ],

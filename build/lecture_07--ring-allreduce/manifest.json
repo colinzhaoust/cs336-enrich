@@ -2,7 +2,7 @@
   "fixture": "lecture_07--ring-allreduce",
   "family": "rank-ring",
   "scene": "RankRingScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
     "lecture_07:all-reduce-decomposition",
     "lecture_07:collective-bytes"

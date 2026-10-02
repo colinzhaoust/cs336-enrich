@@ -19,7 +19,7 @@
     "kind": "executable-lecture",
     "path": "official/lectures/lecture_02.py",
     "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_02.py",
-    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json. Supplies dtype-bytes, optimizer-state-memory (16 bytes/param), six-nd, mixed-precision, gradient-accumulation, activation-checkpointing."
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json. Supplies dtype-bytes, optimizer-state-memory (12 bytes/param; 16 with an fp32 master copy as in the ZeRO paper), six-nd, mixed-precision, gradient-accumulation, activation-checkpointing."
   },
   "lecture_05": {
     "title": "CS336 Spring 2026, Lecture 5: GPUs",

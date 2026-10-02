@@ -146,7 +146,7 @@ ol.worked .faded-step { list-style-type: "? "; }
 .kprow .n { color: var(--muted); font-size: 13px; text-align: right; }
 .kprow .dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--accent); background: transparent; }
 .kprow .dot.mastered { background: var(--ok); border-color: var(--ok); } .kprow .dot.secured { background: #2f6f45; border-color: #2f6f45; } .kprow .dot.seen { background: var(--hilite); border-color: var(--hilite); }
-.kprow.locked .lbl { color: var(--muted); }
+.kprow.locked .lbl { color: var(--ink); }
 .kprow .needs { display: block; }
 .kprow .icons { font-size: 13px; white-space: nowrap; }
 .animstrip { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-width: 900px; }
@@ -162,3 +162,31 @@ ol.worked .faded-step { list-style-type: "? "; }
 .tocrow .tmeta .icons { margin-left: 8px; }
 .tocrow .tlinks { display: flex; gap: 10px; justify-content: flex-end; }
 @media (max-width: 760px) { .tocrow { grid-template-columns: 36px 1fr; } .tocrow .tmeta, .tocrow .tlinks { grid-column: 2; justify-content: flex-start; } }
+/* reading (flow) view */
+.flowwrap { display: grid; grid-template-columns: 220px minmax(0, 760px); gap: 32px; justify-content: center; padding: 24px 16px 80px; }
+.flowtoc { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 90px); overflow: auto; border-right: 1px solid var(--rule); padding-right: 12px; }
+.flowtoc .tochead { font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-size: 11px; margin-bottom: 6px; }
+.flowtoc a { display: block; padding: 3px 0; color: var(--ink); }
+.flow { font-size: 17px; line-height: 1.7; }
+.flow h1 { font-size: 30px; margin: 6px 0 4px; }
+.flow .lede { font-size: 18px; color: var(--muted); }
+.flow section { margin-top: 36px; }
+.flow h2 { font-size: 23px; margin: 0 0 4px; }
+.flow .flowh3 { font-size: 18px; color: var(--ink); text-transform: none; letter-spacing: 0; margin: 22px 0 6px; }
+.flow .src { margin-bottom: 10px; }
+.flow p { margin: 10px 0; }
+.flow figure { margin: 16px 0; } .flow figure img { max-width: 100%; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
+.flow .flowcode pre { font-size: 13px; overflow-x: auto; }
+.flow .flowpres, .flow .flowworked, .flow .flowpredict .block { margin: 18px 0; }
+.flow .flowworked { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; font-size: 16px; }
+.flow .flownote { border-left: 3px solid var(--accent); background: rgba(36,102,141,.06); padding: 8px 14px; margin: 14px 0; border-radius: 0 6px 6px 0; font-size: 16px; }
+.flow .flownote.skip, .flow .flownote.deferred { border-color: var(--muted); background: rgba(107,118,128,.08); }
+.flow .flownote.slip, .flow .flownote.warning { border-color: var(--accent2); background: rgba(184,88,42,.07); }
+.flow .flowkp { display: inline-block; margin: 4px 0 10px; padding: 3px 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--card); color: var(--ink); }
+.flow .flowkp .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--accent); vertical-align: middle; }
+.flow .flowkp .dot.mastered, .flow .flowkp .dot.secured { background: var(--ok); border-color: var(--ok); }
+.flow .flowend { margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 12px; color: var(--muted); }
+@media (max-width: 900px) { .flowwrap { grid-template-columns: 1fr; } .flowtoc { position: static; border-right: none; max-height: none; } }
+.flow figure.slide img { width: 100%; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.flow .flowpres > .label { display: none; }
+.flow .flowtable { overflow-x: auto; margin: 14px 0; } .flow .flowtable table { border-collapse: collapse; font-size: 15px; } .flow .flowtable th, .flow .flowtable td { border: 1px solid var(--rule); padding: 4px 10px; text-align: left; } .flow .flowtable th { background: var(--card); }

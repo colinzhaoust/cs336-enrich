@@ -2,11 +2,11 @@
   "fixture": "matmul-contraction",
   "family": "tensor-contraction",
   "scene": "ContractionScene",
-  "quality": "480p15",
+  "quality": "480p",
   "knowledge_points": [
-    "einsum",
-    "matmul-flops",
-    "backward-2x-forward"
+    "lecture_02:einsum",
+    "lecture_02:matmul-flops",
+    "lecture_02:backward-2x-forward"
   ],
   "video": "video.mp4",
   "probe": {

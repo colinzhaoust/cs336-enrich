@@ -651,7 +651,7 @@
             "quote": "as of the V100, NVIDIA decided here is a piece of hardware that will do your matrix multiplies for you. ... matmuls became the one privileged operation in machine learning ... any near future machine learning architecture that we see that scales with compute is going to have a matrix multiply in it"
           }
         ],
-        "filtering_note": "The '>10x' is stated without the datasheet numbers behind it; the figure on p17 (a spec table) is not in the text layer. Lecture 2 gives H100 numbers that make it concrete: ~990 TFLOP/s bf16 tensor-core vs ~67 TFLOP/s fp32 non-tensor. The p26 table of which precisions tensor cores accept is shown, not explained. Spoken evidence (video 25:08-25:31): the professor draws a design consequence the slide leaves out: because tensor cores make matmul FLOPs more than 10x cheaper, any near-future architecture that scales with compute will be built around matrix multiplies."
+        "filtering_note": "The '>10x' is stated without the datasheet numbers behind it; the figure on p17 (a spec table) is not in the text layer. H100 numbers make it concrete: ~990 TFLOP/s bf16 tensor-core (lecture 2's 1979e12/2) vs ~67 TFLOP/s fp32 non-tensor (NVIDIA's H100 SXM datasheet, not lecture 2). The p26 table of which precisions tensor cores accept is shown, not explained. Spoken evidence (video 25:08-25:31): the professor draws a design consequence the slide leaves out: because tensor cores make matmul FLOPs more than 10x cheaper, any near-future architecture that scales with compute will be built around matrix multiplies."
       },
       "prerequisites": [
         {
@@ -2277,7 +2277,7 @@
       "id": "flash-attention-forward",
       "label": "FlashAttention forward = tiled QKᵀ + fused exp + online softmax",
       "kind": "mechanism",
-      "statement": "FlashAttention computes attention exactly without ever writing the N×N score matrix to HBM: it tiles Q, K, V like a matmul, computes each S tile in shared memory, applies the exponential in the same kernel, and folds the softmax normalizer with the online (telescoping) trick, so HBM traffic is O(N·d) instead of O(N²).",
+      "statement": "FlashAttention computes attention exactly without ever writing the N×N score matrix to HBM: it tiles Q, K, V like a matmul, computes each S tile in shared memory, applies the exponential in the same kernel, and folds the softmax normalizer with the online (telescoping) trick, so the N×N matrix never touches HBM: FlashAttention writes only the O(N·d) output, and its total HBM reads are Θ(N²d²/M) for SRAM size M (the paper's bound), still quadratic in N but smaller than standard attention's Θ(Nd + N²) by roughly M/d².",
       "provenance": {
         "status": "cited",
         "basis": "evidence",
@@ -2386,7 +2386,7 @@
           "q": "Double the sequence length N (fixed d). By what factor does standard attention's score-matrix HBM traffic grow, and by what factor does FlashAttention's output traffic grow? What happens to the matmul FLOPs in both?",
           "format": "short",
           "answer": "Standard: 4x (N²). Flash: 2x (N·d). FLOPs: 4x in both.",
-          "why": "FlashAttention changes the traffic exponent from 2 to 1 but leaves the compute at O(N²·d); at long N it turns a memory-bound op into a compute-bound one, which is the roofline goal from slide 21."
+          "why": "FlashAttention's writes go from O(N²) to O(N·d) (its K/V re-reads stay Θ(N²d²/M), quadratic in N but with a constant far below 1 for real SRAM sizes), while the compute stays O(N²·d); at long N it turns a memory-bound op into a compute-bound one, which is the roofline goal from slide 21."
         },
         "check": {
           "q": "One attention head with sequence length N = 16,384 and head dimension d = 128, in bf16. Standard attention writes the N × N score matrix to HBM; FlashAttention writes only the N × d output. The score matrix is how many times larger than the output? Type only the number.",

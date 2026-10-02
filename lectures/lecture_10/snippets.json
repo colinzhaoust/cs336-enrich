@@ -537,5 +537,110 @@
   "end": 599,
   "text": "    text(\"Previous status quo:\")\n    text(\"- Request comes in\")\n    text(\"- Allocate section of KV cache for prompt and response (up to a max length)\")\n    image(\"images/paged-attention-fragmentation.png\", width=800)\n    text(\"Problem: fragmentation (what happens to your hard drive)\")\n    text(\"- But this is wasteful since we might generate much fewer tokens (internal fragmentation)!\")\n    text(\"- Might be extra unused space between sections (external fragmentation)!\")\n\n    text(\"Solution: PagedAttention (remember operating systems)\")\n    text(\"- Divide the KV cache of a sequence into non-contiguous **blocks**\")\n    image(\"images/paged-attention-blocks.png\", width=400)\n\n    text(\"Two requests share the KV caches:\")\n    image(\"images/paged-attention-logical.png\", width=800)\n\n    text(\"In general, multiple types of sharing KV caches across sequences:\")\n    image(\"images/paged-attention-sharing.png\", width=600)\n    text(\"- Sharing the system prompt\")\n    text(\"- Sampling multiple responses per prompt (e.g., for program synthesis)\")\n\n    text(\"Solution: share prefixes, copy-on-write at the block level\")",
   "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L69-L76": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 69,
+  "end": 76,
+  "text": "    text(\"Why **efficiency** matters: training is one-time cost, inference is repeated many times\")\n    text(\"- OpenAI processes ~8.6T tokens per day \"), article_link(\"https://www.pymnts.com/artificial-intelligence-2/2025/openai-bests-google-in-race-for-consumer-ai-token-consumption/\")\n    text(\"- For reference, DeepSeek v4 was trained on 32T tokens \"), link(deepseek_v4_2026)\n    \n    text(\"Moreover:\")\n    text(\"- Chatbots: most tokens are meant for human consumption (humans are bottleneck)\")\n    text(\"- Agents: query → internal trace → output for human (number of tokens generated can grow unbounded)\")\n    text(\"- Tokens generated = compute spent\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L103-L108": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 103,
+  "end": 108,
+  "text": "    text(\"- Symbols denote dimensions (and their length): B (batch), T (sequence), D (model dim), H (head dim)\")\n    text(\"- Example: BT<font color=\\\"red\\\">D</font> x <font color=\\\"red\\\">D</font>H → BTH\")\n    text(\"- <font color=\\\"red\\\">Contracting (red)</font> dimensions appear in both operands and disappear from result\")\n    text(\"- Regular (black) dimensions appear in one operand and stay in result\")\n    text(\"- Example: <font color=\\\"blue\\\">B</font><font color=\\\"red\\\">D</font> x <font color=\\\"blue\\\">B</font><font color=\\\"red\\\">D</font> → B\")\n    text(\"- <font color=\\\"blue\\\">Batching (blue)</font> dimensions appear in both operands and stay in result\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L127-L137": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 127,
+  "end": 137,
+  "text": "    text(\"1. Read X <font color=\\\"gray\\\">(B x D)</font> from HBM\")\n    bytes_transferred += 2*B*D   # 2 bytes for bf16\n    text(\"2. Read W <font color=\\\"gray\\\">(D x F)</font> from HBM\")\n    bytes_transferred += 2*D*F\n    text(\"3. Compute Y = X <font color=\\\"gray\\\">(B x D)</font> @ W <font color=\\\"gray\\\">(D x F)</font>\")\n    flops += 2*B*D*F\n    text(\"4. Write Y <font color=\\\"gray\\\">(B x F)</font> to HBM\")\n    bytes_transferred += 2*B*F\n\n    assert flops == 2*B*D*F\n    assert bytes_transferred == 2*B*D + 2*D*F + 2*B*F",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L140-L144": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 140,
+  "end": 144,
+  "text": "    intensity = (flops / bytes_transferred).simplify()  # @inspect intensity\n\n    text(\"Assuming B is much less than D and F, then we can simplify:\")\n    intensity = intensity.subs(D, c*B).subs(F, c*B).limit(c, oo).simplify()  # @inspect intensity\n    assert intensity == B",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L146-L159": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 146,
+  "end": 159,
+  "text": "    text(\"Accelerator intensity of H100:\")\n    flops_per_second = 989e12\n    memory_bandwidth = 3.35e12\n    accelerator_intensity = flops_per_second / memory_bandwidth  # @inspect accelerator_intensity\n    assert round(accelerator_intensity) == 295\n\n    text(\"If computation intensity > accelerator intensity, **compute-bound** (good)\")\n    text(\"If computation intensity < accelerator intensity, **memory-bound** (bad)\")\n    text(\"Conclusion: compute-bound iff B > 295\")\n\n    text(\"Extreme case (B = 1, corresponding to matrix-vector product):\")\n    text(\"- Arithmetic intensity: 1\")\n    text(\"- Memory-bound (read D x F matrix, perform only 2 D F FLOPs)\")\n    text(\"- This is basically what happens with inference...\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L187-L205": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 187,
+  "end": 205,
+  "text": "    text(\"1. Read X <font color=\\\"gray\\\">(B x T x D)</font> from HBM\")\n    bytes_transferred += 2*B*T*D\n    text(\"2. Read Wup <font color=\\\"gray\\\">(D x F)</font>, Wgate <font color=\\\"gray\\\">(D x F)</font>, Wdown <font color=\\\"gray\\\">(F x D)</font> from HBM\")\n    bytes_transferred += 3 * 2*D*F\n    text(\"3. Compute U = X <font color=\\\"gray\\\">(B x T x D)</font> @ Wup <font color=\\\"gray\\\">(D x F)</font>\")\n    flops += 2*B*T*D*F\n    text(\"4. Write U <font color=\\\"gray\\\">(B x T x F)</font> to HBM\")\n    bytes_transferred += 2*B*T*F\n    text(\"5. Compute G = X <font color=\\\"gray\\\">(B x T x D)</font> @ Wgate <font color=\\\"gray\\\">(D x F)</font>\")\n    flops += 2*B*T*D*F\n    text(\"6. Write G <font color=\\\"gray\\\">(B x T x F)</font> to HBM\")\n    bytes_transferred += 2*B*T*F\n    text(\"7. Compute Y = GeLU(G)*U <font color=\\\"gray\\\">(B x T x F)</font> @ Wdown <font color=\\\"gray\\\">(F x D)</font>\")\n    flops += 2*B*T*D*F\n    text(\"8. Write Y <font color=\\\"gray\\\">(B x T x D)</font> to HBM\")\n    bytes_transferred += 2*B*T*D\n\n    assert flops == 6*B*T*D*F\n    assert bytes_transferred == 4*B*T*D + 4*B*T*F + 6*D*F",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L208-L211": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 208,
+  "end": 211,
+  "text": "    intensity = (flops / bytes_transferred).simplify()  # @inspect intensity\n    text(\"Assume that B*T is much smaller than D and F.\")\n    intensity = intensity.subs(D, c*B*T).subs(F, c*B*T).limit(c, oo).simplify()  # @inspect intensity\n    assert intensity == B*T",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L225-L240": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 225,
+  "end": 240,
+  "text": "    # Perform the operation\n    text(\"1. Read Q <font color=\\\"gray\\\">(B x T x D)</font>, K <font color=\\\"gray\\\">(B x S x D)</font>, V <font color=\\\"gray\\\">(B x S x D)</font> from HBM\")\n    bytes_transferred += 2*B*T*D + 2*B*S*D + 2*B*S*D\n    text(\"2. Compute A = Q <font color=\\\"gray\\\">(B x T x D)</font> @ K <font color=\\\"gray\\\">(B x S x D)</font>\")\n    flops += 2*B*S*T*D\n    text(\"3. Compute Y = softmax(A) <font color=\\\"gray\\\">(B x S x T x K x G)</font> @ V <font color=\\\"gray\\\">(B x S x K x H)</font>\")\n    flops += 2*B*S*T*D\n    text(\"4. Write Y <font color=\\\"gray\\\">(B x T x D)</font> to HBM\")\n    bytes_transferred += 2*B*T*D\n\n    assert flops == 4*B*S*T*D\n    assert bytes_transferred == 4*B*S*D + 4*B*T*D\n\n    # Compute the arithmetic intensity\n    intensity = (flops / bytes_transferred).simplify()  # @inspect intensity\n    assert intensity == S*T / (S + T)",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L242-L248": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 242,
+  "end": 248,
+  "text": "    text(\"For the two stages:\")\n    text(\"1. Prefill: T = S\")\n    prefill_intensity = intensity.subs(T, S).simplify()  # @inspect prefill_intensity\n    assert prefill_intensity == S/2  # Good!\n    text(\"2. Generation: T = 1\")\n    generate_intensity = intensity.subs(T, 1).simplify()  # @inspect generate_intensity\n    assert generate_intensity < 1  # Bad!",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L363-L368": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 363,
+  "end": 368,
+  "text": "    text(\"Easy parallelism: if you launch M copies of the model, latency is the same, throughput increases by M!\")\n    text(\"Harder parallelism: shard the model and the KV cache \"), link(scaling_book_inference)\n\n    text(\"Note: time-to-first-token (TTFT) is essentially a function of prefill time\")\n    text(\"Use smaller batch sizes during prefill for faster TTFT\")\n    text(\"Use larger batch sizes during generation to improve throughput\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L409-L413": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 409,
+  "end": 413,
+  "text": "    text(\"Normal attention: KV cache consists of K = W_K h, V = W_V h (N*H dimensions)\")\n    text(\"MLA: store compressed vector c = W_c h (C dimensions), project up to K = W_K c, V = W_V c when needed\")\n    text(\"DeepSeek v2: reduce N*H = 16384 to C = 512\")\n    text(\"Wrinkle: MLA is not compatible with RoPE, so need to add additional 64 dimensions for RoPE, so 512 + 64 = 576 total dimensions\")\n    text(\"Latency/throughput improvements follow similarly from the KV cache reduction as argued earlier\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L32-L41": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 32,
+  "end": 41,
+  "text": "    text(\"Summary: reduce inference complexity without hurting accuracy\")\n\n    text(\"From scratch recipe:\")\n    text(\"1. Define faster model architecture\")\n    text(\"2. Train faster model\")\n\n    text(\"Distillation recipe:\")\n    text(\"1. Define faster model architecture\")\n    text(\"2. Initialize weights using original model (which has a different architecture)\")\n    text(\"3. Repair faster model (distillation)\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L514-L522": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 514,
+  "end": 522,
+  "text": "    text(\"- Use a cheaper **draft model** p to guess a few tokens (e.g., 4)\")\n    text(\"- Evaluate with target model q (process tokens in parallel), and accept if it looks good\")\n    link(title=\"Speculative sampling video\", url=\"https://storage.googleapis.com/gweb-research2023-media/media/SpeculativeDecoding-1-Illustration.mp4\")\n    article_link(\"https://research.google/blog/looking-back-at-speculative-decoding/\")\n\n    image(\"images/speculative-sampling-algorithm.png\", width=600)\n    text(\"This is modified rejection sampling with proposal p and target q\")\n    text(\"Modification: always generate at least one candidate (rejection sampling will keep looping)\")\n    text(\"Key property: guaranteed to be an **exact sample** from the target model!\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L46-L50": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 46,
+  "end": 50,
+  "text": "    text(\"### Handling dynamic workloads\")\n    text(\"Batching over sequences in live traffic is tricky because:\")\n    text(\"1. Requests arrive at different times (waiting for batch is bad for early requests)\")\n    text(\"2. Sequences have shared prefixes (e.g., system prompts, generating multiple samples)\")\n    text(\"3. Sequences have different lengths (padding is inefficient)\")",
+  "sha256": "e79acd9115d7"
+ },
+ "lecture_10.py:L55-L60": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_10.py",
+  "start": 55,
+  "end": 60,
+  "text": "    text(\"### Summary\")\n    text(\"- Inference is important (actual use, evaluation, reinforcement learning)\")\n    text(\"- Different characteristics compared to training (memory-bound, dynamic)\")\n    text(\"- Techniques: new architectures, quantization, pruning/distillation, speculative sampling\")\n    text(\"- Ideas from systems (speculative execution, paging)\")\n    text(\"- New architectures have huge potential for improvement\")",
+  "sha256": "e79acd9115d7"
  }
 }

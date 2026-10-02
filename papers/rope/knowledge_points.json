@@ -13,16 +13,39 @@
         "status": "said",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq11", "role": "claim", "quote": "⟨f_q(x_m, m), f_k(x_n, n)⟩ = g(x_m, x_n, m − n)"},
-          {"source": "rope_paper", "ref": "rope:§3.1", "role": "claim", "quote": "we hope that the inner product encodes position information only in the relative form"},
-          {"source": "rope_paper", "ref": "rope:§2.3", "role": "citation", "quote": "all these approaches attempt to modify Equation (6) based on the decomposition of Equation (3)"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p31", "role": "claim", "quote": "a relative position embedding should be some 𝑓(𝑥, 𝑖) s.t. 𝑓 𝑥, 𝑖 , 𝑓 𝑦, 𝑗 = 𝑔(𝑥, 𝑦, 𝑖 − 𝑗) ... That is, the attention function only gets to depend on the relative position (i-j)"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq11",
+            "role": "claim",
+            "quote": "⟨f_q(x_m, m), f_k(x_n, n)⟩ = g(x_m, x_n, m − n)"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.1",
+            "role": "claim",
+            "quote": "we hope that the inner product encodes position information only in the relative form"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§2.3",
+            "role": "citation",
+            "quote": "all these approaches attempt to modify Equation (6) based on the decomposition of Equation (3)"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p31",
+            "role": "claim",
+            "quote": "a relative position embedding should be some 𝑓(𝑥, 𝑖) s.t. 𝑓 𝑥, 𝑖 , 𝑓 𝑦, 𝑗 = 𝑔(𝑥, 𝑦, 𝑖 − 𝑗) ... That is, the attention function only gets to depend on the relative position (i-j)"
+          }
         ],
         "filtering_note": "The paper reaches Eq. 11 through a two-page lineage of additive schemes (Eqs. 3-10: Vaswani, Shaw, Transformer-XL, T5, DeBERTa). The course compresses that lineage into three bullets on p31 (sine has cross terms, absolute is not relative, relative is not an inner product) and states the requirement first. Basis: evidence from both sources."
       },
       "prerequisites": [],
       "misconceptions": [
-        {"belief": "A relative encoding means f itself takes m−n as input.", "why_wrong": "f_q sees only m and f_k only n (Eq. 1); relativity is a property of the inner product, not of the per-token function. That is what makes the scheme usable with a cache and with linear attention."}
+        {
+          "belief": "A relative encoding means f itself takes m−n as input.",
+          "why_wrong": "f_q sees only m and f_k only n (Eq. 1); relativity is a property of the inner product, not of the per-token function. That is what makes the scheme usable with a cache and with linear attention."
+        }
       ],
       "prompts": {
         "predict": {
@@ -40,29 +63,66 @@
         "check": {
           "q": "Let c > 1 be a constant and u a fixed vector. Under Eq. 1, f_q may see only (x_m, m) and f_k only (x_n, n). Which pair satisfies Eq. 11, i.e. makes the real inner product <f_q, f_k> depend on positions only through m − n?",
           "format": "choice",
-          "choices": ["f_q = c^m · W_q x_m and f_k = c^(−n) · W_k x_n", "f_q = c^m · W_q x_m and f_k = c^n · W_k x_n", "f_q = W_q x_m + m·u and f_k = W_k x_n − n·u", "f_q = (m − n) · W_q x_m and f_k = W_k x_n"],
+          "choices": [
+            "f_q = c^m · W_q x_m and f_k = c^(−n) · W_k x_n",
+            "f_q = c^m · W_q x_m and f_k = c^n · W_k x_n",
+            "f_q = W_q x_m + m·u and f_k = W_k x_n − n·u",
+            "f_q = (m − n) · W_q x_m and f_k = W_k x_n"
+          ],
           "answer": "f_q = c^m · W_q x_m and f_k = c^(−n) · W_k x_n",
           "why": "<c^m W_q x_m, c^(−n) W_k x_n> = c^(m−n) x_m^T W_q^T W_k x_n, a function of x_m, x_n and m − n only (Eq. 11), and each function uses only its own position (Eq. 1). c^m and c^n give c^(m+n). The additive pair gives cross terms m·u^T W_k x_n and −n·x_m^T W_q^T u plus −m·n·u^T u, none a function of m − n. (m − n)·W_q x_m makes f_q depend on n, which Eq. 1 forbids. (This scaling solution is unbounded, which is why the paper uses unit-modulus rotations, but it meets the stated requirement.)",
-          "distractor_from": {"f_q = c^m · W_q x_m and f_k = c^n · W_k x_n": "Same-sign coupling: positions add (m + n) instead of subtracting, the error the conjugate/transposed rotation avoids.", "f_q = W_q x_m + m·u and f_k = W_k x_n − n·u": "Additive position terms, which always leave cross terms and an m·n term.", "f_q = (m − n) · W_q x_m and f_k = W_k x_n": "Misconception: a relative encoding means f itself takes m − n as input."},
+          "distractor_from": {
+            "f_q = c^m · W_q x_m and f_k = c^n · W_k x_n": "Same-sign coupling: positions add (m + n) instead of subtracting, the error the conjugate/transposed rotation avoids.",
+            "f_q = W_q x_m + m·u and f_k = W_k x_n − n·u": "Additive position terms, which always leave cross terms and an m·n term.",
+            "f_q = (m − n) · W_q x_m and f_k = W_k x_n": "Misconception: a relative encoding means f itself takes m − n as input."
+          },
           "targets_misconception": "A relative encoding means f itself takes m−n as input.",
           "varies": "Multiplicative scalar coupling and a menu of candidate f's instead of diagnosing one additive proposal (functional: recognise a valid solution, not a violating term).",
           "invariant": "Each token's function uses only its own position, and the position dependence must cancel to m − n inside the inner product; opposite-sign multiplicative coupling does this, additive terms cannot.",
           "transfer_distance": "far"
         },
         "retrieval": [
-          {"q": "Write the functional requirement RoPE places on q_m = f_q(x_m,m) and k_n = f_k(x_n,n).", "answer": "⟨f_q(x_m,m), f_k(x_n,n)⟩ = g(x_m, x_n, m−n)"},
-          {"q": "Which of the two functions, f_q or f_k, receives the relative offset m−n as an argument?", "answer": "Neither; each receives only its own absolute position. m−n appears only in the inner product g."}
+          {
+            "q": "Write the functional requirement RoPE places on q_m = f_q(x_m,m) and k_n = f_k(x_n,n).",
+            "answer": "⟨f_q(x_m,m), f_k(x_n,n)⟩ = g(x_m, x_n, m−n)"
+          },
+          {
+            "q": "Which of the two functions, f_q or f_k, receives the relative offset m−n as an argument?",
+            "answer": "Neither; each receives only its own absolute position. m−n appears only in the inner product g."
+          }
         ],
         "self_explain": "Why would a method that needs m−n inside f_k be a problem for a decoder that caches keys?"
       },
       "presentations": [
-        {"type": "formula-step", "action": "restate", "ref": "rope:eq11"},
-        {"type": "formula-step", "action": "compare", "ref": "lecture_03.pdf:p31", "steps": [
-          {"tex": "\\langle f_q(x_m,m),\\, f_k(x_n,n)\\rangle = g(x_m,x_n,m-n)", "do": "Test each scheme on p31 against Eq. 11's two conditions: (a) the score is an inner product of a query built from (x_m, m) alone and a key built from (x_n, n) alone; (b) positions enter only through m−n.", "why": "Eq. 11 asks for both at once, and each earlier scheme on the slide fails exactly one of them."},
-          {"do": "Sinusoidal vectors added before the projection: ⟨W_q(x_m+p_m), W_k(x_n+p_n)⟩ is an inner product, but its expansion contains cross terms such as x_mᵀW_qᵀW_k p_n that depend on n by itself. Fails (b).", "why": "The bilinear form distributes over each sum, so content gets paired with an absolute position (p31: 'various cross-terms that are not relative')."},
-          {"do": "Learned absolute embeddings: the same additive form with p_m read from a table. Fails (b).", "why": "Nothing ties a free table entry p_m to a difference of positions, so the position terms are absolute (p31: absolute is not relative)."},
-          {"do": "Relative embeddings: a learned term indexed by i−j is added to the score. Passes (b), fails (a).", "why": "The position term is added next to the inner product instead of being part of it, so the score is no longer ⟨f_q, f_k⟩ of per-token vectors (p31: not an inner product). Eq. 11 asks for a scheme that passes both tests."}
-        ]}
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "rope:eq11"
+        },
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "lecture_03.pdf:p31",
+          "steps": [
+            {
+              "tex": "\\langle f_q(x_m,m),\\, f_k(x_n,n)\\rangle = g(x_m,x_n,m-n)",
+              "do": "Test each scheme on p31 against Eq. 11's two conditions: (a) the score is an inner product of a query built from (x_m, m) alone and a key built from (x_n, n) alone; (b) positions enter only through m−n.",
+              "why": "Eq. 11 asks for both at once, and each earlier scheme on the slide fails exactly one of them."
+            },
+            {
+              "do": "Sinusoidal vectors added before the projection: ⟨W_q(x_m+p_m), W_k(x_n+p_n)⟩ is an inner product, but its expansion contains cross terms such as x_mᵀW_qᵀW_k p_n that depend on n by itself. Fails (b).",
+              "why": "The bilinear form distributes over each sum, so content gets paired with an absolute position (p31: 'various cross-terms that are not relative')."
+            },
+            {
+              "do": "Learned absolute embeddings: the same additive form with p_m read from a table. Fails (b).",
+              "why": "Nothing ties a free table entry p_m to a difference of positions, so the position terms are absolute (p31: absolute is not relative)."
+            },
+            {
+              "do": "Relative embeddings: a learned term indexed by i−j is added to the score. Passes (b), fails (a).",
+              "why": "The position term is added next to the inner product instead of being part of it, so the score is no longer ⟨f_q, f_k⟩ of per-token vectors (p31: not an inner product). Eq. 11 asks for a scheme that passes both tests."
+            }
+          ]
+        }
       ]
     },
     {
@@ -74,15 +134,33 @@
         "status": "supplement",
         "basis": "inference",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:§3.2.2", "role": "claim", "quote": "Note that R^d_Θ is an orthogonal matrix, which ensures stability during the process of encoding position information."},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p32", "role": "claim", "quote": "We know that inner products are invariant to arbitrary rotation."},
-          {"source": "cs336_rope_model", "ref": "rope.mjs:rotate", "role": "computation", "quote": "return [c*v[0]-s*v[1], s*v[0]+c*v[1]]"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.2.2",
+            "role": "claim",
+            "quote": "Note that R^d_Θ is an orthogonal matrix, which ensures stability during the process of encoding position information."
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p32",
+            "role": "claim",
+            "quote": "We know that inner products are invariant to arbitrary rotation."
+          },
+          {
+            "source": "cs336_rope_model",
+            "ref": "rope.mjs:rotate",
+            "role": "computation",
+            "quote": "return [c*v[0]-s*v[1], s*v[0]+c*v[1]]"
+          }
         ],
         "filtering_note": "Both the paper and the course use R_m^T R_n = R_{n−m} without stating it; the paper says only 'R is orthogonal'. The additive-angle identity is the step that actually produces n−m, so the student line adds it as an assumed prerequisite (author inference)."
       },
       "prerequisites": [],
       "misconceptions": [
-        {"belief": "Rotating both vectors by different angles keeps the dot product unchanged because rotation preserves it.", "why_wrong": "Invariance holds for the same rotation applied to both; different angles leave a net rotation of α−β between them."}
+        {
+          "belief": "Rotating both vectors by different angles keeps the dot product unchanged because rotation preserves it.",
+          "why_wrong": "Invariance holds for the same rotation applied to both; different angles leave a net rotation of α−β between them."
+        }
       ],
       "prompts": {
         "predict": {
@@ -110,13 +188,29 @@
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "Simplify R(α)^T R(β) for 2D rotation matrices.", "answer": "R(β−α)"},
-          {"q": "What property of R(α) guarantees that ‖R(α)v‖ = ‖v‖?", "answer": "Orthogonality: R^T R = I"}
+          {
+            "q": "Simplify R(α)^T R(β) for 2D rotation matrices.",
+            "answer": "R(β−α)"
+          },
+          {
+            "q": "What property of R(α) guarantees that ‖R(α)v‖ = ‖v‖?",
+            "answer": "Orthogonality: R^T R = I"
+          }
         ]
       },
       "presentations": [
-        {"type": "interactive", "action": "predict-number", "ref": "fixture:rope-shared-shift", "notice": "The lengths of both arrows never change, whatever the angles; only the gap between them moves the readout."},
-        {"type": "interactive", "action": "predict-number", "ref": "fixture:rope--rotation-pair", "notice": "Whatever α and β are, both arrows keep their lengths, and R(α)q · R(β)k always equals q · R(β−α)k. Only the difference β − α moves the dot product."}
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:rope-shared-shift",
+          "notice": "The lengths of both arrows never change, whatever the angles; only the gap between them moves the readout."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:rope--rotation-pair",
+          "notice": "Whatever α and β are, both arrows keep their lengths, and R(α)q · R(β)k always equals q · R(β−α)k. Only the difference β − α moves the dot product."
+        }
       ]
     },
     {
@@ -128,15 +222,38 @@
         "status": "supplement",
         "basis": "inference",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq12", "role": "computation", "quote": "g(x_m, x_n, m−n) = Re[(W_q x_m)(W_k x_n)* e^{i(m−n)θ}]"},
-          {"source": "rope_paper", "ref": "rope:eq23", "role": "computation", "quote": "f_q(x_q, m) = R_q(x_q, m) e^{iΘ_q(x_q, m)}"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p33", "role": "claim", "quote": "Just pair up the coordinates and rotate them in 2d (motivation: complex numbers)"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq12",
+            "role": "computation",
+            "quote": "g(x_m, x_n, m−n) = Re[(W_q x_m)(W_k x_n)* e^{i(m−n)θ}]"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq23",
+            "role": "computation",
+            "quote": "f_q(x_q, m) = R_q(x_q, m) e^{iΘ_q(x_q, m)}"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p33",
+            "role": "claim",
+            "quote": "Just pair up the coordinates and rotate them in 2d (motivation: complex numbers)"
+          }
         ],
         "filtering_note": "The paper moves between the complex form (Eq. 12) and the matrix form (Eq. 13) in one sentence and never states the Re[z w*] = dot-product identity. The course names complex numbers only as a 'motivation' on p33. Author inference that this is the missing bridge."
       },
-      "prerequisites": [{"kp": "supp-rotation-preserves-dot", "basis": "author-inference"}],
+      "prerequisites": [
+        {
+          "kp": "supp-rotation-preserves-dot",
+          "basis": "author-inference"
+        }
+      ],
       "misconceptions": [
-        {"belief": "z w (no conjugate) gives the dot product.", "why_wrong": "Re[z w] = ac − bd; the conjugate flips the sign of the second term so Re[z w*] = ac + bd. Without the conjugate the phases add instead of subtract and m+n appears, not m−n."}
+        {
+          "belief": "z w (no conjugate) gives the dot product.",
+          "why_wrong": "Re[z w] = ac − bd; the conjugate flips the sign of the second term so Re[z w*] = ac + bd. Without the conjugate the phases add instead of subtract and m+n appears, not m−n."
+        }
       ],
       "prompts": {
         "predict": {
@@ -165,18 +282,50 @@
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "For 2-vectors written as complex numbers z and w, which complex expression equals their real dot product?", "answer": "Re[z w*] (real part of z times the conjugate of w)"},
-          {"q": "Multiplying a complex number by e^{iθ} does what to the corresponding 2-vector?", "answer": "Rotates it counter-clockwise by θ, preserving its length"}
+          {
+            "q": "For 2-vectors written as complex numbers z and w, which complex expression equals their real dot product?",
+            "answer": "Re[z w*] (real part of z times the conjugate of w)"
+          },
+          {
+            "q": "Multiplying a complex number by e^{iθ} does what to the corresponding 2-vector?",
+            "answer": "Rotates it counter-clockwise by θ, preserving its length"
+          }
         ]
       },
       "presentations": [
-        {"type": "formula-step", "action": "compute", "ref": "rope:eq12", "faded": false, "steps": [
-          {"tex": "(a+ib)\\,e^{i\\varphi} = (a\\cos\\varphi - b\\sin\\varphi) + i\\,(a\\sin\\varphi + b\\cos\\varphi)", "do": "Multiplying z = a + ib by e^{iφ} rotates the 2-vector (a, b) by φ.", "why": "The real and imaginary parts are exactly the 2×2 rotation matrix of Eq. 13 applied to (a, b)."},
-          {"tex": "\\mathrm{Re}[z\\,w^*] = \\mathrm{Re}[(a+ib)(c-id)] = ac + bd", "do": "With w = c + id, the real part of z w* is the dot product (a, b)·(c, d).", "why": "Conjugating w flips the sign of d, so the cross terms bc − ad land in the imaginary part and only ac + bd is real."},
-          {"tex": "z e^{im\\theta}\\,(w e^{in\\theta})^* = z\\,w^*\\,e^{i(m-n)\\theta}", "do": "Rotate the query by mθ and the key by nθ, then take Re: this is Eq. 12's g.", "why": "The conjugate of a product is the product of conjugates, and (e^{inθ})* = e^{−inθ}, so the key's phase enters with a minus sign and the two positions meet only as m − n."},
-          {"do": "The predict's numbers: z = 1, w = 0.7 + 0.7i, phases π/6 and π/2. z w* e^{−iπ/3} = (0.7 − 0.7i)(0.5 − 0.866i), real part 0.35 − 0.606 = −0.256.", "why": "Same value as rotating (1, 0) by 30° and (0.7, 0.7) by 90° and taking the dot product (rope.mjs rotaryPair().before), as step 2 says it must be."}
-        ]},
-        {"type": "interactive", "action": "compute", "ref": "fixture:rope--rotation-pair", "notice": "With the key conjugated, the complex readout equals the dot product and its phase is α − β. Untick the conjugate: the phase becomes α + β and the readout no longer matches the dot product."}
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "rope:eq12",
+          "faded": false,
+          "steps": [
+            {
+              "tex": "(a+ib)\\,e^{i\\varphi} = (a\\cos\\varphi - b\\sin\\varphi) + i\\,(a\\sin\\varphi + b\\cos\\varphi)",
+              "do": "Multiplying z = a + ib by e^{iφ} rotates the 2-vector (a, b) by φ.",
+              "why": "The real and imaginary parts are exactly the 2×2 rotation matrix of Eq. 13 applied to (a, b)."
+            },
+            {
+              "tex": "\\mathrm{Re}[z\\,w^*] = \\mathrm{Re}[(a+ib)(c-id)] = ac + bd",
+              "do": "With w = c + id, the real part of z w* is the dot product (a, b)·(c, d).",
+              "why": "Conjugating w flips the sign of d, so the cross terms bc − ad land in the imaginary part and only ac + bd is real."
+            },
+            {
+              "tex": "z e^{im\\theta}\\,(w e^{in\\theta})^* = z\\,w^*\\,e^{i(m-n)\\theta}",
+              "do": "Rotate the query by mθ and the key by nθ, then take Re: this is Eq. 12's g.",
+              "why": "The conjugate of a product is the product of conjugates, and (e^{inθ})* = e^{−inθ}, so the key's phase enters with a minus sign and the two positions meet only as m − n."
+            },
+            {
+              "do": "The predict's numbers: z = 1, w = 0.7 + 0.7i, phases π/6 and π/2. z w* e^{−iπ/3} = (0.7 − 0.7i)(0.5 − 0.866i), real part 0.35 − 0.606 = −0.256.",
+              "why": "Same value as rotating (1, 0) by 30° and (0.7, 0.7) by 90° and taking the dot product (rope.mjs rotaryPair().before), as step 2 says it must be."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:rope--rotation-pair",
+          "notice": "With the key conjugated, the complex readout equals the dot product and its phase is α − β. Untick the conjugate: the phase becomes α + β and the readout no longer matches the dot product."
+        }
       ]
     },
     {
@@ -188,20 +337,54 @@
         "status": "computed",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq12", "role": "computation", "quote": "f_q(x_m, m) = (W_q x_m) e^{imθ}"},
-          {"source": "rope_paper", "ref": "rope:eq13", "role": "computation", "quote": "f_{q,k}(x_m, m) = [[cos mθ, −sin mθ],[sin mθ, cos mθ]] W_{q,k} x_m"},
-          {"source": "rope_paper", "ref": "rope:eq30", "role": "computation", "quote": "φ(m) = mθ + γ"},
-          {"source": "rope_paper", "ref": "rope:§3.4.1", "role": "computation", "quote": "the angular functions does not dependent on query and key ... φ(m) with continuous integer inputs produce an arithmetic progression"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p32", "role": "claim", "quote": "Rotate we by ‘0 positions’ ... know by ‘1 positions’"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq12",
+            "role": "computation",
+            "quote": "f_q(x_m, m) = (W_q x_m) e^{imθ}"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq13",
+            "role": "computation",
+            "quote": "f_{q,k}(x_m, m) = [[cos mθ, −sin mθ],[sin mθ, cos mθ]] W_{q,k} x_m"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq30",
+            "role": "computation",
+            "quote": "φ(m) = mθ + γ"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.4.1",
+            "role": "computation",
+            "quote": "the angular functions does not dependent on query and key ... φ(m) with continuous integer inputs produce an arithmetic progression"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p32",
+            "role": "claim",
+            "quote": "Rotate we by ‘0 positions’ ... know by ‘1 positions’"
+          }
         ],
         "filtering_note": "§3.2.1 presents Eq. 12 as 'a solution' and defers the derivation to §3.4.1, where polar decomposition plus the initial condition at position 0 forces the radius to be position-free and the angle to be an arithmetic progression φ(m) = mθ + γ (Eqs. 24-30). The course (p32) gives only the picture 'rotate by the position' and never shows that rotation is forced rather than merely sufficient. The paper itself proves sufficiency and a form of necessity only under its extra assumptions (Eqs. 22, 28)."
       },
       "prerequisites": [
-        {"kp": "rope-position-goal", "basis": "teaching-order"},
-        {"kp": "supp-complex-rotation", "basis": "author-inference"}
+        {
+          "kp": "rope-position-goal",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-complex-rotation",
+          "basis": "author-inference"
+        }
       ],
       "misconceptions": [
-        {"belief": "The rotation angle depends on the token content x_m.", "why_wrong": "Eq. 28: Θ_f(x, m) = φ(m) + θ_x, and the content-dependent part cancels between query and key at m = n (Eq. 26b); only mθ survives."}
+        {
+          "belief": "The rotation angle depends on the token content x_m.",
+          "why_wrong": "Eq. 28: Θ_f(x, m) = φ(m) + θ_x, and the content-dependent part cancels between query and key at m = n (Eq. 26b); only mθ survives."
+        }
       ],
       "prompts": {
         "predict": {
@@ -219,21 +402,59 @@
           "why": "Now the relative rotation is R(n−m) = R(−60°): k rotated by −60° gives (0.956, −0.256), dot with (1,0) is 0.956. The score depends on the sign of m−n, not only its magnitude, so RoPE distinguishes 'key before query' from 'key after query'."
         },
         "retrieval": [
-          {"q": "In the 2D case, by what angle is the projected query at position m rotated?", "answer": "mθ, with θ a fixed non-zero constant"},
-          {"q": "Which two facts about f does the paper's 2D derivation extract from the initial condition at position 0 and the m = n case?", "answer": "The radial part is position-independent (‖q‖, ‖k‖), and the angle is φ(m) + θ_{q,k} with φ an arithmetic progression mθ + γ"}
+          {
+            "q": "In the 2D case, by what angle is the projected query at position m rotated?",
+            "answer": "mθ, with θ a fixed non-zero constant"
+          },
+          {
+            "q": "Which two facts about f does the paper's 2D derivation extract from the initial condition at position 0 and the m = n case?",
+            "answer": "The radial part is position-independent (‖q‖, ‖k‖), and the angle is φ(m) + θ_{q,k} with φ an arithmetic progression mθ + γ"
+          }
         ],
         "self_explain": "Why does setting m = n in Eq. 24 tell you the radius cannot depend on position?"
       },
       "presentations": [
-        {"type": "formula-step", "action": "trace", "ref": "rope:eq24-30", "steps": [
-          {"tex": "f_q(x_q,m) = R_q(x_q,m)\\,e^{i\\Theta_q(x_q,m)},\\quad f_k(x_k,n) = R_k(x_k,n)\\,e^{i\\Theta_k(x_k,n)}", "do": "Write the query and key functions in polar form (Eq. 23), with the initial condition q = f_q(x_q, 0), k = f_k(x_k, 0).", "why": "A product of complex numbers multiplies radii and adds angles, so polar form splits the requirement into one condition on radii and one on angles."},
-          {"tex": "R_q(x_q,m)R_k(x_k,n) = R_g(x_q,x_k,n-m),\\quad \\Theta_k(x_k,n)-\\Theta_q(x_q,m) = \\Theta_g(x_q,x_k,n-m)", "do": "Eq. 24: the radii must multiply, and the angles subtract, to functions of n − m only.", "why": "The score pairs the query with the conjugate of the key, so the key's angle enters with the opposite sign."},
-          {"do": "Set n = m. Then R_q(x_q,m)R_k(x_k,m) = R_g(x_q,x_k,0) = ‖q‖‖k‖ and Θ_k(x_k,m) − Θ_q(x_q,m) = θ_k − θ_q, where θ_q, θ_k are the angles of q and k.", "why": "With equal positions the right-hand sides no longer depend on m, so they equal their values at m = 0, the unrotated q and k."},
-          {"do": "The paper takes the radius to be position-free, R_q(x_q,m) = ‖q‖, R_k(x_k,n) = ‖k‖. The angle condition rearranges to Θ_q(x_q,m) − θ_q = Θ_k(x_k,m) − θ_k, so both sides equal one function φ(m) of the position alone.", "why": "The left side depends on x_q only and the right side on x_k only; they can be equal for all inputs only if neither depends on the input."},
-          {"tex": "\\varphi(m+1)-\\varphi(m) = \\Theta_g(x_q,x_k,1)+\\theta_q-\\theta_k \\;\\Rightarrow\\; \\varphi(m) = m\\theta+\\gamma", "do": "Put n = m + 1 in the angle condition: the step φ(m+1) − φ(m) is the same for every m, which gives Eq. 30.", "why": "The right-hand side does not contain m, and a sequence with a constant step is an arithmetic progression."},
-          {"tex": "f_q(x_q,m) = \\lVert q\\rVert e^{i(\\theta_q + m\\theta+\\gamma)} = q\\,e^{i(m\\theta+\\gamma)}", "do": "With γ = 0 and q = W_q x_m this is Eq. 33, the 2D solution of Eq. 12: rotate the projected query by mθ (and the key by nθ).", "why": "The radius and the input angle rebuild q itself; the only thing position adds is the angle mθ, so the encoding is a rotation."}
-        ]},
-        {"type": "interactive", "action": "predict-number", "ref": "fixture:rope-shared-shift", "notice": "The faint-arrow readout q_m · k_n depends only on n − m: move m and n up by the same amount and it stays put, while changing just one of them changes it."}
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "rope:eq24-30",
+          "steps": [
+            {
+              "tex": "f_q(x_q,m) = R_q(x_q,m)\\,e^{i\\Theta_q(x_q,m)},\\quad f_k(x_k,n) = R_k(x_k,n)\\,e^{i\\Theta_k(x_k,n)}",
+              "do": "Write the query and key functions in polar form (Eq. 23), with the initial condition q = f_q(x_q, 0), k = f_k(x_k, 0).",
+              "why": "A product of complex numbers multiplies radii and adds angles, so polar form splits the requirement into one condition on radii and one on angles."
+            },
+            {
+              "tex": "R_q(x_q,m)R_k(x_k,n) = R_g(x_q,x_k,n-m),\\quad \\Theta_k(x_k,n)-\\Theta_q(x_q,m) = \\Theta_g(x_q,x_k,n-m)",
+              "do": "Eq. 24: the radii must multiply, and the angles subtract, to functions of n − m only.",
+              "why": "The score pairs the query with the conjugate of the key, so the key's angle enters with the opposite sign."
+            },
+            {
+              "do": "Set n = m. Then R_q(x_q,m)R_k(x_k,m) = R_g(x_q,x_k,0) = ‖q‖‖k‖ and Θ_k(x_k,m) − Θ_q(x_q,m) = θ_k − θ_q, where θ_q, θ_k are the angles of q and k.",
+              "why": "With equal positions the right-hand sides no longer depend on m, so they equal their values at m = 0, the unrotated q and k."
+            },
+            {
+              "do": "The paper takes the radius to be position-free, R_q(x_q,m) = ‖q‖, R_k(x_k,n) = ‖k‖. The angle condition rearranges to Θ_q(x_q,m) − θ_q = Θ_k(x_k,m) − θ_k, so both sides equal one function φ(m) of the position alone.",
+              "why": "The left side depends on x_q only and the right side on x_k only; they can be equal for all inputs only if neither depends on the input."
+            },
+            {
+              "tex": "\\varphi(m+1)-\\varphi(m) = \\Theta_g(x_q,x_k,1)+\\theta_q-\\theta_k \\;\\Rightarrow\\; \\varphi(m) = m\\theta+\\gamma",
+              "do": "Put n = m + 1 in the angle condition: the step φ(m+1) − φ(m) is the same for every m, which gives Eq. 30.",
+              "why": "The right-hand side does not contain m, and a sequence with a constant step is an arithmetic progression."
+            },
+            {
+              "tex": "f_q(x_q,m) = \\lVert q\\rVert e^{i(\\theta_q + m\\theta+\\gamma)} = q\\,e^{i(m\\theta+\\gamma)}",
+              "do": "With γ = 0 and q = W_q x_m this is Eq. 33, the 2D solution of Eq. 12: rotate the projected query by mθ (and the key by nθ).",
+              "why": "The radius and the input angle rebuild q itself; the only thing position adds is the angle mθ, so the encoding is a rotation."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:rope-shared-shift",
+          "notice": "The faint-arrow readout q_m · k_n depends only on n − m: move m and n up by the same amount and it stays put, while changing just one of them changes it."
+        }
       ]
     },
     {
@@ -245,20 +466,56 @@
         "status": "computed",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq14", "role": "computation", "quote": "f_{q,k}(x_m, m) = R^d_{Θ,m} W_{q,k} x_m"},
-          {"source": "rope_paper", "ref": "rope:eq15", "role": "computation", "quote": "Θ = {θ_i = 10000^{−2(i−1)/d}, i ∈ [1, 2, ..., d/2]}"},
-          {"source": "rope_paper", "ref": "rope:fig1", "role": "figure", "quote": "Figure 1: Implementation of Rotary Position Embedding(RoPE)."},
-          {"source": "rope_paper", "ref": "rope:§3.3", "role": "claim", "quote": "Following Vaswani et al. [2017], we set θ_i = 10000^{−2i/d}."},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p33", "role": "claim", "quote": "There are many rotations, which one do you pick? ... Just pair up the coordinates and rotate them in 2d"},
-          {"source": "cs336_rope_model", "ref": "rope.mjs:rotatePairs", "role": "computation", "quote": "rotate([vector[i],vector[i+1]], position*base**(-i/vector.length))"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq14",
+            "role": "computation",
+            "quote": "f_{q,k}(x_m, m) = R^d_{Θ,m} W_{q,k} x_m"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq15",
+            "role": "computation",
+            "quote": "Θ = {θ_i = 10000^{−2(i−1)/d}, i ∈ [1, 2, ..., d/2]}"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:fig1",
+            "role": "figure",
+            "quote": "Figure 1: Implementation of Rotary Position Embedding(RoPE)."
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.3",
+            "role": "claim",
+            "quote": "Following Vaswani et al. [2017], we set θ_i = 10000^{−2i/d}."
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p33",
+            "role": "claim",
+            "quote": "There are many rotations, which one do you pick? ... Just pair up the coordinates and rotate them in 2d"
+          },
+          {
+            "source": "cs336_rope_model",
+            "ref": "rope.mjs:rotatePairs",
+            "role": "computation",
+            "quote": "rotate([vector[i],vector[i+1]], position*base**(-i/vector.length))"
+          }
         ],
         "filtering_note": "The paper writes the exponent two ways: 10000^{−2(i−1)/d} with i from 1 (Eq. 15) and 10000^{−2i/d} in §3.3 and §3.4.3 (i from 0). They describe the same set; the atlas uses the 0-indexed form to match rope.mjs. The paper does not motivate the choice beyond 'following Vaswani et al.'; the course (p33) adds that Gemma 4 rotates only the first two coordinates as an alternative, which the paper does not discuss. The paper says nothing about why pairs are adjacent rather than (i, i+d/2)."
       },
       "prerequisites": [
-        {"kp": "rope-2d-solution", "basis": "teaching-order"}
+        {
+          "kp": "rope-2d-solution",
+          "basis": "teaching-order"
+        }
       ],
       "misconceptions": [
-        {"belief": "All pairs rotate by the same angle mθ.", "why_wrong": "Each pair has its own θ_i; with one shared θ every position m and m + 2π/θ would collide, and the model could not resolve distances at more than one scale."}
+        {
+          "belief": "All pairs rotate by the same angle mθ.",
+          "why_wrong": "Each pair has its own θ_i; with one shared θ every position m and m + 2π/θ would collide, and the model could not resolve distances at more than one scale."
+        }
       ],
       "prompts": {
         "predict": {
@@ -286,20 +543,55 @@
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "For head dimension d, how many independent 2×2 rotation blocks does R^d_{Θ,m} contain?", "answer": "d/2"},
-          {"q": "Write RoPE's rotation frequency θ_i, saying how i is counted.", "answer": "θ_i = 10000^{−2i/d}, i counted from 0 (Eq. 15 writes the same set as 10000^{−2(i−1)/d}, i = 1..d/2)"}
+          {
+            "q": "For head dimension d, how many independent 2×2 rotation blocks does R^d_{Θ,m} contain?",
+            "answer": "d/2"
+          },
+          {
+            "q": "Write RoPE's rotation frequency θ_i, saying how i is counted.",
+            "answer": "θ_i = 10000^{−2i/d}, i counted from 0 (Eq. 15 writes the same set as 10000^{−2(i−1)/d}, i = 1..d/2)"
+          }
         ],
         "self_explain": "What would a learner lose if all d/2 blocks used the same θ?"
       },
       "presentations": [
-        {"type": "formula-step", "action": "restate", "ref": "rope:eq15", "steps": [
-          {"tex": "R^d_{\\Theta,m} = \\mathrm{blockdiag}\\big(R(m\\theta_1),\\dots,R(m\\theta_{d/2})\\big)", "do": "Split the d-vector into d/2 adjacent pairs (x_1, x_2), (x_3, x_4), … and rotate pair i by mθ_i.", "why": "Each pair is a 2D plane where the 2D solution (Eq. 13) applies on its own, so the d-dimensional rotation is d/2 independent 2D ones."},
-          {"tex": "\\theta_i = 10000^{-2(i-1)/d},\\ i=1,\\dots,d/2 \\quad\\Longleftrightarrow\\quad \\theta_i = 10000^{-2i/d},\\ i=0,\\dots,d/2-1", "do": "Eq. 15 counts pairs from 1; §3.3 and rope.mjs count from 0.", "why": "Same set of frequencies with the index shifted by one: the first pair has θ = 1 and the last 10000^{−(d−2)/d}, close to 1/10000."},
-          {"do": "The predict's d = 8: θ = 10000^0, 10000^{−1/4}, 10000^{−1/2}, 10000^{−3/4} = 1, 0.1, 0.01, 0.001.", "why": "Consecutive pairs differ by the constant factor 10000^{2/d} (here 10), so the frequencies form a geometric sequence from fast to slow."}
-        ]},
-        {"type": "figure", "action": "distinguish", "ref": "rope:fig1"},
-        {"type": "code", "action": "compute", "ref": "rope.mjs:rotatePairs"},
-        {"type": "interactive", "action": "compute", "ref": "fixture:rope--frequency-dials", "notice": "At the same position, pair 1 has turned many times while the last pair has barely moved. On the log axis θ_i lies on a straight line, so each pair is slower than the one before by the same factor."}
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "rope:eq15",
+          "steps": [
+            {
+              "tex": "R^d_{\\Theta,m} = \\mathrm{blockdiag}\\big(R(m\\theta_1),\\dots,R(m\\theta_{d/2})\\big)",
+              "do": "Split the d-vector into d/2 adjacent pairs (x_1, x_2), (x_3, x_4), … and rotate pair i by mθ_i.",
+              "why": "Each pair is a 2D plane where the 2D solution (Eq. 13) applies on its own, so the d-dimensional rotation is d/2 independent 2D ones."
+            },
+            {
+              "tex": "\\theta_i = 10000^{-2(i-1)/d},\\ i=1,\\dots,d/2 \\quad\\Longleftrightarrow\\quad \\theta_i = 10000^{-2i/d},\\ i=0,\\dots,d/2-1",
+              "do": "Eq. 15 counts pairs from 1; §3.3 and rope.mjs count from 0.",
+              "why": "Same set of frequencies with the index shifted by one: the first pair has θ = 1 and the last 10000^{−(d−2)/d}, close to 1/10000."
+            },
+            {
+              "do": "The predict's d = 8: θ = 10000^0, 10000^{−1/4}, 10000^{−1/2}, 10000^{−3/4} = 1, 0.1, 0.01, 0.001.",
+              "why": "Consecutive pairs differ by the constant factor 10000^{2/d} (here 10), so the frequencies form a geometric sequence from fast to slow."
+            }
+          ]
+        },
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "rope:fig1"
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "rope.mjs:rotatePairs"
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:rope--frequency-dials",
+          "notice": "At the same position, pair 1 has turned many times while the last pair has barely moved. On the log axis θ_i lies on a straight line, so each pair is slower than the one before by the same factor."
+        }
       ]
     },
     {
@@ -311,21 +603,59 @@
         "status": "computed",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq16", "role": "computation", "quote": "q_m^T k_n = (R^d_{Θ,m} W_q x_m)^T (R^d_{Θ,n} W_k x_n) = x^T W_q R^d_{Θ,n−m} W_k x_n"},
-          {"source": "rope_paper", "ref": "rope:§3.2.2", "role": "claim", "quote": "where R^d_{Θ,n−m} = (R^d_{Θ,m})^T R^d_{Θ,n}"},
-          {"source": "roformer_code", "ref": "external/RoFormer/README.md:L32", "role": "computation", "quote": "a = tf.einsum('bjhd,bkhd->bhjk', qw, kw)"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p32", "role": "claim", "quote": "We want our embeddings to be invariant to absolute position"},
-          {"source": "cs336_rope_model", "ref": "rope.mjs:rotaryPair", "role": "computation", "quote": "before:dot(qm,kn), after:dot(qs,ks), relative:dot(q,rotate(k,(n-m)*theta))"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq16",
+            "role": "computation",
+            "quote": "q_m^T k_n = (R^d_{Θ,m} W_q x_m)^T (R^d_{Θ,n} W_k x_n) = x^T W_q R^d_{Θ,n−m} W_k x_n"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.2.2",
+            "role": "claim",
+            "quote": "where R^d_{Θ,n−m} = (R^d_{Θ,m})^T R^d_{Θ,n}"
+          },
+          {
+            "source": "roformer_code",
+            "ref": "external/RoFormer/README.md:L32",
+            "role": "computation",
+            "quote": "a = tf.einsum('bjhd,bkhd->bhjk', qw, kw)"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p32",
+            "role": "claim",
+            "quote": "We want our embeddings to be invariant to absolute position"
+          },
+          {
+            "source": "cs336_rope_model",
+            "ref": "rope.mjs:rotaryPair",
+            "role": "computation",
+            "quote": "before:dot(qm,kn), after:dot(qs,ks), relative:dot(q,rotate(k,(n-m)*theta))"
+          }
         ],
-        "filtering_note": "The paper asserts (R_m)^T R_n = R_{n−m} without proof; it follows block-by-block from the additive-angle identity (supplement KP). The course states the goal ('invariant to absolute position', p32) with a picture of 'we know' shifted by two positions but does not write Eq. 16."
+        "filtering_note": "The paper asserts (R_m)^T R_n = R_{n−m} without proof; it follows block-by-block from the additive-angle identity (supplement KP). The course states the goal ('invariant to absolute position', p32) with a picture of 'we know' shifted by two positions but does not write Eq. 16. The anchored Eq. 16 quote copies the paper's misprint: as printed it lacks the subscript m and the transpose on W_q; the intended form is q_m^T k_n = x_m^T W_q R^d_{Θ,n−m} W_k x_n."
       },
       "prerequisites": [
-        {"kp": "rope-block-diagonal", "basis": "teaching-order"},
-        {"kp": "supp-rotation-preserves-dot", "basis": "author-inference", "note": "The n−m step is the additive-angle identity applied to every block."}
+        {
+          "kp": "rope-block-diagonal",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-rotation-preserves-dot",
+          "basis": "author-inference",
+          "note": "The n−m step is the additive-angle identity applied to every block."
+        }
       ],
       "misconceptions": [
-        {"belief": "Because rotation preserves dot products, the score is the same as without RoPE.", "why_wrong": "Rotation preserves the score only when both vectors get the same rotation; here they get mθ and nθ, so a net R_{n−m} remains, and that is the point."},
-        {"belief": "The score depends on |m−n| only.", "why_wrong": "R_{n−m} and R_{m−n} are transposes, not equal; the score at (m,n) = (1,3) is −0.26 while at (3,1) it is +0.96 in the fixture."}
+        {
+          "belief": "Because rotation preserves dot products, the score is the same as without RoPE.",
+          "why_wrong": "Rotation preserves the score only when both vectors get the same rotation; here they get mθ and nθ, so a net R_{n−m} remains, and that is the point."
+        },
+        {
+          "belief": "The score depends on |m−n| only.",
+          "why_wrong": "R_{n−m} and R_{m−n} are transposes, not equal; the score at (m,n) = (1,3) is −0.26 while at (3,1) it is +0.96 in the fixture."
+        }
       ],
       "prompts": {
         "predict": {
@@ -344,19 +674,50 @@
           "why": "The net rotation is R_{n−m} = R_{−2}: k rotated by −60° is (0.956, −0.256), dot with (1,0) is 0.956. Moving one token changes n−m, and only n−m matters."
         },
         "retrieval": [
-          {"q": "State the RoPE identity for the query-key score in terms of R_{n−m}.", "answer": "q_m^T k_n = x_m^T W_q^T R_{n−m} W_k x_n"},
-          {"q": "What single matrix identity turns the product of the query rotation and the key rotation into a relative rotation?", "answer": "R_m^T R_n = R_{n−m}"}
+          {
+            "q": "State the RoPE identity for the query-key score in terms of R_{n−m}.",
+            "answer": "q_m^T k_n = x_m^T W_q^T R_{n−m} W_k x_n"
+          },
+          {
+            "q": "What single matrix identity turns the product of the query rotation and the key rotation into a relative rotation?",
+            "answer": "R_m^T R_n = R_{n−m}"
+          }
         ],
         "self_explain": "Why does moving both tokens leave the readout fixed while moving one token changes it?"
       },
       "presentations": [
-        {"type": "animation", "action": "distinguish", "ref": "fixture:rope-shared-shift", "notice": "The dot-product readout does not change while both arrows rotate by the same angle, and changes as soon as only one does."},
-        {"type": "formula-step", "action": "trace", "ref": "rope:eq16", "steps": [
-          {"tex": "q_m^\\top k_n = (R^d_{\\Theta,m}W_q x_m)^\\top (R^d_{\\Theta,n}W_k x_n) = x_m^\\top W_q^\\top (R^d_{\\Theta,m})^\\top R^d_{\\Theta,n} W_k x_n", "do": "Transpose the rotated query.", "why": "The transpose of a product reverses the order, so the two rotations end up next to each other between the projections."},
-          {"tex": "R(m\\theta_i)^\\top R(n\\theta_i) = R(-m\\theta_i)\\,R(n\\theta_i) = R((n-m)\\theta_i)", "do": "Work block by block.", "why": "A rotation is orthogonal, so its transpose is the rotation by the opposite angle, and rotations compose by adding angles (supp-rotation-preserves-dot)."},
-          {"tex": "(R^d_{\\Theta,m})^\\top R^d_{\\Theta,n} = R^d_{\\Theta,n-m} \\;\\Rightarrow\\; q_m^\\top k_n = x_m^\\top W_q^\\top R^d_{\\Theta,n-m} W_k x_n", "do": "Collect the blocks: this is Eq. 16 (§3.2.2).", "why": "Block-diagonal matrices multiply block by block, and every block i uses the same θ_i in R_m and R_n."},
-          {"do": "The predict's shift: m = 1, n = 3 moved by s = 4 to m = 5, n = 7. R_5ᵀR_7 = R_2 = R_1ᵀR_3, so the score stays −0.256.", "why": "Only n − m reaches the score, and a shared shift leaves n − m unchanged."}
-        ]}
+        {
+          "type": "animation",
+          "action": "distinguish",
+          "ref": "fixture:rope-shared-shift",
+          "notice": "The dot-product readout does not change while both arrows rotate by the same angle, and changes as soon as only one does."
+        },
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "rope:eq16",
+          "steps": [
+            {
+              "tex": "q_m^\\top k_n = (R^d_{\\Theta,m}W_q x_m)^\\top (R^d_{\\Theta,n}W_k x_n) = x_m^\\top W_q^\\top (R^d_{\\Theta,m})^\\top R^d_{\\Theta,n} W_k x_n",
+              "do": "Transpose the rotated query.",
+              "why": "The transpose of a product reverses the order, so the two rotations end up next to each other between the projections."
+            },
+            {
+              "tex": "R(m\\theta_i)^\\top R(n\\theta_i) = R(-m\\theta_i)\\,R(n\\theta_i) = R((n-m)\\theta_i)",
+              "do": "Work block by block.",
+              "why": "A rotation is orthogonal, so its transpose is the rotation by the opposite angle, and rotations compose by adding angles (supp-rotation-preserves-dot)."
+            },
+            {
+              "tex": "(R^d_{\\Theta,m})^\\top R^d_{\\Theta,n} = R^d_{\\Theta,n-m} \\;\\Rightarrow\\; q_m^\\top k_n = x_m^\\top W_q^\\top R^d_{\\Theta,n-m} W_k x_n",
+              "do": "Collect the blocks: this is Eq. 16 (§3.2.2).",
+              "why": "Block-diagonal matrices multiply block by block, and every block i uses the same θ_i in R_m and R_n."
+            },
+            {
+              "do": "The predict's shift: m = 1, n = 3 moved by s = 4 to m = 5, n = 7. R_5ᵀR_7 = R_2 = R_1ᵀR_3, so the score stays −0.256.",
+              "why": "Only n − m reaches the score, and a shared shift leaves n − m unchanged."
+            }
+          ]
+        }
       ]
     },
     {
@@ -368,19 +729,48 @@
         "status": "said",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:§3.2.2", "role": "claim", "quote": "In contrast to the additive nature of position embedding method adopted in the previous works, i.e., Equations (3) to (10), our approach is multiplicative."},
-          {"source": "rope_paper", "ref": "rope:eq6", "role": "computation", "quote": "q_m^T k_n = x_m^T W_q^T W_k x_n + x_m^T W_q^T W_k p_n + p_m^T W_q^T W_k x_n + p_m^T W_q^T W_k p_n"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p34", "role": "claim", "quote": "Difference with sine embeddings – not additive, no cross terms"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p30", "role": "claim", "quote": "Relative embeddings: add a vector to the attention computation ... T5, Gopher, Chinchilla"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.2.2",
+            "role": "claim",
+            "quote": "In contrast to the additive nature of position embedding method adopted in the previous works, i.e., Equations (3) to (10), our approach is multiplicative."
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq6",
+            "role": "computation",
+            "quote": "q_m^T k_n = x_m^T W_q^T W_k x_n + x_m^T W_q^T W_k p_n + p_m^T W_q^T W_k x_n + p_m^T W_q^T W_k p_n"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p34",
+            "role": "claim",
+            "quote": "Difference with sine embeddings – not additive, no cross terms"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p30",
+            "role": "claim",
+            "quote": "Relative embeddings: add a vector to the attention computation ... T5, Gopher, Chinchilla"
+          }
         ],
         "filtering_note": "The paper's related-work section attributes each edited term to its predecessor (Shaw: relative key vector; Transformer-XL: sinusoid + u, v; T5: scalar bias; DeBERTa: drop the p-p term). The course keeps only the taxonomy on p30 and the one-line contrast on p34, dropping the per-method equations."
       },
       "prerequisites": [
-        {"kp": "rope-position-goal", "basis": "teaching-order"},
-        {"kp": "rope-relative-position", "basis": "teaching-order"}
+        {
+          "kp": "rope-position-goal",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "rope-relative-position",
+          "basis": "teaching-order"
+        }
       ],
       "misconceptions": [
-        {"belief": "RoPE is 'the sinusoidal encoding applied to q and k instead of x'.", "why_wrong": "It uses the same frequencies but multiplies (rotates) rather than adds; adding sinusoids to q and k would recreate the cross terms of Eq. 6."}
+        {
+          "belief": "RoPE is 'the sinusoidal encoding applied to q and k instead of x'.",
+          "why_wrong": "It uses the same frequencies but multiplies (rotates) rather than adds; adding sinusoids to q and k would recreate the cross terms of Eq. 6."
+        }
       ],
       "prompts": {
         "predict": {
@@ -408,17 +798,48 @@
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "In one word each: how do the position encodings the paper reviews before RoPE inject position, and how does RoPE inject it?", "answer": "Additively; multiplicatively"},
-          {"q": "Which encoding leaves the four-term expansion of the query-key score, with absolute position added to each embedding, with cross terms between one token's content and the other's absolute position: sinusoidal-additive or RoPE?", "answer": "Sinusoidal-additive", "format": "choice", "choices": ["Sinusoidal-additive", "RoPE"]}
+          {
+            "q": "In one word each: how do the position encodings the paper reviews before RoPE inject position, and how does RoPE inject it?",
+            "answer": "Additively; multiplicatively"
+          },
+          {
+            "q": "Which encoding leaves the four-term expansion of the query-key score, with absolute position added to each embedding, with cross terms between one token's content and the other's absolute position: sinusoidal-additive or RoPE?",
+            "answer": "Sinusoidal-additive",
+            "format": "choice",
+            "choices": [
+              "Sinusoidal-additive",
+              "RoPE"
+            ]
+          }
         ]
       },
       "presentations": [
-        {"type": "formula-step", "action": "compare", "ref": "rope:eq6", "steps": [
-          {"tex": "q_m^\\top k_n = x_m^\\top W_q^\\top W_k x_n + x_m^\\top W_q^\\top W_k p_n + p_m^\\top W_q^\\top W_k x_n + p_m^\\top W_q^\\top W_k p_n", "do": "Additive absolute encoding (Eq. 3) gives q_m = W_q(x_m + p_m), k_n = W_k(x_n + p_n); expanding their inner product gives Eq. 6.", "why": "The bilinear form distributes over both sums, so every pairing of content and position becomes its own term."},
-          {"do": "Only the first term is free of position. The two middle terms pair one token's content with the other token's absolute position; the last pairs the two positions.", "why": "These three terms are what Eqs. 7-10 edit one at a time to make the score relative: Transformer-XL swaps p_n for a relative sinusoid and p_m for trained vectors u, v; DeBERTa drops the position-position term."},
-          {"tex": "(R_m W_q x_m)^\\top (R_n W_k x_n) = x_m^\\top W_q^\\top R_{n-m} W_k x_n", "do": "RoPE multiplies instead of adding: the score is a single term.", "why": "§3.2.2 calls the approach multiplicative: relative position sits inside the content term as R_{n−m}, so there are no cross terms to edit (lecture p34: 'no cross terms')."}
-        ]},
-        {"type": "formula-step", "action": "compare", "ref": "rope:eq16"}
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "rope:eq6",
+          "steps": [
+            {
+              "tex": "q_m^\\top k_n = x_m^\\top W_q^\\top W_k x_n + x_m^\\top W_q^\\top W_k p_n + p_m^\\top W_q^\\top W_k x_n + p_m^\\top W_q^\\top W_k p_n",
+              "do": "Additive absolute encoding (Eq. 3) gives q_m = W_q(x_m + p_m), k_n = W_k(x_n + p_n); expanding their inner product gives Eq. 6.",
+              "why": "The bilinear form distributes over both sums, so every pairing of content and position becomes its own term."
+            },
+            {
+              "do": "Only the first term is free of position. The two middle terms pair one token's content with the other token's absolute position; the last pairs the two positions.",
+              "why": "These three terms are what Eqs. 7-10 edit one at a time to make the score relative: Transformer-XL swaps p_n for a relative sinusoid and p_m for trained vectors u, v; DeBERTa drops the position-position term."
+            },
+            {
+              "tex": "(R_m W_q x_m)^\\top (R_n W_k x_n) = x_m^\\top W_q^\\top R_{n-m} W_k x_n",
+              "do": "RoPE multiplies instead of adding: the score is a single term.",
+              "why": "§3.2.2 calls the approach multiplicative: relative position sits inside the content term as R_{n−m}, so there are no cross terms to edit (lecture p34: 'no cross terms')."
+            }
+          ]
+        },
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "rope:eq16"
+        }
       ]
     },
     {
@@ -430,20 +851,54 @@
         "status": "computed",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq35", "role": "computation", "quote": "(R_m W_q x_m)^T (R_n W_k x_n) = Re[Σ_{i=0}^{d/2−1} q_{[2i:2i+1]} k*_{[2i:2i+1]} e^{i(m−n)θ_i}]"},
-          {"source": "rope_paper", "ref": "rope:eq37", "role": "computation", "quote": "≤ (max_i |h_{i+1} − h_i|) Σ_{i=0}^{d/2−1} |S_{i+1}|"},
-          {"source": "rope_paper", "ref": "rope:fig2", "role": "figure", "quote": "Figure 2: Long-term decay of RoPE."},
-          {"source": "rope_paper", "ref": "rope:§3.3", "role": "claim", "quote": "One can prove that this setting provides a long-term decay property ... the inner-product will decay when the relative position increase."},
-          {"source": "rope_paper", "ref": "rope:§3.4.3", "role": "claim", "quote": "Note that the value of (1/(d/2)) Σ |S_i| decay with the relative distance m − n increases by setting θ_i = 10000^{−2i/d}, as shown in Figure (2)."}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq35",
+            "role": "computation",
+            "quote": "(R_m W_q x_m)^T (R_n W_k x_n) = Re[Σ_{i=0}^{d/2−1} q_{[2i:2i+1]} k*_{[2i:2i+1]} e^{i(m−n)θ_i}]"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq37",
+            "role": "computation",
+            "quote": "≤ (max_i |h_{i+1} − h_i|) Σ_{i=0}^{d/2−1} |S_{i+1}|"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:fig2",
+            "role": "figure",
+            "quote": "Figure 2: Long-term decay of RoPE."
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.3",
+            "role": "claim",
+            "quote": "One can prove that this setting provides a long-term decay property ... the inner-product will decay when the relative position increase."
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.4.3",
+            "role": "claim",
+            "quote": "Note that the value of (1/(d/2)) Σ |S_i| decay with the relative distance m − n increases by setting θ_i = 10000^{−2i/d}, as shown in Figure (2)."
+          }
         ],
         "filtering_note": "What is proved (Eq. 37) is an upper bound whose distance-dependent factor is Σ|S_i|; that this factor decays is asserted by plot (Fig. 2), not proved, and the plot shows an oscillating envelope, not monotone decay. The actual score for particular q, k can be large at large distance. §3.3 phrases it as 'the inner-product will decay', which overstates Eq. 37. Lecture 3 does not cover this property at all; the course treats RoPE as a relative encoding and moves on."
       },
       "prerequisites": [
-        {"kp": "rope-relative-position", "basis": "teaching-order"},
-        {"kp": "rope-block-diagonal", "basis": "teaching-order"}
+        {
+          "kp": "rope-relative-position",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "rope-block-diagonal",
+          "basis": "teaching-order"
+        }
       ],
       "misconceptions": [
-        {"belief": "RoPE makes attention scores shrink with distance for every query-key pair.", "why_wrong": "Only the Abel bound's distance factor Σ|S_i| decays on average; the content factor max|h_{i+1} − h_i| is arbitrary and a model can learn q, k that attend far away."}
+        {
+          "belief": "RoPE makes attention scores shrink with distance for every query-key pair.",
+          "why_wrong": "Only the Abel bound's distance factor Σ|S_i| decays on average; the content factor max|h_{i+1} − h_i| is arbitrary and a model can learn q, k that attend far away."
+        }
       ],
       "prompts": {
         "predict": {
@@ -461,30 +916,77 @@
         "check": {
           "q": "After training, one RoPE attention head reliably puts a large score on a token 300 positions back. How does this observation relate to the paper's long-term decay result (Eqs. 35-37, Fig. 2)?",
           "format": "choice",
-          "choices": ["No conflict: only an upper bound's distance factor decays, and learned q, k can still score high", "A conflict: RoPE forces every query-key score to fall steadily as the relative distance grows", "No conflict: the decay result only applies to distances longer than the model's training length", "A conflict, unless the head has learned to make all of its frequencies θ_i equal during training"],
+          "choices": [
+            "No conflict: only an upper bound's distance factor decays, and learned q, k can still score high",
+            "A conflict: RoPE forces every query-key score to fall steadily as the relative distance grows",
+            "No conflict: the decay result only applies to distances longer than the model's training length",
+            "A conflict, unless the head has learned to make all of its frequencies θ_i equal during training"
+          ],
           "answer": "No conflict: only an upper bound's distance factor decays, and learned q, k can still score high",
           "why": "Eq. 37 bounds |score| by (max_i |h_{i+1} − h_i|) · Σ_i |S_{i+1}|; only the second factor depends on m − n, and §3.4.3 says its average (1/(d/2)) Σ|S_i| decays with distance. The content factor depends on the learned q and k, so a particular pair can still have a large score at distance 300. The bound is not distance-restricted to beyond training length, and θ_i are fixed by Eq. 15, not learned.",
-          "distractor_from": {"A conflict: RoPE forces every query-key score to fall steadily as the relative distance grows": "Misconception: RoPE makes attention scores shrink with distance for every query-key pair.", "No conflict: the decay result only applies to distances longer than the model's training length": "Invents a scope restriction; the analysis says nothing about training length.", "A conflict, unless the head has learned to make all of its frequencies θ_i equal during training": "Treats θ_i as learned and misreads equal frequencies (which remove the decay) as the escape route."},
+          "distractor_from": {
+            "A conflict: RoPE forces every query-key score to fall steadily as the relative distance grows": "Misconception: RoPE makes attention scores shrink with distance for every query-key pair.",
+            "No conflict: the decay result only applies to distances longer than the model's training length": "Invents a scope restriction; the analysis says nothing about training length.",
+            "A conflict, unless the head has learned to make all of its frequencies θ_i equal during training": "Treats θ_i as learned and misreads equal frequencies (which remove the decay) as the escape route."
+          },
           "targets_misconception": "RoPE makes attention scores shrink with distance for every query-key pair.",
           "varies": "An empirical observation about a trained head instead of a modified frequency schedule (domain: interpreting the bound against learned behaviour).",
           "invariant": "The decay is of a bound's distance factor (average |S_i|), multiplied by an unconstrained content factor; it limits nothing pair-by-pair.",
           "transfer_distance": "far"
         },
         "retrieval": [
-          {"q": "Which summation technique does the paper use to turn Σ h_i e^{i(m−n)θ_i} into a bound with separate content and distance factors?", "answer": "Abel transformation (summation by parts)"},
-          {"q": "To show RoPE's long-term decay, what quantity does the paper plot against relative distance?", "answer": "The relative upper bound (1/(d/2)) Σ_i |S_i|", "layer": "detail"}
+          {
+            "q": "Which summation technique does the paper use to turn Σ h_i e^{i(m−n)θ_i} into a bound with separate content and distance factors?",
+            "answer": "Abel transformation (summation by parts)"
+          },
+          {
+            "q": "To show RoPE's long-term decay, what quantity does the paper plot against relative distance?",
+            "answer": "The relative upper bound (1/(d/2)) Σ_i |S_i|",
+            "layer": "detail"
+          }
         ],
         "self_explain": "Why is a decaying upper bound weaker evidence than a decaying score?"
       },
       "presentations": [
-        {"type": "figure", "action": "predict-trend", "ref": "rope:fig2"},
-        {"type": "formula-step", "action": "trace", "ref": "rope:eq36-37", "faded": false, "steps": [
-          {"tex": "(R^d_{\\Theta,m}W_q x_m)^\\top(R^d_{\\Theta,n}W_k x_n) = \\mathrm{Re}\\Big[\\sum_{i=0}^{d/2-1} h_i\\, e^{i(m-n)\\theta_i}\\Big],\\quad h_i = q_{[2i:2i+1]}k^*_{[2i:2i+1]}", "do": "Eq. 35: read each pair as one complex number, so the score is a sum of d/2 rotated products.", "why": "Per pair this is the 2D score Re[q k* e^{i(m−n)θ}] of Eq. 12; the block-diagonal form just adds the pairs up."},
-          {"tex": "S_j = \\sum_{k=0}^{j-1} e^{i(m-n)\\theta_k},\\quad S_0 = 0,\\quad h_{d/2} = 0,\\quad e^{i(m-n)\\theta_i} = S_{i+1}-S_i", "do": "Define the partial sums of the phases and write each phase as a difference of two of them.", "why": "This is Abel summation (summation by parts): it moves the dependence on distance from single phases, which never shrink, into the partial sums, which can cancel."},
-          {"tex": "\\sum_{i=0}^{d/2-1} h_i (S_{i+1}-S_i) = -\\sum_{i=0}^{d/2-1} S_{i+1}\\,(h_{i+1}-h_i)", "do": "Eq. 36: regroup by S_{i+1}.", "why": "Each S_j appears once with +h_{j−1} and once with −h_j; the boundary terms vanish because S_0 = 0 and h_{d/2} = 0."},
-          {"tex": "\\Big|\\sum_i h_i e^{i(m-n)\\theta_i}\\Big| \\le \\sum_i |S_{i+1}|\\,|h_{i+1}-h_i| \\le \\big(\\max_i |h_{i+1}-h_i|\\big)\\sum_{i=0}^{d/2-1}|S_{i+1}|", "do": "Eq. 37: triangle inequality, then pull out the largest content difference.", "why": "The first factor depends only on q and k; the second only on m − n and the θ_i, so all the distance dependence is in Σ|S_{i+1}|, the quantity Fig. 2 plots."}
-        ]},
-        {"type": "interactive", "action": "predict-trend", "ref": "fixture:rope--decay-bound", "notice": "The relative bound falls from (d/2 + 1)/2 at distance 0 and keeps rippling. With 'all θ_i equal' it stays flat. With the aligned pair shown, one score still peaks at r0 under the decaying bound."}
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "rope:fig2"
+        },
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "rope:eq36-37",
+          "faded": false,
+          "steps": [
+            {
+              "tex": "(R^d_{\\Theta,m}W_q x_m)^\\top(R^d_{\\Theta,n}W_k x_n) = \\mathrm{Re}\\Big[\\sum_{i=0}^{d/2-1} h_i\\, e^{i(m-n)\\theta_i}\\Big],\\quad h_i = q_{[2i:2i+1]}k^*_{[2i:2i+1]}",
+              "do": "Eq. 35: read each pair as one complex number, so the score is a sum of d/2 rotated products.",
+              "why": "Per pair this is the 2D score Re[q k* e^{i(m−n)θ}] of Eq. 12; the block-diagonal form just adds the pairs up."
+            },
+            {
+              "tex": "S_j = \\sum_{k=0}^{j-1} e^{i(m-n)\\theta_k},\\quad S_0 = 0,\\quad h_{d/2} = 0,\\quad e^{i(m-n)\\theta_i} = S_{i+1}-S_i",
+              "do": "Define the partial sums of the phases and write each phase as a difference of two of them.",
+              "why": "This is Abel summation (summation by parts): it moves the dependence on distance from single phases, which never shrink, into the partial sums, which can cancel."
+            },
+            {
+              "tex": "\\sum_{i=0}^{d/2-1} h_i (S_{i+1}-S_i) = -\\sum_{i=0}^{d/2-1} S_{i+1}\\,(h_{i+1}-h_i)",
+              "do": "Eq. 36: regroup by S_{i+1}.",
+              "why": "Each S_j appears once with +h_{j−1} and once with −h_j; the boundary terms vanish because S_0 = 0 and h_{d/2} = 0."
+            },
+            {
+              "tex": "\\Big|\\sum_i h_i e^{i(m-n)\\theta_i}\\Big| \\le \\sum_i |S_{i+1}|\\,|h_{i+1}-h_i| \\le \\big(\\max_i |h_{i+1}-h_i|\\big)\\sum_{i=0}^{d/2-1}|S_{i+1}|",
+              "do": "Eq. 37: triangle inequality, then pull out the largest content difference.",
+              "why": "The first factor depends only on q and k; the second only on m − n and the θ_i, so all the distance dependence is in Σ|S_{i+1}|, the quantity Fig. 2 plots."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:rope--decay-bound",
+          "notice": "The relative bound falls from (d/2 + 1)/2 at distance 0 and keeps rippling. With 'all θ_i equal' it stays flat. With the aligned pair shown, one score still peaks at r0 under the decaying bound."
+        }
       ]
     },
     {
@@ -496,21 +998,62 @@
         "status": "implemented",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq34", "role": "computation", "quote": "R^d_{Θ,m} x = (x_1, x_2, ...)^T ⊗ (cos mθ_1, cos mθ_1, ...)^T + (−x_2, x_1, ...)^T ⊗ (sin mθ_1, sin mθ_1, ...)^T"},
-          {"source": "rope_paper", "ref": "rope:§3.2.2", "role": "claim", "quote": "due to the sparsity of R^d_Θ, applying matrix multiplication directly as in Equation (16) is not computationally efficient"},
-          {"source": "roformer_code", "ref": "external/RoFormer/README.md:L22-L23", "role": "computation", "quote": "cos_pos = repeat_elements(sinusoidal_pos[..., None, 1::2], rep=2, axis=-1)"},
-          {"source": "roformer_code", "ref": "external/RoFormer/README.md:L24-L29", "role": "computation", "quote": "qw2 = stack([-qw[..., 1::2], qw[..., ::2]], 4) ... qw = qw * cos_pos + qw2 * sin_pos"},
-          {"source": "roformer_code", "ref": "external/RoFormer/train.py:L119-L126", "role": "computation", "quote": "build_transformer_model(config_path, ..., model='roformer', ...)"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p34", "role": "claim", "quote": "The actual RoPE math: Multiply with sines and cosines"},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p35", "role": "claim", "quote": "Get the RoPE matrix cos/sin; Multiply query/key inputs"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq34",
+            "role": "computation",
+            "quote": "R^d_{Θ,m} x = (x_1, x_2, ...)^T ⊗ (cos mθ_1, cos mθ_1, ...)^T + (−x_2, x_1, ...)^T ⊗ (sin mθ_1, sin mθ_1, ...)^T"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.2.2",
+            "role": "claim",
+            "quote": "due to the sparsity of R^d_Θ, applying matrix multiplication directly as in Equation (16) is not computationally efficient"
+          },
+          {
+            "source": "roformer_code",
+            "ref": "external/RoFormer/README.md:L22-L23",
+            "role": "computation",
+            "quote": "cos_pos = repeat_elements(sinusoidal_pos[..., None, 1::2], rep=2, axis=-1)"
+          },
+          {
+            "source": "roformer_code",
+            "ref": "external/RoFormer/README.md:L24-L29",
+            "role": "computation",
+            "quote": "qw2 = stack([-qw[..., 1::2], qw[..., ::2]], 4) ... qw = qw * cos_pos + qw2 * sin_pos"
+          },
+          {
+            "source": "roformer_code",
+            "ref": "external/RoFormer/train.py:L119-L126",
+            "role": "computation",
+            "quote": "build_transformer_model(config_path, ..., model='roformer', ...)"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p34",
+            "role": "claim",
+            "quote": "The actual RoPE math: Multiply with sines and cosines"
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p35",
+            "role": "claim",
+            "quote": "Get the RoPE matrix cos/sin; Multiply query/key inputs"
+          }
         ],
-        "filtering_note": "The official repo does not contain the rotary layer; train.py:L122 only selects model='roformer' from bert4keras, and README.md:L18-L32 is the authors' pseudocode (snapshot in code_snapshots/rope_readme_excerpt.py). The paper and README pair adjacent coordinates (−x_2, x_1); many later implementations (and CS336 assignment code) pair coordinate i with i + d/2 ('rotate_half'), which is the same operator under a fixed permutation of dimensions. The course shows the implementation (p35) without Eq. 34."
+        "filtering_note": "The official repo does not contain the rotary layer; train.py:L122 only selects model='roformer' from bert4keras, and README.md:L18-L32 is the authors' pseudocode (snapshot in code_snapshots/rope_readme_excerpt.py). The paper and README pair adjacent coordinates (−x_2, x_1); many later implementations (and CS336 assignment code) pair coordinate i with i + d/2 ('rotate_half'), which is the same operator under a fixed permutation of dimensions. The course shows the implementation (p35) without Eq. 34. Unverified: the claim above that the CS336 assignment code pairs i with i + d/2 was not checked against the assignment; Hugging Face's Llama rotate_half does."
       },
       "prerequisites": [
-        {"kp": "rope-block-diagonal", "basis": "teaching-order"}
+        {
+          "kp": "rope-block-diagonal",
+          "basis": "teaching-order"
+        }
       ],
       "misconceptions": [
-        {"belief": "RoPE needs a d×d matrix multiply per token, so it is expensive.", "why_wrong": "The matrix has only two non-zeros per row; Eq. 34 turns it into 2d multiplies and d adds per vector, cheaper than the projection W_q x itself."}
+        {
+          "belief": "RoPE needs a d×d matrix multiply per token, so it is expensive.",
+          "why_wrong": "The matrix has only two non-zeros per row; Eq. 34 turns it into 2d multiplies and d adds per vector, cheaper than the projection W_q x itself."
+        }
       ],
       "prompts": {
         "predict": {
@@ -538,19 +1081,52 @@
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "How many multiplications does RoPE's elementwise cos/sin form use to rotate one d-dimensional vector, compared with a dense d×d matmul?", "answer": "2d versus d²"},
-          {"q": "In the official README pseudocode, what is computed after qw and kw are rotated?", "answer": "The ordinary attention einsum 'bjhd,bkhd->bhjk' between rotated qw and kw", "layer": "detail"}
+          {
+            "q": "How many multiplications does RoPE's elementwise cos/sin form use to rotate one d-dimensional vector, compared with a dense d×d matmul?",
+            "answer": "2d versus d²"
+          },
+          {
+            "q": "In the official README pseudocode, what is computed after qw and kw are rotated?",
+            "answer": "The ordinary attention einsum 'bjhd,bkhd->bhjk' between rotated qw and kw",
+            "layer": "detail"
+          }
         ],
         "self_explain": "Why do cos_pos and sin_pos repeat each frequency twice along the last axis?"
       },
       "presentations": [
-        {"type": "code", "action": "trace", "ref": "README.md:L22-L32"},
-        {"type": "formula-step", "action": "compute", "ref": "rope:eq34", "faded": false, "steps": [
-          {"tex": "R(\\varphi)\\begin{pmatrix}x_1\\\\x_2\\end{pmatrix} = \\begin{pmatrix}x_1\\cos\\varphi - x_2\\sin\\varphi\\\\ x_1\\sin\\varphi + x_2\\cos\\varphi\\end{pmatrix},\\quad \\varphi = m\\theta_1", "do": "Rotate the first pair with Eq. 13's matrix.", "why": "R^d_{Θ,m} is block-diagonal, so each pair is rotated on its own and nothing outside the pair is touched."},
-          {"tex": "\\begin{pmatrix}x_1\\\\x_2\\end{pmatrix}\\otimes\\begin{pmatrix}\\cos\\varphi\\\\\\cos\\varphi\\end{pmatrix} + \\begin{pmatrix}-x_2\\\\x_1\\end{pmatrix}\\otimes\\begin{pmatrix}\\sin\\varphi\\\\\\sin\\varphi\\end{pmatrix}", "do": "Split each output coordinate into its cos part and its sin part.", "why": "Both coordinates have one cos term and one sin term, so the pair is two elementwise products; the sin factor multiplies the swapped pair with one sign flipped."},
-          {"tex": "R^d_{\\Theta,m}x = x\\otimes(\\cos m\\theta_1,\\cos m\\theta_1,\\cos m\\theta_2,\\cos m\\theta_2,\\dots)^\\top + (-x_2,x_1,-x_4,x_3,\\dots)^\\top\\otimes(\\sin m\\theta_1,\\sin m\\theta_1,\\dots)^\\top", "do": "Repeat for every pair with its own θ_i: this is Eq. 34.", "why": "Each frequency is repeated twice because it serves both coordinates of its pair. The cos and sin vectors depend only on m, so they are computed once and reused (README.md:L22-L29 builds cos_pos, sin_pos and qw2)."}
-        ]},
-        {"type": "code", "action": "compare", "ref": "lecture_03.pdf:p35"}
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "external/RoFormer/README.md:L22-L32"
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "rope:eq34",
+          "faded": false,
+          "steps": [
+            {
+              "tex": "R(\\varphi)\\begin{pmatrix}x_1\\\\x_2\\end{pmatrix} = \\begin{pmatrix}x_1\\cos\\varphi - x_2\\sin\\varphi\\\\ x_1\\sin\\varphi + x_2\\cos\\varphi\\end{pmatrix},\\quad \\varphi = m\\theta_1",
+              "do": "Rotate the first pair with Eq. 13's matrix.",
+              "why": "R^d_{Θ,m} is block-diagonal, so each pair is rotated on its own and nothing outside the pair is touched."
+            },
+            {
+              "tex": "\\begin{pmatrix}x_1\\\\x_2\\end{pmatrix}\\otimes\\begin{pmatrix}\\cos\\varphi\\\\\\cos\\varphi\\end{pmatrix} + \\begin{pmatrix}-x_2\\\\x_1\\end{pmatrix}\\otimes\\begin{pmatrix}\\sin\\varphi\\\\\\sin\\varphi\\end{pmatrix}",
+              "do": "Split each output coordinate into its cos part and its sin part.",
+              "why": "Both coordinates have one cos term and one sin term, so the pair is two elementwise products; the sin factor multiplies the swapped pair with one sign flipped."
+            },
+            {
+              "tex": "R^d_{\\Theta,m}x = x\\otimes(\\cos m\\theta_1,\\cos m\\theta_1,\\cos m\\theta_2,\\cos m\\theta_2,\\dots)^\\top + (-x_2,x_1,-x_4,x_3,\\dots)^\\top\\otimes(\\sin m\\theta_1,\\sin m\\theta_1,\\dots)^\\top",
+              "do": "Repeat for every pair with its own θ_i: this is Eq. 34.",
+              "why": "Each frequency is repeated twice because it serves both coordinates of its pair. The cos and sin vectors depend only on m, so they are computed once and reused (README.md:L22-L29 builds cos_pos, sin_pos and qw2)."
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_03.pdf:p35"
+        }
       ]
     },
     {
@@ -562,17 +1138,38 @@
         "status": "said",
         "basis": "evidence",
         "anchors": [
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p35", "role": "claim", "quote": "Note: embedding at each attention operation to enforce position invariance"},
-          {"source": "rope_paper", "ref": "rope:eq14", "role": "computation", "quote": "f_{q,k}(x_m, m) = R^d_{Θ,m} W_{q,k} x_m"},
-          {"source": "rope_paper", "ref": "rope:§4.2.2", "role": "claim", "quote": "we replace the sinusoidal position encoding in the self-attention block of the baseline model with our proposed RoPE and realizes self-attention according to Equation (16)"}
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p35",
+            "role": "claim",
+            "quote": "Note: embedding at each attention operation to enforce position invariance"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq14",
+            "role": "computation",
+            "quote": "f_{q,k}(x_m, m) = R^d_{Θ,m} W_{q,k} x_m"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§4.2.2",
+            "role": "claim",
+            "quote": "we replace the sinusoidal position encoding in the self-attention block of the baseline model with our proposed RoPE and realizes self-attention according to Equation (16)"
+          }
         ],
         "filtering_note": "The paper never says 'every layer' in §3; it is implicit in Eq. 14 being applied to W_q x and stated only in the experimental setup (§4.2.2). The course makes it an explicit note on p35. The value vector is left unrotated in both (Eq. 2 uses v_n directly; the README rotates only qw and kw)."
       },
       "prerequisites": [
-        {"kp": "rope-efficient-implementation", "basis": "teaching-order"}
+        {
+          "kp": "rope-efficient-implementation",
+          "basis": "teaching-order"
+        }
       ],
       "misconceptions": [
-        {"belief": "RoPE rotates the token embedding once at the input like sinusoidal encoding.", "why_wrong": "A rotation of x before residual layers would be scrambled by the non-linear blocks; the relative-position identity holds only if R multiplies the q and k that enter the very dot product."}
+        {
+          "belief": "RoPE rotates the token embedding once at the input like sinusoidal encoding.",
+          "why_wrong": "A rotation of x before residual layers would be scrambled by the non-linear blocks; the relative-position identity holds only if R multiplies the q and k that enter the very dot product."
+        }
       ],
       "prompts": {
         "predict": {
@@ -590,22 +1187,47 @@
         "check": {
           "q": "An engineer removes RoPE from attention and instead rotates each token embedding once, x'_m = R_m x_m, before layer 1. In layer 1 the score is (W_q x'_m)^T (W_k x'_n). What happens to relative-position dependence in that layer?",
           "format": "choice",
-          "choices": ["Kept in layer 1 only; it is lost from layer 2 onward because the MLPs are non-linear", "Kept: rotations preserve inner products, so the score still depends only on m − n here", "Lost: W_q and W_k sit between R_m and R_n, so the rotations no longer merge into R_(n−m)", "Kept only if W_q equals W_k, since then the projection cancels and leaves R_(n−m)"],
+          "choices": [
+            "Kept in layer 1 only; it is lost from layer 2 onward because the MLPs are non-linear",
+            "Kept: rotations preserve inner products, so the score still depends only on m − n here",
+            "Lost: W_q and W_k sit between R_m and R_n, so the rotations no longer merge into R_(n−m)",
+            "Kept only if W_q equals W_k, since then the projection cancels and leaves R_(n−m)"
+          ],
           "answer": "Lost: W_q and W_k sit between R_m and R_n, so the rotations no longer merge into R_(n−m)",
           "why": "(W_q R_m x_m)^T (W_k R_n x_n) = x_m^T R_m^T W_q^T W_k R_n x_n. R_m^T R_n = R_(n−m) only when the rotations are adjacent; general W_q^T W_k does not commute with rotations, so the score depends on m and n separately. Eq. 14 applies R to W x for this reason, and lecture p35 notes RoPE is applied 'at each attention operation'. Even W_q = W_k does not make W^T W commute with R in general.",
-          "distractor_from": {"Kept: rotations preserve inner products, so the score still depends only on m − n here": "Over-applies rotation invariance while ignoring the projections in between.", "Kept in layer 1 only; it is lost from layer 2 onward because the MLPs are non-linear": "Misconception: RoPE rotates the embedding once at the input like sinusoidal encoding, failing only later through non-linear blocks.", "Kept only if W_q equals W_k, since then the projection cancels and leaves R_(n−m)": "Assumes W^T W is a scalar or commutes with rotations whenever the projections are equal."},
+          "distractor_from": {
+            "Kept: rotations preserve inner products, so the score still depends only on m − n here": "Over-applies rotation invariance while ignoring the projections in between.",
+            "Kept in layer 1 only; it is lost from layer 2 onward because the MLPs are non-linear": "Misconception: RoPE rotates the embedding once at the input like sinusoidal encoding, failing only later through non-linear blocks.",
+            "Kept only if W_q equals W_k, since then the projection cancels and leaves R_(n−m)": "Assumes W^T W is a scalar or commutes with rotations whenever the projections are equal."
+          },
           "targets_misconception": "RoPE rotates the token embedding once at the input like sinusoidal encoding.",
           "varies": "Rotation moved to the embedding instead of extended to the value (functional: a different misplacement of R).",
           "invariant": "The relative identity R_m^T R_n = R_(n−m) needs the rotations to act on the very q and k that enter the dot product.",
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "Which of q, k, v does RoPE rotate?", "answer": "q and k only"},
-          {"q": "At which point in the network is the rotation applied: input embedding, every attention layer, or output head?", "answer": "Every attention layer", "format": "choice", "choices": ["input embedding", "every attention layer", "output head"]}
+          {
+            "q": "Which of q, k, v does RoPE rotate?",
+            "answer": "q and k only"
+          },
+          {
+            "q": "At which point in the network is the rotation applied: input embedding, every attention layer, or output head?",
+            "answer": "Every attention layer",
+            "format": "choice",
+            "choices": [
+              "input embedding",
+              "every attention layer",
+              "output head"
+            ]
+          }
         ]
       },
       "presentations": [
-        {"type": "code", "action": "restate", "ref": "lecture_03.pdf:p35"}
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_03.pdf:p35"
+        }
       ]
     },
     {
@@ -617,19 +1239,48 @@
         "status": "computed",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:eq19", "role": "computation", "quote": "Attention(Q,K,V)_m = Σ_n (R_m φ(q_m))^T (R_n φ(k_n)) v_n / Σ_n φ(q_m)^T φ(k_n)"},
-          {"source": "rope_paper", "ref": "rope:eq18", "role": "computation", "quote": "Attention(Q,K,V)_m = Σ_n φ(q_m)^T φ(k_n) v_n / Σ_n φ(q_m)^T φ(k_n)"},
-          {"source": "rope_paper", "ref": "rope:§3.3", "role": "claim", "quote": "we keep the denominator unchanged to avoid the risk of dividing zero, and the summation in the numerator could contain negative terms ... we kindly argue that the computation can still model the importance of values"},
-          {"source": "rope_paper", "ref": "rope:§1", "role": "claim", "quote": "previous relative position encoding-based approaches are not compatible with linear self-attention"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq19",
+            "role": "computation",
+            "quote": "Attention(Q,K,V)_m = Σ_n (R_m φ(q_m))^T (R_n φ(k_n)) v_n / Σ_n φ(q_m)^T φ(k_n)"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:eq18",
+            "role": "computation",
+            "quote": "Attention(Q,K,V)_m = Σ_n φ(q_m)^T φ(k_n) v_n / Σ_n φ(q_m)^T φ(k_n)"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§3.3",
+            "role": "claim",
+            "quote": "we keep the denominator unchanged to avoid the risk of dividing zero, and the summation in the numerator could contain negative terms ... we kindly argue that the computation can still model the importance of values"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§1",
+            "role": "claim",
+            "quote": "previous relative position encoding-based approaches are not compatible with linear self-attention"
+          }
         ],
         "filtering_note": "The paper asserts without proof that the non-normalized, possibly negative weights 'can still model the importance of values'; the only support is the Performer+RoPE convergence curve (Fig. 3). Lecture 3 does not mention linear attention or this property; the course covers RoPE for softmax attention only."
       },
       "prerequisites": [
-        {"kp": "rope-relative-position", "basis": "teaching-order"},
-        {"kp": "supp-rotation-preserves-dot", "basis": "author-inference"}
+        {
+          "kp": "rope-relative-position",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-rotation-preserves-dot",
+          "basis": "author-inference"
+        }
       ],
       "misconceptions": [
-        {"belief": "The rotated weights in Eq. 19 still sum to one over n.", "why_wrong": "The denominator uses unrotated features, so the numerator weights are neither normalized nor non-negative; the paper says so explicitly."}
+        {
+          "belief": "The rotated weights in Eq. 19 still sum to one over n.",
+          "why_wrong": "The denominator uses unrotated features, so the numerator weights are neither normalized nor non-negative; the paper says so explicitly."
+        }
       ],
       "prompts": {
         "predict": {
@@ -657,17 +1308,50 @@
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "When RoPE is inserted into linear (kernelized) attention, which part of the fraction is rotated: numerator, denominator, or both?", "answer": "Numerator only", "format": "choice", "choices": ["Numerator only", "Denominator only", "Both"]},
-          {"q": "What property of R lets the paper multiply the non-negative feature maps by the rotation without changing their magnitude?", "answer": "Rotation preserves the norm (orthogonality)"}
+          {
+            "q": "When RoPE is inserted into linear (kernelized) attention, which part of the fraction is rotated: numerator, denominator, or both?",
+            "answer": "Numerator only",
+            "format": "choice",
+            "choices": [
+              "Numerator only",
+              "Denominator only",
+              "Both"
+            ]
+          },
+          {
+            "q": "What property of R lets the paper multiply the non-negative feature maps by the rotation without changing their magnitude?",
+            "answer": "Rotation preserves the norm (orthogonality)"
+          }
         ]
       },
       "presentations": [
-        {"type": "formula-step", "action": "compare", "ref": "rope:eq18-19", "steps": [
-          {"tex": "\\mathrm{Attention}(Q,K,V)_m=\\frac{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)\\,v_n}{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)}", "do": "Eq. 18: linear attention with non-negative feature maps.", "why": "With φ ≥ 0 every weight and the denominator are positive, and because the score splits into a query part and a key part, Σ_n φ(k_n) v_nᵀ can be summed once and reused for every query."},
-          {"tex": "(R^d_{\\Theta,m}\\phi(q_m))^\\top (R^d_{\\Theta,n}\\varphi(k_n)) = \\phi(q_m)^\\top R^d_{\\Theta,n-m}\\,\\varphi(k_n)", "do": "Eq. 19 rotates the feature maps in the numerator.", "why": "R_n φ(k_n) still depends on token n alone, so the precomputed sum survives, and Eq. 16 makes the numerator relative."},
-          {"do": "The denominator stays Σ_n φ(q_m)ᵀφ(k_n), unrotated.", "why": "§3.3: rotated products can be negative, so a rotated denominator could reach zero; the unrotated one stays positive. What is given up is that the numerator weights may be negative and no longer form a normalized mixture."}
-        ]},
-        {"type": "interactive", "action": "compare", "ref": "fixture:rope--linear-attention", "notice": "The unrotated denominator stays positive, but with θ > 0 and the query at a different position from the keys the effective weights stop summing to 1. A key whose rotated term turns negative (key 1 once (n − m)θ passes 90°) gets a negative weight."}
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "rope:eq18-19",
+          "steps": [
+            {
+              "tex": "\\mathrm{Attention}(Q,K,V)_m=\\frac{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)\\,v_n}{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)}",
+              "do": "Eq. 18: linear attention with non-negative feature maps.",
+              "why": "With φ ≥ 0 every weight and the denominator are positive, and because the score splits into a query part and a key part, Σ_n φ(k_n) v_nᵀ can be summed once and reused for every query."
+            },
+            {
+              "tex": "(R^d_{\\Theta,m}\\phi(q_m))^\\top (R^d_{\\Theta,n}\\varphi(k_n)) = \\phi(q_m)^\\top R^d_{\\Theta,n-m}\\,\\varphi(k_n)",
+              "do": "Eq. 19 rotates the feature maps in the numerator.",
+              "why": "R_n φ(k_n) still depends on token n alone, so the precomputed sum survives, and Eq. 16 makes the numerator relative."
+            },
+            {
+              "do": "The denominator stays Σ_n φ(q_m)ᵀφ(k_n), unrotated.",
+              "why": "§3.3: rotated products can be negative, so a rotated denominator could reach zero; the unrotated one stays positive. What is given up is that the numerator weights may be negative and no longer form a normalized mixture."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:rope--linear-attention",
+          "notice": "The unrotated denominator stays positive, but with θ > 0 and the query at a different position from the keys the effective weights stop summing to 1. A key whose rotated term turns negative (key 1 once (n − m)θ passes 90°) gets a negative weight."
+        }
       ]
     },
     {
@@ -679,20 +1363,56 @@
         "status": "shown",
         "basis": "evidence",
         "anchors": [
-          {"source": "rope_paper", "ref": "rope:table1", "role": "figure", "quote": "Transformer-base 27.3; RoFormer 27.5"},
-          {"source": "rope_paper", "ref": "rope:§4.2.3", "role": "claim", "quote": "Compare to the vanilla BERT, RoFormer experiences faster convergence."},
-          {"source": "rope_paper", "ref": "rope:table2", "role": "figure", "quote": "RoFormer is higher on MRPC, STS-B, and QQP, but lower on SST-2, QNLI, and MNLI (bundle finding glue_task_deltas)"},
-          {"source": "rope_paper", "ref": "rope:table5", "role": "figure", "quote": "68.29 at length 512 and 69.79 at length 1024 (bundle finding long_sequence_legal)"},
-          {"source": "rope_paper", "ref": "rope:§1", "role": "claim", "quote": "Our experiments show that it consistently achieves better performance compared to its alternatives."},
-          {"source": "lecture_03", "ref": "lecture_03.pdf:p30", "role": "claim", "quote": "Rope embeddings ... GPTJ, PaLM, LLaMA, Most 2024+ models"}
+          {
+            "source": "rope_paper",
+            "ref": "rope:table1",
+            "role": "figure",
+            "quote": "Transformer-base 27.3; RoFormer 27.5"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§4.2.3",
+            "role": "claim",
+            "quote": "Compare to the vanilla BERT, RoFormer experiences faster convergence."
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:table2",
+            "role": "figure",
+            "quote": "RoFormer is higher on MRPC, STS-B, and QQP, but lower on SST-2, QNLI, and MNLI (bundle finding glue_task_deltas)"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:table5",
+            "role": "figure",
+            "quote": "68.29 at length 512 and 69.79 at length 1024 (bundle finding long_sequence_legal)"
+          },
+          {
+            "source": "rope_paper",
+            "ref": "rope:§1",
+            "role": "claim",
+            "quote": "Our experiments show that it consistently achieves better performance compared to its alternatives."
+          },
+          {
+            "source": "lecture_03",
+            "ref": "lecture_03.pdf:p30",
+            "role": "claim",
+            "quote": "Rope embeddings ... GPTJ, PaLM, LLaMA, Most 2024+ models"
+          }
         ],
         "filtering_note": "The introduction claims 'consistently better performance'; Table 2 is mixed and Table 1's 0.2 BLEU gap has no variance estimate. 'Sequence length flexibility' is claimed in §1 but no experiment trains at one length and tests at another; Table 5 compares two training lengths. The course does not cite the paper's results at all: its evidence for RoPE is adoption (p30: GPT-J, PaLM, LLaMA, most 2024+ models) and its later note (p65) that long-range layers may drop RoPE (NoPE) while short-range layers keep RoPE with sliding windows. Basis: evidence for both the paper's numbers and the course's framing; the 'not shown' list is author inference from the absence of such experiments in §4."
       },
       "prerequisites": [
-        {"kp": "rope-relative-position", "basis": "teaching-order"}
+        {
+          "kp": "rope-relative-position",
+          "basis": "teaching-order"
+        }
       ],
       "misconceptions": [
-        {"belief": "The paper demonstrates length extrapolation.", "why_wrong": "No experiment tests a model beyond its training length; Table 5 trains separate 512 and 1024 models."}
+        {
+          "belief": "The paper demonstrates length extrapolation.",
+          "why_wrong": "No experiment tests a model beyond its training length; Table 5 trains separate 512 and 1024 models."
+        }
       ],
       "prompts": {
         "predict": {
@@ -710,24 +1430,48 @@
         "check": {
           "q": "Which of these statements about RoFormer is supported by the results the paper reports?",
           "format": "choice",
-          "choices": ["It beat BERT on every one of the six GLUE tasks reported in the paper's Table 2", "A model trained at 512 tokens kept its accuracy when tested on 1024-token inputs", "Its WMT14 En-De gain over Transformer-base exceeds the run-to-run variance shown", "On CAIL2019-SCM, the 1024-length setting scored 1.5 points above the 512-length one"],
+          "choices": [
+            "It beat BERT on every one of the six GLUE tasks reported in the paper's Table 2",
+            "A model trained at 512 tokens kept its accuracy when tested on 1024-token inputs",
+            "Its WMT14 En-De gain over Transformer-base exceeds the run-to-run variance shown",
+            "On CAIL2019-SCM, the 1024-length setting scored 1.5 points above the 512-length one"
+          ],
           "answer": "On CAIL2019-SCM, the 1024-length setting scored 1.5 points above the 512-length one",
           "why": "Table 5 reports 68.29 at length 512 and 69.79 at length 1024: 69.79 − 68.29 = 1.50. No experiment evaluates beyond training length (Table 5 compares separate 512 and 1024 settings); Table 1 gives single numbers 27.5 vs 27.3 with no seeds or variance; Table 2 is mixed (lower on SST-2, QNLI, MNLI).",
-          "distractor_from": {"A model trained at 512 tokens kept its accuracy when tested on 1024-token inputs": "Misconception: the paper demonstrates length extrapolation.", "Its WMT14 En-De gain over Transformer-base exceeds the run-to-run variance shown": "Assumes variance or seeds are reported; Table 1 is one number per model.", "It beat BERT on every one of the six GLUE tasks reported in the paper's Table 2": "Takes §1's 'consistently better' wording at face value against the mixed Table 2."},
+          "distractor_from": {
+            "A model trained at 512 tokens kept its accuracy when tested on 1024-token inputs": "Misconception: the paper demonstrates length extrapolation.",
+            "Its WMT14 En-De gain over Transformer-base exceeds the run-to-run variance shown": "Assumes variance or seeds are reported; Table 1 is one number per model.",
+            "It beat BERT on every one of the six GLUE tasks reported in the paper's Table 2": "Takes §1's 'consistently better' wording at face value against the mixed Table 2."
+          },
           "targets_misconception": "The paper demonstrates length extrapolation.",
           "varies": "Selecting the one supported claim across four experiments instead of refuting a GLUE summary (domain: Table 5 and missing variance rather than Table 2).",
           "invariant": "Separate what each table actually measures (single runs, separate length settings, mixed GLUE) from the paper's broader claims.",
           "transfer_distance": "near"
         },
         "retrieval": [
-          {"q": "Which two GLUE tasks from {MRPC, SST-2, QNLI} does RoFormer score lower on than BERT?", "answer": "SST-2 and QNLI", "layer": "detail"},
-          {"q": "What evidence does the RoFormer paper give for its 'faster convergence' claim?", "answer": "Only plotted training-loss curves (Figure 3), not a table of numbers."}
+          {
+            "q": "Which two GLUE tasks from {MRPC, SST-2, QNLI} does RoFormer score lower on than BERT?",
+            "answer": "SST-2 and QNLI",
+            "layer": "detail"
+          },
+          {
+            "q": "What evidence does the RoFormer paper give for its 'faster convergence' claim?",
+            "answer": "Only plotted training-loss curves (Figure 3), not a table of numbers."
+          }
         ],
         "self_explain": "Which of the three properties claimed in §1 (length flexibility, decay, linear-attention compatibility) is tested by an experiment in §4, and how?"
       },
       "presentations": [
-        {"type": "figure", "action": "compare", "ref": "rope:table1"},
-        {"type": "example", "action": "distinguish", "ref": "discovered.json:findings"}
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "rope:table1"
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "discovered.json:findings"
+        }
       ]
     }
   ],

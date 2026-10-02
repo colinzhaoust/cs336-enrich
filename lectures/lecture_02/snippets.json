@@ -264,5 +264,180 @@
   "end": 433,
   "text": "def arithmetic_intensity_dot_product():\n    n = 1024 * 1024\n    x = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\n    w = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\n    y = x @ w\n\n    bytes = (2 * n) + (2 * n) + 2  # Read x, read w, write y\n    flops = 2 * n - 1  # n multiplications, n-1 additions\n\n    arithmetic_intensity = flops / bytes  # ~1/2 @inspect arithmetic_intensity\n\n    h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec  # @inspect h100_accelerator_intensity\n    assert arithmetic_intensity < h100_accelerator_intensity\n    text(\"Memory-bound!\")\n\n",
   "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L100-L110": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 100,
+  "end": 110,
+  "text": "    text(\"Each tensor has a rank, which is the number of dimensions.\")\n    x = torch.zeros(4)        # rank 1 tensor (vector) @inspect x\n    x = torch.zeros(4, 8)     # rank 2 tensor (matrix) @inspect x\n    x = torch.zeros(4, 8, 2)  # rank 3 tensor @inspect x\n\n    text(\"In Transformers, will see tensors of rank 4:\")\n    B = 32   # Batch size\n    S = 16   # Sequence length\n    H = 16   # Number of heads\n    D = 64   # Hidden dimension per head\n    x = torch.zeros(B, S, H, D)",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L125-L132": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 125,
+  "end": 132,
+  "text": "    x = torch.zeros(4, 8)  # @inspect x\n    assert x.dtype == torch.float32  # Default type\n    assert x.numel() == 4 * 8\n    assert x.element_size() == 4  # Float is 4 bytes\n    assert get_memory_usage(x) == 4 * 8 * 4  # 128 bytes\n\n    text(\"One matrix in the feedforward layer of GPT-3:\")\n    assert get_memory_usage(torch.empty(12288 * 4, 12288)) == 2304 * 1024 * 1024  # 2.3 GB @stepover",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L138-L152": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 138,
+  "end": 152,
+  "text": "    x = torch.zeros(4, 8, dtype=torch.float16)  # @inspect x\n    assert x.element_size() == 2\n    text(\"However, the dynamic range (especially for small numbers) isn't great.\")\n    x = torch.tensor([1e-8], dtype=torch.float16)  # @inspect x\n    assert x == 0  # Underflow!\n    text(\"If this happens when you train, you can get instability.\")\n\n    text(\"## bf16\")\n    link(title=\"Wikipedia\", url=\"https://en.wikipedia.org/wiki/Bfloat16_floating-point_format\")\n    image(\"images/bf16.png\", width=400)\n    text(\"Google Brain developed brain floating point (bf16) in 2018 to address this issue.\")\n    text(\"bf16 uses the same memory as fp16 but has the same dynamic range as fp32!\")\n    text(\"The only catch is that the resolution is worse, but this matters less for deep learning.\")\n    x = torch.tensor([1e-8], dtype=torch.bfloat16)  # @inspect x\n    assert x != 0  # No underflow!",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L160-L166": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 160,
+  "end": 166,
+  "text": "    text(\"- Use bf16 for parameters, activations, and gradients\")\n    text(\"- Use fp32 for optimizer states\")\n\n    text(\"Pytorch has an automatic mixed precision (AMP) library. \"), link(title=\"docs\", url=\"https://pytorch.org/docs/stable/amp.html\")\n    text(\"Tries to cast things into bf16 when safe (matmuls, not exp).\")\n    with torch.amp.autocast(\"cuda\", dtype=torch.bfloat16):\n        x = torch.zeros(4, 8)  # @inspect x",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L186-L199": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 186,
+  "end": 199,
+  "text": "    x = torch.zeros(32, 32)\n    assert x.device == torch.device(\"cpu\")\n\n    text(\"However, what about GPUs?\")\n    image(\"images/cpu-gpu.png\", width=600)\n    device = cuda_if_available()  # @inspect device\n\n    text(\"In order to take advantage of the massive parallelism of GPUs, we need to move them to GPU memory.\")\n    x = x.to(device)\n\n    text(\"Or create the tensor directly on the GPU:\")\n    with torch.device(device):\n        x = torch.zeros(32, 32)\n        assert x.device == device",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L216-L218": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 216,
+  "end": 218,
+  "text": "    x = torch.ones(2, 2, 3)      # batch seq hidden  @inspect x\n    y = torch.ones(2, 2, 3)      # batch seq hidden  @inspect y\n    z = x @ y.transpose(-2, -1)  # batch seq seq  @inspect z",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L243-L247": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 243,
+  "end": 247,
+  "text": "    z = einsum(x, y, \"batch seq1 hidden, batch seq2 hidden -> batch seq1 seq2\")  # @inspect z\n    text(\"Dimensions that are not named in the output are summed over.\")\n\n    # Or can use `...` to represent broadcasting over any number of dimensions\n    z = einsum(x, y, \"... seq1 hidden, ... seq2 hidden -> ... seq1 seq2\")  # @inspect z",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L255-L258": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 255,
+  "end": 258,
+  "text": "    y = x.sum(dim=-1)  # @inspect y\n\n    # New (einops) way\n    y = reduce(x, \"... hidden -> ...\", \"sum\")  # @inspect y",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L270-L276": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 270,
+  "end": 276,
+  "text": "    x = rearrange(x, \"... (heads hidden1) -> ... heads hidden1\", heads=2)  # @inspect x\n\n    # Perform the transformation by `w`\n    x = einsum(x, w, \"... hidden1, hidden1 hidden2 -> ... hidden2\")  # @inspect x\n\n    # Combine `heads` and `hidden2` back together\n    x = rearrange(x, \"... heads hidden2 -> ... (heads hidden2)\")  # @inspect x",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L296": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 296,
+  "end": 296,
+  "text": "    total_flops = 8 * 2 * (60 * 60 * 24 * 7) * h100_flop_per_sec  # @inspect total_flops",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L308-L314": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 308,
+  "end": 314,
+  "text": "    x = torch.ones(B, D, device=cuda_if_available())\n    w = torch.randn(D, K, device=cuda_if_available())\n    y = x @ w\n\n    text(\"How many FLOPs is this matmul?\")\n    text(\"We have one multiplication (x[i][j] * w[j][k]) and one addition per (i, j, k) triple.\")\n    actual_num_flops = 2 * B * D * K  # @inspect actual_num_flops",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L830-L848": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 830,
+  "end": 848,
+  "text": "def benchmark(func, num_trials: int = 5) -> float:\n    \"\"\"Return the number of seconds required to perform `func`.\"\"\"\n\n    # Wait until previous CUDA threads are done\n    if torch.cuda.is_available():\n        torch.cuda.synchronize()\n\n    def run():\n        # Perform the operation\n        func()\n\n        # Wait until CUDA threads are done\n        if torch.cuda.is_available():\n            torch.cuda.synchronize()\n\n    # Time the operation `num_trials` times\n    total_time = timeit.timeit(run, number=num_trials)\n\n    return total_time / num_trials",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L325-L330": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 325,
+  "end": 330,
+  "text": "    promised_flop_per_sec = get_promised_flop_per_sec(x.dtype)  # @inspect promised_flop_per_sec\n\n    text(\"## Model FLOPs utilization (MFU)\")\n\n    text(\"Definition: MFU = (actual FLOP/s) / (promised FLOP/s) [ignore communication/overhead]\")\n    mfu = actual_flop_per_sec / promised_flop_per_sec if promised_flop_per_sec else None  # @inspect mfu",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L368-L375": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 368,
+  "end": 375,
+  "text": "    bytes = (2 * n) + (2 * n)  # Read x, write y (bf16 is 2 bytes/float)\n    flops = n  # n comparisons\n\n    communication_time = bytes / h100_bytes_per_sec  # @inspect communication_time\n    computation_time = flops / h100_flop_per_sec  # @inspect computation_time\n\n    text(\"Assume we can overlap communication and computation perfectly.\")\n    total_time = max(communication_time, computation_time)  # @inspect total_time",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L424-L427": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 424,
+  "end": 427,
+  "text": "    bytes = (2 * n) + (2 * n) + 2  # Read x, read w, write y\n    flops = 2 * n - 1  # n multiplications, n-1 additions\n\n    arithmetic_intensity = flops / bytes  # ~1/2 @inspect arithmetic_intensity",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L455-L458": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 455,
+  "end": 458,
+  "text": "    bytes = (2 * n * n) + (2 * n * n) + (2 * n * n)  # Read x, read w, write y\n    flops = n * n * (2 * n - 1)  # n^2 dot products\n\n    arithmetic_intensity = flops / bytes  # ~n/3 @inspect arithmetic_intensity",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L577-L599": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 577,
+  "end": 599,
+  "text": "class Block(nn.Module):\n    \"\"\"Simple block that applies a linear transformation followed by a ReLU nonlinearity.\"\"\"\n    def __init__(self, dim: int):\n        super().__init__()\n        self.weight = nn.Parameter(torch.randn(dim, dim) / math.sqrt(dim))\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        x = x @ self.weight  # Linear\n        x = F.relu(x)        # Activation\n        return x\n\n\nclass DeepNetwork(nn.Module):\n    \"\"\"Map `dim`-vector to a `dim`-vector.\"\"\"\n    def __init__(self, dim: int, num_layers: int):\n        super().__init__()\n        self.layers = nn.ModuleList([Block(dim) for i in range(num_layers)])\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        # Apply all the layers sequentially\n        for layer in self.layers:\n            x = layer(x)  # @stepover\n        return x",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L492-L499": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 492,
+  "end": 499,
+  "text": "    x = torch.tensor([1., 2, 3])\n    w = torch.tensor([1., 1, 1], requires_grad=True)  # Want gradient\n    pred_y = x @ w\n    loss = 0.5 * (pred_y - 5).pow(2)\n\n    text(\"Backward pass: compute gradients\")\n    loss.backward()\n    assert torch.equal(w.grad, torch.tensor([1, 2, 3]))  # @inspect w.grad",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L516-L523": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 516,
+  "end": 523,
+  "text": "    h1 = einsum(x, w1, \"batch in, in out -> batch out\")  # x @ w1\n    h2 = einsum(h1, w2, \"batch in, in out -> batch out\")  # h1 @ w2\n    loss = (h2.mean() - 0)**2  # Regress everything to 0 (arbitrary)\n\n    # Backward pass\n    h1.retain_grad()  # For debugging\n    h2.retain_grad()  # For debugging\n    loss.backward()",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L664-L680": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 664,
+  "end": 680,
+  "text": "    def step(self):\n        for group in self.param_groups:\n            lr = group[\"lr\"]\n            for p in group[\"params\"]:\n                # Optimizer state\n                state = self.state[p]\n                grad = p.grad.data\n\n                # Get squared gradients g2 = sum_{i<t} g_i^2\n                g2 = state.get(\"g2\", torch.zeros_like(grad))\n\n                # Update optimizer state\n                g2 += torch.square(grad)\n                state[\"g2\"] = g2\n\n                # Update parameters\n                p.data -= lr * grad / torch.sqrt(g2 + 1e-5)",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L635-L646": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 635,
+  "end": 646,
+  "text": "    num_parameters = D * D * L\n    parameter_memory = 2 * num_parameters  # (2 bytes for bf16) @inspect parameter_memory\n    gradient_memory = 2 * num_parameters  # (2 bytes for bf16) @inspect gradient_memory\n    optimizer_state_memory = 4 * num_parameters  # (4 bytes for fp32) @inspect optimizer_state_memory\n    activation_memory = 2 * (B * D * L)  # (2 bytes for bf16) @inspect activation_memory\n    text(\"It is customary to use fp32 for stability (accumulating averages over powers over many steps).\")\n    text(\"Optimizer state memory:\")\n    text(\"- AdaGrad: 4 bytes/parameter for storing second moments\")\n    text(\"- Adam: 8 bytes/parameter for storing first and second moments\")\n\n    # Putting it all together\n    total_memory = parameter_memory + activation_memory + gradient_memory + optimizer_state_memory  # @inspect total_memory",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L702-L715": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 702,
+  "end": 715,
+  "text": "    for t in range(num_train_steps):\n        # Get data\n        x, y = get_batch()\n\n        # Forward (compute loss)\n        pred_y = model(x).mean()  # @stepover\n        loss = F.mse_loss(pred_y, y)\n\n        # Backward (compute gradients)\n        loss.backward()\n\n        # Update parameters\n        optimizer.step()\n        optimizer.zero_grad(set_to_none=True)",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L721-L730": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 721,
+  "end": 730,
+  "text": "    B = 64     # Batch size\n    D = 1024   # Dimensionality\n    L = 16     # Number of layers\n    activation_memory = 2 * B * D * L  # (2 bytes for bf16) @inspect activation_memory\n    text(\"Gradient accumulation:\")\n    text(\"- Compute gradient on micro batches\")\n    text(\"- Accumulate the gradients (don't zero it out)\")\n    text(\"- Every batch_size / micro_batch_size steps, update the parameters and zero out the gradients\")\n    micro_batch_size = B / 4\n    activation_memory = 2 * micro_batch_size * D * L  # (2 bytes for bf16) @inspect activation_memory",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L782-L787": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 782,
+  "end": 787,
+  "text": "    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        # Apply all the layers sequentially\n        for layer in self.layers:\n            # KEY: only store activations at checkpoints, recompute the rest\n            x = torch.utils.checkpoint.checkpoint(layer, x)  # @stepover\n        return x",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L757-L758": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 757,
+  "end": 758,
+  "text": "    # Store all activations:    x g1 h1 g2 h2 g3 h3 g4 h4\n    # Activation checkpointing: x    h1    h2    h3    h4",
+  "sha256": "f731b3849afc"
  }
 }

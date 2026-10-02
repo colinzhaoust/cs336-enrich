@@ -4,7 +4,7 @@
   "scene": "TimelineScene",
   "quality": "720p",
   "knowledge_points": [
-    "lecture_07:pipeline-parallelism",
+    "lecture_07:pipeline-bubble",
     "lecture_08:pipeline-bubble"
   ],
   "video": "video.mp4",

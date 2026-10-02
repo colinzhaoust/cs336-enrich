@@ -2,7 +2,7 @@
   "fixture": "isoflop-sweep",
   "family": "curve",
   "scene": "CurveScene",
-  "quality": "720p30",
+  "quality": "720p",
   "knowledge_points": [
     "lecture_09:chinchilla-three-methods",
     "chinchilla:approach-2"

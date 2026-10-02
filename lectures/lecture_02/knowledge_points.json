@@ -794,7 +794,7 @@
             "quote": "elementwise operations are just the size of a matrix ... addition also requires m n FLOPs ... no other operation you'll encounter as expensive as matrix multiplication for large enough matrices ... with important caveat of when we talk about memory"
           }
         ],
-        "filtering_note": "Spoken only (video 32:31-32:58). The code goes straight from 'what is a FLOP' to the linear model's 2·B·D·K and never says why counting only matmuls is safe. The professor gives the rule and its limit in one breath: 'for large enough matrices', 'with important caveat of when we talk about memory'. The caveat is cashed out later by the GELU intensity example (L389-L404). The 20 FLOPs/element for GELU used in the prompts is the lecture's own estimate (L394)."
+        "filtering_note": "Spoken only (video 32:31-32:58). The code goes straight from 'what is a FLOP' to the linear model's 2·B·D·K and never says why counting only matmuls is safe. The professor gives the rule and its limit in one breath: 'for large enough matrices', 'with important caveat of when we talk about memory'. The caveat is cashed out later by the GELU intensity example (L400-L415). The 20 FLOPs/element for GELU used in the prompts is the lecture's own estimate (L406)."
       },
       "prerequisites": [
         {
@@ -1007,7 +1007,7 @@
             "quote": "if you get about MFU of 0.5 for modern models, you should be pretty happy with yourself ... something like 0.1, which means that you should do something"
           }
         ],
-        "filtering_note": "Professor explicitly ignores communication/overhead in the definition (L326). Spoken evidence (video 37:52-38:21): the code says only 'MFU of >= 0.5 is quite good'; aloud the professor gives three bands: about 0.5 for a modern model is good, a bare matmul can reach about 0.8 (captions render it '80.8'), and about 0.1 means something is wrong. He also says why fp32 is a bad choice today: 'it's going to be really, really slow because they're not really optimizing for that workload' (40:00-40:07). The promised figure is already the halved, dense number (38:53). The code's timing ran on a laptop without a GPU, so its MFU value is 'not very meaningful' (34:46)."
+        "filtering_note": "Professor explicitly ignores communication/overhead in the definition (L329). Spoken evidence (video 37:52-38:21): the code says only 'MFU of >= 0.5 is quite good'; aloud the professor gives three bands: about 0.5 for a modern model is good, a bare matmul can reach about 0.8 (captions render it '80.8'), and about 0.1 means something is wrong. He also says why fp32 is a bad choice today: 'it's going to be really, really slow because they're not really optimizing for that workload' (40:00-40:07). The promised figure is already the halved, dense number (38:53). The code's timing ran on a laptop without a GPU, so its MFU value is 'not very meaningful' (34:46)."
       },
       "prerequisites": [
         {
@@ -1155,7 +1155,7 @@
             "compute-bound"
           ],
           "answer": "memory-bound",
-          "why": "FLOPs ≈ 2n², bytes ≈ 2n²; intensity ≈ 1 regardless of n. That is why inference decode is memory-bound (L463)."
+          "why": "FLOPs ≈ 2n², bytes ≈ 2n²; intensity ≈ 1 regardless of n. That is why inference decode is memory-bound (L466)."
         },
         "retrieval": [
           {
@@ -1510,7 +1510,7 @@
         {
           "type": "formula-step",
           "action": "restate",
-          "ref": "lecture_02.py:L546-L549",
+          "ref": "lecture_02.py:L550-L553",
           "faded": true,
           "steps": [
             {
@@ -1586,7 +1586,7 @@
             "quote": "we have 4 bytes per parameter for storing the optimizer state. Adam-- you store the first order bit and the second order moments, so that's 8 bytes."
           }
         ],
-        "filtering_note": "Professor uses AdaGrad in code (4 bytes) but states Adam's 8 in prose. The Transformer version is deferred to Assignment 1 and a blog. Spoken evidence (video 1:07:01-1:07:18): the reason the lecture uses AdaGrad (4 bytes/parameter) while prose quotes Adam (8) is said aloud: 'so that I'm not just giving you what's in assignment 1', where students implement Adam (1:07:46). Optimizer details are skipped for time (1:07:36). The professor flags a typo in class (optimizer state written as a multiple of parameter memory instead of parameter count, 1:10:04-1:10:16); the current lecture_02.py (L640) already reads 4 * num_parameters, so the code was fixed after class."
+        "filtering_note": "Professor uses AdaGrad in code (4 bytes) but states Adam's 8 in prose. The Transformer version is deferred to Assignment 1 and a blog. Spoken evidence (video 1:07:01-1:07:18): the reason the lecture uses AdaGrad (4 bytes/parameter) while prose quotes Adam (8) is said aloud: 'so that I'm not just giving you what's in assignment 1', where students implement Adam (1:07:46). Optimizer details are skipped for time (1:07:36). The professor flags a typo in class (optimizer state written as a multiple of parameter memory instead of parameter count, 1:10:04-1:10:16); the current lecture_02.py (L638) already reads 4 * num_parameters, so the code was fixed after class."
       },
       "prerequisites": [
         {
@@ -2007,7 +2007,7 @@
         "anchors": [
           {
             "source": "lecture_02",
-            "ref": "lecture_02.py:L418-L433",
+            "ref": "lecture_02.py:L418-L431",
             "role": "computation",
             "quote": "bytes = (2 * n) + (2 * n) + 2  # Read x, read w, write y ... flops = 2 * n - 1  # n multiplications, n-1 additions"
           },
@@ -2063,7 +2063,7 @@
         {
           "type": "formula-step",
           "action": "compute",
-          "ref": "lecture_02.py:L418-L433"
+          "ref": "lecture_02.py:L418-L431"
         }
       ],
       "misconceptions": [
