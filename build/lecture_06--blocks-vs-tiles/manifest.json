@@ -1,0 +1,103 @@
+{
+  "fixture": "lecture_06--blocks-vs-tiles",
+  "family": "blocks-vs-tiles",
+  "scene": "BlocksVsTilesScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "lecture_06:reduction-stays-in-one-block",
+    "lecture_06:triton-row-sum-kernel"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "18.466667"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "same 10 values, cut into pieces of BLOCK_SIZE = 4",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.533,
+      "caption": "GeLU: each piece is its own block; all run at once",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 6.4,
+      "caption": "row sum: one block owns the row; tile 0 into acc",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 10.067,
+      "caption": "same block, next loop step: acc += tile 1",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 13.733,
+      "caption": "tile 2: masked lanes load 0.0",
+      "frame": "frames/s4.png",
+      "notices": []
+    },
+    {
+      "id": "s5",
+      "time": 16.267,
+      "caption": "tl.sum(acc): 4 lanes to 1 value, one store",
+      "frame": "frames/s5.png",
+      "notices": [
+        "n3"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "GeLU's three pieces become three blocks (pid 0, 1, 2) and all light up in the same step.",
+      "evidence": [
+        "gelu.cells",
+        "gelu.counter"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "The row sum's next piece is a tile, not a block: the block count stays 1 and the same acc lanes grow, 3,1,4,1 to 8,10,6,7.",
+      "evidence": [
+        "sum.acc",
+        "sum.counter"
+      ]
+    },
+    {
+      "id": "n3",
+      "at_step": "s5",
+      "claim": "Only after the last tile does tl.sum collapse the 4 lanes into the row's single value, 39.",
+      "evidence": [
+        "sum.result"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

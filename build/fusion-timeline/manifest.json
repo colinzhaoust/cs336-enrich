@@ -1,0 +1,66 @@
+{
+  "fixture": "fusion-timeline",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "lecture_06:naive-vs-compiled-gelu",
+    "lecture_05:operator-fusion"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "4.900000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "naive GeLU: five elementwise ops, five kernel launches",
+      "frame": "frames/s0.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s1",
+      "time": 2.9,
+      "caption": "fused (torch.compile / Triton): one kernel, one read, one write",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s0",
+      "claim": "Between consecutive kernels the compute lane is idle while HBM writes and re-reads the same tensor.",
+      "evidence": [
+        "lane.compute",
+        "lane.hbm"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s1",
+      "claim": "Fusion removes the intermediate HBM round trips; the compute lane becomes one contiguous block.",
+      "evidence": [
+        "lane.compute",
+        "lane.hbm",
+        "readout"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

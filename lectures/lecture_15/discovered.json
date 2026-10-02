@@ -1,0 +1,938 @@
+{
+  "lecture": "lecture_15",
+  "source_path": "official/lectures/lecture_15.pdf",
+  "anchor_convention": "lecture_15.pdf:p<page>",
+  "txt_sha256": "6cbdc91210302b6ed1867e08ad8d74a3f386c5bcc3170892d23b800af71be2b1",
+  "page_count": 66,
+  "empty_pages": [
+    66
+  ],
+  "summary": {
+    "pages_with_content": 65,
+    "claims": 303,
+    "figures_mentioned": 12,
+    "cites": 6,
+    "dropped": 2
+  },
+  "pages": [
+    {
+      "page": 1,
+      "title": "Lecture 15",
+      "claims": [
+        "“A F T E R P R E T R A I N I N G ” ( M I D / P O S T T R A I N I N G )",
+        "CS336"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 2,
+      "title": "The class thus far",
+      "claims": [
+        "We’ve now covered pre-training, which gets you to GPT3.. But how do we get to instructGPT?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 3,
+      "title": "Instruction following is a remarkable form of control",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [
+        "Text example from [Bubeck et al 2023]"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 4,
+      "title": "Goal today: enable better, tighter controls over LM output",
+      "claims": [
+        "Pretraining data isn’t quite what we want (but it scales)..",
+        "Can we collect data of behaviors we do want and train the LM?",
+        "1. What does that data look like?",
+        "2. How do we best make use of that data?",
+        "3. Do we need scale for this?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 5,
+      "title": "Caveat: post-training information is pretty sparse!",
+      "claims": [
+        "Rich information from the pre-chatgpt competition",
+        "Stiennon 2020 (RLHF paper) – contains annotation guidelines, etc",
+        "Bai 2022 (Anthropic HH) – details on how to set up safety annotation, etc",
+        "Poor information in modern times..",
+        "Open source: lots of distillation, not too public in open-source release notes",
+        "Closed source: ‘secret sauce’ for data."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 6,
+      "title": "Where today’s lecture fits in",
+      "claims": [
+        "Standard approach – imitation (SFT) followed by reinforcement (‘RL’ HF)",
+        "Part 1: the ‘supervised finetuning’ part"
+      ],
+      "figures_mentioned": [
+        "[Ouyang 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 7,
+      "title": "What are the ingredients in SFT?",
+      "claims": [
+        "The training data",
+        "The method"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 8,
+      "title": "Training data",
+      "claims": [
+        "We’ve already seen some of the major types of instruction data..",
+        "Let’s talk about two more details about instruction tuning datasets",
+        "1. What’s actually inside these datasets?",
+        "2. What matters in building ‘high performance’ instruction tuning data?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 9,
+      "title": "Progression of SFT data (in the open world)",
+      "claims": [
+        "FLAN",
+        "Self-instruct",
+        "Alpaca",
+        "ShareGPT/Vicuna",
+        "Open Assistant",
+        "WizardLM",
+        "Tulu3",
+        "Nemotron",
+        "Tool use etc."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 10,
+      "title": "FLAN – random examples",
+      "claims": [
+        "Stephanie - Can you finalize the attached and have it signed. I need to initial it, but it needs to be signed by",
+        "Ronald Chisholm LOI",
+        "Brad Richter. Thanks. Write a subject line for this email.",
+        "Ahold to Sell Spain Operations to Permira (AP) AP - The Dutch supermarket retailer Ahold, seeking to streamline",
+        "global operations and reduce debt, said Sunday it will sell its holdings in Spain to Permira Funds for about",
+        "Business",
+        "#36;849 million. What is this text about? OPTIONS: - World - Sports - Business - Science/Tech",
+        "Write highlights for this article: Sauntering down leafy avenues past typical Dutch step-gabled buildings, carpets of crocuses, the",
+        "The least known of the Dutch",
+        "occasional cyclist whooshing quietly by and the sun bouncing off the canal, I can think of few more pleasant places to spend a spring",
+        "cities, The Hague was a village",
+        "weekend than The Hague. […]The most prized Dutch colony was apparently run from The Hague (aka 'the Widow of Indonesia'). For",
+        "until 1806. It owes its growth to",
+        "summer: the excellent Grapes & Olives and the Café de Bieb on Veenkade will have boats on a newly renovated bit of canal, with",
+        "music and boat trips planned, including a tour at the Kompaan brewery (I can vouch for the product). My art gorging finishes at the",
+        "Louis Bonaparte, Napoleon's",
+        "Panorama, an extraordinary, 14 ft-high circular panorama of The Hague's seaside resort, Scheveningen, painted by Hendrik Mesdag. I",
+        "brother, who ruled here. The",
+        "take a 15-minute tram to the place itself and gorge on scallops and sole at Catch by Simonis on the harbour front. The Hague has",
+        "city has a wealth of art,",
+        "netted a new fan. British Airways (0844 493 0787, www.ba.com) flies to Rotterdam Den Haag (half-hour taxi) from £100 return. For",
+        "including Vermeer's 'Girl With A",
+        "tours with Remco Dörr, email remco.dorr@hotmail.com. Double rooms at the Carlton Ambassador (00 31 70 363 0363,",
+        "Pearl Earring'",
+        "www.carlton.nl/ambassador) cost from £84, room only. More information on travel in The Netherlands at www.holland.com.",
+        "In the city centre there is a",
+        "coffee shop with a",
+        "Here is some data about a restaurant: name = Aromi, eatType = coffee shop, food = English,",
+        "customer rating of 5 out of",
+        "customer rating = 5 out of 5, area = city centre. Write a sentence that includes the following data",
+        "5 called Aromi which serves",
+        "about a restaurant",
+        "English food."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 11,
+      "title": "Alpaca – random examples",
+      "claims": [
+        "1.Eat a balanced diet and make sure to include plenty of fruits and",
+        "vegetables. 2. Exercise regularly to keep your body active and strong. 3.",
+        "Get enough sleep and maintain a consistent sleep schedule.",
+        "Give three tips for staying healthy.",
+        "An algorithm is a step-by-step set of instructions used to solve a problem",
+        "or achieve a goal. It is a process of breaking down complex tasks into",
+        "smaller, more manageable steps. Algorithms can be used to find the",
+        "shortest path from one place to another, sort data, or render data from an",
+        "immense database in a few seconds.",
+        "What does “algorithm” mean?",
+        "def avg_list(nums): total = 0 for n in nums: total += n return total /",
+        "len(nums) print(avg_list([4, 3, 6, 10, 8])) # Output 6.4",
+        "Find the average number in a list."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 12,
+      "title": "OpenAssistant – random examples",
+      "claims": [
+        "\"Monopsony\" refers to a market structure where there is only one buyer for",
+        "a particular good or service. In economics, this term is particularly relevant",
+        "in the labor market, where a monopsony employer has significant power",
+        "Can you write a short introduction about the relevance of the term",
+        "over the wages and working conditions of their employees. […]. Overall, the",
+        "concept of monopsony is essential to understanding the dynamics of labor",
+        "\"monopsony\" in economics? Please use examples related to",
+        "markets and the impact of market power on workers. Further research is",
+        "potential monopsonies in the labour market and cite relevant",
+        "needed to understand the extent and impact of monopsonies on the",
+        "research.",
+        "economy and to develop policies to address this issue. References: Bivens,",
+        "J., & Mishel, L. (2013). The Pay of Corporate Executives and Financial",
+        "Professionals as Evidence of Rents in Top 1 Percent Incomes. Journal of",
+        "Economic Perspectives, 27(3), 57-78.",
+        "There are many cheap and fun science projects that elementary school kids",
+        "can do! Here are a few ideas: 1. Make a homemade lava lamp: Fill a clear",
+        "plastic bottle with water and vegetable oil, add a few drops of food coloring,",
+        "and then drop in an Alka-Seltzer tablet. The reaction will cause bubbles to",
+        "rise and fall like a lava lamp. […]7. Create a solar oven: Using a pizza box,",
+        "My kid needs to do a science project for elementary school, what",
+        "aluminum foil, and plastic wrap, create a solar oven that can cook s'mores",
+        "are some cheap but fun projects to do?",
+        "or other small snacks. 8. Explore magnets: Using magnets and a variety of",
+        "objects, have your child experiment with magnetism to see what objects are",
+        "attracted to magnets and which ones are not. These are just a few ideas to",
+        "get you started! There are many more cheap and fun science projects that",
+        "your child can do with household items and a little creativity."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 13,
+      "title": "Nemotron-SFT-OpenCode-v1",
+      "claims": [
+        "{\"role\": \"assistant\", \"content\": \"I'll analyze the key differences between",
+        "`async/await` and `.then()` for handling promises in JavaScript based",
+        "What are the key differences between using `async/await` and",
+        "on the provided AGENTS.md instructions.\", \"tool_calls\": [ { \"id\":",
+        "`.then()` for handling promises in JavaScript, and when should I",
+        "\"call_132a55728f6c498fbeac3b95\", \"type\": \"function\", \"function\": {",
+        "prefer one approach over the other in terms of readability and",
+        "\"name\": \"skill\", \"arguments\": \"{\\\"name\\\":\\\"bash-skills\\\"}\" } } ]}",
+        "error handling?",
+        "\"role\": \"assistant\",",
+        "\"content\": \"I'll help you decide between integers and floating-point",
+        "numbers for your calculator app. Let me analyze the trade-offs and provide",
+        "a recommendation based on the requirements in AGENTS.md.\",",
+        "I'm building a simple calculator app and need to decide between",
+        "\"tool_calls\": [{\"id\": \"call_b06182c280514fc7bd1d3ae4\",\"type\": \"function\",",
+        "\"function\": {\"name\": \"todowrite\",\"arguments\":",
+        "using integers or floating-point numbers for all calculations. What",
+        "\"{\\\"todos\\\":[{\\\"content\\\":\\\"Review the AGENTS.md file for calculator data",
+        "are the trade-offs of each approach, and which would you",
+        "typerequirements\\\",\\\"id\\\":\\\"1\\\",\\\"priority\\\":\\\"high\\\",\\\"status\\\":\\\"in_progres",
+        "recommend for a beginner-friendly calculator that handles basic",
+        "s\\\"},{\\\"content\\\":\\\"Analyze trade-offs between integers and floating-point",
+        "arithmetic operations?",
+        "numbers\\\",\\\"id\\\":\\\"2\\\",\\\"priority\\\":\\\"high\\\",\\\"status\\\":\\\"pending\\\"},{\\\"conte",
+        "nt\\\":\\\"Check available skills for relevant",
+        "guidance\\\",\\\"id\\\":\\\"3\\\",\\\"priority\\\":\\\"medium\\\",\\\"status\\\":\\\"pending\\\"},{\\\"c",
+        "ontent\\\":\\\"Provide recommendation for beginner-friendly",
+        "calculator\\\",\\\"id\\\":\\\"4\\\",\\\"priority\\\":\\\"high\\\",\\\"status\\\":\\\"pending\\\"}]}\"}}]"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 14,
+      "title": "What’s varying across these?",
+      "claims": [
+        "“Chattiness” – FLAN is (usually) valid data, but people don’t want to talk to a NLP",
+        "benchmark. Later datasets move towards longer, more detailed responses",
+        "Detail – OASST goes into much more detail about various factual pieces of knowledge.",
+        "As we will see, this can be both a pro and a con.",
+        "Tool use – SFT in the last year or two has also been shifting much more towards",
+        "tool/use, agentic downstream applications."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 15,
+      "title": "What did we notice across the datasets?",
+      "claims": [
+        "These datasets vary in many ways…",
+        "Length and bullet points (style variations)",
+        "References, other complex knowledge",
+        "Less visible, but important aspects..",
+        "Scale",
+        "Safety",
+        "How do these factors affect the model?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 16,
+      "title": "Style variations in data and models",
+      "claims": [
+        "Models vary a lot in response length.."
+      ],
+      "figures_mentioned": [
+        "[Wang+ 2023]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 17,
+      "title": "When evaluating by preferences, style matters.",
+      "claims": [
+        "We see very strong length effects (in both humans and GPT-based evaluations)"
+      ],
+      "figures_mentioned": [
+        "[Dubois+ 2023]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 18,
+      "title": "What about benchmarks?",
+      "claims": [
+        "These factors are (mostly) not that relevant for other benchmark perfs"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 19,
+      "title": "References, complex knowledge, and factuality",
+      "claims": [
+        "Consider this example from open assistant:",
+        "\"Monopsony\" refers to a market structure where there is only one buyer for",
+        "a particular good or service. In economics, this term is particularly relevant",
+        "in the labor market, where a monopsony employer has significant power",
+        "Can you write a short introduction about the relevance of the term",
+        "over the wages and working conditions of their employees. […]. Overall, the",
+        "concept of monopsony is essential to understanding the dynamics of labor",
+        "\"monopsony\" in economics? Please use examples related to",
+        "markets and the impact of market power on workers. Further research is",
+        "potential monopsonies in the labour market and cite relevant",
+        "needed to understand the extent and impact of monopsonies on the",
+        "research.",
+        "economy and to develop policies to address this issue. References: Bivens,",
+        "J., & Mishel, L. (2013). The Pay of Corporate Executives and Financial",
+        "Professionals as Evidence of Rents in Top 1 Percent Incomes. Journal of",
+        "Economic Perspectives, 27(3), 57-78.",
+        "What is this example teaching the model?",
+        "1. Teaching the model about Bivens J & Mishel, L",
+        "2. Teaching the model to output citations when asked to do so",
+        "(But by what mechanism? Does the model know about cites?)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 20,
+      "title": "Knowledge extraction and alignment",
+      "claims": [
+        "Folklore: Fine-tuning a model on ‘facts it doesn’t know’ makes it hallucinate"
+      ],
+      "figures_mentioned": [
+        "[Schulman 2023]",
+        "[Gekhman 2023]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 21,
+      "title": "Takeaways on knowledge extraction and alignment",
+      "claims": [
+        "1. You may not want to fine-tune on tail knowledge, even that’s the LM use case",
+        "2. In principle, ‘RL’ style correctness feedback could help",
+        "3. Knowledge storage and extraction in LMs is messy, and nuanced."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 22,
+      "title": "Safety",
+      "claims": [
+        "LMs are widely deployed to end-users, and need some safety controls",
+        "Misinformation",
+        "Scams and spam"
+      ],
+      "figures_mentioned": [
+        "[Goldstein+ 2023]",
+        "[Kang+ 2023]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 23,
+      "title": "Safety SFT in the wild",
+      "claims": [
+        "Details are pretty sparse",
+        "# Examples? ~ few thousand in Llama 2"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 24,
+      "title": "Pipeline with most details",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 25,
+      "title": "Main safety approach – extract scenarios from users",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 26,
+      "title": "Safety-tuning with just a little data",
+      "claims": [
+        "Significant improvements to safety with ~500 samples.",
+        "(Hate speech)",
+        "(Anthropic HH)",
+        "Adding 500 Alpaca-style examples makes models follow safety guidelines"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 27,
+      "title": "Putting it together – SFT Data",
+      "claims": [
+        "1. Instruction fine-tuning (SFT) works works best when we are just extracting pre-",
+        "training behaviors, not adding new ones",
+        "2. Adding (factually correct!) data can sometimes hurt",
+        "3. Small amounts of the right kinds of behavior (safety, instruction-following, style)",
+        "make a big difference, but there is a long-tail that benefits from more data"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 28,
+      "title": "How to fine-tune",
+      "claims": [
+        "Just do gradient descent..",
+        "In many academic settings – this is basically it. But what if..",
+        "You have tons of compute and data, you want to scale up instruction tuning"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 29,
+      "title": "Turning instruction tuning into pretraining",
+      "claims": [
+        "Can we somehow turn instruction tuning data into pretraining data?",
+        "The following (increasingly popular) idea says yes:",
+        "1. Pre-train on web/pretraining data",
+        "2. Mix in instruction-tuning data into pre-training",
+        "3. Do an actual (but short) instruction-tuning round.",
+        "Lets you scale up instruction tuning w/o catastrophic forgetting"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 30,
+      "title": "‘Midtraining’ / ‘Two-phase training’",
+      "claims": [
+        "The recipe is common knowledge among many LLM companies (but not documented)",
+        "Widely used by most models today..",
+        "Publicized in recent Chinese-derived LMs (miniCPM, jetMoE)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 31,
+      "title": "The second part of RLHF",
+      "claims": [
+        "Standard approach – imitation (SFT) followed by reinforcement (‘RL’ HF)",
+        "Part 2: the ‘RL’ part"
+      ],
+      "figures_mentioned": [
+        "[Ouyang 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 32,
+      "title": "From imitation to optimization",
+      "claims": [
+        "Imitation (SFT)",
+        "Fit 𝑝ො 𝑦 𝑥 ≈ 𝑝 ∗ (𝑦|𝑥) for some reference distribution 𝑝 ∗ 𝑦 𝑥",
+        "Pure generative modeling perspective",
+        "Requires samples from reference policy",
+        "Optimization (RLHF)",
+        "Find 𝒑",
+        "ෝ 𝒚 𝒙 such that max 𝐸𝑝 [𝑅 𝑦, 𝑥 ] for a reward 𝑅(𝑦, 𝑥)",
+        "Maximize some reward function that we can measure",
+        "LMs are policies, not a model of some distribution"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "𝑝"
+      ]
+    },
+    {
+      "page": 33,
+      "title": "Why optimize? G-V gap",
+      "claims": [
+        "People don’t always write the thing that they prefer in LM outputs.."
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "From: Zhang et al – “Benchmarking Large Language Models for News Summarization” 2023"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 34,
+      "title": "Overview",
+      "claims": [
+        "We’ll cover three aspects of RLHF",
+        "Data",
+        "How do people collect RLHF data?",
+        "What are some things to worry about",
+        "How do we RLHF?",
+        "PPO",
+        "DPO",
+        "What are some side-effects of RLHF?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 35,
+      "title": "RLHF Data",
+      "claims": [
+        "What types of pairwise feedback. How do we get (good) pairwise feedback?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 36,
+      "title": "RLHF and data – standard setups",
+      "claims": [
+        "Standard ‘pairwise feedback’ setup"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 37,
+      "title": "RLHF and data – instruct GPT guideline",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 38,
+      "title": "Another old example – bard annotations",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [
+        "https://assets.bwbx.io/documents/users/iqjWHBFdfxIU/rqKqEqbXBnDI/v0"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 39,
+      "title": "Modern worker distribution",
+      "claims": [
+        "Caveat: many platforms, covers only one (Outlier, ScaleAI)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 40,
+      "title": "Large variation in compensation",
+      "claims": [
+        "Lots of growth in “expert annotation”"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://www.businessinsider.com/ai-data-labeling-annotators-pay-subject-experts-generalists-gig-workers-2025-12"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 41,
+      "title": "RLHF and data - crowdsourcing",
+      "claims": [
+        "Complexities of crowdsourcing",
+        "Hard to get really high-quality, verifiable annotators",
+        "Hard to get them to really check correctness",
+        "Have to be careful about AI use.."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 42,
+      "title": "RLHF and data – crowdsourcing ethics",
+      "claims": [
+        "Data collection at scale can have significant issues"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 43,
+      "title": "RLHF and data - demographics",
+      "claims": [
+        "The annotator distribution for RLHF can significantly shift its behaviors"
+      ],
+      "figures_mentioned": [
+        "[Santurkar+ 2023]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 44,
+      "title": "RLHF and style – annotators matter (a lot)",
+      "claims": [
+        "This is true even for many annotators – but not all annotators"
+      ],
+      "figures_mentioned": [
+        "[Hosking, Blunsom, Bartolo 2024]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 45,
+      "title": "RLFH and data - LM-generated",
+      "claims": [
+        "GPT4 is a surprisingly good pairwise feedback system",
+        "Near-perfect rank correlation at the system level",
+        "Agreement near human inter-annotator levels"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 46,
+      "title": "RLHF and data - LM-generated",
+      "claims": [
+        "For people following the frontier – AI feedback often used for RLHF",
+        "Ultrafeedback",
+        "Zephyr 7b",
+        "Tulu3",
+        "Used in e.g. Olmo, Zephyr, etc"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://thesequence.substack.com/p/the-sequence-chat-hugging-faces-lewis"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 47,
+      "title": "RLHF and data – Self-training",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [
+        "From Constitutional AI, Bai et al."
+      ],
+      "dropped": []
+    },
+    {
+      "page": 48,
+      "title": "RLHF and style – Length effects",
+      "claims": [
+        "Length effects are a very significant outcome of RLHF"
+      ],
+      "figures_mentioned": [
+        "[Chen et al 2024]",
+        "[Singhal et al 2024]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 49,
+      "title": "How do we RLHF?",
+      "claims": [
+        "We now have a (high quality) pairwise feedback data collection pipeline?",
+        "How do we adapt the model to make use of pairwise feedback?",
+        "Part 1: PPO – the original and very finicky approach (the brief version)",
+        "Part 2: DPO – the new, very accessible approach"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 50,
+      "title": "From imitation to optimization",
+      "claims": [
+        "Imitation (SFT)",
+        "Fit 𝑝ො 𝑦 𝑥 ≈ 𝑝 ∗ (𝑦|𝑥) for some reference distribution 𝑝 ∗ 𝑦 𝑥",
+        "Pure generative modeling perspective",
+        "Requires samples from reference policy",
+        "Optimization (RLHF)",
+        "Find 𝒑",
+        "ෝ 𝒚 𝒙 such that max 𝐸𝑝 [𝑅 𝑦, 𝑥 ] for a reward 𝑅(𝑦, 𝑥)",
+        "Maximize some reward function that we can measure",
+        "LMs are policies, not a model of some distribution"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "𝑝"
+      ]
+    },
+    {
+      "page": 51,
+      "title": "PPO in language modeling",
+      "claims": [
+        "From InstructGPT",
+        "..this is very innocuous looking"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 52,
+      "title": "More details and background from Stiennon",
+      "claims": [
+        "From \"Learning to summarize from human feedback”"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 53,
+      "title": "PPO – at a conceptual level",
+      "claims": [
+        "A brief (and high level) intro to the various ideas in PPO..",
+        "Attempt 1: Policy gradients (variances are too high)",
+        "∇𝜃 𝐸𝑝𝜃 𝑅 𝑧 = 𝐸𝑝𝜃 [R(z)∇𝜃 log 𝑝𝜃 𝑧 ]",
+        "Attempt 2: TRPO (Linearize the problem around the current policy)",
+        "Attempt 3: PPO (Clip the ratios at some eps)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 54,
+      "title": "Can we get rid of PPO?",
+      "claims": [
+        "Question for many: can we avoid doing any ‘RL’ ? (i.e. on-policy RL algorithms)",
+        "Some reasonable stuff people thought about",
+        "Train the model with a control token – (SFT on the pairs, prepend [GOOD] to chosen,",
+        "[BAD] to not chosen)",
+        "Train the model on only preferred output",
+        "Train a reward model, get LM outputs, train on the preferred output",
+        "Train a reward model, get 1024 LM outputs, take the best one."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 55,
+      "title": "DPO – RLHF without tears?",
+      "claims": [
+        "Try to simplify PPO by..",
+        "Getting rid of the reward model",
+        "Getting rid of any on-policy stuff (rollouts, outer loops etc)",
+        "Instead",
+        "Take gradient steps on log-loss of good stuff",
+        "Take negative gradient steps on bad stuff (appropriately weighted)."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 56,
+      "title": "DPO – derivation from the RLHF formula",
+      "claims": [
+        "Our goal is to optimize",
+        "Assume that the policy 𝜋 is the set of all policies (nonparametric assumption).",
+        "The maximizer is then,",
+        "Solve for the ‘implied reward’",
+        "(This is the equivalence also used in the kimi-think paper)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 57,
+      "title": "DPO derivation 2",
+      "claims": [
+        "We can now optimize the implied reward as a reward model via the Stiennon objective",
+        "and",
+        "This gives the DPO objective,",
+        "The key steps?",
+        "1. Make a nonparametric assumption (links 𝜋𝜃 and r in closed form)",
+        "2. Parametrize reward r via the policy",
+        "3. Optimize the reward using supervised losses (which in turn, optimizes the policy)",
+        "Conceptually.. This is MLE on the pairwise rewards, under nonparametric assumption + alternative parametrization"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 58,
+      "title": "DPO updates and components",
+      "claims": [
+        "In some sense, reduces to “pos gradient on good, neg gradient on bad”",
+        "(Scaled by ‘prediction error’ of the implied reward model)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 59,
+      "title": "DPO in LLaMA (and other open models)",
+      "claims": [
+        "DPO + Expert iteration for post-training"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 60,
+      "title": "Variants",
+      "claims": [
+        "Lots of variants (too many variants), but maybe two of note from the Tulu 3 paper..",
+        "SimPO (no ref)",
+        "Length normalized DPO"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 61,
+      "title": "But PPO does too (and sometimes better?)",
+      "claims": [
+        "The trickiness of RL-related empirical work..",
+        "Lots of results are highly contingent (on the specifics of the experiment setup)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 62,
+      "title": "Things to watch out for in RLHF",
+      "claims": [
+        "Overoptimization / overfitting on the reward",
+        "Mode collapse / entropy"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 63,
+      "title": "Thins to watch out for - Overoptimization",
+      "claims": [
+        "Across many different RLHF-style optimizers. Optimizing for reward overfits past a point",
+        "Holds true for human pref (left), noisy LM pref (mid) but not noiseless LM pref (right)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 64,
+      "title": "Things to watch out for - mode collapse",
+      "claims": [
+        "RLHF makes models no longer ‘probabilistic models’ – no calibration by default"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 65,
+      "title": "Recap of the lecture",
+      "claims": [
+        "RLHF recap:",
+        "1. RLHF data collection is (also) hard! Many confounding factors",
+        "2. RLHF algorithms are a bit more complex than SFT – esp. PPO",
+        "3. Be mindful of the impact of (over) optimizing for rewards"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    }
+  ]
+}

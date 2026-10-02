@@ -1,0 +1,823 @@
+{
+  "lecture": "lecture_04",
+  "source_path": "official/lectures/lecture_04.pdf",
+  "anchor_convention": "lecture_04.pdf:p<page>",
+  "txt_sha256": "322bae479631dffeca7eb7fb91fcaa5ff45550217c584226d7233a0082069f00",
+  "page_count": 61,
+  "empty_pages": [
+    61
+  ],
+  "summary": {
+    "pages_with_content": 60,
+    "claims": 185,
+    "figures_mentioned": 14,
+    "cites": 7,
+    "dropped": 40
+  },
+  "pages": [
+    {
+      "page": 1,
+      "title": "Lecture 4",
+      "claims": [
+        "A T T E N T I O N A LT E R N AT I V E S A N D M I X T U R E S O F E X P E R T S",
+        "CS336",
+        "Tatsu H"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 2,
+      "title": "Attention alternatives",
+      "claims": [
+        "Cost of attention rises with large context sizes… how do we control those costs?"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://www.meibel.ai/post/understanding-the-impact-of-increasing-llm-context-windows"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 3,
+      "title": "The ‘basic’ toolkit",
+      "claims": [
+        "Combine local + global attention",
+        "Systems engineering",
+        "But what if we want more radical and potentially large gains?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 4,
+      "title": "Linear attention",
+      "claims": [
+        "Consider the usual attention operation.. 𝑄 ∈ 𝑅 𝑛×𝑑𝑘 , 𝐾 ∈ 𝑅 𝑛×𝑑𝑘 , 𝑉 ∈ 𝑅 𝑛×𝑑𝑣",
+        "This is quadratic due to 𝑄𝐾 ⊤ (𝑛 2 𝑑𝑘 ). Can we do better (when 𝜌 is the identity)?",
+        "This is very silly, but surprisingly important.. We get from 𝑛 2 𝑑𝑘 + 𝑛 2 𝑑𝑣 to 2𝑛𝑑𝑣 𝑑𝑘"
+      ],
+      "figures_mentioned": [
+        "[Shen et al 2018, Katharopoulos 2020 for kernel version. Also connections to things like fast weight programmers]"
+      ],
+      "cites": [],
+      "dropped": [
+        "𝐴𝑡𝑡𝑛 𝑄, 𝐾, 𝑉 = 𝜌 𝑄𝐾 ⊤ 𝑉",
+        "𝑄𝐾 ⊤ 𝑉 = 𝑄(𝐾 ⊤ 𝑉)"
+      ]
+    },
+    {
+      "page": 5,
+      "title": "Recurrent form of linear attention",
+      "claims": [
+        "Recall that in purely linear attention, we consider the reordering",
+        "This is linear time (great) but the even nicer thing is that this looks like a RNN.",
+        "𝑆𝑡 = 𝑆𝑡−1 + 𝑘𝑡 𝑣𝑡⊤ and 𝑦𝑡 = 𝑞𝑡⊤ 𝑆𝑡",
+        "This ‘duality’ allows us to train efficiently (using the parallel, quadratic form) and",
+        "inference efficiently (using the serial, linear form)",
+        "(Note: if one weights 𝑆𝑡−1 by 𝛾, you get a RetNet)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "𝑄𝐾 ⊤ 𝑉 = 𝑄(𝐾 ⊤ 𝑉)"
+      ]
+    },
+    {
+      "page": 6,
+      "title": "Minimax M1",
+      "claims": [
+        "Minimax M1 (and minimax-text-01) use a 7-to-1 hybrid (7 linear, 1 full) linear attention.",
+        "Performance (generally) seems strong, and they show linear scaling in context length"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 7,
+      "title": "From linear attention to Mamba-2",
+      "claims": [
+        "Let’s generalize linear attention a little bit and add per-position weights..",
+        "𝑆𝑡 = 𝑆𝑡−1 + 𝑘𝑡 𝑣𝑡⊤ and 𝑦𝑡 = 𝑞𝑡⊤ 𝑆𝑡 (Linear attention)",
+        "𝑆𝑡 = 𝛾𝑡 𝑆𝑡−1 + 𝑘𝑡 𝑣𝑡⊤ and 𝑦𝑡 = 𝑞𝑡⊤ 𝑆𝑡 + 𝑣𝑡⊤ 𝐷 with 𝛾𝑡 = 𝑓(𝑥𝑡 )(Mamba-2)",
+        "There is a lot more words to justify this (go read the mamba 2 paper) but the mechanics",
+        "is that we can make linear attention more expressive via gating (gating is good!)",
+        "This continues to have duality properties (compute 𝛾 in parallel, apply duality)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 8,
+      "title": "Nemotron 3",
+      "claims": [
+        "Mamba attention hybrid (3-1 ish) – comparable (or better) pref to other similar models"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 9,
+      "title": "Gated delta net (and friends)",
+      "claims": [
+        "Let’s generalize things further – gate the input and selectively erase the state.",
+        "𝑆𝑡 = 𝛾𝑡 𝑆𝑡−1 + 𝑘𝑡 𝑣𝑡⊤ and 𝑦𝑡 = 𝑞𝑡⊤ 𝑆𝑡 + 𝑣𝑡⊤ 𝐷 with 𝛾𝑡 = 𝑓(𝑥𝑡 )(Mamba-2)",
+        "𝑆𝑡 = 𝛾𝑡 (𝐼 − 𝛽𝑡 𝑘𝑡 𝑘𝑡⊤ )𝑆𝑡−1 + 𝛽𝑡 𝑘𝑡 𝑣𝑡⊤ and",
+        "𝑦𝑡 = 𝑞𝑡⊤ 𝑆𝑡 with 𝛾𝑡 = 𝑓 𝑥𝑡 , 𝛽𝑡 = 𝑓 𝑥𝑡 (Gated Delta Net)",
+        "The gated delta net adds a ‘no input operation’ gate (𝛽 = 0)",
+        "And erases anything in the direction of the current key (𝐼 − 𝛽𝑡 𝑘𝑡 𝑘𝑡⊤ )",
+        "Close relationships to various fast weight programming / test time training ideas."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 10,
+      "title": "Qwen 3.5 / Qwen Next",
+      "claims": [
+        "The newest qwen are 3-1 GDN / Attention hybrids.",
+        "Once again, pretty reasonable performance with good inference characteristics"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 11,
+      "title": "Hybrid performance",
+      "claims": [
+        "Not many controlled ablations, but some evidence of low losses at small hybrid ratios"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 12,
+      "title": "Alternative to hybrids: sparse adaptation",
+      "claims": [
+        "Instead of attending to every token, do sparse attention (DSA)",
+        "The indexer can be very lightweight, giving significant gains",
+        "Can be ‘post hoc’ adapted after dense short context pretraining"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 13,
+      "title": "DSA – Deepseek Sparse Attention (v3.2, GLM5)",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 14,
+      "title": "Mixture of experts",
+      "claims": [
+        "GPT4 (?)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 15,
+      "title": "What’s a MoE?",
+      "claims": [
+        "Replace big feedforward with (many) big feedforward networks and a selector layer",
+        "You can increase the # experts without affecting FLOPs"
+      ],
+      "figures_mentioned": [
+        "[Fedus et al 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 16,
+      "title": "Why are MoEs getting popular?",
+      "claims": [
+        "Same FLOP, more param does better"
+      ],
+      "figures_mentioned": [
+        "[Fedus et al 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 17,
+      "title": "Why are MoEs getting popular?",
+      "claims": [
+        "Faster to train MoEs"
+      ],
+      "figures_mentioned": [
+        "[OlMoE]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 18,
+      "title": "Why are MoEs getting popular?",
+      "claims": [
+        "Highly competitive vs dense equivalents"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 19,
+      "title": "Why are MoEs getting popular?",
+      "claims": [
+        "Parallelizable to many devices"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 20,
+      "title": "Some MoE results – from the west",
+      "claims": [
+        "MoEs are most of the highest-performance open models, and are quite quick"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 21,
+      "title": "Earlier MoE results from Chinese groups – Qwen",
+      "claims": [
+        "Chinese LLM companies are also doing quite a bit of MoE work on the smaller end"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 22,
+      "title": "Earlier MoE results from Chinese groups - DeepSeek",
+      "claims": [
+        "There’s also some good recent ablation work on MoEs showing they’re generally good"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 23,
+      "title": "Recent MoE results – DeepSeek v3",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 24,
+      "title": "Why haven’t MoEs been more popular?",
+      "claims": [
+        "Infrastructure is complex / advantages on multi node",
+        "Training objectives are somewhat heuristic (and sometimes unstable)"
+      ],
+      "figures_mentioned": [
+        "[Fedus et al 2022]",
+        "[Zoph et al 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 25,
+      "title": "What MoEs generally look like",
+      "claims": [
+        "Typical: replace MLP with MoE layer",
+        "Less common: MoE for attention heads"
+      ],
+      "figures_mentioned": [
+        "[ModuleFormer, JetMoE]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 26,
+      "title": "MoE – what varies?",
+      "claims": [
+        "Routing function",
+        "Expert sizes",
+        "Training objectives"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 27,
+      "title": "Routing function - overview",
+      "claims": [
+        "Many of the routing algorithms boil down to ‘choose top k’",
+        "Token chooses",
+        "Expert chooses",
+        "Global routing via",
+        "expert",
+        "token",
+        "optimization"
+      ],
+      "figures_mentioned": [
+        "[Fedus et al 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 28,
+      "title": "Routing type",
+      "claims": [
+        "Almost all the MoEs do a standard ‘token choice topk’ routing. Some recent ablations"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 29,
+      "title": "Common routing variants in detail",
+      "claims": [
+        "Used in most MoEs",
+        "Switch Transformer (k=1)",
+        "Top-k",
+        "Gshard (k=2), Grok (2), Mixtral (2),",
+        "Qwen (4), DBRX (4),",
+        "DeepSeek (7)",
+        "Hashing",
+        "Common baseline"
+      ],
+      "figures_mentioned": [
+        "[Fedus et al 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 30,
+      "title": "Other routing methods",
+      "claims": [
+        "RL to learn routes",
+        "Used in some of the earliest work",
+        "Bengio 2013, not common now",
+        "Solve a matching",
+        "Linear assignment for routing",
+        "problem",
+        "Used in various papers like Clark ‘22"
+      ],
+      "figures_mentioned": [
+        "[Fedus et al 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 31,
+      "title": "Top-K routing in detail.",
+      "claims": [
+        "Most papers do the old and classic top-k routing. How does this work?",
+        "Gating",
+        "This is the",
+        "DeepSeek (V1-2) router",
+        "(Grok, Qwen do this too)",
+        "Mixtral, DBRX,",
+        "DeepSeek v3",
+        "softmaxes after the",
+        "TopK",
+        "Gates selected by a logistic regressor"
+      ],
+      "figures_mentioned": [
+        "[Dai et al 2024]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 32,
+      "title": "Recent variations from DeepSeek and other Chinese LMs",
+      "claims": [
+        "Smaller, larger number of experts + a few shared experts that are always on.",
+        "(Used in DeepSeek / Qwen, originally from DeepSpeed MoE)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 33,
+      "title": "Various ablations from the DeepSeek paper",
+      "claims": [
+        "More experts, shared experts all seem to generally help"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 34,
+      "title": "Ablations from OlMoE",
+      "claims": [
+        "Gains from fine-grained experts, none from shared experts."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 35,
+      "title": "Expert routing setups for recent MoEs",
+      "claims": [
+        "Model",
+        "Routed",
+        "Active",
+        "Shared",
+        "Fine-grained ratio",
+        "GShard",
+        "Switch Transformer",
+        "ST-MOE",
+        "Mixtral",
+        "DBRX",
+        "Grok",
+        "DeepSeek v1",
+        "1/4",
+        "Qwen 1.5",
+        "1/8",
+        "DeepSeek v3",
+        "1/14",
+        "OlMoE",
+        "1/8",
+        "MiniMax",
+        "~1/4",
+        "Llama 4 (maverick)",
+        "1/2"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "2048",
+        "2",
+        "0",
+        "64",
+        "1",
+        "0",
+        "64",
+        "2",
+        "0",
+        "8",
+        "2",
+        "0",
+        "16",
+        "4",
+        "0",
+        "8",
+        "2",
+        "0",
+        "64",
+        "6",
+        "2",
+        "60",
+        "4",
+        "4",
+        "256",
+        "8",
+        "1",
+        "64",
+        "8",
+        "0",
+        "32",
+        "2",
+        "0",
+        "128",
+        "1",
+        "1"
+      ]
+    },
+    {
+      "page": 36,
+      "title": "How do we train MoEs?",
+      "claims": [
+        "Major challenge: we need sparsity for training-time efficiency…",
+        "But sparse gating decisions are not differentiable!",
+        "Solutions?",
+        "1. Reinforcment learning to optimize gating policies",
+        "2. Stochastic perturbations",
+        "3. Heuristic ‘balancing’ losses.",
+        "Guess which one people use in practice?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 37,
+      "title": "RL for MoEs",
+      "claims": [
+        "RL via REINFORCE does work, but not so much better that it’s a clear win",
+        "RL is the ‘right solution’ but gradient variances and complexity",
+        "means it’s not widely used"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "(REINFORCE baseline approach, Clark et al 2020)"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 38,
+      "title": "Stochastic approximations",
+      "claims": [
+        "1. This naturally leads to experts that are a bit more robust.",
+        "2. The softmax means that the model learns how to rank K experts"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "From Shazeer et al 2017 – routing decisions are stochastic with gaussian perturbations."
+      ],
+      "dropped": []
+    },
+    {
+      "page": 39,
+      "title": "Stochastic approximations",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [
+        "Stochastic jitter in Fedus et al 2022. This does a uniform multiplicative perturbation for the",
+        "same goal of getting less brittle experts. This was later removed in Zoph et al 2022"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 40,
+      "title": "Heuristic balancing losses",
+      "claims": [
+        "Another key issue – systems efficiency requires that we use experts evenly..",
+        "The derivative with respect to 𝑝𝑖 (𝑥) is 𝑇 2 σ 1𝑎𝑟𝑔𝑚𝑎𝑥 𝑝 𝑥 =𝑖 ,",
+        "so more frequent use = stronger downweighting"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "From the Switch Transformer [Fedus et al 2022]"
+      ],
+      "dropped": [
+        "𝛼𝑁"
+      ]
+    },
+    {
+      "page": 41,
+      "title": "Example from deepseek (v1-2)",
+      "claims": [
+        "Per-expert balancing – same as the switch transformer",
+        "Per-device balancing – the objective above, but aggregated by device."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 42,
+      "title": "DeepSeek v3 variation – per-expert biases",
+      "claims": [
+        "Set up a per-expert bias (making it more likely to get tokens) and use online learning",
+        "They call this ‘auxiliary loss free balancing’",
+        "(but the approach is not fully aux loss free..)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 43,
+      "title": "What happens when removing load balancing losses?",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 44,
+      "title": "Training MoEs – the systems side",
+      "claims": [
+        "MoEs parallelize nicely – Each FFN",
+        "Enables additional kinds of parallelism",
+        "can fit in a device"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 45,
+      "title": "Training MoEs – the systems side",
+      "claims": [
+        "MoE routing allows for parallelism, but also some complexities",
+        "Modern libraries like MegaBlocks (used in many open MoEs) use smarter sparse MMs"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 46,
+      "title": "MoE parallelism and architecture modifications",
+      "claims": [
+        "New ideas from Nemotron 3 – down-projecting the activations to reduce communication"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 47,
+      "title": "Fun side issue – stochasticity of MoE models",
+      "claims": [
+        "MoEs can have additional stochasticity beyond normal models..",
+        "Why would a MoE have additional randomness?",
+        "Token dropping from routing happens at a batch level – this means that",
+        "other people’s queries can drop your token!"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 48,
+      "title": "Issues with MoEs - stability",
+      "claims": [
+        "Solution: Use Float 32 just for the expert router (sometimes with an aux z-loss)"
+      ],
+      "figures_mentioned": [
+        "[Zoph 2022]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 49,
+      "title": "Z-loss stability for the router",
+      "claims": [
+        "What happens when we remove the z-loss?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 50,
+      "title": "Issues with MoEs – fine-tuning",
+      "claims": [
+        "Sparse MoEs can overfit on smaller fine-tuning data",
+        "DeepSeek solution – use lots of data 1.4M SFT"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "Zoph et al solution – finetune non-MoE MLPs"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 51,
+      "title": "Other training methods - upcycling",
+      "claims": [
+        "Can we use a pre-trained LM to initialize a MoE?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 52,
+      "title": "Upcycling example - MiniCPM",
+      "claims": [
+        "Uses the MiniCPM model (topk=2, 8 experts, ~ 4B active params).",
+        "Simple MoE, shows gains from the base model with ~ 520B tokens for training"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 53,
+      "title": "Upcycling example – Qwen MoE",
+      "claims": [
+        "Qwen MoE – Initialized from the Qwen 1.8B model top-k=4, 60 experts w/ 4 shared.",
+        "Similar architecture / setup to DeepSeekMoE, but one of the first (confirmed) upcycling successes"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 54,
+      "title": "DeepSeek MoE v1-v2-v3",
+      "claims": [
+        "To wrap up, we’ll walk through the DeepSeek MoE architecture.",
+        "V1 (16B – 2.8 active):",
+        "Shared (2) + Fine-grained (64/4) experts",
+        "Standard, top-k routing",
+        "Standard Aux-loss balancing (Expert + Device)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 55,
+      "title": "DeepSeek MoE v2",
+      "claims": [
+        "V2 (236B – 21 active):",
+        "Shared (2) + Fine-grained (160/10) experts, 6 active",
+        "New things:",
+        "Top-M device routing",
+        "Communication balancing loss – balancing both communication in and out"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 56,
+      "title": "DeepSeek MoE v3",
+      "claims": [
+        "V2 (671B – 37 active):",
+        "Shared (1) + Fine-grained (258) experts, 8 active",
+        "New things",
+        "Sigmoid+Softmax topK + topM",
+        "Aux-loss-free + seq-wise aux"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 57,
+      "title": "Bonus: What else do you need to make DeepSeek MoE v3?",
+      "claims": [
+        "MLA : Multihead, latent attention",
+        "Basic idea: express the Q, K, V as functions of a lower-dim, ‘latent’ activation"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 58,
+      "title": "What else do you need to make DeepSeek MoE v3?",
+      "claims": [
+        "Basic idea: express the Q, K, V as functions of a lower-dim, ‘latent’ activation",
+        "Benefits: when KV-caching, we only need to store 𝑐𝑡𝐾𝑉 , which can be much smaller.",
+        "𝑊 𝑈𝐾 can be merged into the Q projection",
+        "(they also compress queries, for memory savings during training)",
+        "Complexity: rope conflicts with MLA-style caching.",
+        "Without RoPE – 𝑄, 𝐾 = ℎ𝑊 𝑄 , 𝑊 𝑈𝐾 𝑐𝑡𝐾𝑉 = ⟨ℎ 𝑊 𝑄 𝑊 𝑈𝐾 , 𝑐𝑡𝐾𝑉 ⟩",
+        "With RoPE - 𝑄𝑅𝑞 , 𝑅𝑘 𝐾 = ℎ𝑊 𝑄 𝑅𝑞 , 𝑅𝑘 𝑊 𝑈𝐾 𝑐𝑡𝐾𝑉 = ℎ 𝑊 𝑄 𝑅𝑞 𝑅𝑘 𝑊 𝑈𝐾 , 𝑐𝑡𝐾𝑉",
+        "The solution – Have a few non-latent key dimensions that can be rotated"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 59,
+      "title": "What else do you need to make DeepSeek MoE v3?",
+      "claims": [
+        "MTP: Have small, lightweight models that predict multiple steps ahead",
+        "(But they only do MTP with one token ahead)",
+        "(See paper for ablations)"
+      ],
+      "figures_mentioned": [
+        "[Deepseek v3]",
+        "[EAGLE]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 60,
+      "title": "MoE summary",
+      "claims": [
+        "MoEs take advantage of sparsity – not all inputs need the full model",
+        "Discrete routing is hard, but top-k heuristics seem to work",
+        "Lots of empirical evidence now that MoEs work, and are cost-effective"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    }
+  ]
+}

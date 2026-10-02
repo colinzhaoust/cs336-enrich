@@ -1,0 +1,32 @@
+{
+  "fa_paper": {
+    "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness (Dao, Fu, Ermon, Rudra, Ré)",
+    "kind": "paper",
+    "arxiv": "2205.14135",
+    "revision": "arXiv:2205.14135v2 [cs.LG] 23 Jun 2022",
+    "url": "https://arxiv.org/abs/2205.14135",
+    "text": "atlas/papers/flashattention/paper.txt (arXiv HTML full text https://arxiv.org/html/2205.14135v2 converted to text by discover_paper.py's companion extractor; display math kept as the HTML alttext LaTeX)",
+    "anchor_convention": "fa:§N (section), fa:algN:LK (Algorithm N, line K as numbered in the box), fa:thmN / fa:propN (theorem, proposition), fa:tableN / fa:figN (as printed), fa:eqN (the paper's own equation numbers, which exist only for Appendix B Eqs. 1-6; main-body displays are unnumbered and are anchored by section, e.g. fa:§3.1:softmax-decomp), fa:§C:thmN-proof / fa:§C:propN-proof (a proof paragraph in Appendix C), fa:§B.5 / fa:§E.5 (appendix subsections)",
+    "note": "No PDF was downloaded; page numbers are therefore not recorded. Every quote with this source is checked verbatim (whitespace- and punctuation-insensitive) against paper.txt by discover_paper.py --check; discovered.json carries the result. Tables are transcribed from the HTML table cells, so values are as printed."
+  },
+  "lecture_05": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs (FlashAttention on slides 50-54, memory hierarchy on 10-12)",
+    "kind": "slides",
+    "path": "official/lectures/lecture_05.pdf",
+    "text": "atlas/papers/flashattention/lecture_05.txt (copy of atlas/lectures/lecture_05/lecture_05.txt, pdftotext -layout)",
+    "anchor_convention": "lecture_05.pdf:pNN (pdf page = slide number)",
+    "note": "Gives the course's teaching order for FlashAttention (tiling -> online softmax -> forward pass), to be compared with the paper's order. The course thread's KPs gpu-memory-hierarchy, tiling-shared-memory, online-softmax, flash-attention-forward are referenced via external_prerequisites as lecture_05:<id>."
+  },
+  "online_softmax_2018": {
+    "title": "Online normalizer calculation for softmax (Milakov & Gimelshein, 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1805.02867",
+    "note": "The paper cites the softmax-with-scaling decomposition as [60] (Milakov & Gimelshein), [51] (Reformer) and [66] (Rabe & Staats); not re-read for this thread."
+  },
+  "flash_attention_2_paper": {
+    "title": "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (Dao, 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2307.08691",
+    "note": "Referenced only to flag that the v1 loop order (outer over K/V blocks) is what this paper prints; the loop swap is FlashAttention-2's change and is not evidenced in this thread."
+  }
+}

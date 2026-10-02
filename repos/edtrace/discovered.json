@@ -1,0 +1,876 @@
+{
+  "repo": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace",
+  "git": {
+    "head": null,
+    "ref": null,
+    "sha": null,
+    "source": null
+  },
+  "entry": "execute.py",
+  "args": {
+    "max_depth": 6,
+    "skip": []
+  },
+  "summary": {
+    "n_modules": 7,
+    "n_lines": 792,
+    "n_import_edges": 23,
+    "n_trace_hops": 6,
+    "n_unresolved_calls": 0,
+    "n_frontend_files": 4,
+    "algorithms_with_readme": [],
+    "algorithms_without_readme": []
+  },
+  "modules": [
+    {
+      "name": "__init__",
+      "path": "__init__.py",
+      "lines": 5,
+      "sha256": "89d4bf20a0a116d48202d091499f6897a7ea2af1334ce6cb3495dba9623dd953",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "arxiv_util",
+      "path": "arxiv_util.py",
+      "lines": 53,
+      "sha256": "a21725d3a5d96e6ebf841f5f15ea7ac1e0e07f24cdc28bd96b8ae19a32172160",
+      "defs": [
+        {
+          "name": "canonicalize",
+          "kind": "function",
+          "line": 7,
+          "end_line": 12,
+          "doc": "Remove newlines and extra whitespace with one space.",
+          "parent": null
+        },
+        {
+          "name": "is_arxiv_link",
+          "kind": "function",
+          "line": 15,
+          "end_line": 16,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "arxiv_reference",
+          "kind": "function",
+          "line": 18,
+          "end_line": 53,
+          "doc": "Parse an arXiv reference from a URL (e.g., https://arxiv.org/abs/2005.14165).",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "examples",
+      "path": "examples.py",
+      "lines": 106,
+      "sha256": "eedcddc8768feab9b3ea7fd51ea947ac8a76d6479b8d671dfdf01e0cb3d516e3",
+      "defs": [
+        {
+          "name": "main",
+          "kind": "function",
+          "line": 9,
+          "end_line": 11,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "compute",
+          "kind": "function",
+          "line": 13,
+          "end_line": 17,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "display",
+          "kind": "function",
+          "line": 20,
+          "end_line": 39,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "inspect_values",
+          "kind": "function",
+          "line": 42,
+          "end_line": 103,
+          "doc": "",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "execute",
+      "path": "execute.py",
+      "lines": 387,
+      "sha256": "9393a2f6529edf285520088045a2b4ae0dcddca61945c293374735f0b6495769",
+      "defs": [
+        {
+          "name": "StackElement",
+          "kind": "class",
+          "line": 18,
+          "end_line": 29,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "Value",
+          "kind": "class",
+          "line": 33,
+          "end_line": 45,
+          "doc": "Represents the value of an environment variable.",
+          "parent": null
+        },
+        {
+          "name": "Step",
+          "kind": "class",
+          "line": 49,
+          "end_line": 58,
+          "doc": "Not frozen because the renderings need to be updated.",
+          "parent": null
+        },
+        {
+          "name": "Trace",
+          "kind": "class",
+          "line": 62,
+          "end_line": 70,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "Directive",
+          "kind": "class",
+          "line": 81,
+          "end_line": 85,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "parse_directives",
+          "kind": "function",
+          "line": 88,
+          "end_line": 109,
+          "doc": "Parse the directives from the line.",
+          "parent": null
+        },
+        {
+          "name": "get_inspect_expressions",
+          "kind": "function",
+          "line": 112,
+          "end_line": 123,
+          "doc": "If code contains \"@inspect <variable>\" (as a comment), return those variables.",
+          "parent": null
+        },
+        {
+          "name": "get_clear_expressions",
+          "kind": "function",
+          "line": 126,
+          "end_line": 137,
+          "doc": "If code contains \"@clear <variable>\" (as a comment), return the variables to clear.",
+          "parent": null
+        },
+        {
+          "name": "to_primitive",
+          "kind": "function",
+          "line": 140,
+          "end_line": 144,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "to_serializable_value",
+          "kind": "function",
+          "line": 147,
+          "end_line": 192,
+          "doc": "Convert `value` to something that's serializable to JSON.",
+          "parent": null
+        },
+        {
+          "name": "get_type_str",
+          "kind": "function",
+          "line": 195,
+          "end_line": 200,
+          "doc": "Return the string representation of the type of `value`.",
+          "parent": null
+        },
+        {
+          "name": "execute",
+          "kind": "function",
+          "line": 203,
+          "end_line": 353,
+          "doc": "Execute the module and return a trace of the execution.",
+          "parent": null
+        },
+        {
+          "name": "compute_hidden_line_numbers",
+          "kind": "function",
+          "line": 356,
+          "end_line": 366,
+          "doc": "Compute the line numbers to hide based on the @hide comments.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "execute_util",
+      "path": "execute_util.py",
+      "lines": 159,
+      "sha256": "5dacdec92134beac3188c0f93d20d73937cb43f0230fce8ffc6a038010a4e1de",
+      "defs": [
+        {
+          "name": "CodeLocation",
+          "kind": "class",
+          "line": 16,
+          "end_line": 19,
+          "doc": "Refers to a specific line of code.",
+          "parent": null
+        },
+        {
+          "name": "Rendering",
+          "kind": "class",
+          "line": 23,
+          "end_line": 36,
+          "doc": "Specifies what to display instead of a line of code.  Types:",
+          "parent": null
+        },
+        {
+          "name": "text",
+          "kind": "function",
+          "line": 40,
+          "end_line": 54,
+          "doc": "Make a note (bullet point) with `message`.",
+          "parent": null
+        },
+        {
+          "name": "image",
+          "kind": "function",
+          "line": 57,
+          "end_line": 70,
+          "doc": "Show the image at `url`.",
+          "parent": null
+        },
+        {
+          "name": "video",
+          "kind": "function",
+          "line": 73,
+          "end_line": 86,
+          "doc": "Show the video at `url`.",
+          "parent": null
+        },
+        {
+          "name": "is_url",
+          "kind": "function",
+          "line": 89,
+          "end_line": 91,
+          "doc": "Check if `url` looks like a URL.",
+          "parent": null
+        },
+        {
+          "name": "url_reference",
+          "kind": "function",
+          "line": 94,
+          "end_line": 99,
+          "doc": "Makes a reference (but doesn't add it to _current_renderings).",
+          "parent": null
+        },
+        {
+          "name": "link",
+          "kind": "function",
+          "line": 102,
+          "end_line": 126,
+          "doc": "Shows a link.  There are four possible usages:",
+          "parent": null
+        },
+        {
+          "name": "plot",
+          "kind": "function",
+          "line": 129,
+          "end_line": 131,
+          "doc": "Show a plot given `spec`.",
+          "parent": null
+        },
+        {
+          "name": "note",
+          "kind": "function",
+          "line": 134,
+          "end_line": 136,
+          "doc": "Show a note.",
+          "parent": null
+        },
+        {
+          "name": "pop_renderings",
+          "kind": "function",
+          "line": 144,
+          "end_line": 148,
+          "doc": "Return the renderings and clear the list.",
+          "parent": null
+        },
+        {
+          "name": "system_text",
+          "kind": "function",
+          "line": 151,
+          "end_line": 154,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "remove_ansi_escape_sequences",
+          "kind": "function",
+          "line": 157,
+          "end_line": 159,
+          "doc": "",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "file_util",
+      "path": "file_util.py",
+      "lines": 49,
+      "sha256": "a8e9f3dea3ae8f90ec8941629e4accd607fcc39e13ca37556d9744e1e24dbd29",
+      "defs": [
+        {
+          "name": "download_file",
+          "kind": "function",
+          "line": 10,
+          "end_line": 30,
+          "doc": "Download `url` and save the contents to `filename`.  Skip if `filename` already exists.",
+          "parent": null
+        },
+        {
+          "name": "cached",
+          "kind": "function",
+          "line": 33,
+          "end_line": 41,
+          "doc": "Download `url` if needed and return the location of the cached file.",
+          "parent": null
+        },
+        {
+          "name": "relativize",
+          "kind": "function",
+          "line": 44,
+          "end_line": 48,
+          "doc": "Given a path, return a path relative to the current working directory.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "reference",
+      "path": "reference.py",
+      "lines": 33,
+      "sha256": "0db3634fc96d5cc90db74011a24968004dd47b0a1e8e1a5fa9bf33a0d4d74afa",
+      "defs": [
+        {
+          "name": "Reference",
+          "kind": "class",
+          "line": 6,
+          "end_line": 33,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "label",
+          "kind": "method",
+          "line": 16,
+          "end_line": 33,
+          "doc": "Return a short label like [Author+ YYYY].",
+          "parent": "Reference"
+        }
+      ],
+      "parse_error": null
+    }
+  ],
+  "import_graph": [
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "text",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "image",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "video",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "link",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "plot",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "note",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "system_text",
+      "line": 1,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "reference",
+      "name": "Reference",
+      "line": 2,
+      "nested": false
+    },
+    {
+      "from": "__init__",
+      "to": "execute_util",
+      "name": "url_reference",
+      "line": 3,
+      "nested": false
+    },
+    {
+      "from": "arxiv_util",
+      "to": "file_util",
+      "name": "cached",
+      "line": 3,
+      "nested": false
+    },
+    {
+      "from": "arxiv_util",
+      "to": "reference",
+      "name": "Reference",
+      "line": 4,
+      "nested": false
+    },
+    {
+      "from": "examples",
+      "to": "execute_util",
+      "name": "text",
+      "line": 6,
+      "nested": false
+    },
+    {
+      "from": "examples",
+      "to": "execute_util",
+      "name": "image",
+      "line": 6,
+      "nested": false
+    },
+    {
+      "from": "examples",
+      "to": "execute_util",
+      "name": "link",
+      "line": 6,
+      "nested": false
+    },
+    {
+      "from": "examples",
+      "to": "execute_util",
+      "name": "system_text",
+      "line": 6,
+      "nested": false
+    },
+    {
+      "from": "execute",
+      "to": "execute_util",
+      "name": "Rendering",
+      "line": 13,
+      "nested": false
+    },
+    {
+      "from": "execute",
+      "to": "execute_util",
+      "name": "pop_renderings",
+      "line": 13,
+      "nested": false
+    },
+    {
+      "from": "execute",
+      "to": "file_util",
+      "name": "relativize",
+      "line": 14,
+      "nested": false
+    },
+    {
+      "from": "execute_util",
+      "to": "file_util",
+      "name": "cached",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "execute_util",
+      "to": "file_util",
+      "name": "relativize",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "execute_util",
+      "to": "arxiv_util",
+      "name": "is_arxiv_link",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "execute_util",
+      "to": "arxiv_util",
+      "name": "arxiv_reference",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "execute_util",
+      "to": "reference",
+      "name": "Reference",
+      "line": 13,
+      "nested": false
+    }
+  ],
+  "entry_trace": {
+    "root": "execute:__main__",
+    "root_kind": "__main__ guard",
+    "max_depth": 6,
+    "hops": [
+      {
+        "order": 1,
+        "depth": 0,
+        "caller": "execute:__main__",
+        "callee": "execute:execute",
+        "call_line": 382,
+        "def_line": 203,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 2,
+        "depth": 1,
+        "caller": "execute:execute",
+        "callee": "file_util:relativize",
+        "call_line": 350,
+        "def_line": 44,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 3,
+        "depth": 1,
+        "caller": "execute:execute",
+        "callee": "execute:compute_hidden_line_numbers",
+        "call_line": 351,
+        "def_line": 356,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 4,
+        "depth": 2,
+        "caller": "execute:compute_hidden_line_numbers",
+        "callee": "execute:parse_directives",
+        "call_line": 362,
+        "def_line": 88,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 5,
+        "depth": 3,
+        "caller": "execute:parse_directives",
+        "callee": "execute:Directive",
+        "call_line": 105,
+        "def_line": 81,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 6,
+        "depth": 1,
+        "caller": "execute:execute",
+        "callee": "execute:Trace",
+        "call_line": 352,
+        "def_line": 62,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      }
+    ],
+    "unresolved_calls": []
+  },
+  "algorithm_readmes": [],
+  "frontend_dir": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src",
+  "frontend_modules": [
+    {
+      "path": "App.jsx",
+      "lines": 15,
+      "sha256": "3671c2d98d05a489f3ed8ce931ec0f49f3c9f939e676b0fcae3e3dd88ed493a3",
+      "defs": [
+        {
+          "name": "App",
+          "line": 5
+        }
+      ]
+    },
+    {
+      "path": "TraceViewer.jsx",
+      "lines": 946,
+      "sha256": "0d300f97241a21b4c19d8d565a7d91616d3b11880c2aaaf380a9f607e9107283",
+      "defs": [
+        {
+          "name": "TraceViewer",
+          "line": 10
+        },
+        {
+          "name": "fetchData",
+          "line": 37
+        },
+        {
+          "name": "handleKeyDown",
+          "line": 65
+        },
+        {
+          "name": "handleMouseDown",
+          "line": 105
+        },
+        {
+          "name": "handleMouseMove",
+          "line": 118
+        },
+        {
+          "name": "handleMouseUp",
+          "line": 127
+        },
+        {
+          "name": "stepForward",
+          "line": 209
+        },
+        {
+          "name": "stepBackward",
+          "line": 216
+        },
+        {
+          "name": "stepOverForward",
+          "line": 223
+        },
+        {
+          "name": "stepOverBackward",
+          "line": 230
+        },
+        {
+          "name": "stepUp",
+          "line": 237
+        },
+        {
+          "name": "getStepOverIndex",
+          "line": 244
+        },
+        {
+          "name": "getStepUpIndex",
+          "line": 262
+        },
+        {
+          "name": "computeLinesToShow",
+          "line": 281
+        },
+        {
+          "name": "toggleRawMode",
+          "line": 318
+        },
+        {
+          "name": "toggleAnimateMode",
+          "line": 323
+        },
+        {
+          "name": "toggleHideEnv",
+          "line": 328
+        },
+        {
+          "name": "toggleShowNotes",
+          "line": 333
+        },
+        {
+          "name": "gotoTrace",
+          "line": 338
+        },
+        {
+          "name": "getLocation",
+          "line": 348
+        },
+        {
+          "name": "renderEnv",
+          "line": 355
+        },
+        {
+          "name": "renderedEnv",
+          "line": 392
+        },
+        {
+          "name": "inSameFunction",
+          "line": 408
+        },
+        {
+          "name": "isStrictAncestorOf",
+          "line": 426
+        },
+        {
+          "name": "isInteger",
+          "line": 430
+        },
+        {
+          "name": "renderValue",
+          "line": 434
+        },
+        {
+          "name": "renderNumber",
+          "line": 466
+        },
+        {
+          "name": "renderTensor",
+          "line": 483
+        },
+        {
+          "name": "renderList",
+          "line": 522
+        },
+        {
+          "name": "renderDict",
+          "line": 531
+        },
+        {
+          "name": "renderTitle",
+          "line": 544
+        },
+        {
+          "name": "makeProgressBar",
+          "line": 555
+        },
+        {
+          "name": "renderLines",
+          "line": 575
+        },
+        {
+          "name": "renderedLines",
+          "line": 594
+        },
+        {
+          "name": "renderings",
+          "line": 605
+        },
+        {
+          "name": "noteRenderings",
+          "line": 606
+        },
+        {
+          "name": "renderedRenderings",
+          "line": 616
+        },
+        {
+          "name": "removeDirectives",
+          "line": 709
+        },
+        {
+          "name": "gotoLine",
+          "line": 725
+        },
+        {
+          "name": "scrollIntoViewIfNeeded",
+          "line": 752
+        },
+        {
+          "name": "MarkdownRenderer",
+          "line": 773
+        },
+        {
+          "name": "ExternalLink",
+          "line": 804
+        },
+        {
+          "name": "notes",
+          "line": 810
+        },
+        {
+          "name": "getReferenceAnchorText",
+          "line": 835
+        },
+        {
+          "name": "renderDate",
+          "line": 848
+        },
+        {
+          "name": "renderAuthors",
+          "line": 853
+        },
+        {
+          "name": "renderRendering",
+          "line": 864
+        },
+        {
+          "name": "renderError",
+          "line": 893
+        },
+        {
+          "name": "updateUrlParams",
+          "line": 902
+        },
+        {
+          "name": "TracePathPrompt",
+          "line": 914
+        },
+        {
+          "name": "handleSubmit",
+          "line": 917
+        }
+      ]
+    },
+    {
+      "path": "main.jsx",
+      "lines": 10,
+      "sha256": "4b4b864dbe45253425d0c925337180ec07e204295179f80f59551216f466f618",
+      "defs": []
+    },
+    {
+      "path": "utils.js",
+      "lines": 23,
+      "sha256": "78b74a1b101ac9f7c2ff8ed4e0e08ed5d73f6c15fe3ffb90ee4f6dd7cad959f2",
+      "defs": [
+        {
+          "name": "navigateToUrl",
+          "line": 4
+        },
+        {
+          "name": "getLast",
+          "line": 21
+        }
+      ]
+    }
+  ]
+}

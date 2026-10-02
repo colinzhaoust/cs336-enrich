@@ -1,0 +1,513 @@
+{
+ "execute.py:L343-L348": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 343,
+  "end": 348,
+  "text": "    # Run the module\n    module = importlib.import_module(module_name)\n    visible_paths.append(inspect.getfile(module))\n    sys.settrace(trace_func)\n    module.main()\n    sys.settrace(None)",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L247-L251": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 247,
+  "end": 251,
+  "text": "        # Get the current file path from the frame and skip if not in visible paths\n        # to avoid tracing deep into imports (which would be slow and irrelevant)\n        current_path = frame.f_code.co_filename\n        if current_path not in visible_paths:\n            return trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L255-L263": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 255,
+  "end": 263,
+  "text": "        if event == \"return\":\n            return trace_func\n\n        # Print the current line of code\n        item = stack[-1]\n\n        # Don't step into comprehensions since they're redundant and just stay on the line\n        if item.function_name in (\"<listcomp>\", \"<lambda>\"):\n            return trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L215-L230": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 215,
+  "end": 230,
+  "text": "    def get_stack() -> list[StackElement]:\n        \"\"\"Return the last element of `stack`, but skip over items where local_trace_func is active.\"\"\"\n        stack = []\n        # stack looks like this:\n        #   _run_module_as_main _run_code <module> execute [good stuff to return] local_trace_func trace_func get_stack\n        items = traceback.extract_stack()\n        for item in traceback.extract_stack():\n            if item.name in (\"_run_module_as_main\", \"_run_code\", \"<module>\", \"execute\", \"local_trace_func\", \"trace_func\", \"get_stack\"):\n                continue\n            stack.append(StackElement(\n                path=relativize(item.filename),\n                line_number=item.lineno,\n                function_name=item.name,\n                code=item.line,\n            ))\n        return stack",
+  "sha256": "9393a2f6529e"
+ },
+ "README.md:L24-L30": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/README.md",
+  "start": 24,
+  "end": 30,
+  "text": "2. Execute the program and record the trace:\n\n```sh\nuv add --upgrade edtrace\npython -m edtrace.execute -m hello\n```\nThe results are saved in `var/traces/hello.json`.",
+  "sha256": "da0c327d0f38"
+ },
+ "execute.py:L343-L353": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 343,
+  "end": 353,
+  "text": "    # Run the module\n    module = importlib.import_module(module_name)\n    visible_paths.append(inspect.getfile(module))\n    sys.settrace(trace_func)\n    module.main()\n    sys.settrace(None)\n\n    files = {relativize(path): open(path).read() for path in visible_paths}\n    hidden_line_numbers = compute_hidden_line_numbers(files)\n    trace = Trace(steps=steps, files=files, hidden_line_numbers=hidden_line_numbers)\n    return trace",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L247-L263": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 247,
+  "end": 263,
+  "text": "        # Get the current file path from the frame and skip if not in visible paths\n        # to avoid tracing deep into imports (which would be slow and irrelevant)\n        current_path = frame.f_code.co_filename\n        if current_path not in visible_paths:\n            return trace_func\n\n        stack = get_stack()\n\n        if event == \"return\":\n            return trace_func\n\n        # Print the current line of code\n        item = stack[-1]\n\n        # Don't step into comprehensions since they're redundant and just stay on the line\n        if item.function_name in (\"<listcomp>\", \"<lambda>\"):\n            return trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L233-L245": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 233,
+  "end": 245,
+  "text": "        \"\"\"\n        trace_func and local_trace_func are called on various lines of code when executed.\n        - trace_func is called *before* a line of code is executed.\n        - local_trace_func is called *after* a line of code has been executed\n          and will have the values of the variables.\n        We generally keep the local_trace_func version.  However, when you have\n        a function call that you're tracing through, you want to keep both\n        versions.\n\n        We don't care about all the events, so here are the rules:\n        - In local_trace_func, if the previous event was the same line (presumably the trace_func)\n        - Remove all trace_func(return)\n        \"\"\"",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L282-L288": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 282,
+  "end": 288,
+  "text": "        open_step = Step(\n            stack=stack,\n            env={},\n        )\n        if len(steps) == 0 or open_step.stack != steps[-1].stack:  # Only add a step if it's not redundant\n            steps.append(open_step)\n        open_step_index = len(steps) - 1",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L294-L303": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 294,
+  "end": 303,
+  "text": "            if open_step_index == len(steps) - 1:\n                close_step = steps[-1]\n            else:\n                print(f\"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}\")\n\n                close_step = Step(\n                    stack=stack,\n                    env={},\n                )\n                steps.append(close_step)",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L334-L341": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 334,
+  "end": 341,
+  "text": "            # Capture the renderings of the last line\n            close_step.renderings = pop_renderings()\n\n            # Pass control back to the global trace function\n            return trace_func(frame, event, arg)\n\n        # Pass control to local_trace_func to update the environment\n        return local_trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L280-L303": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 280,
+  "end": 303,
+  "text": "        print(f\"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}\")\n\n        open_step = Step(\n            stack=stack,\n            env={},\n        )\n        if len(steps) == 0 or open_step.stack != steps[-1].stack:  # Only add a step if it's not redundant\n            steps.append(open_step)\n        open_step_index = len(steps) - 1\n\n        def local_trace_func(frame, event, arg):\n            \"\"\"This is called *after* a line of code has been executed.\"\"\"\n            # If the last step was the same line, then just use the same one\n            # Otherwise, create a new step (e.g., returning from a function)\n            if open_step_index == len(steps) - 1:\n                close_step = steps[-1]\n            else:\n                print(f\"  [{len(steps)} {os.path.basename(item.path)}:{item.line_number}] {item.code}\")\n\n                close_step = Step(\n                    stack=stack,\n                    env={},\n                )\n                steps.append(close_step)",
+  "sha256": "9393a2f6529e"
+ },
+ "execute_util.py:L22-L36": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 22,
+  "end": 36,
+  "text": "@dataclass(frozen=True)\nclass Rendering:\n    \"\"\"\n    Specifies what to display instead of a line of code.  Types:\n    - text: plain text (verbatim)\n    - markdown: to be rendered as markdown\n    - image: an image (data = url)\n    - video: a video (data = url)\n    - link: an link to internal code or external URL\n    \"\"\"\n    type: str\n    data: str | None = None\n    style: dict | None = None\n    external_link: Reference | None = None\n    internal_link: CodeLocation | None = None",
+  "sha256": "5dacdec92134"
+ },
+ "execute_util.py:L40-L54": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 40,
+  "end": 54,
+  "text": "def text(message: str, style: dict | None = None, verbatim: bool = False):\n    \"\"\"Make a note (bullet point) with `message`.\"\"\"\n    style = style or {}\n    if verbatim:\n        messages = message.split(\"\\n\")\n        style = {\n            \"fontFamily\": \"monospace\",\n            \"whiteSpace\": \"pre\",\n            **style\n        }\n    else:\n        messages = [message]\n\n    for message in messages:\n        _current_renderings.append(Rendering(type=\"markdown\", data=message, style=style))",
+  "sha256": "5dacdec92134"
+ },
+ "execute_util.py:L63-L70": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 63,
+  "end": 70,
+  "text": "    if is_url(url):\n        path = cached(url, \"image\")\n    else:\n        path = url\n        if not os.path.exists(path):\n            raise ValueError(f\"Image not found: {path}\")\n\n    _current_renderings.append(Rendering(type=\"image\", data=path, style=style))",
+  "sha256": "5dacdec92134"
+ },
+ "execute_util.py:L102-L109": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 102,
+  "end": 109,
+  "text": "def link(arg: type | Reference | str | None = None, style: dict | None = None, **kwargs):\n    \"\"\"\n    Shows a link.  There are four possible usages:\n    1. link(title=\"...\", url=\"...\") [Creates a new reference]\n    2. link(arg: Reference) [Shows an existing reference]\n    3. link(arg: type) [Shows a link to the code]\n    4. link(arg: str) [Creates a new reference with the given URL]\n    \"\"\"",
+  "sha256": "5dacdec92134"
+ },
+ "execute_util.py:L141-L148": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 141,
+  "end": 148,
+  "text": "# Accumulate the renderings during execution (gets flushed).\n_current_renderings: list[Rendering] = []\n\ndef pop_renderings() -> list[Rendering]:\n    \"\"\"Return the renderings and clear the list.\"\"\"\n    renderings = _current_renderings.copy()\n    _current_renderings.clear()\n    return renderings",
+  "sha256": "5dacdec92134"
+ },
+ "execute_util.py:L117-L121": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 117,
+  "end": 121,
+  "text": "    elif isinstance(arg, type) or callable(arg):\n        path = inspect.getfile(arg)\n        _, line_number = inspect.getsourcelines(arg)\n        anchor = CodeLocation(relativize(path), line_number)\n        _current_renderings.append(Rendering(type=\"link\", data=arg.__name__, style=style, internal_link=anchor))",
+  "sha256": "5dacdec92134"
+ },
+ "execute_util.py:L102-L126": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 102,
+  "end": 126,
+  "text": "def link(arg: type | Reference | str | None = None, style: dict | None = None, **kwargs):\n    \"\"\"\n    Shows a link.  There are four possible usages:\n    1. link(title=\"...\", url=\"...\") [Creates a new reference]\n    2. link(arg: Reference) [Shows an existing reference]\n    3. link(arg: type) [Shows a link to the code]\n    4. link(arg: str) [Creates a new reference with the given URL]\n    \"\"\"\n    style = style or {}\n\n    if arg is None:\n        reference = Reference(**kwargs)\n        _current_renderings.append(Rendering(type=\"link\", data=reference.label, style=style, external_link=reference))\n    elif isinstance(arg, Reference):\n        _current_renderings.append(Rendering(type=\"link\", data=arg.label, style=style, external_link=arg))\n    elif isinstance(arg, type) or callable(arg):\n        path = inspect.getfile(arg)\n        _, line_number = inspect.getsourcelines(arg)\n        anchor = CodeLocation(relativize(path), line_number)\n        _current_renderings.append(Rendering(type=\"link\", data=arg.__name__, style=style, internal_link=anchor))\n    elif isinstance(arg, str):\n        reference = url_reference(url=arg, **kwargs)\n        _current_renderings.append(Rendering(type=\"link\", data=reference.label, style=style, external_link=reference))\n    else:\n        raise ValueError(f\"Invalid argument: {arg}\")",
+  "sha256": "5dacdec92134"
+ },
+ "execute.py:L88-L109": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 88,
+  "end": 109,
+  "text": "def parse_directives(line: str) -> list[Directive]:\n    \"\"\"\n    Parse the directives from the line.\n    Examples:\n        \"... # @inspect x y @hide\" -> [Directive(name=\"@inspect\", args=[\"x\", \"y\"]), Directive(name=\"@hide\", args=[])]\n    \"\"\"\n    # Get tokens after the \"#\"\n    if \"#\" not in line:\n        return []\n    tokens = line.split(\"#\")[1].split()\n    directives: list[Directive] = []\n    for token in tokens:\n        if token.startswith(\"@\"):\n            if token not in ACCEPTED_DIRECTIVES:\n                print(f\"WARNING: {token} is not a valid directive.\")\n            name = token\n            args = []\n            directives.append(Directive(name=name, args=args))\n        else:\n            if len(directives) > 0:\n                directives[-1].args.append(token)\n    return directives",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L112-L123": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 112,
+  "end": 123,
+  "text": "def get_inspect_expressions(directives: list[Directive]) -> list[str]:\n    \"\"\"\n    If code contains \"@inspect <variable>\" (as a comment), return those variables.\n    Example code:\n        x, y = str.split(\"a,b\")  # @inspect x @inspect y\n    We would return [\"x\", \"y\"]\n    \"\"\"\n    variables = []\n    for directive in directives:\n        if directive.name == DIRECTIVE_INSPECT:\n            variables.extend(directive.args)\n    return variables",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L311-L327": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 311,
+  "end": 327,
+  "text": "            for expr in exprs:\n                if \".\" in expr:  # e.g., node.name\n                    var, attr = expr.split(\".\", 1)\n                else:\n                    var = expr\n                    attr = None\n                if var in locals:\n                    # Follow the attribute chain\n                    value = locals[var]\n                    if attr:\n                        for attr in attr.split(\".\"):\n                            if value is None:  # Stop early to avoid dereferencing None\n                                break\n                            value = getattr(value, attr)\n                    close_step.env[expr] = to_serializable_value(value)\n                else:\n                    print(f\"WARNING: variable {var} not found in locals\")",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L330-L332": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 330,
+  "end": 332,
+  "text": "            clear_exprs = get_clear_expressions(directives)\n            for expr in clear_exprs:\n                close_step.env[expr] = None",
+  "sha256": "9393a2f6529e"
+ },
+ "lecture_02.py:L499": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 499,
+  "end": 499,
+  "text": "    assert torch.equal(w.grad, torch.tensor([1, 2, 3]))  # @inspect w.grad",
+  "sha256": "f731b3849afc"
+ },
+ "lecture_02.py:L234": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 234,
+  "end": 234,
+  "text": "    text(\"Let's try a more complex example...\")  # @clear x y z",
+  "sha256": "f731b3849afc"
+ },
+ "execute.py:L305-L332": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 305,
+  "end": 332,
+  "text": "            # Update the environment with the actual values\n            locals = frame.f_locals\n            if inspect_all_variables:\n                exprs = locals.keys()\n            else:\n                exprs = get_inspect_expressions(directives)\n            for expr in exprs:\n                if \".\" in expr:  # e.g., node.name\n                    var, attr = expr.split(\".\", 1)\n                else:\n                    var = expr\n                    attr = None\n                if var in locals:\n                    # Follow the attribute chain\n                    value = locals[var]\n                    if attr:\n                        for attr in attr.split(\".\"):\n                            if value is None:  # Stop early to avoid dereferencing None\n                                break\n                            value = getattr(value, attr)\n                    close_step.env[expr] = to_serializable_value(value)\n                else:\n                    print(f\"WARNING: variable {var} not found in locals\")\n                print(f\"    env: {expr} = {close_step.env.get(expr)}\")\n        \n            clear_exprs = get_clear_expressions(directives)\n            for expr in clear_exprs:\n                close_step.env[expr] = None",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L32-L46": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 32,
+  "end": 46,
+  "text": "@dataclass(frozen=True)\nclass Value:\n    \"\"\"Represents the value of an environment variable.\"\"\"\n    type: str\n    \"\"\"The type of the value.\"\"\"\n\n    contents: any\n    \"\"\"The contents itself.\"\"\"\n\n    dtype: str | None = None\n    \"\"\"If `contents` is a tensor/array, then this is its dtype (e.g., \"float32\").\"\"\"\n\n    shape: list[int] | None = None\n    \"\"\"If `contents` is a tensor/array, then this is its shape (e.g., [2, 3] for a 2x3 matrix).\"\"\"\n",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L152-L166": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 152,
+  "end": 166,
+  "text": "    if isinstance(value, (bool, int, float, str)):\n        # Serialize inf and nan values specially since JSON doesn't support it\n        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):\n            return Value(type=value_type, contents=str(value))\n        return Value(type=value_type, contents=value)\n\n    # Tensors\n    if isinstance(value, (np.int64,)):\n        return Value(type=value_type, contents=int(value))  # Hope no rounding issues\n    if isinstance(value, (np.float64,)):\n        return Value(type=value_type, contents=float(value))  # Hope no rounding issues\n    if isinstance(value, np.ndarray):\n        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())\n    if isinstance(value, torch.Tensor):\n        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L176-L192": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 176,
+  "end": 192,
+  "text": "    # Recursive types\n    if isinstance(value, (tuple, list)):\n        return Value(type=value_type, contents=[to_serializable_value(item) for item in value])\n    if isinstance(value, dict):\n        return Value(type=value_type, contents={to_primitive(k): to_serializable_value(v) for k, v in value.items()})\n    if is_dataclass(value):\n        return Value(type=value_type, contents={\n            field.name: to_serializable_value(getattr(value, field.name))\n            for field in fields(value)\n        })\n\n    # If the class has a designated asdict method, use it\n    if hasattr(value, \"asdict\"):\n        return to_serializable_value(value.asdict())\n\n    # Force contents to be a string to avoid serialization errors\n    return Value(type=value_type, contents=str(value))",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L195-L200": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 195,
+  "end": 200,
+  "text": "def get_type_str(value: any) -> str:\n    \"\"\"Return the string representation of the type of `value`.\"\"\"\n    value_type = type(value)\n    if value_type.__module__ == \"builtins\":  # e.g., int, float, str, bool\n        return value_type.__name__\n    return value_type.__module__ + \".\" + value_type.__name__",
+  "sha256": "9393a2f6529e"
+ },
+ "examples.py:L94-L100": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/examples.py",
+  "start": 94,
+  "end": 100,
+  "text": "    x = MyDataclass(a=1, b=[2, 3])  # @inspect x x.a x.b\n\n    # Custom class\n    class Foo:\n        def asdict(self):\n            return {\"a\": 5}\n    x = Foo()  # @inspect x",
+  "sha256": "eedcddc8768f"
+ },
+ "execute.py:L147-L192": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 147,
+  "end": 192,
+  "text": "def to_serializable_value(value: any) -> Value:\n    \"\"\"Convert `value` to something that's serializable to JSON.\"\"\"\n    value_type = get_type_str(value)\n\n    # Primitive types\n    if isinstance(value, (bool, int, float, str)):\n        # Serialize inf and nan values specially since JSON doesn't support it\n        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):\n            return Value(type=value_type, contents=str(value))\n        return Value(type=value_type, contents=value)\n\n    # Tensors\n    if isinstance(value, (np.int64,)):\n        return Value(type=value_type, contents=int(value))  # Hope no rounding issues\n    if isinstance(value, (np.float64,)):\n        return Value(type=value_type, contents=float(value))  # Hope no rounding issues\n    if isinstance(value, np.ndarray):\n        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())\n    if isinstance(value, torch.Tensor):\n        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())\n\n    # Symbols\n    if value_type.startswith(\"sympy.core.\"):\n        if isinstance(value, sympy.core.numbers.Integer):\n            return Value(type=value_type, contents=int(value))\n        if isinstance(value, sympy.core.numbers.Float):\n            return Value(type=value_type, contents=float(value))\n        return Value(type=value_type, contents=str(value))\n\n    # Recursive types\n    if isinstance(value, (tuple, list)):\n        return Value(type=value_type, contents=[to_serializable_value(item) for item in value])\n    if isinstance(value, dict):\n        return Value(type=value_type, contents={to_primitive(k): to_serializable_value(v) for k, v in value.items()})\n    if is_dataclass(value):\n        return Value(type=value_type, contents={\n            field.name: to_serializable_value(getattr(value, field.name))\n            for field in fields(value)\n        })\n\n    # If the class has a designated asdict method, use it\n    if hasattr(value, \"asdict\"):\n        return to_serializable_value(value.asdict())\n\n    # Force contents to be a string to avoid serialization errors\n    return Value(type=value_type, contents=str(value))",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L265-L278": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 265,
+  "end": 278,
+  "text": "        # Handle @stepover (don't recurse)\n        directives = parse_directives(item.code)\n        if any(directive.name == DIRECTIVE_STEPOVER for directive in directives):\n            # If stepping over this line\n            if len(stepovers) > 0 and stepovers[-1] == (item.path, item.line_number):\n                # Stop skipping since we're back to this line\n                stepovers.pop()\n            else:\n                # Just starting to skip starting here\n                stepovers.append((item.path, item.line_number))\n        \n        # Skip everything that is strictly under stepovers\n        if any(stepover[0] == item.path and stepover[1] == item.line_number for stepover in stepovers for item in stack[:-1]):\n            return trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L356-L366": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 356,
+  "end": 366,
+  "text": "def compute_hidden_line_numbers(files: dict[str, str]) -> dict[str, list[int]]:\n    \"\"\"Compute the line numbers to hide based on the @hide comments.\"\"\"\n    hidden_line_numbers = {}\n    for path, contents in files.items():\n        hidden_line_numbers[path] = []\n        for index, line in enumerate(contents.split(\"\\n\")):\n            directives = parse_directives(line)\n            if any(directive.name == DIRECTIVE_HIDE for directive in directives):\n                line_number = index + 1\n                hidden_line_numbers[path].append(line_number)\n    return hidden_line_numbers",
+  "sha256": "9393a2f6529e"
+ },
+ "TraceViewer.jsx:L597-L600": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 597,
+  "end": 600,
+  "text": "    // Don't show hidden lines\n    if (trace.hidden_line_numbers[currentPath] && trace.hidden_line_numbers[currentPath].includes(lineNumber)) {\n      return null;\n    }",
+  "sha256": "0d300f97241a"
+ },
+ "examples.py:L29-L30": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/examples.py",
+  "start": 29,
+  "end": 30,
+  "text": "    text(\"Multiline text: \"\n         \"wrapped around\")  # @hide",
+  "sha256": "eedcddc8768f"
+ },
+ "lecture_02.py:L598": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 598,
+  "end": 598,
+  "text": "            x = layer(x)  # @stepover",
+  "sha256": "f731b3849afc"
+ },
+ "reference.py:L5-L13": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/reference.py",
+  "start": 5,
+  "end": 13,
+  "text": "@dataclass(frozen=True)\nclass Reference:\n    title: str | None = None\n    authors: list[str] | None = None\n    organization: str | None = None\n    date: str | None = None\n    url: str | None = None\n    description: str | None = None\n    notes: str | None = None",
+  "sha256": "0db3634fc96d"
+ },
+ "reference.py:L15-L33": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/reference.py",
+  "start": 15,
+  "end": 33,
+  "text": "    @property\n    def label(self) -> str:\n        \"\"\"Return a short label like [Author+ YYYY].\"\"\"\n        year = self.date[:4] if self.date else \"?\"\n        if self.authors:\n            first = self.authors[0]\n            if re.search(r'\\bTeam\\b', first):\n                name = first  # e.g. \"Kimi Team\", \"GLM-4.5 Team\" — no + needed\n            else:\n                name = first.split()[-1]\n                if len(self.authors) > 1:\n                    name += \"+\"\n            return f\"[{name} {year}]\"\n        elif self.title:\n            return self.title\n        elif self.url:\n            return self.url\n        else:\n            return \"?\"",
+  "sha256": "0db3634fc96d"
+ },
+ "execute_util.py:L94-L99": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 94,
+  "end": 99,
+  "text": "def url_reference(url: str, **kwargs):\n    \"\"\"Makes a reference (but doesn't add it to _current_renderings).\"\"\"\n    if is_arxiv_link(url):\n        return arxiv_reference(url, **kwargs)\n    else:\n        return Reference(url=url, **kwargs)",
+  "sha256": "5dacdec92134"
+ },
+ "arxiv_util.py:L15-L31": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/arxiv_util.py",
+  "start": 15,
+  "end": 31,
+  "text": "def is_arxiv_link(url: str) -> bool:\n    return url.startswith(\"https://arxiv.org/\")\n\ndef arxiv_reference(url: str, **kwargs) -> Reference:\n    \"\"\"\n    Parse an arXiv reference from a URL (e.g., https://arxiv.org/abs/2005.14165).\n    Scrapes the arxiv.org HTML page to extract metadata.\n    \"\"\"\n    m = re.search(r'arxiv.org\\/...\\/(\\d+\\.\\d+)(v\\d)?(\\.pdf)?$', url)\n    if not m:\n        raise ValueError(f\"Cannot handle this URL: {url}\")\n    paper_id = m.group(1)\n\n    abs_url = f\"https://arxiv.org/abs/{paper_id}\"\n    html_path = cached(abs_url, \"arxiv\")\n    with open(html_path, \"r\", encoding=\"utf-8\") as f:\n        soup = BeautifulSoup(f.read(), \"html.parser\")",
+  "sha256": "a21725d3a5d9"
+ },
+ "arxiv_util.py:L37-L44": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/arxiv_util.py",
+  "start": 37,
+  "end": 44,
+  "text": "    title = canonicalize(meta(\"citation_title\"))\n    authors_div = soup.find(\"div\", class_=\"authors\")\n    if authors_div:\n        authors = [canonicalize(a.get_text()) for a in authors_div.find_all(\"a\") if \"searchtype=author\" in a.get(\"href\", \"\")]\n    else:\n        authors = [canonicalize(t[\"content\"]) for t in soup.find_all(\"meta\", {\"name\": \"citation_author\"})]\n    date = meta(\"citation_date\").replace(\"/\", \"-\")\n    summary = canonicalize(soup.find(\"meta\", {\"property\": \"og:description\"})[\"content\"] if soup.find(\"meta\", {\"property\": \"og:description\"}) else \"\")",
+  "sha256": "a21725d3a5d9"
+ },
+ "file_util.py:L33-L41": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/file_util.py",
+  "start": 33,
+  "end": 41,
+  "text": "def cached(url: str, prefix: str) -> str:\n    \"\"\"Download `url` if needed and return the location of the cached file.\"\"\"\n    name = re.sub(r\"[^\\w_-]+\", \"_\", url)\n    url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()\n\n    os.makedirs(\"var/files\", exist_ok=True)\n    path = os.path.join(\"var/files\", prefix + \"-\" + url_hash + \"-\" + name)\n    download_file(url, path)\n    return path",
+  "sha256": "a8e9f3dea3ae"
+ },
+ "arxiv_util.py:L18-L53": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/arxiv_util.py",
+  "start": 18,
+  "end": 53,
+  "text": "def arxiv_reference(url: str, **kwargs) -> Reference:\n    \"\"\"\n    Parse an arXiv reference from a URL (e.g., https://arxiv.org/abs/2005.14165).\n    Scrapes the arxiv.org HTML page to extract metadata.\n    \"\"\"\n    m = re.search(r'arxiv.org\\/...\\/(\\d+\\.\\d+)(v\\d)?(\\.pdf)?$', url)\n    if not m:\n        raise ValueError(f\"Cannot handle this URL: {url}\")\n    paper_id = m.group(1)\n\n    abs_url = f\"https://arxiv.org/abs/{paper_id}\"\n    html_path = cached(abs_url, \"arxiv\")\n    with open(html_path, \"r\", encoding=\"utf-8\") as f:\n        soup = BeautifulSoup(f.read(), \"html.parser\")\n\n    def meta(name):\n        tag = soup.find(\"meta\", {\"name\": name})\n        return tag[\"content\"] if tag else \"\"\n\n    title = canonicalize(meta(\"citation_title\"))\n    authors_div = soup.find(\"div\", class_=\"authors\")\n    if authors_div:\n        authors = [canonicalize(a.get_text()) for a in authors_div.find_all(\"a\") if \"searchtype=author\" in a.get(\"href\", \"\")]\n    else:\n        authors = [canonicalize(t[\"content\"]) for t in soup.find_all(\"meta\", {\"name\": \"citation_author\"})]\n    date = meta(\"citation_date\").replace(\"/\", \"-\")\n    summary = canonicalize(soup.find(\"meta\", {\"property\": \"og:description\"})[\"content\"] if soup.find(\"meta\", {\"property\": \"og:description\"}) else \"\")\n\n    return Reference(\n        title=title,\n        authors=authors,\n        url=url,\n        date=date,\n        description=summary,\n        **kwargs,\n    )",
+  "sha256": "a21725d3a5d9"
+ },
+ "execute.py:L17-L29": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 17,
+  "end": 29,
+  "text": "@dataclass(frozen=True)\nclass StackElement:\n    path: str\n    \"\"\"The path to the file containing the code.\"\"\"\n\n    line_number: int\n    \"\"\"The line number of the code.\"\"\"\n\n    function_name: str\n    \"\"\"The name of the function that we're in.\"\"\"\n\n    code: str\n    \"\"\"The source code that is executed.\"\"\"",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L48-L58": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 48,
+  "end": 58,
+  "text": "@dataclass\nclass Step:\n    \"\"\"Not frozen because the renderings need to be updated.\"\"\"\n    stack: list[StackElement]\n    \"\"\"The stack of function calls.\"\"\"\n\n    env: dict[str, Value]\n    \"\"\"The local variables including function arguments(that we're @inspect-ing).\"\"\"\n\n    renderings: list[Rendering] = field(default_factory=list)\n    \"\"\"The output of the code (see execute_util.py).\"\"\"",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L61-L70": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 61,
+  "end": 70,
+  "text": "@dataclass(frozen=True)\nclass Trace:\n    files: dict[str, str]\n    \"\"\"Mapping from file path to file contents.\"\"\"\n\n    hidden_line_numbers: dict[str, list[int]]\n    \"\"\"Mapping from file path to list of line numbers to hide.\"\"\"\n\n    steps: list[Step]\n    \"\"\"The steps of the trace.\"\"\"",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L350-L352": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 350,
+  "end": 352,
+  "text": "    files = {relativize(path): open(path).read() for path in visible_paths}\n    hidden_line_numbers = compute_hidden_line_numbers(files)\n    trace = Trace(steps=steps, files=files, hidden_line_numbers=hidden_line_numbers)",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L384-L387": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 384,
+  "end": 387,
+  "text": "        output_path = os.path.join(args.output_path, f\"{module}.json\")\n        print(f\"Saving trace to {output_path}...\")\n        with open(output_path, \"w\") as f:\n            json.dump(asdict(trace), f, indent=2)",
+  "sha256": "9393a2f6529e"
+ },
+ "TraceViewer.jsx:L39-L40": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 39,
+  "end": 40,
+  "text": "        // tracePath could be a bare 'welcome', expand to 'var/traces/welcome.json'\n        const url = tracePath.endsWith('.json') ? tracePath : `var/traces/${tracePath}.json`;",
+  "sha256": "0d300f97241a"
+ },
+ "execute.py:L17-L70": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 17,
+  "end": 70,
+  "text": "@dataclass(frozen=True)\nclass StackElement:\n    path: str\n    \"\"\"The path to the file containing the code.\"\"\"\n\n    line_number: int\n    \"\"\"The line number of the code.\"\"\"\n\n    function_name: str\n    \"\"\"The name of the function that we're in.\"\"\"\n\n    code: str\n    \"\"\"The source code that is executed.\"\"\"\n\n\n@dataclass(frozen=True)\nclass Value:\n    \"\"\"Represents the value of an environment variable.\"\"\"\n    type: str\n    \"\"\"The type of the value.\"\"\"\n\n    contents: any\n    \"\"\"The contents itself.\"\"\"\n\n    dtype: str | None = None\n    \"\"\"If `contents` is a tensor/array, then this is its dtype (e.g., \"float32\").\"\"\"\n\n    shape: list[int] | None = None\n    \"\"\"If `contents` is a tensor/array, then this is its shape (e.g., [2, 3] for a 2x3 matrix).\"\"\"\n\n\n@dataclass\nclass Step:\n    \"\"\"Not frozen because the renderings need to be updated.\"\"\"\n    stack: list[StackElement]\n    \"\"\"The stack of function calls.\"\"\"\n\n    env: dict[str, Value]\n    \"\"\"The local variables including function arguments(that we're @inspect-ing).\"\"\"\n\n    renderings: list[Rendering] = field(default_factory=list)\n    \"\"\"The output of the code (see execute_util.py).\"\"\"\n\n\n@dataclass(frozen=True)\nclass Trace:\n    files: dict[str, str]\n    \"\"\"Mapping from file path to file contents.\"\"\"\n\n    hidden_line_numbers: dict[str, list[int]]\n    \"\"\"Mapping from file path to list of line numbers to hide.\"\"\"\n\n    steps: list[Step]\n    \"\"\"The steps of the trace.\"\"\"",
+  "sha256": "9393a2f6529e"
+ },
+ "TraceViewer.jsx:L209-L214": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 209,
+  "end": 214,
+  "text": "function stepForward({trace, currentStepIndex, navigate}) {\n  const newStepIndex = currentStepIndex + 1;\n  if (newStepIndex < trace.steps.length) {\n    updateUrlParams({ step: newStepIndex, source: null, line: null }, navigate);\n  }\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L244-L260": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 244,
+  "end": 260,
+  "text": "function getStepOverIndex({trace, currentStepIndex, direction, stayOnSameLine}) {\n  // Find the next step that is in the same level (and if not stayOnSameLine, not the same line)\n  const currentStep = trace.steps[currentStepIndex];\n  let stepIndex = currentStepIndex + direction;\n  while (stepIndex >= 0 && stepIndex < trace.steps.length) {\n    if (inSameFunction(trace.steps[stepIndex].stack, currentStep.stack) &&\n        (!stayOnSameLine || getLast(trace.steps[stepIndex].stack).line_number !== getLast(currentStep.stack).line_number)) {\n      return stepIndex;\n    }\n    if (isStrictAncestorOf(trace.steps[stepIndex].stack, currentStep.stack)) {\n      // Escaped\n      return stepIndex;\n    }\n    stepIndex += direction;\n  }\n  return stepIndex;\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L404-L428": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 404,
+  "end": 428,
+  "text": "/**\n * Return whether stack1 and stack2 refer to being in the same function (all but\n * the last element must agree).\n */\nfunction inSameFunction(stack1, stack2) {\n  if (stack1.length !== stack2.length) {\n    return false;\n  }\n  // Note: don't include the last element in the comparison\n  for (let i = 0; i < stack1.length - 1; i++) {\n    const a = stack1[i];\n    const b = stack2[i];\n    if (a.path !== b.path || a.line_number !== b.line_number) {\n      return false;\n    }\n  }\n  return true;\n}\n\n/**\n * Return whether stack1 is an ancestor of stack2.\n */\nfunction isStrictAncestorOf(stack1, stack2) {\n  return stack1.length < stack2.length;\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L355-L385": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 355,
+  "end": 385,
+  "text": "function renderEnv({trace, currentStepIndex}) {\n  // Go back to previous steps that are in the same frame\n  const currentStep = trace.steps[currentStepIndex];\n\n  const envs = [];\n  for (let stepIndex = currentStepIndex; stepIndex >= 0; stepIndex--) {\n    const step = trace.steps[stepIndex];\n    if (inSameFunction(step.stack, currentStep.stack)) {\n      if (Object.keys(step.env).length > 0) {\n        envs.push(step.env);\n      }\n    } else if (isStrictAncestorOf(step.stack, currentStep.stack)) {\n      // We've gone up to an ancestor\n      break;\n    }\n  }\n\n  envs.reverse();\n\n  // Create the environment by merging all the environments\n  const env = {};\n  for (const stepEnv of envs) {\n    Object.assign(env, stepEnv);\n  }\n\n  // Delete any variables that are None\n  for (const key in env) {\n    if (env[key] === null) {\n      delete env[key];\n    }\n  }",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L578-L582": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 578,
+  "end": 582,
+  "text": "  // Build a map of line number to renderings\n  const lineNumberToRenderings = [];\n  for (const step of trace.steps) {\n    lineNumberToRenderings[getLast(step.stack).line_number] = step.renderings;\n  }",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L70-L81": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 70,
+  "end": 81,
+  "text": "      if (!event.shiftKey && (event.key === 'ArrowRight' || event.key === 'l')) {\n        stepForward({trace, currentStepIndex, navigate});\n      } else if (!event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'h')) {\n        stepBackward({currentStepIndex, navigate});\n      } else if ((event.shiftKey && event.key === 'ArrowRight') || event.key === 'j') {\n        stepOverForward({trace, currentStepIndex, navigate});\n      } else if ((event.shiftKey && event.key === 'ArrowLeft') || event.key === 'k') {\n        stepOverBackward({trace, currentStepIndex, navigate});\n      } else if (event.shiftKey && (event.key === 'ArrowRight' || event.key === 'l')) {\n        stepForward({trace, currentStepIndex, navigate, stayOnSameLine: true});\n      } else if (event.key === 'u') {\n        stepUp({trace, currentStepIndex, navigate});",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L244-L275": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 244,
+  "end": 275,
+  "text": "function getStepOverIndex({trace, currentStepIndex, direction, stayOnSameLine}) {\n  // Find the next step that is in the same level (and if not stayOnSameLine, not the same line)\n  const currentStep = trace.steps[currentStepIndex];\n  let stepIndex = currentStepIndex + direction;\n  while (stepIndex >= 0 && stepIndex < trace.steps.length) {\n    if (inSameFunction(trace.steps[stepIndex].stack, currentStep.stack) &&\n        (!stayOnSameLine || getLast(trace.steps[stepIndex].stack).line_number !== getLast(currentStep.stack).line_number)) {\n      return stepIndex;\n    }\n    if (isStrictAncestorOf(trace.steps[stepIndex].stack, currentStep.stack)) {\n      // Escaped\n      return stepIndex;\n    }\n    stepIndex += direction;\n  }\n  return stepIndex;\n}\n\nfunction getStepUpIndex({trace, currentStepIndex, direction}) {\n  // Find the first step that is in the same level\n  const currentStep = trace.steps[currentStepIndex];\n  let stepIndex = currentStepIndex + direction;\n  while (stepIndex >= 0 && stepIndex < trace.steps.length) {\n    // If we are no longer in this function but have gone up\n    if (!inSameFunction(trace.steps[stepIndex].stack, currentStep.stack) &&\n        isStrictAncestorOf(trace.steps[stepIndex].stack, currentStep.stack)) {\n      return stepIndex;\n    }\n    stepIndex += direction;\n  }\n  return stepIndex;\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L355-L402": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 355,
+  "end": 402,
+  "text": "function renderEnv({trace, currentStepIndex}) {\n  // Go back to previous steps that are in the same frame\n  const currentStep = trace.steps[currentStepIndex];\n\n  const envs = [];\n  for (let stepIndex = currentStepIndex; stepIndex >= 0; stepIndex--) {\n    const step = trace.steps[stepIndex];\n    if (inSameFunction(step.stack, currentStep.stack)) {\n      if (Object.keys(step.env).length > 0) {\n        envs.push(step.env);\n      }\n    } else if (isStrictAncestorOf(step.stack, currentStep.stack)) {\n      // We've gone up to an ancestor\n      break;\n    }\n  }\n\n  envs.reverse();\n\n  // Create the environment by merging all the environments\n  const env = {};\n  for (const stepEnv of envs) {\n    Object.assign(env, stepEnv);\n  }\n\n  // Delete any variables that are None\n  for (const key in env) {\n    if (env[key] === null) {\n      delete env[key];\n    }\n  }\n\n  if (Object.keys(env).length === 0) {\n    return null;\n  }\n\n  // Create a table mapping variable names to values\n  const renderedEnv = Object.entries(env).map(([key, value]) => {\n    return (\n      <tr key={key}>\n        <td className=\"code-container key\">{key}</td>\n        <td className=\"code-container\">=</td>\n        <td className=\"code-container\" title={renderTitle(value)}>{renderValue(value)}</td>\n      </tr>\n    );\n  });\n  return <table className=\"env\"><tbody>{renderedEnv}</tbody></table>;\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L434-L464": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 434,
+  "end": 464,
+  "text": "function renderValue(value) {\n  if (!value.type) {  // Shouldn't happen, but be defensive\n    return \"NO_TYPE:\" + JSON.stringify(value);  // For debugging\n  }\n  if (value.type === \"NoneType\") {\n    return \"None\";\n  }\n  if (value.type === \"bool\") {\n    return \"\" + value.contents;\n  }\n  if ([\"int\", \"float\"].includes(value.type)) {\n    return renderNumber(value.contents);\n  }\n  if ([\"torch.Tensor\", \"torch.nn.parameter.Parameter\", \"numpy.ndarray\"].includes(value.type)) {\n    return renderTensor(value.shape, value.contents);\n  }\n  if (value.type.startsWith(\"sympy.core.\")) {\n    return value.contents;\n  }\n\n  // Interpret value.contents as a JSON object\n  if (Array.isArray(value.contents)) {\n    return renderList(value.contents);\n  }\n  if (typeof value.contents === \"object\") {\n    return renderDict(value.contents);\n  }\n\n  // Default to JSON\n  return JSON.stringify(value.contents, null, 2);\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L466-L481": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 466,
+  "end": 481,
+  "text": "function renderNumber(x) {\n  if (typeof x === \"string\") {\n    return x;  // What happens with inf and nan\n  }\n  if (Math.abs(x) > 1e12) {\n    // Use scientific notation\n    return x.toExponential(3);\n  } if (Math.abs(x) > 1e6) {\n    return x.toLocaleString();  // Put commas in the number\n  }\n  if (isInteger(x * 1000)) {\n    return x.toString();\n  }\n  // Round to 4 decimal places\n  return x.toFixed(4);\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L483-L520": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 483,
+  "end": 520,
+  "text": "function renderTensor(shape, contents) {\n  if (shape.length === 0) {\n    return renderNumber(contents);\n  }\n\n  if (shape.length === 1) {\n    return <table className=\"matrix\"><tbody><tr>{\n      contents.map((v, i) => <td key={i}>{renderNumber(v)}</td>)\n    }</tr></tbody></table>;\n  }\n\n  if (shape.length === 2) {\n    return <table className=\"matrix\"><tbody>{\n      contents.map((row, rowIndex) => <tr key={rowIndex}>{\n        row.map((v, colIndex) => <td key={colIndex}>{renderNumber(v)}</td>)\n      }</tr>)\n    }</tbody></table>;\n  }\n\n  if (shape.length === 3) {\n    // Stack the slices vertically\n    const allRows = [];\n    for (const slice of contents) {\n      // Add a separator between slices\n      if (allRows.length > 0) {\n        allRows.push(<tr key=\"separator\"><td colSpan={slice[0].length}>&nbsp;</td></tr>);\n      }\n      slice.forEach((row, rowIndex) => {\n        allRows.push(<tr key={allRows.length}>{  // Don't use rowIndex because need to include slice\n          row.map((v, colIndex) => <td key={colIndex}>{renderNumber(v)}</td>)\n        }</tr>);\n      });\n    }\n    return <table className=\"matrix\"><tbody>{allRows}</tbody></table>;\n  }\n\n  return JSON.stringify(contents, null, 2);\n}",
+  "sha256": "0d300f97241a"
+ },
+ "TraceViewer.jsx:L544-L553": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src/TraceViewer.jsx",
+  "start": 544,
+  "end": 553,
+  "text": "function renderTitle(value) {\n  let title = value.type;\n  if (value.dtype) {\n    title += ` ${value.dtype}`;\n  }\n  if (value.shape) {\n    title += ` [${value.shape.join(\" x \")}]`;\n  }\n  return title;\n}",
+  "sha256": "0d300f97241a"
+ },
+ "execute.py:L344-L348": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 344,
+  "end": 348,
+  "text": "    module = importlib.import_module(module_name)\n    visible_paths.append(inspect.getfile(module))\n    sys.settrace(trace_func)\n    module.main()\n    sys.settrace(None)",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L261-L263": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 261,
+  "end": 263,
+  "text": "        # Don't step into comprehensions since they're redundant and just stay on the line\n        if item.function_name in (\"<listcomp>\", \"<lambda>\"):\n            return trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L163-L166": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 163,
+  "end": 166,
+  "text": "    if isinstance(value, np.ndarray):\n        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())\n    if isinstance(value, torch.Tensor):\n        return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())",
+  "sha256": "9393a2f6529e"
+ },
+ "execute_util.py:L151-L154": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute_util.py",
+  "start": 151,
+  "end": 154,
+  "text": "def system_text(command: list[str]):\n    output = subprocess.check_output(command).decode('utf-8')\n    output = remove_ansi_escape_sequences(output)\n    text(output, verbatim=True)",
+  "sha256": "5dacdec92134"
+ },
+ "lecture_02.py:L800": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_02.py",
+  "start": 800,
+  "end": 800,
+  "text": "    properties = torch.cuda.get_device_properties(cuda_if_available())  # @inspect properties.name",
+  "sha256": "f731b3849afc"
+ },
+ "README.md:L8-L11": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/README.md",
+  "start": 8,
+  "end": 11,
+  "text": "edtrace was primarily designed to create **executable lectures**, where a\nPython program replaces lecture notes or slides, allowing for deep integration\nof code and ideas.  Or it can simply be used on any Python program, and allow a\nuser to explore its execution.",
+  "sha256": "da0c327d0f38"
+ },
+ "execute.py:L232-L241": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 232,
+  "end": 241,
+  "text": "    def trace_func(frame, event, arg):\n        \"\"\"\n        trace_func and local_trace_func are called on various lines of code when executed.\n        - trace_func is called *before* a line of code is executed.\n        - local_trace_func is called *after* a line of code has been executed\n          and will have the values of the variables.\n        We generally keep the local_trace_func version.  However, when you have\n        a function call that you're tracing through, you want to keep both\n        versions.\n",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L290-L291": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 290,
+  "end": 291,
+  "text": "        def local_trace_func(frame, event, arg):\n            \"\"\"This is called *after* a line of code has been executed.\"\"\"",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L337-L341": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 337,
+  "end": 341,
+  "text": "            # Pass control back to the global trace function\n            return trace_func(frame, event, arg)\n\n        # Pass control to local_trace_func to update the environment\n        return local_trace_func",
+  "sha256": "9393a2f6529e"
+ },
+ "execute.py:L232-L245": {
+  "path": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace/execute.py",
+  "start": 232,
+  "end": 245,
+  "text": "    def trace_func(frame, event, arg):\n        \"\"\"\n        trace_func and local_trace_func are called on various lines of code when executed.\n        - trace_func is called *before* a line of code is executed.\n        - local_trace_func is called *after* a line of code has been executed\n          and will have the values of the variables.\n        We generally keep the local_trace_func version.  However, when you have\n        a function call that you're tracing through, you want to keep both\n        versions.\n\n        We don't care about all the events, so here are the rules:\n        - In local_trace_func, if the previous event was the same line (presumably the trace_func)\n        - Remove all trace_func(return)\n        \"\"\"",
+  "sha256": "9393a2f6529e"
+ }
+}

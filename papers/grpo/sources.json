@@ -1,0 +1,30 @@
+{
+  "grpo_paper": {
+    "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (Shao, Wang, Zhu, Xu, Song, Bi, Zhang, Zhang, Li, Wu, Guo; DeepSeek-AI)",
+    "kind": "paper",
+    "arxiv": "2402.03300",
+    "revision": "arXiv:2402.03300v3 (v1 5 Feb 2024, v2 6 Feb 2024, v3 27 Apr 2024)",
+    "url": "https://arxiv.org/abs/2402.03300",
+    "html": "https://arxiv.org/html/2402.03300v3",
+    "text": "atlas/papers/grpo/paper.txt (html_to_text.py over the arXiv HTML; MathML replaced by its LaTeX alttext; sha256 in discovered.json)",
+    "anchor_convention": "grpo:§4.1.1 (section as printed), grpo:eqN (equation number as printed in the HTML), grpo:table5 / grpo:fig7 / grpo:algorithm1",
+    "note": "Fetched 2026-09-30 from the arXiv HTML; no PDF was downloaded, so there are no page anchors. Equation numbers were paired with their LaTeX by discover_paper.py from the printed '(N)' tags (21 equations). Figures 5-7 are images: only captions and the prose around them are quotable. Algorithm 1 line 11 cites 'Equation 21' as printed; in the HTML numbering Eq. 3 is the objective and Eq. 21 its gradient coefficient."
+  },
+  "feynrl_repo": {
+    "title": "FeynRL: RL post-training library (local clone), GRPO implementation",
+    "kind": "repo",
+    "path": "external/FeynRL",
+    "sha": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "upstream_thread": "atlas/repos/feynrl (KPs group-relative-advantage, grpo-clipped-loss, kl-reference-penalty, supp-importance-ratio)",
+    "anchor_convention": "algs/GRPO/grpo.py:L169-L176 (repo-relative path, 1-based inclusive line range), algs/RL/common.py:L131-L139, rollouts/base.py:L131-L136",
+    "note": "Code anchors carry status 'implemented': the lines are where this paper's Eq. 3 (ratio/min/clip, beta*KL in the loss), Eq. 4 (k3 estimator) and §4.1.2 (group mean/std) are executed. Divergences from the paper (Bessel-corrected std, kl_coeff 0 in the gsm8k recipe, asymmetric clip bounds, global token normalisation) are listed in discovered.json code.divergences."
+  },
+  "lecture_16": {
+    "title": "CS336 Spring 2026, Lecture 16: Post-training 2, RL from verifiable rewards (PPO recap p5-p9, GRPO p17-p24)",
+    "kind": "slides",
+    "path": "official/lectures/lecture_16.pdf",
+    "text": "atlas/papers/grpo/lecture_16.txt (copy of atlas/lectures/lecture_16/lecture_16.txt, pdftotext -layout; page = form-feed index, title slide = p1)",
+    "anchor_convention": "lecture_16.pdf:pNN",
+    "note": "Gives the course's teaching order for GRPO, to be compared with the paper's order (course_path). The GRPO objective and advantage code on p18-p20 are screenshots; only slide captions survive in the text layer. atlas/lectures/lecture_16/knowledge_points.json landed on 2026-09-30 while this thread was being written; external_prerequisites of the form lecture_16:<kp-id> point at its ids (basis author-inference) and course_path follows its teaching order."
+  }
+}

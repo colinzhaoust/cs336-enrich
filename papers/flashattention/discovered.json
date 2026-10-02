@@ -1,0 +1,4203 @@
+{
+  "paper": {
+    "id": "flashattention",
+    "title": "",
+    "arxiv": "2205.14135",
+    "revision": "arXiv:2205.14135v2 [cs.LG] 23 Jun 2022",
+    "source_url": "https://arxiv.org/html/2205.14135v2",
+    "paper_txt_sha256": "3bbd0cd3fdda5e29f324bb80c1416180623ab7f7dc3938a0812ce5877fc90c6d"
+  },
+  "generated_by": "discover_paper.py",
+  "inputs": {
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/flashattention/paper.txt": "3bbd0cd3fdda5e29f324bb80c1416180623ab7f7dc3938a0812ce5877fc90c6d",
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/flashattention/lecture_05.txt": "a6b21ff193001a12174fb77d3cc6690e1b073d868de362fef39fe8a6b7a7e0ee"
+  },
+  "verification_note": "Structure parsed from the arXiv HTML text; no PDF pages were inspected, so no page numbers. Only Appendix B equations carry printed numbers (1)-(6); main-body displays are anchored by section and text line. Table rows are the HTML cells as printed.",
+  "sections": [
+    {
+      "id": "sec1",
+      "ref": "fa:§1",
+      "title": "Introduction",
+      "line": 53,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [
+        "fa:fig1"
+      ],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec2",
+      "ref": "fa:§2",
+      "title": "Background",
+      "line": 115,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec2.1",
+      "ref": "fa:§2.1",
+      "title": "Hardware Performance",
+      "line": 121,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": [
+        {
+          "ref": "lecture_05.pdf:p10",
+          "match": "SRAM (shared/cache memory) is much more expensive (100x) but ~ 8x faster than DRAM (Global memory)"
+        }
+      ]
+    },
+    {
+      "id": "sec2.2",
+      "ref": "fa:§2.2",
+      "title": "Standard Attention Implementation",
+      "line": 173,
+      "equations": [
+        180
+      ],
+      "algorithms": [
+        "fa:alg0"
+      ],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": [
+        {
+          "ref": "lecture_05.pdf:p51",
+          "match": "Attention computation: 3 matrix multiplies (K, Q, V) with a softmax in between"
+        }
+      ]
+    },
+    {
+      "id": "sec3",
+      "ref": "fa:§3",
+      "title": "FlashAttention: Algorithm, Analysis, and Extensions",
+      "line": 227,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec3.1",
+      "ref": "fa:§3.1",
+      "title": "An Efficient Attention Algorithm With Tiling and Recomputation",
+      "line": 239,
+      "equations": [
+        263
+      ],
+      "algorithms": [
+        "fa:alg1"
+      ],
+      "tables": [],
+      "figures": [],
+      "theorems": [
+        "fa:thm1"
+      ],
+      "course_restates": [
+        {
+          "ref": "lecture_05.pdf:p52",
+          "match": "This figure 1 from the paper is literally just tiling for a KQV matrix multiply.."
+        },
+        {
+          "ref": "lecture_05.pdf:p53",
+          "match": "Online softmax"
+        },
+        {
+          "ref": "lecture_05.pdf:p54",
+          "match": "• Tile-wise computation of the softmax via the online, telescoping sum trick"
+        }
+      ]
+    },
+    {
+      "id": "sec3.2",
+      "ref": "fa:§3.2",
+      "title": "Analysis: IO Complexity of FlashAttention",
+      "line": 388,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [
+        "fa:fig2"
+      ],
+      "theorems": [
+        "fa:thm2",
+        "fa:prop3"
+      ],
+      "course_restates": []
+    },
+    {
+      "id": "sec3.3",
+      "ref": "fa:§3.3",
+      "title": "Extension: Block-Sparse FlashAttention",
+      "line": 481,
+      "equations": [
+        493
+      ],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [
+        "fa:prop4"
+      ],
+      "course_restates": []
+    },
+    {
+      "id": "sec4",
+      "ref": "fa:§4",
+      "title": "Experiments",
+      "line": 536,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec4.1",
+      "ref": "fa:§4.1",
+      "title": "Faster Models with FlashAttention",
+      "line": 565,
+      "equations": [],
+      "algorithms": [],
+      "tables": [
+        "fa:table1",
+        "fa:table2",
+        "fa:table3"
+      ],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec4.2",
+      "ref": "fa:§4.2",
+      "title": "Better Models with Longer Sequences",
+      "line": 748,
+      "equations": [],
+      "algorithms": [],
+      "tables": [
+        "fa:table4",
+        "fa:table5",
+        "fa:table6"
+      ],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec4.3",
+      "ref": "fa:§4.3",
+      "title": "Benchmarking Attention",
+      "line": 883,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [
+        "fa:fig3"
+      ],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec5",
+      "ref": "fa:§5",
+      "title": "Limitations and Future Directions",
+      "line": 906,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secA",
+      "ref": "fa:§A",
+      "title": "Related Work",
+      "line": 1808,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secB",
+      "ref": "fa:§B",
+      "title": "Algorithm Details",
+      "line": 1891,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secB.1",
+      "ref": "fa:§B.1",
+      "title": "Memory-efficient forward pass",
+      "line": 1902,
+      "equations": [
+        1921,
+        1931,
+        1940
+      ],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secB.2",
+      "ref": "fa:§B.2",
+      "title": "Memory-efficient backward pass",
+      "line": 1959,
+      "equations": [
+        1984,
+        1998,
+        2008,
+        2018,
+        2027,
+        2035,
+        2044,
+        2053
+      ],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secB.3",
+      "ref": "fa:§B.3",
+      "title": "FlashAttention: Forward Pass",
+      "line": 2080,
+      "equations": [],
+      "algorithms": [
+        "fa:alg2"
+      ],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secB.4",
+      "ref": "fa:§B.4",
+      "title": "FlashAttention: Backward Pass",
+      "line": 2197,
+      "equations": [],
+      "algorithms": [
+        "fa:alg3",
+        "fa:alg4"
+      ],
+      "tables": [],
+      "figures": [],
+      "theorems": [
+        "fa:thm5"
+      ],
+      "course_restates": [
+        {
+          "ref": "lecture_05.pdf:p54",
+          "match": "(We won’t cover the backward pass – but they recompute tile-by-tile..)"
+        }
+      ]
+    },
+    {
+      "id": "secB.5",
+      "ref": "fa:§B.5",
+      "title": "Comparison with Rabe and Staats [66]",
+      "line": 2408,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secC",
+      "ref": "fa:§C",
+      "title": "Proofs",
+      "line": 2451,
+      "equations": [
+        2469,
+        2490,
+        2509,
+        2517,
+        2526,
+        2615,
+        2624,
+        2633,
+        2641,
+        2649,
+        2657,
+        2670,
+        2678,
+        2721,
+        2729,
+        2737
+      ],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secD",
+      "ref": "fa:§D",
+      "title": "Extension Details",
+      "line": 2743,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secD.1",
+      "ref": "fa:§D.1",
+      "title": "Block-sparse FlashAttention",
+      "line": 2745,
+      "equations": [
+        2861
+      ],
+      "algorithms": [
+        "fa:alg5"
+      ],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secD.2",
+      "ref": "fa:§D.2",
+      "title": "Potential Extensions",
+      "line": 2867,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE",
+      "ref": "fa:§E",
+      "title": "Full Experimental Results",
+      "line": 2906,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE.1",
+      "ref": "fa:§E.1",
+      "title": "BERT",
+      "line": 2908,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE.2",
+      "ref": "fa:§E.2",
+      "title": "GPT-2",
+      "line": 2929,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [
+        "fa:fig4"
+      ],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE.3",
+      "ref": "fa:§E.3",
+      "title": "LRA details",
+      "line": 2968,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE.4",
+      "ref": "fa:§E.4",
+      "title": "Comparison with Apex FMHA",
+      "line": 2996,
+      "equations": [],
+      "algorithms": [],
+      "tables": [
+        "fa:table7"
+      ],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE.5",
+      "ref": "fa:§E.5",
+      "title": "Speedup On Different Hardware and Configurations",
+      "line": 3070,
+      "equations": [],
+      "algorithms": [],
+      "tables": [],
+      "figures": [
+        "fa:fig5",
+        "fa:fig6",
+        "fa:fig7",
+        "fa:fig8"
+      ],
+      "theorems": [],
+      "course_restates": []
+    },
+    {
+      "id": "secE.6",
+      "ref": "fa:§E.6",
+      "title": "Full Benchmarking Results",
+      "line": 3107,
+      "equations": [],
+      "algorithms": [],
+      "tables": [
+        "fa:table8",
+        "fa:table9",
+        "fa:table10",
+        "fa:table11",
+        "fa:table12",
+        "fa:table13",
+        "fa:table14",
+        "fa:table15",
+        "fa:table16",
+        "fa:table17",
+        "fa:table18",
+        "fa:table19",
+        "fa:table20",
+        "fa:table21"
+      ],
+      "figures": [],
+      "theorems": [],
+      "course_restates": []
+    }
+  ],
+  "algorithms": [
+    {
+      "number": 0,
+      "ref": "fa:alg0",
+      "title": "Standard Attention Implementation",
+      "steps": [
+        {
+          "line": 0,
+          "text": "Matrices $\\mathbf{Q},\\mathbf{K},\\mathbf{V}\\in\\mathbb{R}^{N\\times d}$ in HBM."
+        },
+        {
+          "line": 1,
+          "text": "Load $\\mathbf{Q},\\mathbf{K}$ by blocks from HBM, compute $\\mathbf{S}=\\mathbf{Q}\\mathbf{K}^{\\top}$ , write $\\mathbf{S}$ to HBM."
+        },
+        {
+          "line": 2,
+          "text": "Read $\\mathbf{S}$ from HBM, compute $\\mathbf{P}=\\mathrm{softmax}(\\mathbf{S})$ , write $\\mathbf{P}$ to HBM."
+        },
+        {
+          "line": 3,
+          "text": "Load $\\mathbf{P}$ and $\\mathbf{V}$ by blocks from HBM, compute $\\mathbf{O}=\\mathbf{P}\\mathbf{V}$ , write $\\mathbf{O}$ to HBM."
+        },
+        {
+          "line": 4,
+          "text": "Return $\\mathbf{O}$ ."
+        }
+      ]
+    },
+    {
+      "number": 1,
+      "ref": "fa:alg1",
+      "title": "FlashAttention",
+      "steps": [
+        {
+          "line": 0,
+          "text": "Matrices $\\mathbf{Q},\\mathbf{K},\\mathbf{V}\\in\\mathbb{R}^{N\\times d}$ in HBM, on-chip SRAM of size $M$ ."
+        },
+        {
+          "line": 1,
+          "text": "Set block sizes $B_{c}=\\left\\lceil\\frac{M}{4d}\\right\\rceil,B_{r}=\\min\\left(\\left\\lceil\\frac{M}{4d}\\right\\rceil,d\\right)$ ."
+        },
+        {
+          "line": 2,
+          "text": "Initialize $\\mathbf{O}=(0)_{N\\times d}\\in\\mathbb{R}^{N\\times d},\\ell=(0)_{N}\\in\\mathbb{R}^{N},m=(-\\infty)_{N}\\in\\mathbb{R}^{N}$ in HBM."
+        },
+        {
+          "line": 3,
+          "text": "Divide $\\mathbf{Q}$ into $T_{r}=\\left\\lceil\\frac{N}{B_{r}}\\right\\rceil$ blocks $\\mathbf{Q}_{1},\\dots,\\mathbf{Q}_{T_{r}}$ of size $B_{r}\\times d$ each, and divide $\\mathbf{K},\\mathbf{V}$ in to $T_{c}=\\left\\lceil\\frac{N}{B_{c}}\\right\\rceil$ blocks $\\mathbf{K}_{1},\\dots,\\mathbf{K}_{T_{c}}$ and $\\mathbf{V}_{1},\\dots,\\mathbf{V}_{T_{c}}$ , of size $B_{c}\\times d$ each."
+        },
+        {
+          "line": 4,
+          "text": "Divide $\\mathbf{O}$ into $T_{r}$ blocks $\\mathbf{O}_{i},\\dots,\\mathbf{O}_{T_{r}}$ of size $B_{r}\\times d$ each, divide $\\ell$ into $T_{r}$ blocks $\\ell_{i},\\dots,\\ell_{T_{r}}$ of size $B_{r}$ each, divide $m$ into $T_{r}$ blocks $m_{1},\\dots,m_{T_{r}}$ of size $B_{r}$ each."
+        },
+        {
+          "line": 5,
+          "text": "for $1\\leq j\\leq T_{c}$ do"
+        },
+        {
+          "line": 6,
+          "text": "Load $\\mathbf{K}_{j},\\mathbf{V}_{j}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 7,
+          "text": "for $1\\leq i\\leq T_{r}$ do"
+        },
+        {
+          "line": 8,
+          "text": "Load $\\mathbf{Q}_{i},\\mathbf{O}_{i},\\ell_{i},m_{i}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 9,
+          "text": "On chip, compute $\\mathbf{S}_{ij}=\\mathbf{Q}_{i}\\mathbf{K}_{j}^{T}\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 10,
+          "text": "On chip, compute $\\tilde{m}_{ij}=\\mathrm{rowmax}(\\mathbf{S}_{ij})\\in\\mathbb{R}^{B_{r}}$ , $\\tilde{\\mathbf{P}}_{ij}=\\exp(\\mathbf{S}_{ij}-\\tilde{m}_{ij})\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ (pointwise), $\\tilde{\\ell}_{ij}=\\mathrm{rowsum}(\\tilde{\\mathbf{P}}_{ij})\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 11,
+          "text": "On chip, compute $m_{i}^{\\mathrm{new}}=\\max(m_{i},\\tilde{m}_{ij})\\in\\mathbb{R}^{B_{r}}$ , $\\ell_{i}^{\\mathrm{new}}=e^{m_{i}-m_{i}^{\\mathrm{new}}}\\ell_{i}+e^{\\tilde{m}_{ij}-m_{i}^{\\mathrm{new}}}\\tilde{\\ell}_{ij}\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 12,
+          "text": "Write $\\mathbf{O}_{i}\\leftarrow\\mathrm{diag}(\\ell_{i}^{\\mathrm{new}})^{-1}(\\mathrm{diag}(\\ell_{i})e^{m_{i}-m_{i}^{\\mathrm{new}}}\\mathbf{O}_{i}+e^{\\tilde{m}_{ij}-m_{i}^{\\mathrm{new}}}\\tilde{\\mathbf{P}}_{ij}\\mathbf{V}_{j})$ to HBM."
+        },
+        {
+          "line": 13,
+          "text": "Write $\\ell_{i}\\leftarrow\\ell_{i}^{\\mathrm{new}}$ , $m_{i}\\leftarrow m_{i}^{\\mathrm{new}}$ to HBM."
+        },
+        {
+          "line": 14,
+          "text": "end for"
+        },
+        {
+          "line": 15,
+          "text": "end for"
+        },
+        {
+          "line": 16,
+          "text": "Return $\\mathbf{O}$ ."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "ref": "fa:alg2",
+      "title": "FlashAttention Forward Pass",
+      "steps": [
+        {
+          "line": 0,
+          "text": "Matrices $\\mathbf{Q},\\mathbf{K},\\mathbf{V}\\in\\mathbb{R}^{N\\times d}$ in HBM, on-chip SRAM of size $M$ , softmax scaling constant $\\tau\\in\\mathbb{R}$ , masking function mask, dropout probability $p_{\\mathrm{drop}}$ ."
+        },
+        {
+          "line": 1,
+          "text": "Initialize the pseudo-random number generator state ${\\cal R}$ and save to HBM."
+        },
+        {
+          "line": 2,
+          "text": "Set block sizes $B_{c}=\\left\\lceil\\frac{M}{4d}\\right\\rceil,B_{r}=\\min\\left(\\left\\lceil\\frac{M}{4d}\\right\\rceil,d\\right)$ ."
+        },
+        {
+          "line": 3,
+          "text": "Initialize $\\mathbf{O}=(0)_{N\\times d}\\in\\mathbb{R}^{N\\times d},\\ell=(0)_{N}\\in\\mathbb{R}^{N},m=(-\\infty)_{N}\\in\\mathbb{R}^{N}$ in HBM."
+        },
+        {
+          "line": 4,
+          "text": "Divide $\\mathbf{Q}$ into $T_{r}=\\left\\lceil\\frac{N}{B_{r}}\\right\\rceil$ blocks $\\mathbf{Q}_{1},\\dots,\\mathbf{Q}_{T_{r}}$ of size $B_{r}\\times d$ each, and divide $\\mathbf{K},\\mathbf{V}$ in to $T_{c}=\\left\\lceil\\frac{N}{B_{c}}\\right\\rceil$ blocks $\\mathbf{K}_{1},\\dots,\\mathbf{K}_{T_{c}}$ and $\\mathbf{V}_{1},\\dots,\\mathbf{V}_{T_{c}}$ , of size $B_{c}\\times d$ each."
+        },
+        {
+          "line": 5,
+          "text": "Divide $\\mathbf{O}$ into $T_{r}$ blocks $\\mathbf{O}_{i},\\dots,\\mathbf{O}_{T_{r}}$ of size $B_{r}\\times d$ each, divide $\\ell$ into $T_{r}$ blocks $\\ell_{i},\\dots,\\ell_{T_{r}}$ of size $B_{r}$ each, divide $m$ into $T_{r}$ blocks $m_{1},\\dots,m_{T_{r}}$ of size $B_{r}$ each."
+        },
+        {
+          "line": 6,
+          "text": "for $1\\leq j\\leq T_{c}$ do"
+        },
+        {
+          "line": 7,
+          "text": "Load $\\mathbf{K}_{j},\\mathbf{V}_{j}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 8,
+          "text": "for $1\\leq i\\leq T_{r}$ do"
+        },
+        {
+          "line": 9,
+          "text": "Load $\\mathbf{Q}_{i},\\mathbf{O}_{i},\\ell_{i},m_{i}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 10,
+          "text": "On chip, compute $\\mathbf{S}_{ij}=\\tau\\mathbf{Q}_{i}\\mathbf{K}_{j}^{T}\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 11,
+          "text": "On chip, compute $\\mathbf{S}_{ij}^{\\mathrm{masked}}=\\textsc{mask}(\\mathbf{S}_{ij})$ ."
+        },
+        {
+          "line": 12,
+          "text": "On chip, compute $\\tilde{m}_{ij}=\\mathrm{rowmax}(\\mathbf{S}_{ij}^{\\mathrm{masked}})\\in\\mathbb{R}^{B_{r}}$ , $\\tilde{\\mathbf{P}}_{ij}=\\exp(\\mathbf{S}_{ij}^{\\mathrm{masked}}-\\tilde{m}_{ij})\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ (pointwise), $\\tilde{\\ell}_{ij}=\\mathrm{rowsum}(\\tilde{\\mathbf{P}}_{ij})\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 13,
+          "text": "On chip, compute $m_{i}^{\\mathrm{new}}=\\max(m_{i},\\tilde{m}_{ij})\\in\\mathbb{R}^{B_{r}}$ , $\\ell_{i}^{\\mathrm{new}}=e^{m_{i}-m_{i}^{\\mathrm{new}}}\\ell_{i}+e^{\\tilde{m}_{ij}-m_{i}^{\\mathrm{new}}}\\tilde{\\ell}_{ij}\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 14,
+          "text": "On chip, compute $\\tilde{\\mathbf{P}}_{ij}^{\\mathrm{dropped}}=\\mathrm{dropout}(\\tilde{\\mathbf{P}}_{ij},p_{\\mathrm{drop}})$ ."
+        },
+        {
+          "line": 15,
+          "text": "Write $\\mathbf{O}_{i}\\leftarrow\\mathrm{diag}(\\ell_{i}^{\\mathrm{new}})^{-1}(\\mathrm{diag}(\\ell_{i})e^{m_{i}-m_{i}^{\\mathrm{new}}}\\mathbf{O}_{i}+e^{\\tilde{m}_{ij}-m_{i}^{\\mathrm{new}}}\\tilde{\\mathbf{P}}_{ij}^{\\mathrm{dropped}}\\mathbf{V}_{j})$ to HBM."
+        },
+        {
+          "line": 16,
+          "text": "Write $\\ell_{i}\\leftarrow\\ell_{i}^{\\mathrm{new}}$ , $m_{i}\\leftarrow m_{i}^{\\mathrm{new}}$ to HBM."
+        },
+        {
+          "line": 17,
+          "text": "end for"
+        },
+        {
+          "line": 18,
+          "text": "end for"
+        },
+        {
+          "line": 19,
+          "text": "Return $\\mathbf{O},\\ell,m,{\\cal R}$ ."
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "ref": "fa:alg3",
+      "title": "Standard Attention Backward Pass",
+      "steps": [
+        {
+          "line": 0,
+          "text": "Matrices $\\mathbf{Q},\\mathbf{K},\\mathbf{V},\\mathbf{dO}\\in\\mathbb{R}^{N\\times d}$ , $\\mathbf{P}\\in\\mathbb{R}^{N\\times N}$ in HBM."
+        },
+        {
+          "line": 1,
+          "text": "Load $\\mathbf{P},\\mathbf{dO}$ by blocks from HBM, compute $\\mathbf{dV}=\\mathbf{P}^{\\top}\\mathbf{dO}\\in\\mathbb{R}^{N\\times d}$ , write $\\mathbf{dV}$ to HBM."
+        },
+        {
+          "line": 2,
+          "text": "Load $\\mathbf{dO},\\mathbf{V}$ by blocks from HBM, compute $\\mathbf{dP}=\\mathbf{dO}\\mathbf{V}^{\\top}\\in\\mathbb{R}^{N\\times N}$ , write $\\mathbf{dP}$ to HBM."
+        },
+        {
+          "line": 3,
+          "text": "Read $\\mathbf{P},\\mathbf{dP}$ from HBM, compute $\\mathbf{dS}\\in\\mathbb{R}^{N\\times N}$ where $dS_{ij}=P_{ij}(dP_{ij}-\\sum_{l}P_{il}dP_{il})$ , write $\\mathbf{dS}$ to HBM."
+        },
+        {
+          "line": 4,
+          "text": "Load $\\mathbf{dS}$ and $\\mathbf{K}$ by blocks from HBM, compute $\\mathbf{dQ}=\\mathbf{dS}\\mathbf{K}$ , write $\\mathbf{dQ}$ to HBM."
+        },
+        {
+          "line": 5,
+          "text": "Load $\\mathbf{dS}$ and $\\mathbf{Q}$ by blocks from HBM, compute $\\mathbf{dK}=\\mathbf{dS}^{\\top}\\mathbf{Q}$ , write $\\mathbf{dK}$ to HBM."
+        },
+        {
+          "line": 6,
+          "text": "Return $\\mathbf{dQ},\\mathbf{dK},\\mathbf{dV}$ ."
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "ref": "fa:alg4",
+      "title": "FlashAttention Backward Pass",
+      "steps": [
+        {
+          "line": 0,
+          "text": "Matrices $\\mathbf{Q},\\mathbf{K},\\mathbf{V},\\mathbf{O},\\mathbf{dO}\\in\\mathbb{R}^{N\\times d}$ in HBM, vectors $\\ell,m\\in\\mathbb{R}^{N}$ in HBM, on-chip SRAM of size $M$ , softmax scaling constant $\\tau\\in\\mathbb{R}$ , masking function mask, dropout probability $p_{\\mathrm{drop}}$ , pseudo-random number generator state ${\\cal R}$ from the forward pass."
+        },
+        {
+          "line": 1,
+          "text": "Set the pseudo-random number generator state to ${\\cal R}$ ."
+        },
+        {
+          "line": 2,
+          "text": "Set block sizes $B_{c}=\\left\\lceil\\frac{M}{4d}\\right\\rceil,B_{r}=\\min\\left(\\left\\lceil\\frac{M}{4d}\\right\\rceil,d\\right)$ ."
+        },
+        {
+          "line": 3,
+          "text": "Divide $\\mathbf{Q}$ into $T_{r}=\\left\\lceil\\frac{N}{B_{r}}\\right\\rceil$ blocks $\\mathbf{Q}_{1},\\dots,\\mathbf{Q}_{T_{r}}$ of size $B_{r}\\times d$ each, and divide $\\mathbf{K},\\mathbf{V}$ in to $T_{c}=\\left\\lceil\\frac{N}{B_{c}}\\right\\rceil$ blocks $\\mathbf{K}_{1},\\dots,\\mathbf{K}_{T_{c}}$ and $\\mathbf{V}_{1},\\dots,\\mathbf{V}_{T_{c}}$ , of size $B_{c}\\times d$ each."
+        },
+        {
+          "line": 4,
+          "text": "Divide $\\mathbf{O}$ into $T_{r}$ blocks $\\mathbf{O}_{i},\\dots,\\mathbf{O}_{T_{r}}$ of size $B_{r}\\times d$ each, divide $\\mathbf{dO}$ into $T_{r}$ blocks $\\mathbf{dO}_{i},\\dots,\\mathbf{dO}_{T_{r}}$ of size $B_{r}\\times d$ each, divide $\\ell$ into $T_{r}$ blocks $\\ell_{i},\\dots,\\ell_{T_{r}}$ of size $B_{r}$ each, divide $m$ into $T_{r}$ blocks $m_{1},\\dots,m_{T_{r}}$ of size $B_{r}$ each."
+        },
+        {
+          "line": 5,
+          "text": "Initialize $\\mathbf{dQ}=(0)_{N\\times d}$ in HBM and divide it into $T_{r}$ blocks $\\mathbf{dQ}_{1},\\dots,\\mathbf{dQ}_{T_{r}}$ of size $B_{r}\\times d$ each. Initialize $\\mathbf{dK}=(0)_{N\\times d},\\mathbf{dV}=(0)_{N\\times d}$ in HBM and divide $\\mathbf{dK},\\mathbf{dV}$ in to $T_{c}$ blocks $\\mathbf{dK}_{1},\\dots,\\mathbf{dK}_{T_{c}}$ and $\\mathbf{dV}_{1},\\dots,\\mathbf{dV}_{T_{c}}$ , of size $B_{c}\\times d$ each."
+        },
+        {
+          "line": 6,
+          "text": "for $1\\leq j\\leq T_{c}$ do"
+        },
+        {
+          "line": 7,
+          "text": "Load $\\mathbf{K}_{j},\\mathbf{V}_{j}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 8,
+          "text": "Initialize $\\tilde{\\mathbf{dK}}_{j}=(0)_{B_{c}\\times d},\\tilde{\\mathbf{dV}}_{j}=(0)_{B_{c}\\times d}$ on SRAM."
+        },
+        {
+          "line": 9,
+          "text": "for $1\\leq i\\leq T_{r}$ do"
+        },
+        {
+          "line": 10,
+          "text": "Load $\\mathbf{Q}_{i},\\mathbf{O}_{i},\\mathbf{dO}_{i},\\mathbf{dQ}_{i},\\ell_{i},m_{i}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 11,
+          "text": "On chip, compute $\\mathbf{S}_{ij}=\\tau\\mathbf{Q}_{i}\\mathbf{K}_{j}^{T}\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 12,
+          "text": "On chip, compute $\\mathbf{S}_{ij}^{\\mathrm{masked}}=\\textsc{mask}(\\mathbf{S}_{ij})$ ."
+        },
+        {
+          "line": 13,
+          "text": "On chip, compute $\\mathbf{P}_{ij}=\\mathrm{diag}(l_{i})^{-1}\\exp(\\mathbf{S}_{ij}^{\\mathrm{masked}}-m_{i})\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 14,
+          "text": "On chip, compute dropout mask $\\mathbf{Z}_{ij}\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ where each entry has value $\\frac{1}{1-p_{\\mathrm{drop}}}$ with probability $1-p_{\\mathrm{drop}}$ and value 0 with probability $p_{\\mathrm{drop}}$ ."
+        },
+        {
+          "line": 15,
+          "text": "On chip, compute $\\mathbf{P}_{ij}^{\\mathrm{dropped}}=\\mathbf{P}_{ij}\\circ\\mathbf{Z}_{ij}$ (pointwise multiply)."
+        },
+        {
+          "line": 16,
+          "text": "On chip, compute $\\tilde{\\mathbf{dV}_{j}}\\leftarrow\\tilde{\\mathbf{dV}_{j}}+(\\mathbf{P}_{ij}^{\\mathrm{dropped}})^{\\top}\\mathbf{dO}_{i}\\in\\mathbb{R}^{B_{c}\\times d}$ ."
+        },
+        {
+          "line": 17,
+          "text": "On chip, compute $\\mathbf{dP}_{ij}^{\\mathrm{dropped}}=\\mathbf{dO}_{i}\\mathbf{V}_{j}^{\\top}\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 18,
+          "text": "On chip, compute $\\mathbf{dP}_{ij}=\\mathbf{dP}_{ij}^{\\mathrm{dropped}}\\circ\\mathbf{Z}_{ij}$ (pointwise multiply)."
+        },
+        {
+          "line": 19,
+          "text": "On chip, compute $D_{i}=\\mathrm{rowsum}(\\mathbf{dO}_{i}\\circ\\mathbf{O}_{i})\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 20,
+          "text": "On chip, compute $\\mathbf{dS}_{ij}=\\mathbf{P}_{ij}\\circ(\\mathbf{dP}_{ij}-D_{i})\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 21,
+          "text": "Write $\\mathbf{dQ}_{i}\\leftarrow\\mathbf{dQ}_{i}+\\tau\\mathbf{dS}_{ij}\\mathbf{K}_{j}\\in\\mathbb{R}^{B_{r}\\times d}$ to HBM."
+        },
+        {
+          "line": 22,
+          "text": "On chip, compute $\\tilde{\\mathbf{dK}}_{j}\\leftarrow\\tilde{\\mathbf{dK}}_{j}+\\tau\\mathbf{dS}_{ij}^{\\top}\\mathbf{Q}_{i}\\in\\mathbb{R}^{B_{c}\\times d}$ ."
+        },
+        {
+          "line": 23,
+          "text": "end for"
+        },
+        {
+          "line": 24,
+          "text": "Write $\\mathbf{dK}_{j}\\leftarrow\\tilde{\\mathbf{dK}_{j}},\\mathbf{dV}_{j}\\leftarrow\\tilde{\\mathbf{dV}_{j}}$ to HBM."
+        },
+        {
+          "line": 25,
+          "text": "end for"
+        },
+        {
+          "line": 26,
+          "text": "Return $\\mathbf{dQ},\\mathbf{dK},\\mathbf{dV}$ ."
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "ref": "fa:alg5",
+      "title": "Block-Sparse FlashAttention Forward Pass",
+      "steps": [
+        {
+          "line": 0,
+          "text": "Matrices $\\mathbf{Q},\\mathbf{K},\\mathbf{V}\\in\\mathbb{R}^{N\\times d}$ in HBM, on-chip SRAM of size $M$ , softmax scaling constant $\\tau\\in\\mathbb{R}$ , masking function mask, dropout probability $p_{\\mathrm{drop}}$ , block sizes $B_{c}=\\left\\lceil\\frac{M}{4d}\\right\\rceil,B_{r}=\\min\\left(\\left\\lceil\\frac{M}{4d}\\right\\rceil,d\\right)$ , block sparsity mask $M\\in\\{0,1\\}^{N/B_{r}\\times N/B_{c}}$ .."
+        },
+        {
+          "line": 1,
+          "text": "Initialize the pseudo-random number generator state ${\\cal R}$ and save to HBM."
+        },
+        {
+          "line": 2,
+          "text": "Initialize $\\mathbf{O}=(0)_{N\\times d}\\in\\mathbb{R}^{N\\times d},\\ell=(0)_{N}\\in\\mathbb{R}^{N},m=(-\\infty)_{N}\\in\\mathbb{R}^{N}$ in HBM."
+        },
+        {
+          "line": 3,
+          "text": "Divide $\\mathbf{Q}$ into $T_{r}=\\left\\lceil\\frac{N}{B_{r}}\\right\\rceil$ blocks $\\mathbf{Q}_{1},\\dots,\\mathbf{Q}_{T_{r}}$ of size $B_{r}\\times d$ each, and divide $\\mathbf{K},\\mathbf{V}$ in to $T_{c}=\\left\\lceil\\frac{N}{B_{c}}\\right\\rceil$ blocks $\\mathbf{K}_{1},\\dots,\\mathbf{K}_{T_{c}}$ and $\\mathbf{V}_{1},\\dots,\\mathbf{V}_{T_{c}}$ , of size $B_{c}\\times d$ each."
+        },
+        {
+          "line": 4,
+          "text": "Divide $\\mathbf{O}$ into $T_{r}$ blocks $\\mathbf{O}_{i},\\dots,\\mathbf{O}_{T_{r}}$ of size $B_{r}\\times d$ each, divide $\\ell$ into $T_{r}$ blocks $\\ell_{i},\\dots,\\ell_{T_{r}}$ of size $B_{r}$ each, divide $m$ into $T_{r}$ blocks $m_{1},\\dots,m_{T_{r}}$ of size $B_{r}$ each."
+        },
+        {
+          "line": 5,
+          "text": "for $1\\leq j\\leq T_{c}$ do"
+        },
+        {
+          "line": 6,
+          "text": "Load $\\mathbf{K}_{j},\\mathbf{V}_{j}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 7,
+          "text": "for $1\\leq i\\leq T_{r}$ do"
+        },
+        {
+          "line": 8,
+          "text": "if $M_{ij}\\neq 0$ then"
+        },
+        {
+          "line": 9,
+          "text": "Load $\\mathbf{Q}_{i},\\mathbf{O}_{i},\\ell_{i},m_{i}$ from HBM to on-chip SRAM."
+        },
+        {
+          "line": 10,
+          "text": "On chip, compute $\\mathbf{S}_{ij}=\\tau\\mathbf{Q}_{i}\\mathbf{K}_{j}^{T}\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ ."
+        },
+        {
+          "line": 11,
+          "text": "On chip, compute $\\mathbf{S}_{ij}^{\\mathrm{masked}}=\\textsc{mask}(\\mathbf{S}_{ij})$ ."
+        },
+        {
+          "line": 12,
+          "text": "On chip, compute $\\tilde{m}_{ij}=\\mathrm{rowmax}(\\mathbf{S}_{ij}^{\\mathrm{masked}})\\in\\mathbb{R}^{B_{r}}$ , $\\tilde{\\mathbf{P}}_{ij}=\\exp(\\mathbf{S}_{ij}^{\\mathrm{masked}}-\\tilde{m}_{ij})\\in\\mathbb{R}^{B_{r}\\times B_{c}}$ (pointwise), $\\tilde{\\ell}_{ij}=\\mathrm{rowsum}(\\tilde{\\mathbf{P}}_{ij})\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 13,
+          "text": "On chip, compute $m_{i}^{\\mathrm{new}}=\\max(m_{i},\\tilde{m}_{ij})\\in\\mathbb{R}^{B_{r}}$ , $\\ell_{i}^{\\mathrm{new}}=e^{m_{i}-m_{i}^{\\mathrm{new}}}\\ell_{i}+e^{\\tilde{m}_{ij}-m_{i}^{\\mathrm{new}}}\\tilde{\\ell}_{ij}\\in\\mathbb{R}^{B_{r}}$ ."
+        },
+        {
+          "line": 14,
+          "text": "On chip, compute $\\tilde{\\mathbf{P}}_{ij}^{\\mathrm{dropped}}=\\mathrm{dropout}(\\tilde{\\mathbf{P}}_{ij},p_{\\mathrm{drop}})$ ."
+        },
+        {
+          "line": 15,
+          "text": "Write $\\mathbf{O}_{i}\\leftarrow\\mathrm{diag}(\\ell_{i}^{\\mathrm{new}})^{-1}(\\mathrm{diag}(\\ell_{i})e^{m_{i}-m_{i}^{\\mathrm{new}}}\\mathbf{O}_{i}+e^{\\tilde{m}_{ij}-m_{i}^{\\mathrm{new}}}\\tilde{\\mathbf{P}}_{ij}^{\\mathrm{dropped}}\\mathbf{V}_{j})$ to HBM."
+        },
+        {
+          "line": 16,
+          "text": "Write $\\ell_{i}\\leftarrow\\ell_{i}^{\\mathrm{new}}$ , $m_{i}\\leftarrow m_{i}^{\\mathrm{new}}$ to HBM."
+        },
+        {
+          "line": 17,
+          "text": "end if"
+        },
+        {
+          "line": 18,
+          "text": "end for"
+        },
+        {
+          "line": 19,
+          "text": "end for"
+        },
+        {
+          "line": 20,
+          "text": "Return $\\mathbf{O},\\ell,m,{\\cal R}$ ."
+        }
+      ]
+    }
+  ],
+  "theorems": [
+    {
+      "kind": "Theorem",
+      "number": 1,
+      "ref": "fa:thm1",
+      "statement": "",
+      "section": "fa:§3.1"
+    },
+    {
+      "kind": "Theorem",
+      "number": 2,
+      "ref": "fa:thm2",
+      "statement": "",
+      "section": "fa:§3.2"
+    },
+    {
+      "kind": "Proposition",
+      "number": 3,
+      "ref": "fa:prop3",
+      "statement": "",
+      "section": "fa:§3.2"
+    },
+    {
+      "kind": "Proposition",
+      "number": 4,
+      "ref": "fa:prop4",
+      "statement": "",
+      "section": "fa:§3.3"
+    },
+    {
+      "kind": "Theorem",
+      "number": 5,
+      "ref": "fa:thm5",
+      "statement": "",
+      "section": "fa:§B.4"
+    }
+  ],
+  "tables": [
+    {
+      "number": 1,
+      "ref": "fa:table1",
+      "caption": "Training time of BERT-large, starting from the same initialization provided by the MLPerf benchmark, to reach the target accuracy of 72.0% on masked language modeling. Averaged over 10 runs on 8 $\\times$ A100 GPUs.",
+      "rows": [
+        [
+          "BERT Implementation",
+          "Training time (minutes)"
+        ],
+        [
+          "Nvidia MLPerf 1.1 [58]",
+          "20.0 $\\pm$ 1.5"
+        ],
+        [
+          "FlashAttention (ours)",
+          "17.4 $\\pm$ 1.4"
+        ]
+      ]
+    },
+    {
+      "number": 2,
+      "ref": "fa:table2",
+      "caption": "GPT-2 small and medium using FlashAttention achieve up to 3 $\\times$ speed up compared to Huggingface implementation and up to 1.7 $\\times$ compared to Megatron-LM. Training time reported on 8 $\\times$ A100s GPUs.",
+      "rows": [
+        [
+          "Model implementations",
+          "OpenWebText (ppl)",
+          "Training time (speedup)"
+        ],
+        [
+          "GPT-2 small - Huggingface [87]",
+          "18.2",
+          "9.5 days (1.0 $\\times$ )"
+        ],
+        [
+          "GPT-2 small - Megatron-LM [77]",
+          "18.2",
+          "4.7 days (2.0 $\\times$ )"
+        ],
+        [
+          "GPT-2 small - FlashAttention",
+          "18.2",
+          "2.7 days (3.5 $\\times$ )"
+        ],
+        [
+          "GPT-2 medium - Huggingface [87]",
+          "14.2",
+          "21.0 days (1.0 $\\times$ )"
+        ],
+        [
+          "GPT-2 medium - Megatron-LM [77]",
+          "14.3",
+          "11.5 days (1.8 $\\times$ )"
+        ],
+        [
+          "GPT-2 medium - FlashAttention",
+          "14.3",
+          "6.9 days (3.0 $\\times$ )"
+        ]
+      ]
+    },
+    {
+      "number": 3,
+      "ref": "fa:table3",
+      "caption": "The performance of standard attention, FlashAttention, block-sparse FlashAttention, and approximate attention baselines on the Long-Range-Arena benchmarks.",
+      "rows": [
+        [
+          "Models",
+          "ListOps",
+          "Text",
+          "Retrieval",
+          "Image",
+          "Pathfinder",
+          "Avg",
+          "Speedup"
+        ],
+        [
+          "Transformer",
+          "36.0",
+          "63.6",
+          "81.6",
+          "42.3",
+          "72.7",
+          "59.3",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "37.6",
+          "63.9",
+          "81.4",
+          "43.5",
+          "72.7",
+          "59.8",
+          "2.4 $\\times$"
+        ],
+        [
+          "Block-sparse FlashAttention",
+          "37.0",
+          "63.0",
+          "81.3",
+          "43.6",
+          "73.3",
+          "59.6",
+          "2.8 $\\times$"
+        ],
+        [
+          "Linformer [84]",
+          "35.6",
+          "55.9",
+          "77.7",
+          "37.8",
+          "67.6",
+          "54.9",
+          "2.5 $\\times$"
+        ],
+        [
+          "Linear Attention [50]",
+          "38.8",
+          "63.2",
+          "80.7",
+          "42.6",
+          "72.5",
+          "59.6",
+          "2.3 $\\times$"
+        ],
+        [
+          "Performer [12]",
+          "36.8",
+          "63.6",
+          "82.2",
+          "42.1",
+          "69.9",
+          "58.9",
+          "1.8 $\\times$"
+        ],
+        [
+          "Local Attention [80]",
+          "36.1",
+          "60.2",
+          "76.7",
+          "40.6",
+          "66.6",
+          "56.0",
+          "1.7 $\\times$"
+        ],
+        [
+          "Reformer [51]",
+          "36.5",
+          "63.8",
+          "78.5",
+          "39.6",
+          "69.4",
+          "57.6",
+          "1.3 $\\times$"
+        ],
+        [
+          "Smyrf [19]",
+          "36.1",
+          "64.1",
+          "79.0",
+          "39.6",
+          "70.5",
+          "57.9",
+          "1.7 $\\times$"
+        ]
+      ]
+    },
+    {
+      "number": 4,
+      "ref": "fa:table4",
+      "caption": "GPT-2 small with FlashAttention, with 4 $\\times$ larger context length compared to Megatron-LM, is still 30% faster while achieving 0.7 better perplexity. Training time on 8 $\\times$ A100 GPUs is reported.",
+      "rows": [
+        [
+          "Model implementations",
+          "Context length",
+          "OpenWebText (ppl)",
+          "Training time (speedup)"
+        ],
+        [
+          "GPT-2 small - Megatron-LM",
+          "1k",
+          "18.2",
+          "4.7 days (1.0 $\\times$ )"
+        ],
+        [
+          "GPT-2 small - FlashAttention",
+          "1k",
+          "18.2",
+          "2.7 days (1.7 $\\times$ )"
+        ],
+        [
+          "GPT-2 small - FlashAttention",
+          "2k",
+          "17.6",
+          "3.0 days (1.6 $\\times$ )"
+        ],
+        [
+          "GPT-2 small - FlashAttention",
+          "4k",
+          "17.5",
+          "3.6 days (1.3 $\\times$ )"
+        ]
+      ]
+    },
+    {
+      "number": 5,
+      "ref": "fa:table5",
+      "caption": "Long Document performance (micro $F_{1}$ ) at different sequence lengths using FlashAttention.",
+      "rows": [
+        [
+          "",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384"
+        ],
+        [
+          "MIMIC-III [47]",
+          "52.8",
+          "50.7",
+          "51.7",
+          "54.6",
+          "56.4",
+          "57.1"
+        ],
+        [
+          "ECtHR [6]",
+          "72.2",
+          "74.3",
+          "77.1",
+          "78.6",
+          "80.7",
+          "79.2"
+        ]
+      ]
+    },
+    {
+      "number": 6,
+      "ref": "fa:table6",
+      "caption": "We report the first Transformer model that can achieve non-random performance on Path-X and Path-256.",
+      "rows": [
+        [
+          "Model",
+          "Path-X",
+          "Path-256"
+        ],
+        [
+          "Transformer",
+          "✗",
+          "✗"
+        ],
+        [
+          "Linformer [84]",
+          "✗",
+          "✗"
+        ],
+        [
+          "Linear Attention [50]",
+          "✗",
+          "✗"
+        ],
+        [
+          "Performer [12]",
+          "✗",
+          "✗"
+        ],
+        [
+          "Local Attention [80]",
+          "✗",
+          "✗"
+        ],
+        [
+          "Reformer [51]",
+          "✗",
+          "✗"
+        ],
+        [
+          "SMYRF [19]",
+          "✗",
+          "✗"
+        ],
+        [
+          "FlashAttention",
+          "61.4",
+          "✗"
+        ],
+        [
+          "Block-sparse FlashAttention",
+          "56.0",
+          "63.1"
+        ]
+      ]
+    },
+    {
+      "number": 7,
+      "ref": "fa:table7",
+      "caption": "Runtime (ms) of FlashAttention compared to FMHA by sequence length, with masking and dropout, measured on an A100-SXM4-40GB GPU. Batch size 64, 16 heads, head dimension 64 (i.e., BERT-large size).",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512"
+        ],
+        [
+          "Apex FMHA forward",
+          "0.10",
+          "0.29",
+          "1.14"
+        ],
+        [
+          "FlashAttention forward",
+          "0.08",
+          "0.22",
+          "0.81"
+        ],
+        [
+          "Apex FMHA backward",
+          "0.17",
+          "0.52",
+          "1.81"
+        ],
+        [
+          "FlashAttention backward",
+          "0.20",
+          "0.53",
+          "2.00"
+        ],
+        [
+          "Apex FMHA forward + backward",
+          "0.27",
+          "0.81",
+          "2.95"
+        ],
+        [
+          "FlashAttention forward + backward",
+          "0.28",
+          "0.75",
+          "2.81"
+        ]
+      ]
+    },
+    {
+      "number": 8,
+      "ref": "fa:table8",
+      "caption": "Pointers to results tables.",
+      "rows": [
+        [
+          "Dropout",
+          "Masking",
+          "Pass",
+          "Table"
+        ],
+        [
+          "Yes",
+          "Yes",
+          "Forward",
+          "Table 9"
+        ],
+        [
+          "Yes",
+          "Yes",
+          "Backward",
+          "Table 10"
+        ],
+        [
+          "Yes",
+          "Yes",
+          "Combined",
+          "Table 11"
+        ],
+        [
+          "No",
+          "Yes",
+          "Forward",
+          "Table 12"
+        ],
+        [
+          "No",
+          "Yes",
+          "Backward",
+          "Table 13"
+        ],
+        [
+          "No",
+          "Yes",
+          "Combined",
+          "Table 14"
+        ],
+        [
+          "Yes",
+          "No",
+          "Forward",
+          "Table 15"
+        ],
+        [
+          "Yes",
+          "No",
+          "Backward",
+          "Table 16"
+        ],
+        [
+          "Yes",
+          "No",
+          "Combined",
+          "Table 17"
+        ],
+        [
+          "No",
+          "No",
+          "Forward",
+          "Table 18"
+        ],
+        [
+          "No",
+          "No",
+          "Backward",
+          "Table 19"
+        ],
+        [
+          "No",
+          "No",
+          "Combined",
+          "Table 20"
+        ],
+        [
+          "No",
+          "No",
+          "Memory Usage (Combined)",
+          "Table 21"
+        ]
+      ]
+    },
+    {
+      "number": 9,
+      "ref": "fa:table9",
+      "caption": "Forward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with dropout and masking. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.36",
+          "0.34",
+          "0.78",
+          "2.54",
+          "9.33",
+          "36.33",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.40",
+          "0.40",
+          "1.10",
+          "3.65",
+          "16.19",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "2.03",
+          "3.15",
+          "5.67",
+          "11.02",
+          "22.59",
+          "46.14",
+          "97.38",
+          "212.13",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.83",
+          "0.86",
+          "1.01",
+          "2.20",
+          "7.13",
+          "14.32",
+          "28.60",
+          "57.79",
+          "117.67",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.67",
+          "0.52",
+          "0.69",
+          "0.71",
+          "1.65",
+          "3.18",
+          "6.15",
+          "12.16",
+          "24.17",
+          "52.39"
+        ],
+        [
+          "Smyrf",
+          "2.27",
+          "2.34",
+          "3.91",
+          "7.44",
+          "14.71",
+          "29.22",
+          "58.27",
+          "116.41",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.18",
+          "1.27",
+          "1.34",
+          "3.38",
+          "11.40",
+          "22.55",
+          "44.95",
+          "89.76",
+          "179.66",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "1.12",
+          "1.11",
+          "2.13",
+          "2.77",
+          "6.95",
+          "20.91",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "1.22",
+          "1.14",
+          "1.08",
+          "1.95",
+          "5.72",
+          "12.98",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "1.13",
+          "1.12",
+          "1.12",
+          "1.77",
+          "6.03",
+          "13.68",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.04",
+          "0.06",
+          "0.21",
+          "0.82",
+          "2.85",
+          "10.41",
+          "41.74",
+          "167.19",
+          "670.76",
+          "2682.35"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.06",
+          "0.06",
+          "0.06",
+          "0.12",
+          "0.44",
+          "0.86",
+          "1.70",
+          "3.29",
+          "6.55",
+          "13.34"
+        ]
+      ]
+    },
+    {
+      "number": 10,
+      "ref": "fa:table10",
+      "caption": "Backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with dropout and masking. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.37",
+          "0.49",
+          "1.66",
+          "5.81",
+          "22.32",
+          "87.67",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.35",
+          "0.32",
+          "0.77",
+          "2.42",
+          "8.43",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "2.37",
+          "4.59",
+          "8.91",
+          "17.68",
+          "35.13",
+          "70.05",
+          "140.01",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.55",
+          "0.62",
+          "1.49",
+          "4.03",
+          "13.78",
+          "27.61",
+          "55.20",
+          "110.27",
+          "221.40",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.89",
+          "0.80",
+          "0.81",
+          "0.93",
+          "2.48",
+          "4.75",
+          "9.29",
+          "18.27",
+          "36.53",
+          "-"
+        ],
+        [
+          "Smyrf",
+          "1.41",
+          "2.83",
+          "5.43",
+          "10.72",
+          "21.25",
+          "42.31",
+          "84.48",
+          "168.95",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.75",
+          "1.76",
+          "3.01",
+          "7.50",
+          "20.07",
+          "39.08",
+          "76.39",
+          "150.82",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "1.29",
+          "1.28",
+          "2.18",
+          "3.04",
+          "7.27",
+          "21.16",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "1.27",
+          "1.31",
+          "1.29",
+          "2.04",
+          "5.24",
+          "10.74",
+          "25.95",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "1.33",
+          "1.28",
+          "1.32",
+          "1.81",
+          "5.55",
+          "11.44",
+          "27.45",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.30",
+          "0.26",
+          "0.68",
+          "2.02",
+          "6.84",
+          "26.89",
+          "105.70",
+          "418.96",
+          "1666.89",
+          "6660.44"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.30",
+          "0.27",
+          "0.29",
+          "0.59",
+          "1.50",
+          "2.94",
+          "5.82",
+          "11.85",
+          "23.98",
+          "47.61"
+        ]
+      ]
+    },
+    {
+      "number": 11,
+      "ref": "fa:table11",
+      "caption": "Forward pass + backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with dropout and masking. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.84",
+          "0.86",
+          "2.35",
+          "8.29",
+          "31.75",
+          "124.19",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.87",
+          "0.89",
+          "1.33",
+          "4.21",
+          "16.50",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "4.30",
+          "7.76",
+          "14.60",
+          "28.74",
+          "57.79",
+          "116.34",
+          "237.57",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "1.40",
+          "1.60",
+          "2.06",
+          "6.06",
+          "20.94",
+          "42.01",
+          "84.08",
+          "168.48",
+          "339.45",
+          "-"
+        ],
+        [
+          "Linformer",
+          "1.57",
+          "1.49",
+          "1.55",
+          "1.60",
+          "4.19",
+          "8.04",
+          "15.71",
+          "30.92",
+          "61.47",
+          "-"
+        ],
+        [
+          "Smyrf",
+          "3.41",
+          "5.08",
+          "9.35",
+          "18.18",
+          "36.03",
+          "71.68",
+          "143.04",
+          "285.87",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "3.08",
+          "3.10",
+          "4.26",
+          "10.90",
+          "31.59",
+          "61.72",
+          "121.51",
+          "241.18",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "2.54",
+          "2.52",
+          "3.71",
+          "5.44",
+          "13.29",
+          "39.19",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "2.47",
+          "2.49",
+          "2.51",
+          "3.10",
+          "10.39",
+          "22.49",
+          "60.44",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "2.51",
+          "2.49",
+          "2.52",
+          "3.40",
+          "10.97",
+          "23.89",
+          "63.28",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.43",
+          "0.41",
+          "0.95",
+          "2.55",
+          "9.56",
+          "37.49",
+          "147.75",
+          "586.61",
+          "2339.11",
+          "9341.30"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.44",
+          "0.44",
+          "0.45",
+          "0.89",
+          "1.95",
+          "4.12",
+          "7.64",
+          "16.60",
+          "32.73",
+          "64.11"
+        ]
+      ]
+    },
+    {
+      "number": 12,
+      "ref": "fa:table12",
+      "caption": "Forward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with masking. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.30",
+          "0.30",
+          "0.63",
+          "1.93",
+          "7.08",
+          "27.45",
+          "112.90",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.45",
+          "0.41",
+          "0.43",
+          "1.52",
+          "5.80",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "1.87",
+          "3.00",
+          "5.37",
+          "10.43",
+          "21.40",
+          "43.83",
+          "92.80",
+          "203.24",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.70",
+          "0.81",
+          "1.02",
+          "2.09",
+          "6.64",
+          "13.34",
+          "26.77",
+          "54.02",
+          "110.11",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.63",
+          "0.50",
+          "0.67",
+          "0.65",
+          "1.36",
+          "2.60",
+          "5.04",
+          "9.92",
+          "19.69",
+          "43.47"
+        ],
+        [
+          "Smyrf",
+          "2.38",
+          "2.32",
+          "3.76",
+          "7.16",
+          "14.14",
+          "28.09",
+          "55.98",
+          "111.73",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.22",
+          "1.29",
+          "1.44",
+          "3.28",
+          "10.99",
+          "21.72",
+          "43.29",
+          "86.32",
+          "172.76",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "0.96",
+          "1.04",
+          "1.66",
+          "2.16",
+          "5.41",
+          "16.15",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "0.99",
+          "0.98",
+          "0.99",
+          "1.56",
+          "4.79",
+          "11.07",
+          "32.98",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "0.96",
+          "1.02",
+          "1.02",
+          "1.48",
+          "5.05",
+          "11.59",
+          "34.16",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.03",
+          "0.04",
+          "0.17",
+          "0.68",
+          "2.28",
+          "8.40",
+          "33.55",
+          "134.14",
+          "537.50",
+          "2150.88"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.05",
+          "0.04",
+          "0.05",
+          "0.11",
+          "0.35",
+          "0.68",
+          "1.33",
+          "2.54",
+          "5.34",
+          "10.73"
+        ]
+      ]
+    },
+    {
+      "number": 13,
+      "ref": "fa:table13",
+      "caption": "Backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with masking. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.44",
+          "0.46",
+          "1.53",
+          "5.33",
+          "20.34",
+          "79.87",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.29",
+          "0.31",
+          "0.65",
+          "1.95",
+          "6.49",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "2.31",
+          "4.47",
+          "8.68",
+          "17.20",
+          "34.14",
+          "68.09",
+          "136.02",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.51",
+          "0.62",
+          "1.30",
+          "3.81",
+          "13.33",
+          "26.72",
+          "53.41",
+          "106.82",
+          "214.15",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.76",
+          "0.81",
+          "0.94",
+          "0.87",
+          "2.24",
+          "4.25",
+          "8.35",
+          "16.38",
+          "32.67",
+          "72.11"
+        ],
+        [
+          "Smyrf",
+          "1.34",
+          "2.77",
+          "5.30",
+          "10.46",
+          "20.73",
+          "41.27",
+          "82.41",
+          "164.86",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.66",
+          "1.61",
+          "3.09",
+          "7.42",
+          "19.68",
+          "38.35",
+          "74.92",
+          "147.86",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "1.24",
+          "1.25",
+          "2.04",
+          "2.91",
+          "6.78",
+          "19.67",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "1.27",
+          "1.23",
+          "1.24",
+          "1.85",
+          "4.99",
+          "10.21",
+          "24.89",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "1.43",
+          "1.50",
+          "1.44",
+          "1.69",
+          "5.25",
+          "10.86",
+          "26.26",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.21",
+          "0.22",
+          "0.62",
+          "1.84",
+          "5.77",
+          "22.25",
+          "86.21",
+          "338.91",
+          "1343.91",
+          "5361.09"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.22",
+          "0.22",
+          "0.26",
+          "0.57",
+          "1.55",
+          "3.13",
+          "5.98",
+          "12.21",
+          "23.49",
+          "47.85"
+        ]
+      ]
+    },
+    {
+      "number": 14,
+      "ref": "fa:table14",
+      "caption": "Forward pass + backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with masking. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.80",
+          "0.81",
+          "2.08",
+          "7.23",
+          "27.51",
+          "107.58",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.81",
+          "0.83",
+          "1.09",
+          "3.36",
+          "12.39",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "4.16",
+          "7.46",
+          "14.06",
+          "27.68",
+          "55.66",
+          "112.15",
+          "229.37",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "1.39",
+          "1.68",
+          "2.08",
+          "5.83",
+          "20.04",
+          "40.16",
+          "80.44",
+          "161.35",
+          "325.11",
+          "-"
+        ],
+        [
+          "Linformer",
+          "1.51",
+          "1.42",
+          "1.56",
+          "1.67",
+          "3.67",
+          "6.99",
+          "13.63",
+          "26.77",
+          "53.36",
+          "117.56"
+        ],
+        [
+          "Smyrf",
+          "3.38",
+          "4.93",
+          "9.07",
+          "17.66",
+          "34.94",
+          "69.55",
+          "138.72",
+          "277.41",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "3.08",
+          "3.10",
+          "4.26",
+          "10.90",
+          "31.59",
+          "61.72",
+          "121.51",
+          "241.18",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "2.39",
+          "2.40",
+          "3.31",
+          "5.02",
+          "12.25",
+          "35.94",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "2.36",
+          "2.34",
+          "2.38",
+          "2.94",
+          "9.83",
+          "21.35",
+          "58.12",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "2.35",
+          "2.35",
+          "2.37",
+          "3.25",
+          "10.36",
+          "22.57",
+          "60.63",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.32",
+          "0.30",
+          "0.83",
+          "2.37",
+          "7.95",
+          "30.77",
+          "119.98",
+          "473.65",
+          "1883.43",
+          "7513.01"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.34",
+          "0.34",
+          "0.36",
+          "0.69",
+          "1.85",
+          "3.89",
+          "7.16",
+          "14.85",
+          "30.46",
+          "60.03"
+        ]
+      ]
+    },
+    {
+      "number": 15,
+      "ref": "fa:table15",
+      "caption": "Forward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with dropout. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.26",
+          "0.24",
+          "0.57",
+          "1.80",
+          "6.56",
+          "25.34",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.27",
+          "0.27",
+          "0.56",
+          "1.88",
+          "6.56",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "1.83",
+          "2.96",
+          "5.31",
+          "10.33",
+          "21.19",
+          "43.42",
+          "91.96",
+          "201.34",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.51",
+          "0.60",
+          "0.78",
+          "2.01",
+          "6.23",
+          "12.52",
+          "25.07",
+          "50.50",
+          "102.18",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.47",
+          "0.37",
+          "0.49",
+          "0.52",
+          "1.37",
+          "2.65",
+          "5.12",
+          "10.13",
+          "20.25",
+          "44.16"
+        ],
+        [
+          "Smyrf",
+          "2.12",
+          "2.01",
+          "3.15",
+          "5.97",
+          "11.83",
+          "23.36",
+          "46.48",
+          "92.72",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.28",
+          "1.33",
+          "1.51",
+          "3.39",
+          "11.40",
+          "22.54",
+          "44.96",
+          "89.85",
+          "179.73",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "1.03",
+          "1.00",
+          "1.72",
+          "2.39",
+          "5.96",
+          "17.88",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "1.02",
+          "1.03",
+          "1.03",
+          "1.73",
+          "5.10",
+          "11.63",
+          "34.22",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "0.99",
+          "1.03",
+          "1.01",
+          "1.58",
+          "5.36",
+          "12.27",
+          "35.56",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.10",
+          "0.10",
+          "0.22",
+          "0.83",
+          "2.81",
+          "10.38",
+          "41.63",
+          "167.01",
+          "668.74",
+          "2678.11"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.54",
+          "0.51",
+          "0.68",
+          "0.61",
+          "0.67",
+          "1.10",
+          "1.89",
+          "3.71",
+          "7.18",
+          "14.41"
+        ]
+      ]
+    },
+    {
+      "number": 16,
+      "ref": "fa:table16",
+      "caption": "Backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with dropout. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.44",
+          "0.35",
+          "0.90",
+          "2.94",
+          "10.77",
+          "41.67",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.28",
+          "0.33",
+          "0.92",
+          "2.94",
+          "10.80",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "2.24",
+          "4.34",
+          "8.39",
+          "16.62",
+          "33.02",
+          "65.77",
+          "131.52",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.51",
+          "0.58",
+          "1.41",
+          "3.71",
+          "12.96",
+          "25.98",
+          "51.94",
+          "103.72",
+          "207.78",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.84",
+          "0.74",
+          "0.79",
+          "0.85",
+          "2.28",
+          "4.37",
+          "8.66",
+          "17.02",
+          "33.78",
+          "-"
+        ],
+        [
+          "Smyrf",
+          "1.27",
+          "2.56",
+          "4.90",
+          "9.66",
+          "19.16",
+          "38.13",
+          "76.17",
+          "152.39",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.67",
+          "1.77",
+          "3.03",
+          "7.52",
+          "20.10",
+          "39.13",
+          "76.35",
+          "150.83",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "1.27",
+          "1.36",
+          "2.15",
+          "3.04",
+          "7.27",
+          "21.18",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "1.28",
+          "1.34",
+          "1.38",
+          "1.98",
+          "5.24",
+          "10.74",
+          "25.95",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "1.48",
+          "1.47",
+          "1.50",
+          "1.81",
+          "5.57",
+          "11.38",
+          "27.43",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.15",
+          "0.18",
+          "0.58",
+          "1.86",
+          "6.50",
+          "26.21",
+          "104.27",
+          "416.10",
+          "1661.92",
+          "6643.01"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.17",
+          "0.17",
+          "0.17",
+          "0.40",
+          "1.10",
+          "2.04",
+          "4.43",
+          "9.33",
+          "18.28",
+          "37.31"
+        ]
+      ]
+    },
+    {
+      "number": 17,
+      "ref": "fa:table17",
+      "caption": "Forward pass + backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length, with dropout. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.66",
+          "0.67",
+          "1.43",
+          "4.82",
+          "17.47",
+          "67.29",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.88",
+          "0.90",
+          "1.49",
+          "4.73",
+          "17.41",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "4.06",
+          "7.28",
+          "13.68",
+          "26.98",
+          "54.27",
+          "109.39",
+          "223.80",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "1.09",
+          "1.40",
+          "1.99",
+          "5.61",
+          "19.23",
+          "38.62",
+          "77.30",
+          "154.63",
+          "311.12",
+          "-"
+        ],
+        [
+          "Linformer",
+          "1.31",
+          "1.21",
+          "1.30",
+          "1.39",
+          "3.73",
+          "7.15",
+          "14.05",
+          "27.69",
+          "55.00",
+          "-"
+        ],
+        [
+          "Smyrf",
+          "3.00",
+          "4.37",
+          "8.05",
+          "15.66",
+          "31.04",
+          "61.64",
+          "123.04",
+          "245.65",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "3.07",
+          "3.17",
+          "4.31",
+          "10.89",
+          "31.54",
+          "61.78",
+          "121.56",
+          "240.94",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "2.54",
+          "2.52",
+          "3.71",
+          "5.44",
+          "13.29",
+          "39.19",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "2.47",
+          "2.49",
+          "2.51",
+          "3.10",
+          "10.39",
+          "22.49",
+          "60.44",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "2.51",
+          "2.49",
+          "2.52",
+          "3.40",
+          "10.97",
+          "23.89",
+          "63.28",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.35",
+          "0.36",
+          "0.80",
+          "2.52",
+          "9.16",
+          "36.70",
+          "146.13",
+          "583.45",
+          "2332.01",
+          "9323.63"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.91",
+          "0.83",
+          "0.94",
+          "0.92",
+          "1.83",
+          "3.50",
+          "7.02",
+          "13.56",
+          "26.71",
+          "53.92"
+        ]
+      ]
+    },
+    {
+      "number": 18,
+      "ref": "fa:table18",
+      "caption": "Forward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.21",
+          "0.22",
+          "0.43",
+          "1.27",
+          "4.32",
+          "16.47",
+          "67.77",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.24",
+          "0.26",
+          "0.42",
+          "1.33",
+          "4.28",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "1.77",
+          "2.82",
+          "5.01",
+          "9.74",
+          "20.03",
+          "41.11",
+          "87.39",
+          "192.40",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.48",
+          "0.57",
+          "0.80",
+          "1.90",
+          "5.76",
+          "11.56",
+          "23.13",
+          "46.65",
+          "94.74",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.46",
+          "0.36",
+          "0.45",
+          "0.50",
+          "1.09",
+          "2.09",
+          "4.01",
+          "7.90",
+          "15.70",
+          "35.40"
+        ],
+        [
+          "Smyrf",
+          "1.94",
+          "1.96",
+          "3.01",
+          "5.69",
+          "11.26",
+          "22.23",
+          "44.21",
+          "88.22",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.21",
+          "1.34",
+          "1.34",
+          "3.31",
+          "11.01",
+          "21.71",
+          "43.27",
+          "86.32",
+          "172.85",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "0.96",
+          "1.04",
+          "1.66",
+          "2.16",
+          "5.41",
+          "16.15",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "0.99",
+          "0.98",
+          "0.99",
+          "1.56",
+          "4.79",
+          "11.07",
+          "32.98",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "0.96",
+          "1.02",
+          "1.02",
+          "1.48",
+          "5.05",
+          "11.59",
+          "34.16",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.08",
+          "0.09",
+          "0.18",
+          "0.68",
+          "2.40",
+          "8.42",
+          "33.54",
+          "134.03",
+          "535.95",
+          "2147.05"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.56",
+          "0.52",
+          "0.63",
+          "0.65",
+          "0.61",
+          "0.96",
+          "1.69",
+          "3.02",
+          "5.69",
+          "11.77"
+        ]
+      ]
+    },
+    {
+      "number": 19,
+      "ref": "fa:table19",
+      "caption": "Backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.26",
+          "0.29",
+          "0.78",
+          "2.44",
+          "8.82",
+          "33.87",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.29",
+          "0.30",
+          "0.80",
+          "2.59",
+          "8.86",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "2.18",
+          "4.21",
+          "8.14",
+          "16.12",
+          "32.02",
+          "63.84",
+          "127.60",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "0.51",
+          "0.64",
+          "1.28",
+          "3.60",
+          "12.52",
+          "25.08",
+          "50.22",
+          "100.23",
+          "200.66",
+          "-"
+        ],
+        [
+          "Linformer",
+          "0.69",
+          "0.76",
+          "0.69",
+          "0.80",
+          "2.04",
+          "3.88",
+          "7.67",
+          "15.04",
+          "30.11",
+          "63.15"
+        ],
+        [
+          "Smyrf",
+          "1.24",
+          "2.49",
+          "4.77",
+          "9.42",
+          "18.65",
+          "37.12",
+          "74.15",
+          "148.35",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "1.68",
+          "1.61",
+          "3.02",
+          "7.40",
+          "19.72",
+          "38.27",
+          "74.89",
+          "147.99",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "1.24",
+          "1.25",
+          "2.04",
+          "2.91",
+          "6.78",
+          "19.67",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "1.27",
+          "1.23",
+          "1.24",
+          "1.85",
+          "4.99",
+          "10.21",
+          "24.89",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "1.43",
+          "1.50",
+          "1.44",
+          "1.69",
+          "5.25",
+          "10.86",
+          "26.26",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.11",
+          "0.16",
+          "0.52",
+          "1.62",
+          "5.45",
+          "21.57",
+          "84.75",
+          "336.00",
+          "1338.56",
+          "5343.19"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.11",
+          "0.12",
+          "0.16",
+          "0.38",
+          "1.20",
+          "2.34",
+          "4.69",
+          "9.10",
+          "18.74",
+          "37.04"
+        ]
+      ]
+    },
+    {
+      "number": 20,
+      "ref": "fa:table20",
+      "caption": "Forward pass + backward pass runtime (ms) of various exact/approximate/sparse attention mechanisms by sequence length. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "0.67",
+          "0.70",
+          "1.18",
+          "3.67",
+          "13.22",
+          "50.44",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "0.74",
+          "0.65",
+          "1.23",
+          "3.80",
+          "13.21",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "3.93",
+          "7.01",
+          "13.15",
+          "25.89",
+          "52.09",
+          "105.00",
+          "215.13",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "1.09",
+          "1.27",
+          "1.99",
+          "5.38",
+          "18.32",
+          "36.77",
+          "73.67",
+          "147.29",
+          "296.35",
+          "-"
+        ],
+        [
+          "Linformer",
+          "1.31",
+          "1.25",
+          "1.30",
+          "1.29",
+          "3.20",
+          "6.10",
+          "11.93",
+          "23.39",
+          "46.72",
+          "100.52"
+        ],
+        [
+          "Smyrf",
+          "2.98",
+          "4.23",
+          "7.78",
+          "15.12",
+          "29.96",
+          "59.45",
+          "118.60",
+          "237.02",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "3.03",
+          "3.05",
+          "4.26",
+          "10.70",
+          "30.77",
+          "60.15",
+          "118.33",
+          "234.94",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "2.39",
+          "2.40",
+          "3.31",
+          "5.02",
+          "12.25",
+          "35.94",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "2.36",
+          "2.34",
+          "2.38",
+          "2.94",
+          "9.83",
+          "21.35",
+          "58.12",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "2.35",
+          "2.35",
+          "2.37",
+          "3.25",
+          "10.36",
+          "22.57",
+          "60.63",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "0.31",
+          "0.31",
+          "0.73",
+          "2.29",
+          "7.64",
+          "30.09",
+          "118.50",
+          "470.51",
+          "1876.08",
+          "7492.85"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "0.74",
+          "0.77",
+          "0.82",
+          "0.88",
+          "1.71",
+          "3.21",
+          "6.56",
+          "12.60",
+          "24.93",
+          "50.39"
+        ]
+      ]
+    },
+    {
+      "number": 21,
+      "ref": "fa:table21",
+      "caption": "Memory usage (MB) of various exact/approximate/sparse attention mechanisms by sequence length. Best in bold, second best underlined.",
+      "rows": [
+        [
+          "Attention Method",
+          "128",
+          "256",
+          "512",
+          "1024",
+          "2048",
+          "4096",
+          "8192",
+          "16384",
+          "32768",
+          "65536"
+        ],
+        [
+          "PyTorch Attention",
+          "36",
+          "104",
+          "336",
+          "1184",
+          "4416",
+          "17024",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Megatron",
+          "36",
+          "104",
+          "336",
+          "1184",
+          "4416",
+          "-",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Reformer",
+          "377",
+          "754",
+          "1508",
+          "3016",
+          "6033",
+          "12067",
+          "24134",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Local Attention",
+          "53",
+          "110",
+          "232",
+          "592",
+          "1696",
+          "3392",
+          "6784",
+          "13568",
+          "27136",
+          "-"
+        ],
+        [
+          "Linformer",
+          "25",
+          "52",
+          "114",
+          "287",
+          "832",
+          "1652",
+          "3292",
+          "6572",
+          "13132",
+          "26252"
+        ],
+        [
+          "Smyrf",
+          "217",
+          "434",
+          "868",
+          "1737",
+          "3474",
+          "6947",
+          "13894",
+          "27788",
+          "-",
+          "-"
+        ],
+        [
+          "LSformer",
+          "72",
+          "152",
+          "333",
+          "796",
+          "2540",
+          "5068",
+          "10125",
+          "20240",
+          "-",
+          "-"
+        ],
+        [
+          "Block Sparse",
+          "33",
+          "82",
+          "228",
+          "408",
+          "910",
+          "2401",
+          "-",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "Longformer",
+          "30",
+          "61",
+          "124",
+          "277",
+          "681",
+          "1370",
+          "2748",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "BigBird",
+          "33",
+          "66",
+          "131",
+          "294",
+          "708",
+          "1431",
+          "2872",
+          "-",
+          "-",
+          "-"
+        ],
+        [
+          "FlashAttention",
+          "22",
+          "44",
+          "104",
+          "209",
+          "418",
+          "836",
+          "1672",
+          "3344",
+          "6688",
+          "13376"
+        ],
+        [
+          "Block-Sparse FlashAttention",
+          "22",
+          "44",
+          "104",
+          "209",
+          "418",
+          "836",
+          "1672",
+          "3344",
+          "6690",
+          "13384"
+        ]
+      ]
+    }
+  ],
+  "figures": [
+    {
+      "number": 1,
+      "ref": "fa:fig1",
+      "caption": "Left: FlashAttention uses tiling to prevent materialization of the large $N\\times N$ attention matrix (dotted box) on (relatively) slow GPU HBM. In the outer loop (red arrows), FlashAttention loops through blocks of the $\\mathbf{K}$ and $\\mathbf{V}$ matrices and loads them to fast on-chip SRAM. In each block, FlashAttention loops over blocks of $\\mathbf{Q}$ matrix (blue arrows), loading them to SRAM, and writing the output of the attention computation back to HBM. Right: Speedup over the PyTorch implementation of attention on GPT-2. FlashAttention does not read and write the large $N\\times N$ attention matrix to HBM, resulting in an 7.6 $\\times$ speedup on the attention computation."
+    },
+    {
+      "number": 2,
+      "ref": "fa:fig2",
+      "caption": "Left: Forward + backward runtime of standard attention and FlashAttention for GPT-2 medium (seq. length 1024, head dim. 64, 16 heads, batch size 64) on A100 GPU. HBM access is the primary factor affecting runtime. Middle: Forward runtime of FlashAttention (seq. length 1024, head dim. 64, 16 heads, batch size 64) on A100 GPU. Fewer HBM accesses result in faster runtime, up to a point. Right: The runtime (for seq. length 4K) of block-sparse FlashAttention is faster than FlashAttention by a factor proportional to the sparsity."
+    },
+    {
+      "number": 3,
+      "ref": "fa:fig3",
+      "caption": "Left: runtime of forward pass + backward pass. Right: attention memory usage."
+    },
+    {
+      "number": 4,
+      "ref": "fa:fig4",
+      "caption": "Validation perplexity of GPT-2 small/medium using two implementations. We confirm that FlashAttention yields the same validation curves as the baseline implementation from HuggingFace."
+    },
+    {
+      "number": 5,
+      "ref": "fa:fig5",
+      "caption": "Speedup over standard PyTorch attention at different sequence lengths, on A100."
+    },
+    {
+      "number": 6,
+      "ref": "fa:fig6",
+      "caption": "Speedup over standard PyTorch attention at different sequence lengths, on A100, with head dimension 128."
+    },
+    {
+      "number": 7,
+      "ref": "fa:fig7",
+      "caption": "Speedup over standard PyTorch attention at different sequence lengths, on RTX 3090."
+    },
+    {
+      "number": 8,
+      "ref": "fa:fig8",
+      "caption": "Speedup over standard PyTorch attention at different sequence lengths, on T4. Top: Combined forward pass + backward pass. Bottom: Forward pass only."
+    }
+  ],
+  "equations": [
+    {
+      "latex": "\\mathbf{S}=\\mathbf{Q}\\mathbf{K}^{\\top}\\in\\mathbb{R}^{N\\times N},\\quad\\mathbf{P}=\\mathrm{softmax}(\\mathbf{S})\\in\\mathbb{R}^{N\\times N},\\quad\\mathbf{O}=\\mathbf{P}\\mathbf{V}\\in\\mathbb{R}^{N\\times d},",
+      "number": null,
+      "section": "fa:§2.2",
+      "line": 180,
+      "ref": "fa:§2.2:L180"
+    },
+    {
+      "latex": "m(x):=\\max_{i}\\ \\ x_{i},\\quad f(x):=\\begin{bmatrix}e^{x_{1}-m(x)}&\\ldots&e^{x_{B}-m(x)}\\end{bmatrix},\\quad\\ell(x):=\\sum_{i}f(x)_{i},\\quad\\mathrm{softmax}(x):=\\frac{f(x)}{\\ell(x)}.",
+      "number": null,
+      "section": "fa:§3.1",
+      "line": 263,
+      "ref": "fa:§3.1:L263"
+    },
+    {
+      "latex": "\\mathbf{S}=\\mathbf{Q}\\mathbf{K}^{\\top}\\in\\mathbb{R}^{N\\times N},\\quad\\mathbf{P}=\\mathrm{softmax}(\\mathbf{S}\\odot\\mathbb{1}_{\\tilde{\\mathbf{M}}})\\in\\mathbb{R}^{N\\times N},\\quad\\mathbf{O}=\\mathbf{P}\\mathbf{V}\\in\\mathbb{R}^{N\\times d},",
+      "number": null,
+      "section": "fa:§3.3",
+      "line": 493,
+      "ref": "fa:§3.3:L493"
+    },
+    {
+      "latex": "\\mathbf{S}=\\mathbf{Q}\\mathbf{K}^{\\top}\\in\\mathbb{R}^{N\\times N},\\quad\\mathbf{P}=\\mathrm{softmax}(\\mathbf{S})\\in\\mathbb{R}^{N\\times N},\\quad\\mathbf{O}=\\mathbf{P}\\mathbf{V}\\in\\mathbb{R}^{N\\times d}.",
+      "number": null,
+      "section": "fa:§B.1",
+      "line": 1921,
+      "ref": "fa:§B.1:L1921"
+    },
+    {
+      "latex": "L_{i}=\\sum_{j}e^{q_{i}^{T}k_{j}}.",
+      "number": 1,
+      "section": "fa:§B.1",
+      "line": 1931,
+      "ref": "fa:eq1"
+    },
+    {
+      "latex": "o_{i}=P_{i:}\\mathbf{V}=\\sum_{j}P_{ij}v_{j}=\\sum_{j}\\frac{e^{q_{i}^{T}k_{j}}}{L_{i}}v_{j}.",
+      "number": 2,
+      "section": "fa:§B.1",
+      "line": 1940,
+      "ref": "fa:eq2"
+    },
+    {
+      "latex": "dv_{j}=\\sum_{i}P_{ij}do_{i}=\\sum_{i}\\frac{e^{q_{i}^{T}k_{j}}}{L_{i}}do_{i}.",
+      "number": 3,
+      "section": "fa:§B.2",
+      "line": 1984,
+      "ref": "fa:eq3"
+    },
+    {
+      "latex": "dP_{ij}=do_{i}^{T}v_{j}.",
+      "number": null,
+      "section": "fa:§B.2",
+      "line": 1998,
+      "ref": "fa:§B.2:L1998"
+    },
+    {
+      "latex": "dS_{i:}=(\\mathrm{diag}(P_{i:})-P_{i:}P_{i:}^{T})dP_{i:}=P_{i:}\\circ dP_{i:}-(P_{i:}^{T}dP_{i:})P_{i:},",
+      "number": null,
+      "section": "fa:§B.2",
+      "line": 2008,
+      "ref": "fa:§B.2:L2008"
+    },
+    {
+      "latex": "D_{i}=P_{i:}^{T}dP_{i:}=\\sum_{j}\\frac{e^{q_{i}^{T}k_{j}}}{L_{i}}do_{i}^{T}v_{j}=do_{i}^{T}\\sum_{j}\\frac{e^{q_{i}^{\\top}k_{j}}}{L_{i}}v_{j}=do_{i}^{T}o_{i},",
+      "number": 4,
+      "section": "fa:§B.2",
+      "line": 2018,
+      "ref": "fa:eq4"
+    },
+    {
+      "latex": "dS_{i:}=P_{i:}\\circ dP_{i:}-D_{i}P_{i:}.",
+      "number": null,
+      "section": "fa:§B.2",
+      "line": 2027,
+      "ref": "fa:§B.2:L2027"
+    },
+    {
+      "latex": "dS_{ij}=P_{ij}dP_{ij}-D_{i}P_{ij}=P_{ij}(dP_{ij}-D_{i}).",
+      "number": null,
+      "section": "fa:§B.2",
+      "line": 2035,
+      "ref": "fa:§B.2:L2035"
+    },
+    {
+      "latex": "dq_{i}=\\sum_{j}dS_{ij}k_{j}=\\sum_{j}P_{ij}(dP_{ij}-D_{i})k_{j}=\\sum_{j}\\frac{e^{q_{i}^{T}k_{j}}}{L_{i}}(do_{i}^{T}v_{j}-D_{i})k_{j}.",
+      "number": 5,
+      "section": "fa:§B.2",
+      "line": 2044,
+      "ref": "fa:eq5"
+    },
+    {
+      "latex": "dk_{j}=\\sum_{i}dS_{ij}q_{i}=\\sum_{i}P_{ij}(dP_{ij}-D_{i})q_{i}=\\sum_{i}\\frac{e^{q_{i}^{T}k_{j}}}{L_{i}}(do_{i}^{T}v_{j}-D_{i})q_{i}.",
+      "number": 6,
+      "section": "fa:§B.2",
+      "line": 2053,
+      "ref": "fa:eq6"
+    },
+    {
+      "latex": "O\\left(\\frac{N^{2}}{B_{c}B_{r}}B_{r}B_{c}d\\right)=O(N^{2}d).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2469,
+      "ref": "fa:§C:L2469"
+    },
+    {
+      "latex": "m^{(j)}=\\mathrm{rowmax}(\\mathbf{S}_{:,:j})\\in\\mathbb{R}^{N},\\quad\\ell^{(j)}=\\mathrm{rowsum}(\\exp(\\mathbf{S}_{:,:j}-m^{(j)}))\\in\\mathbb{R}^{N},\\quad\\mathbf{O}^{(j)}=\\mathbf{P}_{:,:j}\\mathbf{V}_{:j}\\in\\mathbb{R}^{N\\times d}.",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2490,
+      "ref": "fa:§C:L2490"
+    },
+    {
+      "latex": "m^{(j+1)}=\\mathrm{rowmax}(\\mathbf{S}_{:,:j+1})\\in\\mathbb{R}^{N}.",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2509,
+      "ref": "fa:§C:L2509"
+    },
+    {
+      "latex": "\\ell^{(j+1)}=e^{m^{(j)}-m^{(j+1)}}\\ell^{(j)}+e^{\\tilde{m}-m^{(j+1)}}\\tilde{\\ell},",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2517,
+      "ref": "fa:§C:L2517"
+    },
+    {
+      "latex": "\\ell^{(j+1)}=\\mathrm{rowsum}(\\exp(\\mathbf{S}_{:,:j+1}-m^{(j+1)}))\\in\\mathbb{R}^{N}.",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2526,
+      "ref": "fa:§C:L2526"
+    },
+    {
+      "latex": "B_{c}d=O(M)\\Leftrightarrow B_{c}=O\\left(\\frac{M}{d}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2615,
+      "ref": "fa:§C:L2615"
+    },
+    {
+      "latex": "B_{r}d=O(M)\\Leftrightarrow B_{r}=O\\left(\\frac{M}{d}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2624,
+      "ref": "fa:§C:L2624"
+    },
+    {
+      "latex": "B_{r}B_{c}=O(M).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2633,
+      "ref": "fa:§C:L2633"
+    },
+    {
+      "latex": "B_{c}=\\Theta\\left(\\frac{M}{d}\\right),\\qquad B_{r}=\\Theta\\left(\\min\\left(\\frac{M}{d},\\frac{M}{B_{c}}\\right)\\right)=\\Theta\\left(\\min\\left(\\frac{M}{d},d\\right)\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2641,
+      "ref": "fa:§C:L2641"
+    },
+    {
+      "latex": "T_{c}=\\frac{N}{B_{c}}=\\Theta\\left(\\frac{Nd}{M}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2649,
+      "ref": "fa:§C:L2649"
+    },
+    {
+      "latex": "\\Theta\\left(NdT_{c}\\right)=\\Theta\\left(\\frac{N^{2}d^{2}}{M}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2657,
+      "ref": "fa:§C:L2657"
+    },
+    {
+      "latex": "o\\left(\\frac{N^{2}d^{2}}{M}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2670,
+      "ref": "fa:§C:L2670"
+    },
+    {
+      "latex": "o\\left(\\frac{N^{2}d^{2}}{Nd}\\right)=o(Nd).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2678,
+      "ref": "fa:§C:L2678"
+    },
+    {
+      "latex": "B_{c}=\\Theta\\left(\\frac{M}{d}\\right),\\qquad B_{r}=\\Theta\\left(\\min\\left(\\frac{M}{d},d\\right)\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2721,
+      "ref": "fa:§C:L2721"
+    },
+    {
+      "latex": "T_{c}=\\frac{N}{B_{c}}=\\Theta\\left(\\frac{Nd}{M}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2729,
+      "ref": "fa:§C:L2729"
+    },
+    {
+      "latex": "\\Theta\\left(NdT_{c}\\right)=\\Theta\\left(\\frac{N^{2}d^{2}}{M}\\right).",
+      "number": null,
+      "section": "fa:§C",
+      "line": 2737,
+      "ref": "fa:§C:L2737"
+    },
+    {
+      "latex": "\\Theta\\left(Nd+\\frac{N^{2}d^{2}}{M}s\\right).",
+      "number": null,
+      "section": "fa:§D.1",
+      "line": 2861,
+      "ref": "fa:§D.1:L2861"
+    }
+  ],
+  "equation_roles": [
+    {
+      "ref": "fa:§2.2:attention",
+      "describes": "standard attention S = QK^T, P = softmax(S), O = PV",
+      "role": "setup"
+    },
+    {
+      "ref": "fa:§3.1:softmax-stable",
+      "describes": "numerically stable softmax via m(x), f(x), l(x)",
+      "role": "mechanism"
+    },
+    {
+      "ref": "fa:§3.1:softmax-decomp",
+      "describes": "decomposition of softmax over a concatenation: m, f, l of the whole from the halves",
+      "role": "mechanism"
+    },
+    {
+      "ref": "fa:alg1:L1",
+      "describes": "block sizes B_c = ceil(M/4d), B_r = min(ceil(M/4d), d)",
+      "role": "procedure"
+    },
+    {
+      "ref": "fa:alg1:L11",
+      "describes": "running statistics update m_new, l_new with the rescale factors e^{m_i - m_new}",
+      "role": "mechanism"
+    },
+    {
+      "ref": "fa:alg1:L12",
+      "describes": "output update O_i <- diag(l_new)^{-1}(diag(l_i) e^{m_i-m_new} O_i + e^{m~-m_new} P~ V_j)",
+      "role": "mechanism"
+    },
+    {
+      "ref": "fa:thm1",
+      "describes": "O(N^2 d) FLOPs, O(N) extra memory",
+      "role": "result"
+    },
+    {
+      "ref": "fa:thm2",
+      "describes": "standard Theta(Nd + N^2) vs FlashAttention Theta(N^2 d^2 M^{-1}) HBM accesses",
+      "role": "result"
+    },
+    {
+      "ref": "fa:prop3",
+      "describes": "no exact algorithm with o(N^2 d^2 M^{-1}) accesses for all M in [d, Nd]",
+      "role": "result"
+    },
+    {
+      "ref": "fa:§3.3:block-sparse",
+      "describes": "block-sparse attention with mask M~",
+      "role": "setup"
+    },
+    {
+      "ref": "fa:prop4",
+      "describes": "block-sparse Theta(Nd + N^2 d^2 M^{-1} s)",
+      "role": "result"
+    },
+    {
+      "ref": "fa:eq4",
+      "describes": "D_i = P_i:^T dP_i: = do_i^T o_i (softmax backward without an N-length reduction)",
+      "role": "mechanism"
+    },
+    {
+      "ref": "fa:alg4:L13",
+      "describes": "backward recomputes P_ij = diag(l_i)^{-1} exp(S_ij - m_i) on chip",
+      "role": "mechanism"
+    },
+    {
+      "ref": "fa:thm5",
+      "describes": "backward: standard Theta(Nd + N^2), FlashAttention Theta(N^2 d^2 M^{-1})",
+      "role": "result"
+    },
+    {
+      "ref": "fa:§C:thm2-proof",
+      "describes": "T_c = N/B_c = Theta(Nd/M) passes over Q and O; accesses Theta(N d T_c)",
+      "role": "derivation"
+    }
+  ],
+  "findings": [
+    {
+      "id": "bert_mlperf",
+      "question": "Does FlashAttention beat the MLPerf 1.1 BERT-large record?",
+      "setting": "BERT-large, seq 512, 8xA100, 10 runs, to 72.0% MLM accuracy",
+      "metric": "training minutes",
+      "value": "17.4±1.4 vs 20.0±1.5 (15% faster)",
+      "evidence_kind": "table with mean±std",
+      "refs": [
+        "fa:table1",
+        "fa:§4.1"
+      ]
+    },
+    {
+      "id": "gpt2_speed",
+      "question": "End-to-end GPT-2 training speedup vs HuggingFace and Megatron-LM?",
+      "setting": "GPT-2 small/medium, OpenWebText, 8xA100",
+      "metric": "days (speedup)",
+      "value": "small: 2.7 d (3.5x vs HF 9.5 d; Megatron 4.7 d); medium: 6.9 d (3.0x vs HF 21.0 d; Megatron 11.5 d); ppl 18.2/14.3 unchanged",
+      "evidence_kind": "table, single run per row",
+      "refs": [
+        "fa:table2",
+        "fa:§4.1"
+      ],
+      "note": "Abstract says '3x speedup on GPT-2'; the Table 2 small-model row prints 3.5x. Text says 1.7x vs Megatron, the §4 bullet says 1.8x."
+    },
+    {
+      "id": "lra_speed_quality",
+      "question": "Speed and accuracy on Long-Range Arena vs exact and approximate baselines?",
+      "setting": "LRA, seq 1K-4K",
+      "metric": "avg accuracy / speedup",
+      "value": "Transformer 59.3 / -; FlashAttention 59.8 / 2.4x; block-sparse 59.6 / 2.8x; Linformer 54.9 / 2.5x",
+      "evidence_kind": "table",
+      "refs": [
+        "fa:table3",
+        "fa:§4.1"
+      ]
+    },
+    {
+      "id": "longer_context_gpt2",
+      "question": "Does 4x context still train faster than Megatron at 1K?",
+      "setting": "GPT-2 small, 8xA100",
+      "metric": "ppl, days",
+      "value": "FA 4K: 17.5 ppl, 3.6 d (1.3x) vs Megatron 1K: 18.2 ppl, 4.7 d; 0.7 ppl better, 30% faster",
+      "evidence_kind": "table",
+      "refs": [
+        "fa:table4",
+        "fa:§4.2"
+      ]
+    },
+    {
+      "id": "long_doc_classification",
+      "question": "Lift from longer sequences on MIMIC-III and ECtHR?",
+      "setting": "pretrained RoBERTa, seq 512..16384",
+      "metric": "micro F1",
+      "value": "MIMIC-III 52.8 (512) -> 57.1 (16384): +4.3; ECtHR 72.2 (512) -> 80.7 (8192): +8.5, 79.2 at 16384",
+      "evidence_kind": "table",
+      "refs": [
+        "fa:table5",
+        "fa:§4.2"
+      ],
+      "note": "'6.4 points of lift' in the abstract is the mean of 4.3 and 8.5."
+    },
+    {
+      "id": "path_x_256",
+      "question": "First Transformer above chance on Path-X / Path-256?",
+      "setting": "LRA Path-X (16K) and Path-256 (64K), pretrained on Path-64",
+      "metric": "accuracy",
+      "value": "FlashAttention Path-X 61.4, Path-256 ✗; block-sparse Path-X 56.0, Path-256 63.1; all baselines ✗",
+      "evidence_kind": "table",
+      "refs": [
+        "fa:table6",
+        "fa:§4.2"
+      ]
+    },
+    {
+      "id": "attention_benchmark",
+      "question": "Runtime and memory of the attention kernel alone vs baselines?",
+      "setting": "one A100 40GB, dropout + padding mask, seq 128..64K",
+      "metric": "ms, MB",
+      "value": "up to 3x faster than PyTorch attention for 128-2K; approximate methods cross over between 512 and 1024; memory linear in N, up to 20x less than exact baselines, 2x less than Linformer at 64K",
+      "evidence_kind": "figure (numbers in Appendix E tables 9-21)",
+      "refs": [
+        "fa:fig3",
+        "fa:§4.3"
+      ]
+    },
+    {
+      "id": "hbm_vs_flops",
+      "question": "Is HBM traffic, not FLOPs, what sets runtime?",
+      "setting": "GPT-2 medium attention fwd+bwd, seq 1024, d 64, 16 heads, batch 64, A100",
+      "metric": "GFLOPs, GB, ms",
+      "value": "standard 66.6 GFLOPs / 40.3 GB / 41.7 ms; FlashAttention 75.2 GFLOPs / 4.4 GB / 7.3 ms",
+      "evidence_kind": "table in figure",
+      "refs": [
+        "fa:fig2",
+        "fa:§3.2"
+      ]
+    },
+    {
+      "id": "speedup_by_hardware",
+      "question": "How does speedup vary with GPU and head dim?",
+      "setting": "A100 (d=64 and 128), RTX 3090, T4",
+      "metric": "speedup over PyTorch",
+      "value": "A100 2-4x; A100 d=128 less (up to 3x with causal mask); RTX 3090 2.5-4.5x (lower HBM bandwidth ~900 GB/s vs 1.5 TB/s)",
+      "evidence_kind": "figures",
+      "refs": [
+        "fa:§E.5"
+      ]
+    }
+  ],
+  "course": {
+    "source": "lecture_05.pdf",
+    "order": [
+      {
+        "ref": "lecture_05.pdf:p10",
+        "step": "memory hierarchy: SRAM 100x more expensive, ~8x faster than DRAM"
+      },
+      {
+        "ref": "lecture_05.pdf:p41-p42",
+        "step": "tiling: factor-T reduction in global reads (matmul)"
+      },
+      {
+        "ref": "lecture_05.pdf:p50",
+        "step": "Flash attention [Dao et al] dramatically accelerates attention.. But how?"
+      },
+      {
+        "ref": "lecture_05.pdf:p51",
+        "step": "recap: matmuls with a softmax in between"
+      },
+      {
+        "ref": "lecture_05.pdf:p52",
+        "step": "Figure 1 of the paper 'is literally just tiling'; but what about the softmax?"
+      },
+      {
+        "ref": "lecture_05.pdf:p53",
+        "step": "online softmax: running max, telescoping sum (Milakov & Gimelshein)"
+      },
+      {
+        "ref": "lecture_05.pdf:p54",
+        "step": "forward pass = tile-wise S, fused exp, online softmax; backward skipped ('they recompute tile-by-tile')"
+      }
+    ],
+    "flash_pages": [
+      "lecture_05.pdf:p2",
+      "lecture_05.pdf:p50",
+      "lecture_05.pdf:p53",
+      "lecture_05.pdf:p54"
+    ]
+  },
+  "anchor_check": {
+    "ok": 70,
+    "failed": 0,
+    "unchecked": 0,
+    "problems": []
+  }
+}

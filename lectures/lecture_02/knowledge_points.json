@@ -1,0 +1,2510 @@
+{
+  "lecture": "lecture_02",
+  "title": "Resource accounting",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are line ranges in official/lectures/lecture_02.py (see sources.json). Status and anchors are evidence read from the executable lecture by atlas/tools/discover_lecture.py; prerequisite edges marked author-inference are hypotheses until a learner attempt confirms them. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer (pilot, 2026-10-01): anchors with ref 'video:M:SS-M:SS' and role 'spoken' quote the human-made YouTube captions in transcript.json (source lecture_02_video; verified by tools/check_anchors.py, ±8 s). Filtering notes that begin 'Spoken evidence' record what the audio adds to or corrects in the written source. Status 'spoken' marks KPs whose testable content exists only in the audio. Top-level spoken_filtering lists every explicit skip, deferral and aside, reviewed by hand from the full transcript; see research/10-spoken-layer-pilot.md.",
+  "knowledge_points": [
+    {
+      "id": "napkin-training-time",
+      "label": "Napkin math: training time from FLOPs",
+      "kind": "procedure",
+      "statement": "Training time ≈ 6·N·D FLOPs ÷ (peak FLOP/s × MFU × #GPUs).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L72-L77",
+            "role": "computation",
+            "quote": "total_flops = 6 * 70e9 * 15e12 ... days = total_flops / flops_per_day"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L85-L86",
+            "role": "claim",
+            "quote": "This is a rough back-of-the-envelope calculation."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:2:05-2:50",
+            "role": "spoken",
+            "quote": "How long would it take to train a 70 billion parameter model on 15 trillion tokens ... So the number of days is 143."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:29:27-29:57",
+            "role": "spoken",
+            "quote": "there's a footnote that says this is with sparsity ... So you always have to take these numbers divide by 2."
+          }
+        ],
+        "filtering_note": "The professor states 6ND here as a given and derives it only later (gradients_flops). Teaching order puts the use before the derivation on purpose: motivation first. Spoken evidence (video 29:27-29:57): the reason for halving the datasheet number is told as a story the code only encodes as `/ 2`: you benchmark, fall short of 1979 TFLOP/s, read the fine print, find the figure assumes sparsity, so 'you always have to take these numbers divide by 2'. Spoken result at 2:46 is 143 days (the prompts use 144)."
+      },
+      "prerequisites": [
+        {
+          "kp": "six-nd",
+          "basis": "author-inference",
+          "note": "Uses 6ND before it is derived; a learner can follow by trusting the constant."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Peak FLOP/s on the datasheet is what you get.",
+          "why_wrong": "The professor divides by 2 for the no-sparsity figure and multiplies by MFU=0.5."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "70B parameters, 15T tokens, 1024 H100s at MFU 0.5 (use the H100's dense bf16 peak, ~9.9e14 FLOP/s, not the sparse datasheet figure). Roughly how many days of training?",
+          "format": "number",
+          "answer": "144",
+          "tolerance": 0.3,
+          "why": "6·70e9·15e12 = 6.3e24 FLOPs. One H100 without sparsity is ~9.9e14 FLOP/s; ×0.5 MFU ×1024 GPUs ×86400 s ≈ 4.4e22 FLOPs/day. Ratio ≈ 144 days.",
+          "targets_misconception": "Peak FLOP/s on the datasheet is what you get."
+        },
+        "transfer": {
+          "q": "Same run but on 4096 H100s and the team reaches MFU 0.4. Days?",
+          "format": "number",
+          "answer": "45",
+          "tolerance": 0.2,
+          "why": "4× the GPUs, 0.8× the MFU: 144 / (4 × 0.8) = 45."
+        },
+        "retrieval": [
+          {
+            "q": "Write the one-line formula for training days given N parameters, D tokens, G GPUs, peak FLOP/s P and utilization u.",
+            "answer": "6ND / (G · P · u · 86400)"
+          },
+          {
+            "q": "Keep N, D and GPU count fixed but the team's MFU falls from 0.5 to 0.25. Training days multiply by what factor?",
+            "answer": "2 (days are inversely proportional to MFU; L76-L77).",
+            "format": "number",
+            "tolerance": 0.01
+          }
+        ],
+        "self_explain": "Why does the professor halve the datasheet FLOP/s before starting?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:napkin",
+          "notice": "Days scale linearly with N and D and inversely with GPUs and MFU; no term is quadratic."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_02.py:L72-L77"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:29:27-29:57",
+          "notice": "why the datasheet FLOP/s is always halved before any napkin math"
+        }
+      ]
+    },
+    {
+      "id": "napkin-max-model-size",
+      "label": "Napkin math: largest model that fits in memory",
+      "kind": "procedure",
+      "statement": "With AdamW in mixed precision the lecture counts 12 bytes per parameter (2 param + 2 grad + 4 + 4 optimizer state), so 8×80 GB H100s hold ~53B parameters before activations.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L79-L83",
+            "role": "computation",
+            "quote": "bytes_per_parameter = 2 + 2 + (4 + 4)"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L83",
+            "role": "claim",
+            "quote": "Caveat: activations are not accounted for ... so this is an upper bound."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:2:51-3:43",
+            "role": "spoken",
+            "quote": "What's the largest model you can train on H100s using AdamW? ... the number of bytes per parameter, which is 2 plus 2 plus 4 plus 4 ... going to be about 53 billion"
+          }
+        ],
+        "filtering_note": "L81 counts 2 + 2 + (4 + 4) = 12 bytes/parameter: bf16 params and grads plus two fp32 Adam moments, with no fp32 master copy. The blog the professor cites later does count a master copy (16). The lecture's own number is 12 → 53B. Spoken evidence (video 3:27-3:54): the professor frames both motivating numbers as shape, not precision: 'the point is not to precisely calculate every single thing, but just get the rough shape of things'. He promises to explain 2+2+4+4 later; the lecture explains AdaGrad's 4 and Adam's 8 bytes (1:10:45) but never the AdamW-specific breakdown again."
+      },
+      "prerequisites": [
+        {
+          "kp": "dtype-bytes",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "optimizer-state-memory",
+          "basis": "author-inference"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Model memory = parameters × 2 bytes.",
+          "why_wrong": "Training also stores gradients and two optimizer moments; that is 6× the bf16 parameter footprint."
+        },
+        {
+          "belief": "Adam's state costs the same as the parameters.",
+          "why_wrong": "Two fp32 moments are 8 bytes per parameter, four times a bf16 parameter."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "8 H100s (80 GB each), AdamW with the lecture's accounting: bf16 params, bf16 grads, two fp32 moments, no master copy. Largest parameter count that fits, ignoring activations? (billions)",
+          "format": "number",
+          "answer": "53",
+          "tolerance": 0.1,
+          "why": "Bytes per parameter = 2 + 2 + (4 + 4) = 12 (L81). 640e9 / 12 ≈ 53e9. The professor's own @inspect value is num_parameters ≈ 5.3e10. With an fp32 master copy it would be 16 bytes and ~40B.",
+          "targets_misconception": "Adam's state costs the same as the parameters."
+        },
+        "transfer": {
+          "q": "Same 8 H100s (640 GB total), but you swap AdamW for SGD with momentum, which keeps a single fp32 momentum buffer per parameter. Using the lecture's accounting (bf16 params and grads, no separate fp32 master copy), what is the largest model in billions of parameters?",
+          "format": "number",
+          "answer": "80",
+          "tolerance": 0.1,
+          "why": "Bytes per parameter fall from 12 to 2 + 2 + 4 = 8 (bf16 params, bf16 grads, one fp32 momentum buffer), so 640e9 / 8 = 80e9. The numerator is unchanged; only the optimizer term of the divisor changed (L81-L82)."
+        },
+        "retrieval": [
+          {
+            "q": "Bytes per parameter for AdamW training in bf16 with fp32 moments, per the lecture?",
+            "answer": "12 = 2 (param) + 2 (grad) + 4 + 4 (two moments)"
+          },
+          {
+            "q": "The professor calls the ~53B figure an upper bound. Which memory cost is left out of the 12 bytes/parameter, and what two run settings does it depend on?",
+            "answer": "Activations; they depend on batch size and sequence length (L83)."
+          }
+        ],
+        "self_explain": "Which of the four terms would change if you trained in fp32 throughout?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:napkin",
+          "notice": "Changing the optimizer changes the divisor, not the GPU memory."
+        },
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "lecture_02.py:L80-L82",
+          "steps": [
+            {
+              "do": "Memory available: 8 H100s × 80e9 bytes = 640e9 bytes.",
+              "why": "The napkin treats the 8 GPUs as one pool; the parameters, gradients and optimizer state are spread across them."
+            },
+            {
+              "tex": "2 + 2 + (4 + 4) = 12\\ \\text{bytes per parameter}",
+              "do": "Per parameter: 2 bytes of bf16 weight, 2 of bf16 gradient, and 4 + 4 for AdamW's two fp32 moments.",
+              "why": "Every one of these lives for the whole step; the moments are fp32 because they accumulate small updates (the mixed-precision rule), so the optimizer state alone is 8 of the 12 bytes."
+            },
+            {
+              "do": "Divide: 640e9 / 12 ≈ 5.3e10, about 53B parameters (the @inspect num_parameters).",
+              "why": "Total bytes over bytes per parameter gives how many parameters fit."
+            },
+            {
+              "do": "Read it as an upper bound.",
+              "why": "Activations are not counted (L83), and they depend on batch size and sequence length; an fp32 master copy of the weights would add 4 more bytes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tensor-rank",
+      "label": "Tensors and rank",
+      "kind": "definition",
+      "statement": "Everything in training is a tensor (data, parameters, gradients, optimizer state, activations); rank is the number of dimensions, and Transformers routinely use rank 4 (batch, seq, heads, head_dim).",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L90-L95",
+            "role": "claim",
+            "quote": "Tensors are the basic building block for storing everything"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L100-L106",
+            "role": "computation",
+            "quote": "x = torch.zeros(4, 8, 2)  # rank 3 tensor"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:4:52-5:20",
+            "role": "spoken",
+            "quote": "At the bottom are tensor. ... everything essentially is a tensor ... you can take a look at the DeepSeek 3.2 model"
+          }
+        ]
+      },
+      "prerequisites": [],
+      "prompts": {
+        "predict": {
+          "q": "Attention scores for batch 32, 16 heads, sequence 128: what is the rank and shape?",
+          "format": "short",
+          "answer": "rank 4, (32, 16, 128, 128)",
+          "why": "One score per (batch, head, query position, key position).",
+          "targets_misconception": "Rank means the number of elements, or the linear-algebra rank of a matrix."
+        },
+        "transfer": {
+          "q": "The KV cache for one layer during decoding at step t, batch size B, H heads, head_dim d: rank and shape of the K tensor (V is the same)?",
+          "format": "short",
+          "answer": "rank 4: (B, H, t, d)",
+          "why": "Same axes as attention inputs, but the sequence axis grows with t."
+        },
+        "check": {
+          "q": "Attention probabilities have shape (batch 4, heads 8, query 512, key 512). You sum them over the key axis and then average over heads. What is the rank of the resulting tensor? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "value": 2,
+          "tolerance": 0.01,
+          "why": "Summing removes the key axis and averaging removes the heads axis, leaving (batch, query) = (4, 512): two axes, so rank 2. Rank counts axes, not elements (4 × 512 = 2048) and not linear-algebra rank (L90-L95).",
+          "targets_misconception": "Rank means the number of elements, or the linear-algebra rank of a matrix.",
+          "varies": "axes are removed by reductions instead of added for a cache",
+          "invariant": "rank is the number of axes of the tensor",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Besides parameters, gradients and optimizer state, which two kinds of tensor complete the professor's list of 'everything'?",
+            "layer": "detail",
+            "answer": "Data and activations."
+          },
+          {
+            "q": "What is the rank of a tensor of shape (1, 1, 4096), and what does rank count?",
+            "answer": "3: rank counts axes, not elements, and size-1 axes still count."
+          }
+        ],
+        "self_explain": "Why does the professor put gradients and optimizer state in the same list as data and parameters: what do they share that makes memory accounting uniform?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_02.py:L100-L106"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Rank means the number of elements, or the linear-algebra rank of a matrix.",
+          "why_wrong": "In the lecture rank is the number of dimensions (axes): torch.zeros(4, 8, 2) is rank 3 whatever its 64 elements or its column rank (L100-L103)."
+        }
+      ]
+    },
+    {
+      "id": "dtype-bytes",
+      "label": "Floating point formats and bytes per element",
+      "kind": "quantity",
+      "statement": "fp32 = 4 bytes; fp16 and bf16 = 2 bytes; bf16 keeps fp32's exponent range but has coarser mantissa; fp8 (E4M3/E5M2) = 1 byte.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L116-L152",
+            "role": "claim",
+            "quote": "bf16 uses the same memory as fp16 but has the same dynamic range as fp32!"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L141-L151",
+            "role": "computation",
+            "quote": "x = torch.tensor([1e-8], dtype=torch.float16) ... assert x == 0  # Underflow!"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L168-L172",
+            "role": "claim",
+            "quote": "H100s support two variants of FP8: E4M3 (range [-448, 448]) and E5M2"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:6:08-6:26",
+            "role": "spoken",
+            "quote": "One of the bits is a sign, 8 bits are the exponent, which gives you dynamic range"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:9:35-9:49",
+            "role": "spoken",
+            "quote": "if you train with fp16, which people did back in the day, you will get instability ... You will get underflow ... You'll get NaNs"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:10:30-10:54",
+            "role": "spoken",
+            "quote": "because things are kind of sloppy and stochastic anyway, you don't need that much resolution"
+          }
+        ],
+        "filtering_note": "Professor shows the underflow live (1e-8 in fp16 becomes 0, in bf16 does not) rather than deriving exponent widths. Wikipedia figures are shown, not explained. Spoken evidence (video 10:30-10:54): the reason bf16's coarse mantissa is acceptable is given only aloud: training is 'sloppy and stochastic anyway', so range matters more than resolution; fp16 training failure modes are named as underflow, overflow and NaNs (9:35-9:49). Correction to the note above: the audio shows the fp16 1e-8 underflow (9:10) but then 'let me actually skip over this part' (10:54) right after the bf16 explanation, so the bf16 no-underflow demo (L148-L149) was most likely skipped in class, not shown live. fp8 variants are explicitly not covered (13:37)."
+      },
+      "prerequisites": [
+        {
+          "kp": "tensor-rank",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "bf16 is just a less precise fp16.",
+          "why_wrong": "bf16 trades mantissa bits for exponent bits: same range as fp32, worse resolution. fp16 has the opposite trade."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Store 1e-8 in fp16 and in bf16. Which one becomes exactly 0?",
+          "format": "choice",
+          "choices": [
+            "fp16",
+            "bf16",
+            "both",
+            "neither"
+          ],
+          "answer": "fp16",
+          "why": "fp16's smallest subnormal is ~6e-8; bf16 shares fp32's 8-bit exponent and represents 1e-8 fine.",
+          "targets_misconception": "bf16 is just a less precise fp16."
+        },
+        "transfer": {
+          "q": "A 175B-parameter matrix set stored in bf16 versus fp32: how many GB each?",
+          "format": "short",
+          "answer": "350 GB vs 700 GB",
+          "why": "2 bytes vs 4 bytes per element."
+        },
+        "check": {
+          "q": "A GPU has 80 GB of memory used for nothing but weights (1 GB = 1e9 bytes). What is the largest number of parameters, in billions, it can hold in bf16? Type only the number.",
+          "format": "number",
+          "answer": "40 (billion)",
+          "tolerance": 0.02,
+          "why": "bf16 is 2 bytes per element, so 80e9 bytes / 2 = 40e9 parameters. fp32 would fit 20B and fp8 80B (L116-L152).",
+          "varies": "the inverse direction: bytes are given and the parameter count is asked",
+          "invariant": "memory = parameters × bytes per element, with bf16 = 2 bytes",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which has larger dynamic range, fp16 or bf16, and what did that cost?",
+            "answer": "bf16; it has fewer mantissa bits, so worse resolution."
+          },
+          {
+            "q": "One feedforward matrix of GPT-3 is (4·12288) × 12288 in fp32. Memory in GB?",
+            "answer": "≈2.4 GB (4·12288·12288 elements × 4 bytes = 2304 MiB; L132).",
+            "format": "number",
+            "tolerance": 0.1
+          }
+        ],
+        "self_explain": "Why does giving bf16 more exponent bits fix the 1e-8 underflow without making it more precise than fp16?"
+      },
+      "presentations": [
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_02.py:L141-L151",
+          "steps": [
+            {
+              "do": "fp16 has a 5-bit exponent: its smallest positive value is the subnormal 2⁻²⁴ ≈ 5.96e-8.",
+              "why": "Below that, fp16 has no representable number except 0."
+            },
+            {
+              "do": "1e-8 is less than half of 2⁻²⁴ (≈ 2.98e-8), so it rounds to 0: the assert x == 0 at L142 holds.",
+              "why": "Rounding goes to the nearest representable value, and 0 is nearer than 5.96e-8. That is the underflow the code calls a source of instability."
+            },
+            {
+              "do": "bf16 keeps fp32's 8-bit exponent (smallest normal 2⁻¹²⁶ ≈ 1.2e-38) with only 7 mantissa bits, so 1e-8 is stored as about 1.0012e-8, not 0.",
+              "why": "Range comes from exponent bits, resolution from mantissa bits: bf16 spends its 16 bits on range ('same dynamic range as fp32') and pays in resolution."
+            }
+          ]
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/bf16.png"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:10:30-10:54",
+          "notice": "why losing mantissa bits is an acceptable trade in deep learning"
+        }
+      ]
+    },
+    {
+      "id": "mixed-precision",
+      "label": "Mixed precision training",
+      "kind": "rule-of-thumb",
+      "statement": "Use bf16 for parameters, activations and gradients; keep optimizer state in fp32 for stability.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L154-L164",
+            "role": "claim",
+            "quote": "Use bf16 for parameters, activations, and gradients; Use fp32 for optimizer states"
+          },
+          {
+            "source": "mixed_precision_2017",
+            "ref": "arXiv:1710.03740",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:11:05-11:42",
+            "role": "spoken",
+            "quote": "if you're training a small model ... just float32 is fine ... So bf16 is the sweet spot."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:12:18-12:32",
+            "role": "spoken",
+            "quote": "bf16 is what you would use for parameters, activations, and gradients ... And for optimizer states, you would use fp32."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:10:24-1:10:45",
+            "role": "spoken",
+            "quote": "it's customary to use fp32 for the optimizer states for stability reasons ... you're taking squares, and you're averaging multiple steps"
+          }
+        ],
+        "filtering_note": "The 2017 paper's key device, fp32 master weights plus loss scaling, is not mentioned. Professor keeps the rule and drops the mechanism. Spoken evidence: (1) advice absent from the code: for a small model 'just float32 is fine' (11:05-11:15); (2) the reason optimizer state stays fp32, stated at 1:10:24-1:10:45: people have tried bf16, but the state squares gradients and averages over many steps, which is not stable at low precision; (3) AMP is introduced with 'We're not going to talk too much about this' (12:40), so the autocast policy beyond 'matmuls safe, exp not' is filtered out."
+      },
+      "prerequisites": [
+        {
+          "kp": "dtype-bytes",
+          "basis": "teaching-order"
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Why does the professor keep optimizer state in fp32 while everything else is bf16?",
+          "format": "short",
+          "answer": "Moments accumulate small updates over many steps; bf16 resolution would swallow them.",
+          "why": "Accumulating averages over many steps needs resolution, which bf16 lacks (L641).",
+          "targets_misconception": "Mixed precision means everything, including the optimizer state, is stored in bf16."
+        },
+        "transfer": {
+          "q": "You observe the loss going NaN when training in pure fp16 but not bf16. Which property of fp16 is the likely cause?",
+          "format": "short",
+          "answer": "Narrow dynamic range causing overflow/underflow.",
+          "why": "fp16 has a 5-bit exponent; large activations or gradients overflow."
+        },
+        "check": {
+          "q": "An activation with value 70,000 is cast to fp16 and to bf16. Which casts produce inf?",
+          "format": "choice",
+          "choices": [
+            "neither",
+            "bf16 only",
+            "both fp16 and bf16",
+            "fp16 only"
+          ],
+          "answer": "fp16 only",
+          "distractor_from": [
+            "'bf16 only' <- misconception (neighbouring KP dtype-bytes): 'bf16 is just a less precise fp16.' (assumes bf16 is worse on every axis)",
+            "'both fp16 and bf16' <- same misconception: treats the two 16-bit formats as having the same range",
+            "'neither' <- plausible: assumes any 16-bit float covers ordinary activation magnitudes"
+          ],
+          "why": "fp16's 5-bit exponent tops out at 65,504, so 70,000 overflows to inf. bf16 keeps fp32's 8-bit exponent (max about 3.4e38) and stores it with coarse precision instead. Narrow range is why pure-fp16 training goes NaN and bf16 does not (L141-L151; arXiv:1710.03740 uses loss scaling for this).",
+          "varies": "overflow of a single value instead of a training run going NaN",
+          "invariant": "fp16 has a narrow exponent range; bf16 has fp32's range with fewer mantissa bits",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which tensors are bf16 and which are fp32 in the lecture's mixed-precision recipe?",
+            "answer": "bf16: params, activations, gradients. fp32: optimizer state."
+          },
+          {
+            "q": "Name one operation PyTorch autocast casts to bf16 and one it leaves in higher precision, per the lecture.",
+            "layer": "detail",
+            "answer": "Casts matmuls; leaves exp (L164)."
+          }
+        ],
+        "self_explain": "Why is an average accumulated over thousands of steps more sensitive to bf16's coarse resolution than a single forward matmul is?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "lecture_02.py:L160-L161"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:10:24-1:10:45",
+          "notice": "why optimizer state is the one thing kept in fp32"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Mixed precision means everything, including the optimizer state, is stored in bf16.",
+          "why_wrong": "The lecture's recipe keeps optimizer state in fp32 (L161) because moments accumulate over many steps and bf16 resolution would lose the small updates (L640)."
+        },
+        {
+          "belief": "Autocast converts every operation to bf16.",
+          "why_wrong": "AMP casts only where it is safe: matmuls, not exp (L164). The recipe is per-tensor-role and per-op, not a global switch."
+        }
+      ]
+    },
+    {
+      "id": "einsum",
+      "label": "einsum as named contraction",
+      "kind": "mechanism",
+      "statement": "einsum names each axis; axes that appear in inputs but not the output are summed over. It replaces transposes and reshapes with a readable spec.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L222-L249",
+            "role": "computation",
+            "quote": "z = einsum(x, y, \"seq1 hidden, hidden seq2 -> seq1 seq2\")"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L250-L278",
+            "role": "computation",
+            "quote": "y = reduce(x, \"... hidden -> ...\", \"sum\") ... x = rearrange(x, \"... (heads hidden1) -> ... heads hidden1\", heads=2)"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:19:17-19:24",
+            "role": "spoken",
+            "quote": "the way to think about einsum is a generalized matrix multiplication with good bookkeeping"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:20:08-20:14",
+            "role": "spoken",
+            "quote": "anything that is not mentioned here, the hidden gets summed out"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:23:50-23:57",
+            "role": "spoken",
+            "quote": "Is there some speed-up to this? ... You can think about it as just sugar."
+          }
+        ],
+        "filtering_note": "Spoken evidence (video 23:50-23:57): asked whether einops is faster, the professor says it reduces to the same primitive operations, 'just sugar'; the benefit is readability (no transposes to reason about). He covers only the basics and points to the tutorial (19:10), and says rearrange 'will come up in an assignment once' (24:10)."
+      },
+      "prerequisites": [
+        {
+          "kp": "tensor-rank",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "einsum is just matmul with a different spelling.",
+          "why_wrong": "Any axis omitted from the output is reduced; batch axes are kept only because they are written on the right."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "einsum(x, y, 'batch seq1 hidden, batch seq2 hidden -> batch seq1 seq2'): which axis is summed?",
+          "format": "short",
+          "answer": "hidden",
+          "why": "It appears in both inputs and not in the output.",
+          "targets_misconception": "einsum is just matmul with a different spelling."
+        },
+        "transfer": {
+          "q": "Write the einsum spec for the attention output: probabilities (batch heads q k) times values (batch heads k d).",
+          "format": "short",
+          "answer": "batch heads q k, batch heads k d -> batch heads q d",
+          "why": "k is the contracted axis; batch and heads are carried through."
+        },
+        "check": {
+          "q": "In einsum(x, w, 'batch seq d_in, d_in d_out -> batch d_out'), which axes are summed over?",
+          "format": "choice",
+          "choices": [
+            "d_in only",
+            "seq only",
+            "seq and d_in",
+            "batch and d_in"
+          ],
+          "answer": "seq and d_in",
+          "distractor_from": [
+            "'d_in only' <- misconception: 'einsum is just matmul with a different spelling.' (only the shared axis is contracted)",
+            "'seq only' <- plausible: notices seq disappears but forgets the shared axis",
+            "'batch and d_in' <- plausible: confuses which input-only axis is dropped"
+          ],
+          "why": "Every axis that appears in an input but not in the output is summed. d_in is shared and absent from the output; seq appears only in x and is also absent, so it is summed too. A plain matmul would keep seq (L222-L249).",
+          "targets_misconception": "einsum is just matmul with a different spelling.",
+          "varies": "an axis present in only one input is also dropped from the output",
+          "invariant": "axes missing from the output spec are summed over, whether or not they are shared",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In einsum, what determines which axis is summed?",
+            "answer": "An axis present in an input but absent from the output is summed."
+          },
+          {
+            "q": "einsum(x, y, 'seq1 hidden, hidden seq2 -> seq1 seq2') with x of shape (3, 5) and y of shape (5, 7): output shape, and how many products are summed per output element?",
+            "answer": "(3, 7); 5 products per element, one per value of hidden (L232)."
+          }
+        ],
+        "self_explain": "Why can the einsum spec replace an explicit transpose in x @ y.T: what does naming the axes make unnecessary?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:matmul-contraction",
+          "notice": "The highlighted index moves along the contracted axis of both inputs and never appears in the output."
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_02.py:L232"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:23:50-23:57",
+          "notice": "einsum is notation, not a speed-up"
+        }
+      ]
+    },
+    {
+      "id": "matmul-flops",
+      "label": "FLOPs of a matrix multiply",
+      "kind": "quantity",
+      "statement": "A (B×D)·(D×K) matmul costs 2·B·D·K FLOPs: one multiply and one add per (i, j, k) triple.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L312-L314",
+            "role": "computation",
+            "quote": "actual_num_flops = 2 * B * D * K"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L281-L286",
+            "role": "claim",
+            "quote": "FLOPs: floating-point operations (measure of computation done) ... FLOP/s: floating-point operations per second"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:31:42-32:22",
+            "role": "spoken",
+            "quote": "this is going to be 2 times basically the product of all the three dimensions ... we have one multiplication for each triple and then also one addition"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:33:42-33:53",
+            "role": "spoken",
+            "quote": "I think the way the hardware is built, the two are basically the same"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:34:09-34:45",
+            "role": "spoken",
+            "quote": "the number of FLOPs in order to do a forward pass of this linear matrix is actually 2 times the number of tokens or data points times the number of parameters"
+          }
+        ],
+        "filtering_note": "Spoken evidence (video 33:59-34:45): the bridge from 2·B·D·K to '2 × tokens × parameters' (the seed of 6ND) is made aloud here, while the code states it only later in gradients_flops. Also spoken: the −1 in D−1 additions is dropped on purpose (32:11-32:22); adds and multiplies cost the same on the hardware (33:42); sub-cubic matmul algorithms are set aside because practical gains come from co-design with the systems, not asymptotics (33:10-33:32)."
+      },
+      "prerequisites": [
+        {
+          "kp": "einsum",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A matmul costs B·D·K.",
+          "why_wrong": "Each of the B·D·K products is also accumulated, so multiply by 2."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "x is 1024×256, w is 256×64. FLOPs for x @ w?",
+          "format": "number",
+          "answer": "33554432",
+          "tolerance": 0.01,
+          "why": "2 × 1024 × 256 × 64.",
+          "targets_misconception": "A matmul costs B·D·K."
+        },
+        "transfer": {
+          "q": "Double the batch B and double the output width K at once. FLOPs multiply by?",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.01,
+          "why": "FLOPs are linear in each of B, D, K separately."
+        },
+        "retrieval": [
+          {
+            "q": "FLOPs of (B×D)(D×K), and why the factor of 2?",
+            "answer": "2BDK: one multiply and one add per triple."
+          },
+          {
+            "q": "The lecture's GPU-sized example uses B=16384, D=32768, K=8192. FLOPs for x @ w?",
+            "answer": "≈8.8e12 (2 × 16384 × 32768 × 8192; L300-L302, L314).",
+            "format": "number",
+            "tolerance": 0.05
+          }
+        ],
+        "self_explain": "Why does the FLOP count depend on D when the output has only B·K entries?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "predict-number",
+          "ref": "fixture:matmul-contraction",
+          "notice": "Each output cell is a length-D dot product; the count of cells is B·K."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:matmul-contraction",
+          "notice": "Sliding any one of B, D, K scales the total linearly; the counter never grows faster than that."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:33:59-34:45",
+          "notice": "how 2·B·D·K is re-read as 2 × data points × parameters"
+        }
+      ]
+    },
+    {
+      "id": "elementwise-flops-negligible",
+      "label": "Elementwise FLOPs are negligible next to matmul FLOPs",
+      "kind": "rule-of-thumb",
+      "statement": "An elementwise op on an m×n tensor costs about c·mn FLOPs (c a small per-element constant), while the matmul that produced it costs 2·m·n·k, so for a large inner dimension k the FLOP count is dominated by matmuls; this says nothing about time, because elementwise ops are memory-bound.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02_video",
+            "ref": "video:32:31-32:58",
+            "role": "spoken",
+            "quote": "elementwise operations are just the size of a matrix ... addition also requires m n FLOPs ... no other operation you'll encounter as expensive as matrix multiplication for large enough matrices ... with important caveat of when we talk about memory"
+          }
+        ],
+        "filtering_note": "Spoken only (video 32:31-32:58). The code goes straight from 'what is a FLOP' to the linear model's 2·B·D·K and never says why counting only matmuls is safe. The professor gives the rule and its limit in one breath: 'for large enough matrices', 'with important caveat of when we talk about memory'. The caveat is cashed out later by the GELU intensity example (L389-L404). The 20 FLOPs/element for GELU used in the prompts is the lecture's own estimate (L394)."
+      },
+      "prerequisites": [
+        {
+          "kp": "matmul-flops",
+          "basis": "teaching-order",
+          "note": "Compares against 2·B·D·K."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "GELU's ~20 FLOPs per element make it a significant share of a layer's compute.",
+          "why_wrong": "Per output element the matmul does 2k FLOPs (k = inner dimension, thousands), so 20 is a fraction of a percent once k is large."
+        },
+        {
+          "belief": "A tiny FLOP share means a tiny share of wall-clock time.",
+          "why_wrong": "Elementwise ops are memory-bound (intensity ~5 vs ~295 for an H100); their time is set by bytes moved, not FLOPs."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A layer computes h = x·W with x of shape 4096×4096 (batch × D) and W of shape 4096×4096, then applies GELU (about 20 FLOPs per element, the lecture's estimate) to h. What fraction of the layer's total FLOPs is the GELU? Give a decimal.",
+          "format": "number",
+          "answer": "0.0024",
+          "tolerance": 0.15,
+          "why": "GELU: 20·B·D. Matmul: 2·B·D·D. Share = 20 / (20 + 2·4096) ≈ 0.0024, about a quarter of a percent.",
+          "targets_misconception": "GELU's ~20 FLOPs per element make it a significant share of a layer's compute."
+        },
+        "transfer": {
+          "q": "Same layer and the same batch of 4096, but the hidden size D is only 64 (W is 64×64). What fraction of the layer's FLOPs is the GELU now? Give a decimal.",
+          "format": "number",
+          "answer": "0.135",
+          "tolerance": 0.1,
+          "why": "Share = 20 / (20 + 2·64) = 20/148 ≈ 0.135. The rule holds 'for large enough matrices': with a small inner dimension, elementwise FLOPs stop being negligible.",
+          "varies": "inner dimension D (4096 → 64)",
+          "invariant": "elementwise cost c·B·D vs matmul cost 2·B·D·D",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "Hold the batch fixed and double the hidden size D of a D×D linear layer followed by GELU. Does GELU's share of the layer's FLOPs go up, go down, or stay the same?",
+          "format": "trend",
+          "answer": "down (roughly halves, since the share is about 10/D)",
+          "why": "Elementwise FLOPs grow like B·D, matmul FLOPs like B·D², so the elementwise share falls like 1/D.",
+          "varies": "D doubles",
+          "invariant": "c·B·D vs 2·B·D²"
+        },
+        "retrieval": [
+          {
+            "q": "Write the FLOP counts of an elementwise op on an m×n matrix and of the matmul (m×k)(k×n) that produced it.",
+            "answer": "About c·mn for the elementwise op (c FLOPs per element) vs 2·m·n·k for the matmul."
+          },
+          {
+            "q": "GELU is 0.24% of a 4096-wide layer's FLOPs. Why can't you conclude it takes 0.24% of the layer's time?",
+            "answer": "It is memory-bound: its arithmetic intensity (~5 FLOPs/byte) is far below the accelerator's (~295), so its time is set by reading and writing the tensor, not by its FLOPs."
+          }
+        ],
+        "self_explain": "Why does the elementwise share of FLOPs shrink as the hidden size grows, and why is that the professor's licence to count only matmuls?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_02--elementwise-share",
+          "notice": "GELU's FLOP share falls like 10/D as D grows, but its time share stays far larger, because GELU is memory-bound."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:32:31-32:58",
+          "notice": "the condition 'for large enough matrices' and the caveat about memory"
+        }
+      ]
+    },
+    {
+      "id": "gpu-timing-synchronize",
+      "label": "Timing GPU code needs synchronize",
+      "kind": "procedure",
+      "statement": "GPU kernels launch asynchronously, so a timer must call torch.cuda.synchronize() before starting and after the operation; without it you time only the launch and the measured FLOP/s comes out impossibly high. Time several runs and average.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02_video",
+            "ref": "video:35:24-36:01",
+            "role": "spoken",
+            "quote": "you have to call cuda synchronize to make sure that-- because the GPU is running asynchronously ... If you omit this, you're going to find that wow, your timings are really fast. ... And that's because this is a non-blocking call."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:36:02-36:11",
+            "role": "spoken",
+            "quote": "it's general good practice to try this multiple times and take the average"
+          }
+        ],
+        "filtering_note": "Spoken only. The lecture's benchmark() helper (lecture_02.py L830-L848) calls torch.cuda.synchronize() twice with bare comments ('Wait until CUDA threads are done'), but the text never says what goes wrong without it. The failure mode ('wow, your timings are really fast', 'a non-blocking call') exists only in the audio. Benchmarking proper is deferred to a later lecture ('in the few lectures, we're going to talk more about benchmarking', 35:18). The numbers in the prompts are the author's."
+      },
+      "prerequisites": [
+        {
+          "kp": "matmul-flops",
+          "basis": "teaching-order",
+          "note": "Measured FLOP/s = counted FLOPs ÷ measured time."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Wrapping `y = x @ w` in time.time() calls measures the matmul.",
+          "why_wrong": "The call only enqueues a kernel and returns; the GPU is still working when the second timestamp is taken."
+        },
+        {
+          "belief": "A benchmark showing more FLOP/s than the datasheet means the GPU is faster than advertised.",
+          "why_wrong": "You never get more than promised (MFU ≤ 1); an above-peak number means the timer stopped before the work finished."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You time y = x @ w on an H100 (about 1.1e12 FLOPs) with time.time() before and after the line, without synchronize, and get 20 µs. What does that 20 µs mostly measure?",
+          "format": "choice",
+          "choices": [
+            "The matmul itself, which simply ran very fast",
+            "Launching the kernel: the call returned before the GPU finished",
+            "Copying x and w from CPU memory to the GPU",
+            "Python interpreter overhead of evaluating the @ operator"
+          ],
+          "answer": "Launching the kernel: the call returned before the GPU finished",
+          "why": "CUDA calls are non-blocking. Without a synchronize after the op, the timer stops as soon as the kernel is queued.",
+          "targets_misconception": "Wrapping `y = x @ w` in time.time() calls measures the matmul.",
+          "distractor_from": "true-runtime belief; host-device copy confusion; interpreter-overhead guess"
+        },
+        "transfer": {
+          "q": "Taking that 20 µs at face value, the 1.1e12-FLOP matmul would run at how many times the H100's dense bf16 peak of 9.9e14 FLOP/s?",
+          "format": "number",
+          "answer": "56",
+          "tolerance": 0.15,
+          "why": "1.1e12 / 2e-5 s = 5.5e16 FLOP/s, about 56× the peak. MFU can never exceed 1, so the measurement, not the GPU, is wrong.",
+          "varies": "from 'what is timed' to a sanity check against the spec sheet",
+          "invariant": "measured FLOP/s = FLOPs ÷ measured time, MFU ≤ 1",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "You add torch.cuda.synchronize() after the op but forget the one before starting the timer, while a long previous kernel is still running. Compared with the op's true time, is the measured time higher, lower or the same?",
+          "format": "trend",
+          "answer": "higher: the timer also counts the tail of the earlier kernel still in the queue",
+          "why": "The closing synchronize waits for everything queued, including work launched before the timer started.",
+          "varies": "which synchronize is missing (before instead of after)",
+          "invariant": "asynchronous launches, synchronize waits for all queued work"
+        },
+        "retrieval": [
+          {
+            "q": "Why must a GPU timing harness call synchronize both before and after the timed op?",
+            "answer": "Launches are asynchronous: the 'before' synchronize drains earlier queued work so it is not counted, and the 'after' one waits until the op has actually finished."
+          },
+          {
+            "q": "A benchmark reports a matmul running at 30× the GPU's peak FLOP/s. What is the most likely bug?",
+            "answer": "No synchronize after the op: only the kernel launch was timed."
+          }
+        ],
+        "self_explain": "Why does an asynchronous launch make an un-synchronized timer read too fast rather than too slow?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_02--sync-timeline",
+          "notice": "Without synchronize the timer window closes when the launch returns, while the GPU kernel is still running; a closing synchronize stretches it to the kernel's end."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_02--mfu",
+          "notice": "Shrinking the measured time far enough pushes MFU above 1, which no GPU can do: the timer, not the hardware, is wrong."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:35:24-36:11",
+          "notice": "what happens if you omit synchronize: timings that look 'really fast'"
+        }
+      ]
+    },
+    {
+      "id": "mfu",
+      "label": "Model FLOPs utilization",
+      "kind": "definition",
+      "statement": "MFU = actual FLOP/s ÷ promised FLOP/s for the data type; ≥0.5 is good.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L323-L334",
+            "role": "computation",
+            "quote": "mfu = actual_flop_per_sec / promised_flop_per_sec"
+          },
+          {
+            "source": "h100_datasheet",
+            "ref": "H100 spec",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:37:12-37:34",
+            "role": "spoken",
+            "quote": "the definition of MFU is the actual FLOPs per second divided by the promise of FLOPs per second ... this is ignoring the communication and other overhead"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:37:52-38:21",
+            "role": "spoken",
+            "quote": "if you get about MFU of 0.5 for modern models, you should be pretty happy with yourself ... something like 0.1, which means that you should do something"
+          }
+        ],
+        "filtering_note": "Professor explicitly ignores communication/overhead in the definition (L326). Spoken evidence (video 37:52-38:21): the code says only 'MFU of >= 0.5 is quite good'; aloud the professor gives three bands: about 0.5 for a modern model is good, a bare matmul can reach about 0.8 (captions render it '80.8'), and about 0.1 means something is wrong. He also says why fp32 is a bad choice today: 'it's going to be really, really slow because they're not really optimizing for that workload' (40:00-40:07). The promised figure is already the halved, dense number (38:53). The code's timing ran on a laptop without a GPU, so its MFU value is 'not very meaningful' (34:46)."
+      },
+      "prerequisites": [
+        {
+          "kp": "matmul-flops",
+          "basis": "teaching-order"
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A bf16 matmul does 3.4e10 FLOPs in 50 µs on an H100 (promised ~9.9e14 FLOP/s). MFU?",
+          "format": "number",
+          "answer": "0.69",
+          "tolerance": 0.1,
+          "why": "3.4e10 / 50e-6 = 6.8e14; divided by 9.9e14 ≈ 0.69.",
+          "targets_misconception": "MFU is measured against the datasheet's headline 1979 TFLOP/s."
+        },
+        "transfer": {
+          "q": "Same kernel run in fp32. Promised FLOP/s drops to ~6.7e13 (per the datasheet). If the time also grows 12×, does MFU go up or down?",
+          "format": "trend",
+          "answer": "up",
+          "why": "Actual drops 12× (6.8e14 → 5.7e13) while promised drops ~15×, so the ratio rises (0.69 → ~0.85). MFU is relative to the dtype's own peak."
+        },
+        "retrieval": [
+          {
+            "q": "Define MFU and state the threshold the professor calls 'quite good'.",
+            "answer": "actual/promised FLOP/s; ≥0.5"
+          },
+          {
+            "q": "Why does the lecture's promised FLOP/s take the tensor's dtype as an argument rather than being a per-GPU constant?",
+            "answer": "Peak FLOP/s depends heavily on data type (L324): H100 fp32 ≈ 67.5 TFLOP/s vs bf16 ≈ 989 TFLOP/s (L812-L815)."
+          }
+        ],
+        "self_explain": "The professor defines MFU while ignoring communication and overhead. What would including them do to the measured number, and why does he leave them out here?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_02--mfu",
+          "notice": "Switching bf16 to fp32 changes only the promised denominator (9.9e14 to 6.75e13); the measured FLOP/s comes from your FLOPs and time alone."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:37:52-38:21",
+          "notice": "the three MFU bands: about 0.1 broken, 0.5 good, 0.8 for a bare matmul"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "MFU is measured against the datasheet's headline 1979 TFLOP/s.",
+          "why_wrong": "That figure is with sparsity; the lecture halves it to ~989 TFLOP/s dense bf16 (L350, L815). Using the sparse peak would halve every MFU you compute."
+        },
+        {
+          "belief": "Promised FLOP/s is one number per GPU.",
+          "why_wrong": "It depends heavily on the data type (L324): H100 fp32 is 67.5 TFLOP/s versus ~989 for bf16 (L812-L815), so MFU is always relative to the dtype in use."
+        }
+      ]
+    },
+    {
+      "id": "arithmetic-intensity",
+      "label": "Arithmetic intensity and the compute/memory bound",
+      "kind": "mechanism",
+      "statement": "Arithmetic intensity = FLOPs ÷ bytes moved. If it is below the accelerator's FLOP/s ÷ bytes/s (~295 for H100 bf16), the operation is memory-bound; above, compute-bound.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L338-L349",
+            "role": "claim",
+            "quote": "Depends on two things: ... 1. Accelerator speed (FLOP/s) ... 2. Memory bandwidth (bytes/s)"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L363-L448",
+            "role": "computation",
+            "quote": "In this case, ReLU is memory-bound. ... In general, we'll find ourselves memory bound. ... But still memory-bound! ... Memory-bound!"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L449-L467",
+            "role": "computation",
+            "quote": "arithmetic_intensity = flops / bytes  # ~n/3 ... Finally, compute-bound!"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:44:10-44:52",
+            "role": "spoken",
+            "quote": "we overlap communication and computation ... we're just going to assume that the total time is the max of the two"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:46:20-46:43",
+            "role": "spoken",
+            "quote": "That's 295. ... So that's an intuitive number to have in your head, about 300."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:49:17-49:38",
+            "role": "spoken",
+            "quote": "even though GELU does a lot of work, more work than ReLU ... it's still memory bound ... But actually it's exactly the same, because that's not where the bottleneck is."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:52:01-52:29",
+            "role": "spoken",
+            "quote": "you're sending n squared things, but you're computing n cubed things ... this is why when you hear people talk about, oh, we need to make large batch sizes or have large matrices, it's exactly this"
+          }
+        ],
+        "filtering_note": "Professor walks five operations in increasing intensity so the learner sees the crossover happen. The n/3 for square matmul is stated as a comment, not derived on screen. Spoken evidence (video 52:01-52:29): the n/3 intensity of a square matmul, a bare comment in the code, is justified aloud: n² values are sent but n³ work is done, so intensity grows like n, which is why people ask for large batches and large matrices. Also spoken: 'about 300' as the number to carry in your head (46:38); 0.25 should make you say 'this is really bad' (47:54); the class was polled on matrix-vector before the reveal (50:43). Transformer intensity is deferred to Assignment 1 and the next lecture (53:03), and inference as matrix-vector to the inference lecture (53:26)."
+      },
+      "prerequisites": [
+        {
+          "kp": "matmul-flops",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "dtype-bytes",
+          "basis": "author-inference",
+          "note": "Bytes moved depends on element size."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Bigger operations are always compute-bound.",
+          "why_wrong": "A huge elementwise op stays memory-bound; intensity depends on reuse per byte, not on size."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Square bf16 matmul, n=1024. Counting the reads of both inputs and the write of the bf16 output (3 matrices of 2n² bytes), what is the arithmetic intensity (FLOPs per byte), roughly?",
+          "format": "number",
+          "answer": "341",
+          "tolerance": 0.1,
+          "why": "n²(2n−1) FLOPs over 3·2n² bytes ≈ n/3 ≈ 341. H100 bf16 accelerator intensity ≈ 295, so just compute-bound.",
+          "targets_misconception": "Bigger operations are always compute-bound."
+        },
+        "transfer": {
+          "q": "A matrix-vector product (n×n times n) with n=8192 in bf16. Memory- or compute-bound on H100?",
+          "format": "choice",
+          "choices": [
+            "memory-bound",
+            "compute-bound"
+          ],
+          "answer": "memory-bound",
+          "why": "FLOPs ≈ 2n², bytes ≈ 2n²; intensity ≈ 1 regardless of n. That is why inference decode is memory-bound (L463)."
+        },
+        "retrieval": [
+          {
+            "q": "What single number decides memory- vs compute-bound, and what is it for H100 bf16?",
+            "answer": "Arithmetic intensity vs accelerator intensity ≈ 295 FLOPs/byte (989.5e12 / 3.35e12)."
+          },
+          {
+            "q": "GeLU does ~20 FLOPs per element versus ReLU's 1, yet the professor says ReLU is not faster than GeLU in isolation. Why?",
+            "answer": "Both are memory-bound (intensity ≈0.25 and ≈5, far below 295), so time is set by bytes moved, which is identical for both (L368-L369, L405-L406, L415)."
+          }
+        ],
+        "self_explain": "Why does the square matmul's intensity grow with n while matrix-vector's does not?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_02--roofline",
+          "notice": "Raising n slides the matmul point right (intensity ≈ n/3) across the kink near n ≈ 887, while the matvec point stays at intensity ≈ 1 for every n."
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "https://jax-ml.github.io/scaling-book/assets/img/roofline-improved-1400.webp"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:52:01-52:29",
+          "notice": "why matmul intensity grows like n and why that motivates big batches"
+        }
+      ]
+    },
+    {
+      "id": "roofline",
+      "label": "Roofline plot and MFU bound",
+      "kind": "comparison",
+      "statement": "On a roofline plot the kink is the accelerator intensity; MFU ≤ min(1, arithmetic intensity ÷ accelerator intensity).",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L471-L483",
+            "role": "figure",
+            "quote": "Kink is the accelerator intensity ... MFU = min(1, arithmetic-intensity / accelerator-intensity)"
+          },
+          {
+            "source": "scaling_book_roofline",
+            "ref": "roofline chapter",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:55:49-57:04",
+            "role": "spoken",
+            "quote": "this plot basically plots the arithmetic intensity on the x-axis ... each of these lines corresponds to, let's say, a particular accelerator ... obviously you can't exceed the peak FLOPs"
+          }
+        ],
+        "filtering_note": "The figure is borrowed from the jax-ml scaling book; the professor reads it rather than plotting the lecture's own five operations. The interactive here plots those five. Spoken evidence (video 54:54-55:44): a student asks why accelerators are oversized relative to memory bandwidth; the question is deferred to the GPU lecture ('if you have an answer, you should tell Jensen')."
+      },
+      "prerequisites": [
+        {
+          "kp": "arithmetic-intensity",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "mfu",
+          "basis": "teaching-order"
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "An op has intensity 30 on hardware with accelerator intensity 295. Upper bound on MFU?",
+          "format": "number",
+          "answer": "0.10",
+          "tolerance": 0.15,
+          "why": "min(1, 30/295) ≈ 0.10.",
+          "targets_misconception": "MFU below 1 always means a badly written kernel."
+        },
+        "transfer": {
+          "q": "Two GPUs: same FLOP/s, but GPU B has 2× the memory bandwidth. Where does B's kink sit relative to A's?",
+          "format": "choice",
+          "choices": [
+            "left of A",
+            "right of A",
+            "same place"
+          ],
+          "answer": "left of A",
+          "why": "Accelerator intensity = FLOP/s ÷ bytes/s halves, so more operations become compute-bound."
+        },
+        "retrieval": [
+          {
+            "q": "What is the x-coordinate of the roofline kink?",
+            "answer": "The accelerator intensity (peak FLOP/s ÷ memory bandwidth)."
+          },
+          {
+            "q": "An op has arithmetic intensity 600 on H100 bf16 (accelerator intensity ≈295). Roofline bound on its MFU?",
+            "answer": "1 (min(1, 600/295) = 1; it is compute-bound, right of the kink; L479).",
+            "format": "number",
+            "tolerance": 0.01
+          }
+        ],
+        "self_explain": "Why does the roofline have exactly two pieces, and what physical quantity sets the slope of the rising piece?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_02--roofline",
+          "notice": "Doubling memory bandwidth moves the kink left (295 to 148), so points between the two kinks turn from memory-bound to compute-bound; left of the kink the MFU bound is intensity ÷ kink."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "MFU below 1 always means a badly written kernel.",
+          "why_wrong": "Left of the kink the roofline itself caps MFU at intensity ÷ accelerator intensity (L479); for intensity 30 on H100 bf16 the ceiling is ~0.10 no matter how good the code."
+        },
+        {
+          "belief": "Raising an operation's arithmetic intensity always raises its achievable FLOP/s.",
+          "why_wrong": "Past the kink the roof is flat: MFU = min(1, ...) saturates at 1, so extra intensity buys nothing once the op is compute-bound (L479)."
+        }
+      ]
+    },
+    {
+      "id": "backward-2x-forward",
+      "label": "Backward pass costs twice the forward",
+      "kind": "mechanism",
+      "statement": "For h2 = h1·w2, the backward needs two matmuls of the same size (grad wrt h1 and wrt w2), so backward = 2× forward FLOPs.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L529",
+            "role": "computation",
+            "quote": "num_forward_flops = 2 * B * D * D"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L537-L543",
+            "role": "computation",
+            "quote": "h1_grad = einsum(h2.grad, w2, ...); w2_grad = einsum(h2.grad, h1, ...); num_backward_flops = (2*B*D*D) + (2*B*D*D)"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:02:12-1:02:36",
+            "role": "spoken",
+            "quote": "you have to compute two things ... the gradient of the loss with respect to your input ... gradient with respect to your parameters"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:04:40-1:05:27",
+            "role": "spoken",
+            "quote": "The number of FLOPs is essentially the product of all the dimensions. It doesn't matter which ones you're batching or not. ... notice that the backward pass is exactly twice as expensive as the forward pass"
+          }
+        ],
+        "filtering_note": "The professor verifies each hand-written gradient against autograd with allclose; that check is the evidence, not the prose. Spoken evidence (video 1:04:40-1:05:00): the reason each backward matmul costs the same as the forward one is said, not written: FLOPs are the product of the three named dimensions, and it does not matter which one is summed over. The professor also explains why he writes gradients in einsum: he always forgets where the transpose goes, and named dimensions remove the question (1:03:16-1:03:46)."
+      },
+      "prerequisites": [
+        {
+          "kp": "matmul-flops",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "einsum",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Backward costs the same as forward.",
+          "why_wrong": "Each layer needs a gradient for its input and for its weight: two contractions, not one."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Forward matmul costs 2BD² FLOPs. How many FLOPs is the backward for that layer?",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.01,
+          "why": "Two contractions of the same size: 2BD² for dL/dh1 and 2BD² for dL/dw2. Answer as multiple of BD²: 4.",
+          "targets_misconception": "Backward costs the same as forward."
+        },
+        "transfer": {
+          "q": "The first layer's input x is data, not a parameter, so no gradient wrt x is needed. Backward FLOPs for layer 1 as a multiple of BD²?",
+          "format": "number",
+          "answer": "2",
+          "tolerance": 0.01,
+          "why": "Only the weight gradient contraction remains. The 6ND rule slightly overcounts for the first layer."
+        },
+        "retrieval": [
+          {
+            "q": "Name the two gradients computed for h2 = h1 w2 and the FLOPs of each.",
+            "answer": "dL/dh1 and dL/dw2; 2BD² each."
+          },
+          {
+            "q": "In the backward for h2 = h1 @ w2, which axis is contracted to get h1.grad and which to get w2.grad?",
+            "layer": "detail",
+            "answer": "h1.grad contracts 'out' (h2.grad against w2); w2.grad contracts 'batch' (h2.grad against h1) (L537, L540)."
+          }
+        ],
+        "self_explain": "Why does the weight gradient contract over the batch axis while the input gradient does not?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_02.py:L529-L543",
+          "steps": [
+            {
+              "tex": "h_2 = h_1 w_2,\\quad h_1\\in\\mathbb{R}^{B\\times D},\\ w_2\\in\\mathbb{R}^{D\\times D}",
+              "do": "Forward: 2·B·D·D = 2BD² FLOPs.",
+              "why": "Each of the B·D outputs is a dot product of length D: D multiplies and D adds."
+            },
+            {
+              "tex": "\\frac{\\partial L}{\\partial w_2} = h_1^{\\top}\\,\\frac{\\partial L}{\\partial h_2}",
+              "do": "(D×B)·(B×D): 2BD² FLOPs.",
+              "why": "The weight gradient sums over the batch, so it contracts the same three dimensions B, D, D."
+            },
+            {
+              "tex": "\\frac{\\partial L}{\\partial h_1} = \\frac{\\partial L}{\\partial h_2}\\, w_2^{\\top}",
+              "do": "(B×D)·(D×D): 2BD² FLOPs.",
+              "why": "Earlier layers need the gradient with respect to their output, so backprop must also pass it down."
+            },
+            {
+              "do": "Backward = 2BD² + 2BD² = 4BD² = 2 × forward.",
+              "why": "Two contractions, each the same size as the forward one."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:backward-two-contractions",
+          "notice": "The same upstream gradient G is contracted twice, once against w2 (summing the out axis) and once against h1 (summing the batch axis); both products have the same B·D·D size."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_02--backward-flops",
+          "notice": "Every layer contributes one forward block and two backward blocks of the same size, so backward is 2× forward; ticking 'layer 1's input is data' removes exactly one backward block."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_02.py:L533-L541"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:04:40-1:05:27",
+          "notice": "each backward matmul has the same three dimensions, so the same FLOPs"
+        }
+      ]
+    },
+    {
+      "id": "six-nd",
+      "label": "6·N·D FLOPs per training run",
+      "kind": "rule-of-thumb",
+      "statement": "Forward 2ND + backward 4ND = 6ND FLOPs for N parameters and D data points; exact for MLPs, a good approximation for Transformers at short context.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L549-L553",
+            "role": "claim",
+            "quote": "Forward pass: 2 (# data points) (# parameters) FLOPs; Backward pass: 4 ...; Total: 6"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L555-L556",
+            "role": "claim",
+            "quote": "...a good approximation for Transformers for short context lengths as well."
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L653-L654",
+            "role": "assignment",
+            "quote": "The accounting for a Transformer is more complicated... Assignment 1 will ask you to do that."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:05:47-1:06:18",
+            "role": "spoken",
+            "quote": "the forward pass is 2 times the number of data points ... 4 times the number of data points times the number of parameters FLOPs ... So this is where the 6 nd comes from"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:06:28-1:06:47",
+            "role": "spoken",
+            "quote": "as long as the context length isn't too large ... then you get the context length squared"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:16:30-1:16:46",
+            "role": "spoken",
+            "quote": "And actually if this is training step, this should be batch size."
+          }
+        ],
+        "filtering_note": "The attention term (quadratic in context) is the reason for 'short context'; the professor names the caveat and defers the derivation to Assignment 1. Spoken evidence: (1) the 'short context' caveat is explained aloud as the context-length-squared attention term that 6ND does not count (1:06:28-1:06:47); (2) at 1:16:41 the professor corrects his own summary line ('6 (# data points) (# parameters) FLOPs per training step', L65): for one training step D is the batch size, not the dataset; (3) the Transformer version is deferred: 'you're going to do that in assignment 1' (1:11:59). The deferral covers the Transformer accounting, not the MLP derivation, so the status stays 'said'."
+      },
+      "prerequisites": [
+        {
+          "kp": "backward-2x-forward",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "6ND counts attention.",
+          "why_wrong": "6ND counts parameter matmuls only; attention scores add ~O(B·L²·d) that 6ND ignores."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A 2-layer MLP with parameters w1, w2 each D×D, batch B. Using the 6ND rule, total FLOPs per training step as a multiple of BD²?",
+          "format": "number",
+          "answer": "12",
+          "tolerance": 0.01,
+          "why": "N = 2D² parameters, so 6·N·B = 12BD². The exact count is 10BD² because layer 1 skips its input gradient (see backward-2x-forward); 6ND overcounts slightly."
+        },
+        "transfer": {
+          "q": "Which of these makes 6ND a worse approximation: (a) doubling the model depth, (b) doubling the context length, (c) doubling the batch?",
+          "format": "choice",
+          "choices": [
+            "a",
+            "b",
+            "c"
+          ],
+          "answer": "b",
+          "why": "Attention FLOPs grow quadratically in context and are not in N.",
+          "targets_misconception": "6ND counts attention."
+        },
+        "retrieval": [
+          {
+            "q": "Split 6ND into its forward and backward parts.",
+            "answer": "2ND forward, 4ND backward."
+          },
+          {
+            "q": "For which architecture is 6ND exact, and when does it break for Transformers?",
+            "answer": "MLPs; long context, where attention's quadratic term matters."
+          }
+        ],
+        "self_explain": "Why is 6ND exact for an MLP but only an approximation for a Transformer, and what in the Transformer is not counted in N?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "lecture_02.py:L546-L549",
+          "faded": true,
+          "steps": [
+            {
+              "do": "Forward: 2 FLOPs per parameter per data point, so 2ND in total.",
+              "why": "Every weight is used in one multiply and one add per token (the forward step of backward-2x-forward)."
+            },
+            {
+              "do": "Backward: 4 FLOPs per parameter per data point, so 4ND.",
+              "why": "Each weight matrix needs two matmuls of forward size: one for its own gradient, one to pass the gradient down."
+            },
+            {
+              "do": "Total: 2ND + 4ND = 6ND.",
+              "why": "Forward plus backward; the optimizer update is O(N) per step, negligible next to O(ND)."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_02--backward-flops",
+          "notice": "The total tracks 6·B·N block for block as L grows (2 forward + 4 backward per layer); it falls below 6ND only when layer 1's input gradient is skipped."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:06:28-1:06:47",
+          "notice": "where 6ND stops being accurate: context length squared"
+        }
+      ]
+    },
+    {
+      "id": "optimizer-state-memory",
+      "label": "Training memory: params, grads, optimizer state, activations",
+      "kind": "quantity",
+      "statement": "Per parameter: 2 bytes params (bf16) + 2 bytes grads (bf16) + optimizer state in fp32 (4 for AdaGrad, 8 for Adam); plus activations 2·B·D·L bytes for the toy MLP.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L636-L646",
+            "role": "computation",
+            "quote": "parameter_memory = 2 * num_parameters; gradient_memory = 2 * ...; optimizer_state_memory = 4 * ...; activation_memory = 2 * (B * D * L)"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L642-L643",
+            "role": "claim",
+            "quote": "AdaGrad: 4 bytes/parameter ...; Adam: 8 bytes/parameter"
+          },
+          {
+            "source": "transformer_memory_blog",
+            "ref": "erees.dev",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:07:01-1:07:18",
+            "role": "spoken",
+            "quote": "Just so that I'm not just giving you what's in assignment 1, I'm going to use the AdaGrad optimizer"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:10:04-1:10:16",
+            "role": "spoken",
+            "quote": "This is a typo. This should be the number of parameters, not parameter memory."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:10:45-1:10:56",
+            "role": "spoken",
+            "quote": "we have 4 bytes per parameter for storing the optimizer state. Adam-- you store the first order bit and the second order moments, so that's 8 bytes."
+          }
+        ],
+        "filtering_note": "Professor uses AdaGrad in code (4 bytes) but states Adam's 8 in prose. The Transformer version is deferred to Assignment 1 and a blog. Spoken evidence (video 1:07:01-1:07:18): the reason the lecture uses AdaGrad (4 bytes/parameter) while prose quotes Adam (8) is said aloud: 'so that I'm not just giving you what's in assignment 1', where students implement Adam (1:07:46). Optimizer details are skipped for time (1:07:36). The professor flags a typo in class (optimizer state written as a multiple of parameter memory instead of parameter count, 1:10:04-1:10:16); the current lecture_02.py (L640) already reads 4 * num_parameters, so the code was fixed after class."
+      },
+      "prerequisites": [
+        {
+          "kp": "dtype-bytes",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "mixed-precision",
+          "basis": "teaching-order"
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Toy MLP: N parameters, Adam, bf16 params/grads, fp32 moments. Bytes per parameter excluding activations?",
+          "format": "number",
+          "answer": "12",
+          "tolerance": 0.01,
+          "why": "2 + 2 + 8 = 12.",
+          "targets_misconception": "Optimizer state is a minor cost next to the parameters themselves."
+        },
+        "transfer": {
+          "q": "Activation memory for the toy MLP is 2·B·D·L. You double B and halve L. Activation memory multiplies by?",
+          "format": "number",
+          "answer": "1",
+          "tolerance": 0.01,
+          "why": "Linear in each factor; they cancel."
+        },
+        "retrieval": [
+          {
+            "q": "List the four memory terms in the lecture's training-memory total and which are bf16 vs fp32.",
+            "answer": "params (bf16), grads (bf16), optimizer state (fp32), activations (bf16)."
+          },
+          {
+            "q": "Switching the lecture's optimizer from AdaGrad to Adam changes optimizer-state bytes per parameter from what to what, and what extra quantity is stored?",
+            "answer": "4 to 8; Adam adds first moments to AdaGrad's second moments (L642-L643)."
+          }
+        ],
+        "self_explain": "Why does the activation term depend on batch size B while the other three terms do not?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:memory-ledger",
+          "notice": "Only the activation bar responds to batch size; the other three scale with parameter count."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:07:01-1:07:18",
+          "notice": "why AdaGrad, not Adam, appears in the lecture code"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Optimizer state is a minor cost next to the parameters themselves.",
+          "why_wrong": "With Adam it is 8 bytes/parameter in fp32 against 2 for the bf16 parameters: the largest per-parameter term in the ledger (L642-L643)."
+        }
+      ]
+    },
+    {
+      "id": "optimizer-state-capacity-not-speed",
+      "label": "Optimizer state costs capacity, not step time",
+      "kind": "rule-of-thumb",
+      "statement": "Optimizer state is a large share of training memory (fp32, 4-8 bytes per parameter) but is read and written once per step by a cheap elementwise update, so it limits the largest model that fits, not the speed of a step, as long as each step processes many tokens.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:10:56-1:11:42",
+            "role": "spoken",
+            "quote": "So if you think about the optimizer states is actually a lot of the memory used. ... remember memory serves two purposes ... the optimizer state is not really the bottleneck for compute ... it means that you can't fit large models in your memory"
+          }
+        ],
+        "filtering_note": "Spoken only (video 1:10:56-1:11:42). The code totals the memory (L636-L646) but never separates the two costs of memory, capacity (it must fit in HBM) and traffic (it must be shipped to the compute units). The professor does so aloud and assigns optimizer state to capacity. The condition 'as long as each step processes many tokens' and all numbers in the prompts (22 bytes/parameter moved per Adam update, 3.35 TB/s, 5e14 FLOP/s achieved) are the author's arithmetic, added so the claim can be tested and its limit seen."
+      },
+      "prerequisites": [
+        {
+          "kp": "optimizer-state-memory",
+          "basis": "teaching-order",
+          "note": "Bytes per parameter for optimizer state."
+        },
+        {
+          "kp": "arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "Time for a memory-bound update = bytes ÷ bandwidth."
+        },
+        {
+          "kp": "six-nd",
+          "basis": "author-inference",
+          "note": "Forward+backward FLOPs per step = 6 × params × tokens."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Halving optimizer-state memory makes training steps noticeably faster.",
+          "why_wrong": "The state is touched once per step, while forward/backward work scales with tokens per step; with large batches the update is a tiny fraction of step time."
+        },
+        {
+          "belief": "Since optimizer state is most of the memory, it is most of the memory traffic.",
+          "why_wrong": "Capacity and traffic differ: weights and activations are streamed by every matmul, the state only by the once-per-step update."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You store Adam's two moments in bf16 instead of fp32 (8 → 4 bytes per parameter) for a 1B-parameter model trained on 1M-token batches. What mainly changes?",
+          "format": "choice",
+          "choices": [
+            "Step time falls by roughly a third",
+            "Largest model that fits grows, step time barely moves",
+            "Step time and capacity both improve about equally",
+            "Nothing: optimizer state is a small share of memory"
+          ],
+          "answer": "Largest model that fits grows, step time barely moves",
+          "why": "Memory serves two purposes. Optimizer state is mostly a capacity cost: it shrinks, so more parameters fit, but the once-per-step update was never the bottleneck for compute.",
+          "targets_misconception": "Halving optimizer-state memory makes training steps noticeably faster.",
+          "distractor_from": "memory = time; both equal; state is negligible in memory too"
+        },
+        "transfer": {
+          "q": "Same 1B Adam model. The optimizer update moves about 22 bytes per parameter (read bf16 params and grads, read and write both fp32 moments, write params), about 6.6 ms at 3.35 TB/s. Now each step processes only 1,000 tokens, at an achieved 5e14 FLOP/s. What fraction of step time is the optimizer update? Give a decimal.",
+          "format": "number",
+          "answer": "0.35",
+          "tolerance": 0.15,
+          "why": "Forward+backward = 6 · 1e9 · 1e3 = 6e12 FLOPs → 12 ms. Update 6.6 ms. Share = 6.6 / 18.6 ≈ 0.35. The rule needs many tokens per step: the update cost is fixed per parameter while matmul work scales with tokens.",
+          "varies": "tokens per step (1M → 1,000)",
+          "invariant": "update cost per parameter per step",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "Same model and the same 6.6 ms optimizer update, but each step processes 1M tokens (6e15 FLOPs at an achieved 5e14 FLOP/s). What fraction of step time is the optimizer update? Give a decimal.",
+          "format": "number",
+          "answer": "0.00055",
+          "tolerance": 0.2,
+          "why": "Forward+backward takes 12 s; 0.0066 / 12.0066 ≈ 5.5e-4. At normal batch sizes the optimizer state costs memory, not time.",
+          "varies": "tokens per step back to 1M",
+          "invariant": "update cost per parameter per step"
+        },
+        "retrieval": [
+          {
+            "q": "What two costs does a tensor's memory impose, and which one does optimizer state mostly incur?",
+            "answer": "Capacity (it must fit in HBM) and traffic (it must be moved to the compute units). Optimizer state mostly costs capacity."
+          },
+          {
+            "q": "When does the optimizer update stop being negligible in step time?",
+            "answer": "When each step processes few tokens: the update cost is fixed per parameter, while forward/backward work scales with tokens."
+          }
+        ],
+        "self_explain": "Why does the optimizer update's cost not grow with batch size while forward and backward do?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:10:56-1:11:42",
+          "notice": "'memory serves two purposes', and which one optimizer state uses"
+        }
+      ]
+    },
+    {
+      "id": "gradient-accumulation",
+      "label": "Gradient accumulation trades steps for activation memory",
+      "kind": "procedure",
+      "statement": "Split a batch into micro-batches, accumulate gradients without zeroing, step every batch/micro steps; activation memory drops from 2·B·D·L to 2·micro·D·L with unchanged total FLOPs.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L719-L731",
+            "role": "computation",
+            "quote": "activation_memory = 2 * micro_batch_size * D * L"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L725-L728",
+            "role": "claim",
+            "quote": "Accumulate the gradients (don't zero it out)"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:12:30-1:13:12",
+            "role": "spoken",
+            "quote": "One is gradient accumulation. ... batch sizes that are large enough to improve stability up to a critical batch size ... You don't zero out the gradients."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:13:12-1:13:19",
+            "role": "spoken",
+            "quote": "this is actually a very simple code change which allows you to save on compute"
+          }
+        ],
+        "filtering_note": "Spoken evidence, and a slip: at 1:13:12 the professor says gradient accumulation lets you 'save on compute'. The code (L719-L731) and his own summary at 1:17:01 ('ways to reduce the memory') say memory, and total FLOPs are unchanged, so the statement here keeps 'memory'. Spoken addition: large batches help stability only up to a critical batch size, deferred to Tatsu's later lecture (1:12:34)."
+      },
+      "prerequisites": [
+        {
+          "kp": "optimizer-state-memory",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Gradient accumulation saves compute.",
+          "why_wrong": "It saves activation memory; FLOPs are identical because every example is still processed once."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Batch 1024 split into micro-batches of 128. Activation memory multiplies by? Total FLOPs multiply by?",
+          "format": "short",
+          "answer": "1/8 and 1",
+          "why": "Activations scale with micro-batch; FLOPs count examples, which are unchanged.",
+          "targets_misconception": "Gradient accumulation saves compute."
+        },
+        "transfer": {
+          "q": "Your optimizer-state memory is the bottleneck, not activations. Does gradient accumulation help?",
+          "format": "choice",
+          "choices": [
+            "yes",
+            "no"
+          ],
+          "answer": "no",
+          "why": "It only shrinks the activation term."
+        },
+        "retrieval": [
+          {
+            "q": "What is the one line you must NOT run between micro-batch backward calls?",
+            "answer": "optimizer.zero_grad() (or equivalently zeroing .grad)."
+          },
+          {
+            "q": "Batch 64 with micro-batches of 16: how many backward calls run before each optimizer.step()?",
+            "answer": "4 (batch_size / micro_batch_size; L728, L730).",
+            "format": "number",
+            "tolerance": 0.01
+          }
+        ],
+        "self_explain": "Why can the gradient keep accumulating across micro-batches while the activations are freed after each one?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_02--grad-accum-timeline",
+          "notice": "Four micro-step humps, each a quarter of the full-batch peak, cover the same 64 examples on the time axis, while the fixed-size gradient buffer fills a quarter per micro-step until the single optimizer step."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:memory-ledger",
+          "notice": "The activation bar tracks micro-batch size while the FLOPs readout stays fixed."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:12:30-1:13:19",
+          "notice": "the saving is activation memory; 'save on compute' at 1:13:12 is a slip (compare the summary at 1:17:01)"
+        }
+      ]
+    },
+    {
+      "id": "activation-checkpointing",
+      "label": "Activation checkpointing: memory O(√L) for O(L) recompute",
+      "kind": "mechanism",
+      "statement": "Keep activations only at checkpoint layers and recompute the rest during backward; storing every √L layers gives O(√L) memory with O(L) extra compute.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L751-L755",
+            "role": "claim",
+            "quote": "Forward pass: keep only activations at subset of layers; Backward pass: recompute ... Philosophy: tradeoff memory for compute"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L747-L762",
+            "role": "computation",
+            "quote": "memory = get_max_memory_usage(...); checkpointed_memory = get_max_memory_usage(...)"
+          },
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L770-L773",
+            "role": "claim",
+            "quote": "If store every sqrt(L) layers, then activation memory is O(sqrt(L)) and O(L) recomputation."
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:13:23-1:13:40",
+            "role": "spoken",
+            "quote": "for inference we don't need to compute the gradient, so we only need to store the current layer's activations"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:15:12-1:15:22",
+            "role": "spoken",
+            "quote": "you don't store the pre ReLU, and you save basically half"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:1:15:33-1:16:15",
+            "role": "spoken",
+            "quote": "in the extreme case, I can just store no layers ... the compute is going to be L squared ... your recomputation overhead is also square root of L"
+          }
+        ],
+        "filtering_note": "The measured memory numbers require a GPU; on CPU the @inspect values do not reproduce. The √L argument is stated, not derived. Spoken evidence (video 1:15:12-1:15:22): a worked number missing from the text: checkpointing each linear+ReLU block drops the pre-ReLU tensor and saves 'basically half' the activation memory. Spoken discrepancy: at 1:15:57 the professor says the √L schedule has 'recomputation overhead ... also square root of L ... balanced', while L773 says O(L) recomputation. The written version is the right total: each of √L segments is recomputed once, about one extra forward pass, O(L). √L is the length of each recomputed segment. The statement keeps O(L). This is a spoken imprecision, not a deliberate correction."
+      },
+      "prerequisites": [
+        {
+          "kp": "optimizer-state-memory",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "backward-2x-forward",
+          "basis": "author-inference",
+          "note": "Recompute cost is a forward pass, which the learner must be able to size."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Checkpointing is free memory.",
+          "why_wrong": "It adds roughly one extra forward pass of compute (≈ +33% FLOPs on the 6ND budget)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "L=64 layers, checkpoint every √L=8 layers. At the peak of the backward pass, how many layers' activations are resident, counting both the stored checkpoints and the layers recomputed inside the current segment?",
+          "format": "number",
+          "answer": "16",
+          "tolerance": 0.3,
+          "why": "8 checkpoints plus up to 8 recomputed layers in the current segment ≈ 2√L."
+        },
+        "transfer": {
+          "q": "Full recomputation (store nothing): memory order and compute order in L?",
+          "format": "short",
+          "answer": "O(1) memory, O(L²) compute",
+          "why": "Each layer's backward recomputes from the start (L771)."
+        },
+        "check": {
+          "q": "Under full recomputation (no activations stored; each layer's input is recomputed from the network input during backward), you double the depth from L = 32 to L = 64. By roughly what factor does the total recomputation work grow? Type only the number.",
+          "format": "number",
+          "answer": "4",
+          "value": 4,
+          "tolerance": 0.1,
+          "why": "Backprop through layer i needs about i layer-forwards to rebuild its input, so the total is about L²/2: 528 at L = 32 and 2080 at L = 64, a factor of about 4. Memory stays O(1); compute is O(L²) (L770-L773).",
+          "targets_misconception": "Checkpointing is free memory.",
+          "varies": "asks the scaling factor for a change in L instead of the big-O orders",
+          "invariant": "with nothing stored, recomputation for each layer starts at the input, so the total grows as L²",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What extra cost does activation checkpointing add to a training step, in units of forward passes?",
+            "answer": "About one extra forward pass (recompute), i.e. FLOPs go from 6ND to ~8ND."
+          },
+          {
+            "q": "With checkpoints every √L layers, which two sets of activations are alive at the memory peak during backward?",
+            "answer": "The √L stored checkpoints plus the up-to-√L recomputed layers of the current segment (L753-L754, L773)."
+          }
+        ],
+        "self_explain": "Why does recompute stay O(L) in total when checkpoints are √L apart, but become O(L²) when nothing is stored?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_02--checkpoint-sweep",
+          "notice": "During backward only one segment is refilled at a time, from its own checkpoint: the resident bar peaks at checkpoints + one segment (4 + 4 = 8 of 16) and then falls."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_02--checkpoint-tradeoff",
+          "notice": "Peak memory L/k + k is U-shaped in k with its minimum at k = √L, while recomputation stays one forward pass; 'store nothing' drops memory to a constant but makes recomputation grow like L²."
+        },
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "lecture_02.py:L770-L773",
+          "steps": [
+            {
+              "do": "Store every layer: L activations resident during backward, nothing recomputed: O(L) memory.",
+              "why": "This is the default the other options are measured against (L771)."
+            },
+            {
+              "tex": "\\text{peak} \\approx \\frac{L}{k} + k",
+              "do": "Checkpoint every k layers: L/k checkpoints stay resident, and backward through one segment recomputes its k layers from the segment's checkpoint.",
+              "why": "Only one segment is refilled at a time, so at the peak you hold all checkpoints plus one segment."
+            },
+            {
+              "do": "The sum is smallest at k = √L. For L = 64, k = 8: 8 checkpoints + 8 recomputed layers = 16 = 2√L, so memory is O(√L).",
+              "why": "L/k shrinks and k grows as the segments lengthen; they balance where L/k = k."
+            },
+            {
+              "do": "Recomputation: every layer is recomputed once, from its own segment's checkpoint, about L layer-forwards in total: O(L), one extra forward pass.",
+              "why": "Each segment starts from a stored checkpoint, so no layer has to be rebuilt from the network input."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:15:12-1:15:22",
+          "notice": "checkpointing each linear+ReLU block halves activation memory by not storing the pre-ReLU tensor"
+        }
+      ]
+    },
+    {
+      "id": "supp-dot-product-cost",
+      "label": "Supplement: cost of a dot product",
+      "kind": "quantity",
+      "statement": "A length-n dot product is n multiplies and n−1 adds, ≈ 2n FLOPs, and reads 2n elements.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_02",
+            "ref": "lecture_02.py:L418-L433",
+            "role": "computation",
+            "quote": "bytes = (2 * n) + (2 * n) + 2  # Read x, read w, write y ... flops = 2 * n - 1  # n multiplications, n-1 additions"
+          },
+          {
+            "source": "lecture_02_video",
+            "ref": "video:49:46-50:24",
+            "role": "spoken",
+            "quote": "you read x, which is 2n; read w, which is 2n; and then you write y, which is a scalar ... n multiplications and n minus 1 additions"
+          }
+        ],
+        "filtering_note": "The professor touches the dot product only as one of five intensity examples. Learners who cannot count a dot product cannot follow 2BDK; the student line makes it explicit."
+      },
+      "prerequisites": [],
+      "prompts": {
+        "predict": {
+          "q": "Dot product of two length-1024 bf16 vectors: FLOPs and bytes read?",
+          "format": "short",
+          "answer": "≈2048 FLOPs, 4096 bytes",
+          "why": "2n FLOPs; 2 vectors × n × 2 bytes.",
+          "targets_misconception": "A length-n dot product costs n FLOPs."
+        },
+        "transfer": {
+          "q": "How many dot products does a (B×D)(D×K) matmul contain, and of what length?",
+          "format": "short",
+          "answer": "B·K dot products of length D",
+          "why": "One per output cell."
+        },
+        "check": {
+          "q": "A (512 × 1024) by (1024 × 256) matmul is computed as dot products, each counted at 2n FLOPs for length n. How many FLOPs in total? Type only the number.",
+          "format": "number",
+          "answer": "2.68e8",
+          "value": 268435456,
+          "tolerance": 0.02,
+          "why": "There is one dot product per output cell, 512 × 256 = 131,072 of them, each of length 1024 costing 2 × 1024 FLOPs: 131,072 × 2048 ≈ 2.68e8 = 2·B·D·K (L418-L433).",
+          "targets_misconception": "A length-n dot product costs n FLOPs.",
+          "varies": "asks total FLOPs for concrete shapes instead of the number and length of dot products",
+          "invariant": "a (B×D)(D×K) matmul is B·K dot products of length D, each about 2D FLOPs",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Arithmetic intensity of a dot product in bf16, roughly?",
+            "answer": "≈ 0.5 FLOPs/byte (2n FLOPs over 4n bytes)."
+          },
+          {
+            "q": "Why does lengthening the vectors not move a dot product toward compute-bound?",
+            "answer": "FLOPs (≈2n) and bytes (≈4n in bf16) both grow linearly in n, so intensity stays ≈0.5 whatever n is (L424-L427)."
+          }
+        ],
+        "self_explain": "Why is the dot product's intensity about 1/2 while a matrix-vector product's is about 1, when both are 'n dot products' at heart?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_02.py:L418-L433"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A length-n dot product costs n FLOPs.",
+          "why_wrong": "n multiplies plus n−1 adds ≈ 2n (L425); the multiply-add pair is why the lecture's FLOP counts carry a factor of 2."
+        }
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Order in which main() calls sections in lecture_02.py, mapped to KPs. Announcements and the takeaway list (L17-L38) are not KPs. Spoken-only KPs (status 'spoken', from the lecture captions) are placed at the moment they are said: elementwise-flops-negligible (32:31) and gpu-timing-synchronize (35:24) between matmul-flops and mfu, optimizer-state-capacity-not-speed (1:10:56) after optimizer-state-memory.",
+    "stops": [
+      "napkin-training-time",
+      "napkin-max-model-size",
+      "tensor-rank",
+      "dtype-bytes",
+      "mixed-precision",
+      "einsum",
+      "matmul-flops",
+      "elementwise-flops-negligible",
+      "gpu-timing-synchronize",
+      "mfu",
+      "arithmetic-intensity",
+      "roofline",
+      "backward-2x-forward",
+      "six-nd",
+      "optimizer-state-memory",
+      "optimizer-state-capacity-not-speed",
+      "gradient-accumulation",
+      "activation-checkpointing"
+    ],
+    "supplements": [
+      "supp-dot-product-cost"
+    ]
+  },
+  "spoken_filtering": [
+    {
+      "at": "1:05",
+      "kind": "defer-assignment",
+      "quote": "we are talking about tokenization, which is going to be on the first assignment",
+      "what_was_filtered": "Tokenization (the previous lecture's topic) is left to Assignment 1.",
+      "kp": null
+    },
+    {
+      "at": "4:37",
+      "kind": "defer-later",
+      "quote": "There's going to be no ML magic today. I'll leave that to Tatsu for the next lecture.",
+      "what_was_filtered": "Modeling and architecture content goes to the next lecture; today is accounting only.",
+      "kp": null
+    },
+    {
+      "at": "10:54",
+      "kind": "skip",
+      "quote": "So let me actually skip over this part.",
+      "what_was_filtered": "The rest of the bf16 segment, most likely the bf16 1e-8 no-underflow demo (L148-L149). The audio does not say which lines.",
+      "kp": "dtype-bytes"
+    },
+    {
+      "at": "12:40",
+      "kind": "skip",
+      "quote": "We're not going to talk too much about this",
+      "what_was_filtered": "PyTorch AMP (autocast) details beyond 'matmuls are safe, exponentiation stays fp32'.",
+      "kp": "mixed-precision"
+    },
+    {
+      "at": "13:37",
+      "kind": "skip",
+      "quote": "And so we're not going to talk about that.",
+      "what_was_filtered": "The two fp8 variants (E4M3 vs E5M2) and when to use each.",
+      "kp": "dtype-bytes"
+    },
+    {
+      "at": "16:30",
+      "kind": "defer-later",
+      "quote": "I think we'll talk about quantization later",
+      "what_was_filtered": "Post-training quantization to 1-2 bits, raised by a student question about 1-bit training.",
+      "kp": null
+    },
+    {
+      "at": "17:27",
+      "kind": "aside",
+      "quote": "the slides that they were executed on my laptop, which means that I don't have GPU. So some of the code I'll just show but not execute.",
+      "what_was_filtered": "Every GPU-dependent @inspect value (timings, MFU, checkpointing memory) is shown but not run in class.",
+      "kp": null
+    },
+    {
+      "at": "19:10",
+      "kind": "skip",
+      "quote": "There's a nice tutorial which you can go through. I'm just going to cover some of the basics.",
+      "what_was_filtered": "The rest of einops beyond einsum, reduce and rearrange, left to the tutorial.",
+      "kp": "einsum"
+    },
+    {
+      "at": "24:10",
+      "kind": "defer-assignment",
+      "quote": "I think it will come up in an assignment once.",
+      "what_was_filtered": "Practice with rearrange (splitting a flattened heads × hidden dimension).",
+      "kp": "einsum"
+    },
+    {
+      "at": "33:17",
+      "kind": "aside",
+      "quote": "much more about how you co-design with the systems, rather than these more asymptotic algorithms",
+      "what_was_filtered": "Sub-cubic matrix multiplication algorithms, dismissed as irrelevant to practice.",
+      "kp": "matmul-flops"
+    },
+    {
+      "at": "34:46",
+      "kind": "aside",
+      "quote": "these calculations are not going to be very meaningful because I'm doing this on CPU",
+      "what_was_filtered": "Measured FLOP/s and MFU for the linear model; the numbers in the trace come from a laptop CPU.",
+      "kp": "mfu"
+    },
+    {
+      "at": "35:18",
+      "kind": "defer-later",
+      "quote": "we're going to talk more about benchmarking. But here's a little preview.",
+      "what_was_filtered": "Benchmarking methodology (warm-up, synchronize, averaging), previewed only.",
+      "kp": "gpu-timing-synchronize"
+    },
+    {
+      "at": "39:19",
+      "kind": "defer-later",
+      "quote": "I'll come back to that when we talk about memory bottlenecks.",
+      "what_was_filtered": "Why MFU is only about 0.5; answered later in the same lecture through arithmetic intensity (54:09).",
+      "kp": "mfu"
+    },
+    {
+      "at": "44:19",
+      "kind": "defer-later",
+      "quote": "We're going to talk more about that when we talk more deeply about GPUs.",
+      "what_was_filtered": "How communication and computation actually overlap. Assumed perfect here (total = max).",
+      "kp": "arithmetic-intensity"
+    },
+    {
+      "at": "53:03",
+      "kind": "defer-assignment",
+      "quote": "we'll see in both your assignment, but also in the next lecture that transformers are essentially big matrix multiplications",
+      "what_was_filtered": "Arithmetic intensity of an actual Transformer.",
+      "kp": "arithmetic-intensity"
+    },
+    {
+      "at": "53:26",
+      "kind": "defer-later",
+      "quote": "just to foreshadow the inference lecture, is that matrix vector products is essentially what goes on when you're doing transformer inference",
+      "what_was_filtered": "Why decoding is memory-bound, left to the inference lecture.",
+      "kp": "arithmetic-intensity"
+    },
+    {
+      "at": "55:36",
+      "kind": "defer-later",
+      "quote": "Maybe when we talk about GPUs and understand a bit more how they work, we can talk about why this is.",
+      "what_was_filtered": "Why accelerators have so much more compute than memory bandwidth (student question).",
+      "kp": "roofline"
+    },
+    {
+      "at": "1:07:01",
+      "kind": "defer-assignment",
+      "quote": "Just so that I'm not just giving you what's in assignment 1, I'm going to use the AdaGrad optimizer",
+      "what_was_filtered": "Adam/AdamW implementation is withheld for Assignment 1; AdaGrad stands in.",
+      "kp": "optimizer-state-memory"
+    },
+    {
+      "at": "1:07:36",
+      "kind": "skip",
+      "quote": "I'm not going to have time to go into the optimizer details here",
+      "what_was_filtered": "How AdaGrad, RMSProp and Adam relate, beyond the one-line list on screen.",
+      "kp": "optimizer-state-memory"
+    },
+    {
+      "at": "1:07:46",
+      "kind": "defer-assignment",
+      "quote": "in the assignment 1, you're going to implement Adam",
+      "what_was_filtered": "Writing an optimizer step for Adam.",
+      "kp": "optimizer-state-memory"
+    },
+    {
+      "at": "1:09:06",
+      "kind": "skip",
+      "quote": "So I'm actually going to maybe skip the training loop.",
+      "what_was_filtered": "train_loop() (L668-L702); retracted a moment later to go back to optimizer memory, then skipped for good at 1:12:04.",
+      "kp": null
+    },
+    {
+      "at": "1:11:59",
+      "kind": "defer-assignment",
+      "quote": "But you're going to do that in assignment 1.",
+      "what_was_filtered": "FLOPs and memory accounting for a Transformer.",
+      "kp": "six-nd"
+    },
+    {
+      "at": "1:12:04",
+      "kind": "skip",
+      "quote": "I'm going to skip the training loop. This is just a general review.",
+      "what_was_filtered": "train_loop() (L668-L702): data, forward, backward, step, zero_grad.",
+      "kp": null
+    },
+    {
+      "at": "1:12:34",
+      "kind": "defer-later",
+      "quote": "up to a critical batch size, which Tatsu will talk about later",
+      "what_was_filtered": "Critical batch size: how large a batch still helps.",
+      "kp": "gradient-accumulation"
+    }
+  ],
+  "spoken_map": [
+    {
+      "from": "0:05",
+      "to": "1:55",
+      "kp": null,
+      "what": "Opening: Marin 1e23 run matched its forecast; recap of lecture 1; goal of resource accounting"
+    },
+    {
+      "from": "1:55",
+      "to": "2:51",
+      "kp": "napkin-training-time",
+      "what": "70B params x 15T tokens on 1024 H100s: 6ND / (peak x MFU) = 143 days"
+    },
+    {
+      "from": "2:51",
+      "to": "3:43",
+      "kp": "napkin-max-model-size",
+      "what": "80 GB / (2+2+4+4) bytes = about 53B parameters, activations ignored"
+    },
+    {
+      "from": "3:43",
+      "to": "4:43",
+      "kp": null,
+      "what": "Mindset preamble: knowledge, mechanics, mindset, intuitions; no ML magic today"
+    },
+    {
+      "from": "4:43",
+      "to": "5:45",
+      "kp": "tensor-rank",
+      "what": "everything is a tensor; DeepSeek checkpoint as a bag of tensors"
+    },
+    {
+      "from": "5:45",
+      "to": "8:46",
+      "kp": "dtype-bytes",
+      "what": "fp32 layout, single precision, 4x8 matrix = 128 bytes, GPT-3 FFN matrix"
+    },
+    {
+      "from": "8:46",
+      "to": "11:00",
+      "kp": "dtype-bytes",
+      "what": "fp16's 5-bit exponent underflows; bf16 trades mantissa for fp32's range"
+    },
+    {
+      "from": "11:00",
+      "to": "12:55",
+      "kp": "mixed-precision",
+      "what": "small models: fp32 is fine; bf16 for params/activations/grads, fp32 optimizer state; AMP"
+    },
+    {
+      "from": "12:55",
+      "to": "14:45",
+      "kp": "dtype-bytes",
+      "what": "going further: fp8's two formats, nvfp4 with block scales, Nemotron 3 Super"
+    },
+    {
+      "from": "14:45",
+      "to": "17:20",
+      "kp": null,
+      "what": "fp4 block-scaling Q&A and 1-bit training vs post-training quantization"
+    },
+    {
+      "from": "17:20",
+      "to": "18:05",
+      "kp": null,
+      "what": "Moving tensors to GPU; slides executed on a laptop, GPU code shown not run"
+    },
+    {
+      "from": "18:05",
+      "to": "21:20",
+      "kp": "einsum",
+      "what": "why named axes; einsum as generalized matmul, unmentioned axes summed"
+    },
+    {
+      "from": "21:20",
+      "to": "24:00",
+      "kp": "einsum",
+      "what": "batched einsum without transposes, ellipsis, reduce; 'just sugar'"
+    },
+    {
+      "from": "24:00",
+      "to": "27:20",
+      "kp": "einsum",
+      "what": "rearrange: splitting a flattened heads x hidden axis and back; row-major Q&A"
+    },
+    {
+      "from": "27:20",
+      "to": "30:00",
+      "kp": "napkin-training-time",
+      "what": "FLOPs vs FLOP/s; spec-sheet 1979 TFLOP/s is with sparsity, halve it"
+    },
+    {
+      "from": "30:00",
+      "to": "30:45",
+      "kp": null,
+      "what": "Intuition number: 8 H100s for a week is about 5e21 FLOPs"
+    },
+    {
+      "from": "30:45",
+      "to": "32:25",
+      "kp": "matmul-flops",
+      "what": "linear model B x D times D x K: one multiply and one add per triple, 2BDK"
+    },
+    {
+      "from": "32:25",
+      "to": "33:00",
+      "kp": "elementwise-flops-negligible",
+      "what": "elementwise ops cost mn; nothing as expensive as matmul for large matrices"
+    },
+    {
+      "from": "33:00",
+      "to": "34:50",
+      "kp": "matmul-flops",
+      "what": "Q&A on sub-cubic algorithms and add vs multiply; 2 x tokens x parameters"
+    },
+    {
+      "from": "34:50",
+      "to": "36:30",
+      "kp": "gpu-timing-synchronize",
+      "what": "timing on GPU needs cuda synchronize before and after; async calls look fast"
+    },
+    {
+      "from": "36:30",
+      "to": "40:30",
+      "kp": "mfu",
+      "what": "MFU = actual / promised FLOP/s; 0.5 good, 0.8 bare matmul, 0.1 broken; fp32 slow"
+    },
+    {
+      "from": "40:30",
+      "to": "42:25",
+      "kp": "arithmetic-intensity",
+      "what": "cartoon hardware: HBM to accelerator; memory bandwidth 3.3 TB/s matters"
+    },
+    {
+      "from": "42:25",
+      "to": "45:55",
+      "kp": "arithmetic-intensity",
+      "what": "ReLU: bytes vs FLOPs, overlap assumption, memory bound vs compute bound"
+    },
+    {
+      "from": "45:55",
+      "to": "49:40",
+      "kp": "arithmetic-intensity",
+      "what": "accelerator intensity about 295; ReLU 0.25, GELU about 5, both memory bound"
+    },
+    {
+      "from": "49:40",
+      "to": "50:25",
+      "kp": "supp-dot-product-cost",
+      "what": "dot product: 4n+2 bytes, 2n-1 FLOPs, intensity about one half"
+    },
+    {
+      "from": "50:25",
+      "to": "53:00",
+      "kp": "arithmetic-intensity",
+      "what": "matrix-vector still memory bound; matmul about n/3, compute bound"
+    },
+    {
+      "from": "53:00",
+      "to": "54:45",
+      "kp": "arithmetic-intensity",
+      "what": "transformers are big matmuls; inference is matrix-vector; low MFU from memory bottlenecks"
+    },
+    {
+      "from": "54:45",
+      "to": "57:04",
+      "kp": "roofline",
+      "what": "Q&A on why accelerators outrun bandwidth; the roofline plot read aloud"
+    },
+    {
+      "from": "57:04",
+      "to": "1:00:15",
+      "kp": null,
+      "what": "Deep-network running example and PyTorch gradient basics (MSE toy)"
+    },
+    {
+      "from": "1:00:15",
+      "to": "1:02:40",
+      "kp": "backward-2x-forward",
+      "what": "two-layer linear net; forward FLOPs of the second layer; the two gradients needed"
+    },
+    {
+      "from": "1:02:40",
+      "to": "1:05:30",
+      "kp": "backward-2x-forward",
+      "what": "h1.grad and w2.grad in einsum; each costs the same as the forward matmul"
+    },
+    {
+      "from": "1:05:30",
+      "to": "1:06:50",
+      "kp": "six-nd",
+      "what": "2ND forward + 4ND backward = 6ND; context length squared not counted"
+    },
+    {
+      "from": "1:06:50",
+      "to": "1:09:10",
+      "kp": "optimizer-state-memory",
+      "what": "AdaGrad instead of Adam; optimizer state holds summed squared gradients"
+    },
+    {
+      "from": "1:09:10",
+      "to": "1:10:56",
+      "kp": "optimizer-state-memory",
+      "what": "memory tally: bf16 params, activations, grads; fp32 state, 4 bytes AdaGrad, 8 Adam"
+    },
+    {
+      "from": "1:10:56",
+      "to": "1:11:45",
+      "kp": "optimizer-state-capacity-not-speed",
+      "what": "memory serves two purposes; optimizer state limits capacity, not speed"
+    },
+    {
+      "from": "1:11:45",
+      "to": "1:12:15",
+      "kp": null,
+      "what": "Recap of D^2 L parameters; Transformer accounting left to Assignment 1; training loop skipped"
+    },
+    {
+      "from": "1:12:15",
+      "to": "1:13:20",
+      "kp": "gradient-accumulation",
+      "what": "micro-batches, accumulate without zeroing, step every batch/micro steps"
+    },
+    {
+      "from": "1:13:20",
+      "to": "1:16:16",
+      "kp": "activation-checkpointing",
+      "what": "keep a subset of activations, recompute in backward; half per block; sqrt(L) sweet spot"
+    },
+    {
+      "from": "1:16:16",
+      "to": "1:17:20",
+      "kp": null,
+      "what": "Lecture summary and next lecture (architectures)"
+    }
+  ]
+}

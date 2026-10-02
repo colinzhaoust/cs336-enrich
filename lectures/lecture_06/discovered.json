@@ -1,0 +1,2545 @@
+{
+  "lecture": "lecture_06",
+  "source_path": "official/lectures/lecture_06.py",
+  "source_sha256": "d21a54725f5bf70a2eb7e9df24773308ea63561a2ded09e4aff0d208aa2445f8",
+  "summary": {
+    "counts": {
+      "section_start": 11,
+      "claim": 186,
+      "heading": 9,
+      "figure": 7,
+      "code": 34,
+      "value": 22,
+      "section_end": 11,
+      "directive": 15,
+      "cite": 2
+    },
+    "sections_in_order": [
+      "main",
+      "review_of_gpus",
+      "benchmarking_and_profiling",
+      "benchmarking",
+      "profiling",
+      "naive_vs_builtin_vs_compiled_gelu",
+      "triton_introduction",
+      "triton_gelu_example",
+      "triton_softmax_example",
+      "triton_row_sum_example",
+      "triton_matmul_relu_example"
+    ],
+    "n_reference_cites": 0,
+    "n_url_cites": 2
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 13,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 14,
+      "section": "main",
+      "depth": 0,
+      "text": "Last lecture: high-level overview of GPUs and performance",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 15,
+      "section": "main",
+      "depth": 0,
+      "text": "This lecture: benchmarking/profiling + writing kernels",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 39,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 40,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Hardware",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 41,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "images/gpu-hardware.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 42,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| Accelerator                        | A100      | H100      | B200      |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 43,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "+------------------------------------+-----------+-----------+-----------+",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 44,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| # SMs                              |       108 |       132 |       148 |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 45,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "+------------------------------------+-----------+-----------+-----------+",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 46,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| Register size (per SM)             |    256 KB |    256 KB |    256 KB |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 47,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| L1 cache + shared memory (per SM)  |    192 KB |    256 KB |    256 KB |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 48,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| L2 cache size                      |     40 MB |     50 MB | 96-126 MB |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 49,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| HBM size                           |     80 GB |     80 GB |    192 GB |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 50,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "+------------------------------------+-----------+-----------+-----------+",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 51,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| Register bandwidth                 | ~116 TB/s | ~401 TB/s | ~447 TB/s |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 52,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| L1 cache + shared memory bandwidth |  ~19 TB/s |  ~33 TB/s |  ~19 TB/s |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 53,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| L2 cache bandwidth                 | ~5-8 TB/s |  ~12 TB/s |   ~9 TB/s |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 54,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| HBM bandwidth                      |    2 TB/s | 3.35 TB/s |    8 TB/s |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 56,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "(B200s also have tensor memory (TMEM) for tensor cores (between registers and shared memory) that are invisible to programmer.)",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 58,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Programming model",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 59,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "https://docs.nvidia.com/cuda/parallel-thread-execution/_images/grid-with-CTAs.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 60,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- *Thread*: executes code on a small part of the data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 61,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- *Thread block* or concurrent thread array (CTA): a group of threads",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- *Grid*: collection of thread blocks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 64,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "(H100s and B200s also have thread block clusters that enable distributed shared memory.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 66,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Why thread blocks?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 67,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "For elementwise operations (e.g., GeLU), threads are most natural: each thread processes one element.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- f(i) for i = 0, ..., N-1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 69,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "However, for non-elementwise operations like softmax or matrix multiplication, threads need to communicate.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 70,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Reading/writing from HBM is slow, so use shared memory (local to SM).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 71,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Thread block: a collection of threads that access the same shared memory.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 72,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Consequently, a thread block is scheduled on one SM.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 73,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "In Triton, think natively in terms of thread blocks (later).",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 75,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Interaction between programming model and hardware",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 76,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Programming model provides an abstraction of the hardware.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 77,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "In principle, don't need to think about anything else (for correctness).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 78,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "In practice, performance is very sensitive to the hardware, so need to understand it to obtain high performance.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 80,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Let's go over some considerations.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 82,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "**Warps**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 83,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Within a thread block, threads are grouped into warps (32 threads per warp).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 84,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Example: thread block has 64 threads => it has 2 warps.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 85,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT | TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 86,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- All threads within a warp must execute same instructions in lockstep on an SM.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 87,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Control divergence: if different threads in a warp need to execute different instructions (if A, else B), must be done sequentially (bad)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 88,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| AAAAAAAAA....................... |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 89,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "| .........BBBBBBBBBBBBBBBBBBBBBBB |",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 90,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- SM runs multiple warps and switches between them (e.g., when one warp is blocked on HBM reads/writes) with zero cost.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 92,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "**(Warp) occupancy**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 93,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Each thread can use between 0 and 255 registers.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 94,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- The more registers threads use, the fewer threads can be scheduled on an SM (low occupancy).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 95,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Low occupancy isn't necessarily bad if each thread is doing more work.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 96,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Example: thread coarsening (each thread processes multiple elements).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 97,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Example: thread block has 64 threads, each using 160 registers, SM has 65536 registers",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 100,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "num_threads_per_block = 128\nnum_registers_per_thread = 160\nmax_registers = 65536  # Registers allowed per SM\nmax_warps = 64         # Concurrent warps allowed per SM\nassert num_registers_per_thread <= 255\nnum_registers_per_block = num_threads_per_block * num_registers_per_thread  # @inspect num_registers_per_block",
+      "extra": {
+        "end_line": 109
+      }
+    },
+    {
+      "kind": "value",
+      "line": 109,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "num_registers_per_block",
+      "extra": {
+        "expr": "num_registers_per_block = num_threads_per_block * num_registers_per_thread"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 110,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "num_blocks = max_registers // num_registers_per_block  # Limited by registers @inspect num_blocks",
+      "extra": {
+        "end_line": 110
+      }
+    },
+    {
+      "kind": "value",
+      "line": 110,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "num_blocks",
+      "extra": {
+        "expr": "num_blocks = max_registers // num_registers_per_block"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 111,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "num_warps = num_blocks * num_threads_per_block / 32  # @inspect num_warps",
+      "extra": {
+        "end_line": 111
+      }
+    },
+    {
+      "kind": "value",
+      "line": 111,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "num_warps",
+      "extra": {
+        "expr": "num_warps = num_blocks * num_threads_per_block / 32"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 112,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "occupancy = num_warps / max_warps  # @inspect occupancy",
+      "extra": {
+        "end_line": 112
+      }
+    },
+    {
+      "kind": "value",
+      "line": 112,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "occupancy",
+      "extra": {
+        "expr": "occupancy = num_warps / max_warps"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 114,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "**Bank conflicts** (shared memory):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 115,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Shared memory is divided into 32 banks, each 4 bytes wide.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 116,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "B00 B01 B02 B03 B04 B05 B06 B07 B08 B09 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23 B24 B25 B26 B27 B28 B29 B30 B31",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 117,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 118,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 119,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 120,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Each cycle, each bank can only be accessed by one thread (if not the same exact location).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 121,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- If multiple threads access the same bank, accesses serialized (bank conflict).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 122,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Worst case example: matrix where each row spans all banks; 32 threads accessing first column results in 32-way bank conflict!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 123,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Unavoidable: when doing matmul A @ B, access rows of A and columns of B",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 124,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Solution: swizzling rearranges shared memory (e.g., row xor col) to avoid bank conflicts",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 126,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "**Memory coalescing** (HBM):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 127,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- When the 32 threads in a warp access HBM, memory accesses combined into transactions of 128 bytes (cache lines).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 128,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "M00 M01 M02 M03 M04 M05 M06 M07 M08 M09 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 129,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55 M56 M57 M58 M59 M60 M61 M62 M63",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 130,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Best case: full coalescing, all threads access the same cache line (32 threads x 4 bytes = 128 bytes).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 132,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "**Block occupancy**:",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 133,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "https://developer-blogs.nvidia.com/wp-content/uploads/2019/06/pasted-image-0.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 134,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Thread blocks scheduled onto SMs in waves.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 135,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- B200 has 148 SMs, if we launch 160 thread blocks, first wave has 148 blocks, second wave has 12 blocks.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 136,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Wave quantization problem: last wave has fewer thread blocks, leaving some SMs idle (low block occupancy).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 137,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Solution: make number of thread blocks divide # SMs.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 139,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 140,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Programming model: grid (HBM) -> thread block (shared memory) -> thread (registers)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 141,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "- Details of hardware (warps, bank conflicts, memory coalescing, occupancy) determine performance",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 141,
+      "section": "review_of_gpus",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 144,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 145,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "Recipe for success:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 146,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "1. Benchmark and profile your code",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 147,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "2. Make changes",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 148,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "3. Benchmark and profile your code again",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 156,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 157,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "Benchmarking measures the wall-clock time of performing some operation.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 158,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "It only gives you end-to-end time, not where time is spent (profiling).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 160,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "It is still useful for:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 161,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "- comparing different implementations (which is faster?), and",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 162,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "- understanding how performance scales (e.g., with dimension).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 164,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "You can use [`torch.utils.benchmark`](https://pytorch.org/tutorials/recipes/recipes/benchmark.html).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 165,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "We will roll our own to make benchmarking more transparent.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 168,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "matmul = run_operation2(dim=1024, operation=lambda a, b: a @ b)\nresult = benchmark(matmul)  # @inspect result",
+      "extra": {
+        "end_line": 169
+      }
+    },
+    {
+      "kind": "value",
+      "line": 169,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "result",
+      "extra": {
+        "expr": "result = benchmark(matmul)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 172,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "results = {}\nfor dim in [256, 512, 1024, 2048, 4096, 8192]:\nresults[dim] = benchmark(run_operation2(dim=dim, operation=lambda a, b: a @ b))  # @inspect results @stepover",
+      "extra": {
+        "end_line": 174
+      }
+    },
+    {
+      "kind": "value",
+      "line": 174,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "results",
+      "extra": {
+        "expr": "results[dim] = benchmark(run_operation2(dim=dim, operation=lambda a, b: a @ b))"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 174,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 176,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "Note: time is roughly constant when dimension is small, then cubic scaling.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 176,
+      "section": "benchmarking",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 206,
+      "section": "profiling",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 207,
+      "section": "profiling",
+      "depth": 2,
+      "text": "While benchmarking looks at end-to-end time, profiling looks at where time is spent.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 208,
+      "section": "profiling",
+      "depth": 2,
+      "text": "Independent of time, profiling also helps you understand what's going under the hood.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 210,
+      "section": "profiling",
+      "depth": 2,
+      "text": "PyTorch has a built-in [profiler](https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 211,
+      "section": "profiling",
+      "depth": 2,
+      "text": "In your assignment, you will use nsight to get more details.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 213,
+      "section": "profiling",
+      "depth": 2,
+      "text": "add(dim=2048)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 214,
+      "section": "profiling",
+      "depth": 2,
+      "text": "add_profile = profile(run_operation2(dim=2048, operation=lambda a, b: a + b))",
+      "extra": {
+        "end_line": 214
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 215,
+      "section": "profiling",
+      "depth": 2,
+      "text": "add_profile",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 217,
+      "section": "profiling",
+      "depth": 2,
+      "text": "matmul(dim=2048)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 218,
+      "section": "profiling",
+      "depth": 2,
+      "text": "matmul_profile = profile(run_operation2(dim=2048, operation=lambda a, b: a @ b)) # @stepover",
+      "extra": {
+        "end_line": 218
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 218,
+      "section": "profiling",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 219,
+      "section": "profiling",
+      "depth": 2,
+      "text": "matmul_profile",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 221,
+      "section": "profiling",
+      "depth": 2,
+      "text": "matmul(dim=128)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 222,
+      "section": "profiling",
+      "depth": 2,
+      "text": "matmul_profile = profile(run_operation2(dim=128, operation=lambda a, b: a @ b)) # @stepover",
+      "extra": {
+        "end_line": 222
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 222,
+      "section": "profiling",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 223,
+      "section": "profiling",
+      "depth": 2,
+      "text": "matmul_profile",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 225,
+      "section": "profiling",
+      "depth": 2,
+      "text": "Observations:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 226,
+      "section": "profiling",
+      "depth": 2,
+      "text": "- You can see which CUDA kernels are actually being called (the long names).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 227,
+      "section": "profiling",
+      "depth": 2,
+      "text": "- Different CUDA kernels are invoked depending on the tensor dimensions.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 229,
+      "section": "profiling",
+      "depth": 2,
+      "text": "Name of CUDA kernel tells us something about the implementation.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 230,
+      "section": "profiling",
+      "depth": 2,
+      "text": "Example: cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x64x16_1x1x1_3_nnn_align1_bi...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 231,
+      "section": "profiling",
+      "depth": 2,
+      "text": "- cutlass: NVIDIA's CUDA library for linear algebra",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 232,
+      "section": "profiling",
+      "depth": 2,
+      "text": "- sm100: corresponds to the NVIDIA Blackwell architecture (B200)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 233,
+      "section": "profiling",
+      "depth": 2,
+      "text": "- f32: float32",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 234,
+      "section": "profiling",
+      "depth": 2,
+      "text": "- 64x64x16: tile shape (more on this later)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 234,
+      "section": "profiling",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 153,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "Benchmark and profile your code!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 153,
+      "section": "benchmarking_and_profiling",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 262,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 263,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "Let's benchmark and profile the [GeLU activation function](https://pytorch.org/docs/stable/generated/torch.nn.GELU.html).",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 265,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "x = torch.tensor([1.])  # @inspect x",
+      "extra": {
+        "end_line": 265
+      }
+    },
+    {
+      "kind": "value",
+      "line": 265,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.tensor([1.])"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 268,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "y1 = naive_gelu(x)  # @inspect y1",
+      "extra": {
+        "end_line": 268
+      }
+    },
+    {
+      "kind": "value",
+      "line": 268,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "y1",
+      "extra": {
+        "expr": "y1 = naive_gelu(x)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 271,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "y2 = builtin_gelu(x)  # @inspect y2",
+      "extra": {
+        "end_line": 271
+      }
+    },
+    {
+      "kind": "value",
+      "line": 271,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "y2",
+      "extra": {
+        "expr": "y2 = builtin_gelu(x)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 272,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "check_equal_1d(naive_gelu, builtin_gelu)  # Check it works\ncompiled_gelu = torch.compile(naive_gelu)  # @stepover",
+      "extra": {
+        "end_line": 275
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 275,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 276,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "y3 = compiled_gelu(x)  # @inspect y3 @stepover",
+      "extra": {
+        "end_line": 276
+      }
+    },
+    {
+      "kind": "value",
+      "line": 276,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "y3",
+      "extra": {
+        "expr": "y3 = compiled_gelu(x)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 276,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 277,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "check_equal_1d(naive_gelu, compiled_gelu)  # Check it works (compilation shouldn't change semantics) @stepover",
+      "extra": {
+        "end_line": 277
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 277,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 280,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "naive_time = benchmark(run_operation1(dim=16384, operation=naive_gelu)) # @inspect naive_time @stepover",
+      "extra": {
+        "end_line": 280
+      }
+    },
+    {
+      "kind": "value",
+      "line": 280,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "naive_time",
+      "extra": {
+        "expr": "naive_time = benchmark(run_operation1(dim=16384, operation=naive_gelu))"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 280,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 281,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "builtin_time = benchmark(run_operation1(dim=16384, operation=builtin_gelu)) # @inspect builtin_time @stepover",
+      "extra": {
+        "end_line": 281
+      }
+    },
+    {
+      "kind": "value",
+      "line": 281,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "builtin_time",
+      "extra": {
+        "expr": "builtin_time = benchmark(run_operation1(dim=16384, operation=builtin_gelu))"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 281,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 282,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "compiled_time = benchmark(run_operation1(dim=16384, operation=compiled_gelu)) # @inspect compiled_time @stepover",
+      "extra": {
+        "end_line": 282
+      }
+    },
+    {
+      "kind": "value",
+      "line": 282,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "compiled_time",
+      "extra": {
+        "expr": "compiled_time = benchmark(run_operation1(dim=16384, operation=compiled_gelu))"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 282,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 283,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "The builtin and compiled versions are significantly faster!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 285,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "To understand why, let's look at the profiler to see where time is being spent.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 287,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "naive_gelu",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 288,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "naive_gelu_profile = profile(run_operation1(dim=16384, operation=naive_gelu))  # @stepover",
+      "extra": {
+        "end_line": 288
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 288,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 289,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "naive_gelu_profile",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 291,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "builtin_gelu",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 292,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "builtin_gelu_profile = profile(run_operation1(dim=16384, operation=builtin_gelu))  # @stepover",
+      "extra": {
+        "end_line": 292
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 292,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 293,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "builtin_gelu_profile",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 295,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "compiled_gelu",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 296,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "compiled_gelu_profile = profile(run_operation1(dim=16384, operation=compiled_gelu))  # @stepover",
+      "extra": {
+        "end_line": 296
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 296,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 297,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "compiled_gelu_profile",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 299,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "Notes:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 300,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "- Naive implementation: multiple kernels, requires many reads/writes from/to HBM (**no fusion**).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 301,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "- Builtin and compiled versions: one kernel (**kernel fusion**), one read from HBM, one write to HBM.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 302,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "- The compiled kernel is a Triton kernel.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 302,
+      "section": "naive_vs_builtin_vs_compiled_gelu",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 305,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 306,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "https://docs.nvidia.com/cuda/parallel-thread-execution/_images/grid-with-CTAs.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 308,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "In CUDA (developed by NVIDIA), specify what each thread does.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 309,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "- Pros: fine-grained control",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 310,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "- Cons: need to manage more things (e.g., shared memory)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 312,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "In Triton (developed by OpenAI), specify what each thread block does.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 313,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "- Generally powerful enough (especially when getting started)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 314,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "- Conceptual framework: load data into shared memory, operate on it, write back to global memory",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 314,
+      "section": "triton_introduction",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 317,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 318,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "Let's write the Triton kernel for GeLU.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 320,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "x = torch.randn(8192, device=cuda_if_available())\ny = triton_gelu(x)\ncheck_equal_1d(triton_gelu, naive_gelu)  # Check for correctness @stepover",
+      "extra": {
+        "end_line": 323
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 323,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 325,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "Triton compiles down to PTX (parallel thread execution), an assembly language for GPUs.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 327,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "We can see the PTX code generated by Triton.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 328,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "get_local_url('var/triton_gelu-ptx.txt')",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 330,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "Observations:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 331,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "- ld.global.* and st.global.* reads and writes from global memory",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 332,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "- %ctaid.x is block index, %tid.x is thread index",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 333,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "- %f* are floating point registers, %r* are integer registers",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 334,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "- One thread processes 8 elements at the same time (thread coarsening)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 334,
+      "section": "triton_gelu_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 392,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 393,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "So far, we've looked at elementwise operations in Triton (e.g., GeLU).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 394,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "Now let us look at operations that aggregate over multiple values.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 396,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "We will roughly follow the Triton fused softmax tutorial:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 396,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "https://triton-lang.org/main/getting-started/tutorials/02-fused-softmax.html",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 398,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "Recall the softmax operation is used in attention and generating probabilities.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 399,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "Exponentiate and normalize each row of a matrix:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 400,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "[0 0 0]      =>   [1/3 1/3 1/3]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 401,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "[1 1 -inf]        [1/2 1/2 0  ]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 403,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "Let's first start with the naive implementation and keep track of reads/writes.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 404,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "x = torch.tensor([\n        [5., 5, 5],\n        [0, 0, 100],\n    ], device=cuda_if_available())\ny1 = naive_softmax(x) # @inspect y1",
+      "extra": {
+        "end_line": 408
+      }
+    },
+    {
+      "kind": "value",
+      "line": 408,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "y1",
+      "extra": {
+        "expr": "y1 = naive_softmax(x)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 410,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "Now let us write the Triton kernel.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 411,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "images/triton-softmax.png",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 412,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "y2 = triton_softmax(x)  # @inspect y2",
+      "extra": {
+        "end_line": 412
+      }
+    },
+    {
+      "kind": "value",
+      "line": 412,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "y2",
+      "extra": {
+        "expr": "y2 = triton_softmax(x)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 415,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "check_equal_2d(pytorch_softmax, naive_softmax) # @stepover",
+      "extra": {
+        "end_line": 415
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 415,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 416,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "check_equal_2d(pytorch_softmax, triton_softmax) # @stepover",
+      "extra": {
+        "end_line": 416
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 416,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 416,
+      "section": "triton_softmax_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 487,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 488,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "In the softmax example, an entire row fits in a block, so the reduction happens within a block (handled by Triton).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 489,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "What if the row doesn't fit in a block?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 490,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "Example: 4096 columns, but block size is 1024...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 492,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "Strategy:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 493,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "- Break up row into tiles (4 in the example above)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 494,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "- Each thread iterates over tiles and accumulates a sum",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 495,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "- Do final reduction (sum) over accumulators of each thread (shared memory or warp shuffles)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 497,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "Consider the simpler example (row sum instead of softmax):",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 498,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "x = torch.tensor([[1., 2, 3, 4], [5, 6, 7, 8]], device=cuda_if_available())  # @inspect x",
+      "extra": {
+        "end_line": 498
+      }
+    },
+    {
+      "kind": "value",
+      "line": 498,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.tensor([[1., 2, 3, 4], [5, 6, 7, 8]], device=cuda_if_available())"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 499,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "y1 = builtin_row_sum(x)  # @inspect y1",
+      "extra": {
+        "end_line": 499
+      }
+    },
+    {
+      "kind": "value",
+      "line": 499,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "y1",
+      "extra": {
+        "expr": "y1 = builtin_row_sum(x)"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 501,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "images/triton-row-sum.png",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 503,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "y2 = triton_row_sum(x)  # @inspect y2",
+      "extra": {
+        "end_line": 503
+      }
+    },
+    {
+      "kind": "value",
+      "line": 503,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "y2",
+      "extra": {
+        "expr": "y2 = triton_row_sum(x)"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 503,
+      "section": "triton_row_sum_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 538,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 539,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Matrix multiplication is the bread and butter of deep learning.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 540,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "a = torch.randn(1024, 1024, device=cuda_if_available())\nb = torch.randn(1024, 1024, device=cuda_if_available())\nc = naive_matmul_relu(a, b)",
+      "extra": {
+        "end_line": 542
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 544,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "How should we build a matmul kernel?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 546,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "|        k                  n",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 547,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "|   [ A1 A2 A3 ]       [ B1 B2 B3 ]   [ C1 C2 C3 ]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 548,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "| m [ A4 A5 A6 ]  *  k [ B4 B5 B6 ] = [ C4 C5 C6 ]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 549,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "|   [ A7 A8 A9 ]       [ B7 B8 B9 ]   [ C7 C8 C9 ]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 551,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "**Naive approach:**",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 552,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Fix any (m, n).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 553,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "For each k:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 554,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Read A[m, k] and B[k, n] from HBM.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 555,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Multiply and accumulate.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 556,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Write result to C[m, n] in HBM.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 558,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Bottleneck: M K N reads, M N writes",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 559,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Arithmetic intensity: O(1)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 561,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Computing C4 and C5 both need A4, A5, A6.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 562,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Can we read A4, A5, A6 from HBM once to compute both?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 563,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Answer: yes, using shared memory!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 565,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "**Idealized approach:**",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 566,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Load all of A and B into shared memory, then compute C.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 567,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Now we get M K + K N reads and M N writes.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 568,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- This yields the idealized O(N) arithmetic intensity from before.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 569,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- However, A and B are usually too large to fit in shared memory.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 571,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "**Tiling:**",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 573,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "images/gemm_tiled.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 574,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Key idea: divide the matrix C into output tiles (thread blocks).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 575,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Fix an output tile in C.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 576,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "For each pair of (row tile of A, column tile of B):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 577,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Load the corresponding A tile and B tile from HBM into shared memory.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 578,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Perform matrix multiplication on the tiles.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 579,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Accumulate into the partial sum (in shared memory).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 580,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Write output tile to HBM.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 582,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Arithmetic intensity: O(tile_size).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 584,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Bonus:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 585,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Often, you want to apply an elementwise activation function.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 586,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Example: GeLU(A @ B)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 587,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "- Solution: kernel fusion!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 589,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "**Implementation.**",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 591,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "Review: each matrix is linearized in memory",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 592,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "x = torch.tensor([[0., 1, 2, 3], [4, 5, 6, 7]])  # @inspect x",
+      "extra": {
+        "end_line": 592
+      }
+    },
+    {
+      "kind": "value",
+      "line": 592,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.tensor([[0., 1, 2, 3], [4, 5, 6, 7]])"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 593,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "stride_row, stride_col = x.stride()  # @inspect stride_row stride_col",
+      "extra": {
+        "end_line": 593
+      }
+    },
+    {
+      "kind": "value",
+      "line": 593,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "stride_row",
+      "extra": {
+        "expr": "stride_row, stride_col = x.stride()"
+      }
+    },
+    {
+      "kind": "value",
+      "line": 593,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "stride_col",
+      "extra": {
+        "expr": "stride_row, stride_col = x.stride()"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 594,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "row = 1\ncol = 2\nindex = row * stride_row + col * stride_col  # @inspect index",
+      "extra": {
+        "end_line": 596
+      }
+    },
+    {
+      "kind": "value",
+      "line": 596,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "index",
+      "extra": {
+        "expr": "index = row * stride_row + col * stride_col"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 599,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "c = triton_matmul_relu(a, b)",
+      "extra": {
+        "end_line": 599
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 599,
+      "section": "triton_matmul_relu_example",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 28,
+      "section": "main",
+      "depth": 0,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 29,
+      "section": "main",
+      "depth": 0,
+      "text": "- Know the programming model (PyTorch, Triton, PTX) to give you correctness",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 30,
+      "section": "main",
+      "depth": 0,
+      "text": "- Understand the hardware (SMs, warps, occupancy, bank conflicts, etc.) to optimize performance",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 31,
+      "section": "main",
+      "depth": 0,
+      "text": "- Benchmark to understand scaling",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 32,
+      "section": "main",
+      "depth": 0,
+      "text": "- Profile to see what's being executed for how long",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 33,
+      "section": "main",
+      "depth": 0,
+      "text": "- Triton: think in terms of thread blocks (read to shared memory, do stuff (fusion), write back HBM)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 34,
+      "section": "main",
+      "depth": 0,
+      "text": "- Examples: GeLU (elementwise), softmax (row-wise), row sum (baby tiling), matmul (tiling)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 36,
+      "section": "main",
+      "depth": 0,
+      "text": "Next time: more than one GPU!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 36,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

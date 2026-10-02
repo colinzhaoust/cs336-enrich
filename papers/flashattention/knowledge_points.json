@@ -1,0 +1,951 @@
+{
+  "paper": "flashattention",
+  "title": "FlashAttention: IO-aware exact attention (Dao, Fu, Ermon, Rudra, Ré, 2022)",
+  "version": "0.1.0",
+  "authoring_note": "Anchors follow sources.json: fa:§N / fa:algN:LK / fa:thmN / fa:propN / fa:tableN / fa:figN / fa:eqN for the paper (arXiv HTML v2, no PDF pages), lecture_05.pdf:pNN for the CS336 slides. Every paper quote is verified against paper.txt by discover_paper.py --check (check_anchors.py skips fa:* refs); lecture quotes are checked by both. Status 'computed' marks equations and theorems, 'said' prose claims, 'shown' tables/figures, 'supplement' things the paper assumes. Cross-thread prerequisites on the Lecture 5 KPs gpu-memory-hierarchy, tiling-shared-memory, online-softmax, flash-attention-forward are listed under external_prerequisites (the validator only checks in-file ids). Numeric answers in prompts were computed by hand from the printed formulas; changed cases use numbers that do not appear in the paper or in Lecture 5's prompts.",
+  "path": {
+    "basis": "teaching-order",
+    "note": "Paper order: §1-§2 motivate IO-awareness and the memory-bound standard implementation (Algorithm 0), §3.1 gives tiling (the softmax decomposition) and recomputation and Algorithm 1, §3.2 the IO complexity theorem and lower bound, §3.3 block-sparse, §4 experiments, §5 limitations; the backward pass lives in Appendix B. Supplements are what the paper assumes: what M is in practice, and why 'exact' is the property the whole experiment section rests on.",
+    "stops": [
+      "fa-io-aware-framing",
+      "fa-standard-attention-hbm-traffic",
+      "fa-softmax-decomposition",
+      "fa-forward-loop-structure",
+      "fa-output-rescale-update",
+      "fa-backward-recomputation",
+      "fa-io-complexity",
+      "fa-lower-bound",
+      "fa-block-sparse",
+      "fa-experimental-claims"
+    ],
+    "supplements": [
+      "supp-sram-size-m",
+      "supp-exact-vs-approximate"
+    ]
+  },
+  "course_path": {
+    "basis": "teaching-order",
+    "source": "lecture_05",
+    "note": "Lecture 5 order: memory hierarchy (p10-p12: lecture_05:gpu-memory-hierarchy), tiling for a matmul (p40-p42: lecture_05:tiling-shared-memory), then 'Flash attention .. But how?' (p50), recap of attention as matmuls with a softmax between (p51), Figure 1 'is literally just tiling' (p52), online softmax (p53: lecture_05:online-softmax), and the forward pass as tile-wise S + fused exp + online softmax (p54: lecture_05:flash-attention-forward). The course states the IO goal only through the memory hierarchy and roofline, never names Θ(N²d²M⁻¹), the loop order, the block-size rule, the lower bound, block-sparse, or any experiment, and explicitly skips the backward pass ('they recompute tile-by-tile'). So the course path puts the SRAM supplement first, treats the forward algorithm as a single stop, and leaves five KPs uncovered.",
+    "stops": [
+      "supp-sram-size-m",
+      "fa-io-aware-framing",
+      "fa-standard-attention-hbm-traffic",
+      "fa-forward-loop-structure",
+      "fa-softmax-decomposition",
+      "fa-output-rescale-update",
+      "fa-io-complexity",
+      "fa-backward-recomputation"
+    ],
+    "supplements": [
+      "supp-exact-vs-approximate"
+    ],
+    "not_covered": [
+      "fa-lower-bound",
+      "fa-block-sparse",
+      "fa-experimental-claims"
+    ]
+  },
+  "knowledge_points": [
+    {
+      "id": "fa-io-aware-framing",
+      "label": "IO-awareness: attention is bound by HBM reads/writes, not FLOPs",
+      "kind": "definition",
+      "statement": "An IO-aware algorithm counts reads and writes between slow GPU HBM and fast on-chip SRAM; FlashAttention's thesis is that attention is memory-bound, so wall-clock time follows HBM traffic, which is why FLOP-reducing approximate methods often give no speedup.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:§1", "role": "claim", "quote": "we argue that a missing principle is making attention algorithms IO-aware [1]—that is, carefully accounting for reads and writes to different levels of fast and slow memory"},
+          {"source": "fa_paper", "ref": "fa:§1", "role": "claim", "quote": "One main reason is that they focus on FLOP reduction (which may not correlate with wall-clock speed) and tend to ignore overheads from memory access (IO)."},
+          {"source": "fa_paper", "ref": "fa:§2.1", "role": "claim", "quote": "Memory-bound: the time taken by the operation is determined by the number of memory accesses, while time spent in computation is much smaller. Examples include most other operations: elementwise (e.g., activation, dropout), and reduction (e.g., sum, softmax, batch norm, layer norm)."},
+          {"source": "fa_paper", "ref": "fa:fig2", "role": "figure", "quote": "GFLOPs 66.6 75.2 ... HBM R/W (GB) 40.3 4.4 ... Runtime (ms) 41.7 7.3"},
+          {"source": "lecture_05", "ref": "lecture_05.pdf:p50", "role": "claim", "quote": "Flash attention [Dao et al] dramatically accelerates attention.. But how?"}
+        ],
+        "filtering_note": "The paper states the thesis in §1 and backs it with the Figure 2 (left) table: FlashAttention does 13% more GFLOPs (75.2 vs 66.6) yet runs 5.7x faster because HBM traffic drops 9.2x (40.3 GB to 4.4 GB). The course reaches the same framing through its roofline and memory-hierarchy slides (p10, p21) and then asks 'But how?' on p50 without quoting the paper's numbers. Basis: evidence for both."
+      },
+      "prerequisites": [
+        {"kp": "supp-sram-size-m", "basis": "author-inference", "note": "The thesis needs the two memory levels and their bandwidth gap to be concrete."}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_05:gpu-memory-hierarchy", "basis": "author-inference"},
+        {"kp": "lecture_02:arithmetic-intensity", "basis": "author-inference", "note": "Memory-bound vs compute-bound is the roofline vocabulary the paper uses in §2.1."}
+      ],
+      "misconceptions": [
+        {"belief": "An algorithm with fewer FLOPs is faster on a GPU.", "why_wrong": "Memory-bound operations are timed by bytes moved; Figure 2 shows FlashAttention doing more FLOPs than standard attention and running 5.7x faster because it moves 9x fewer bytes through HBM."},
+        {"belief": "FlashAttention is an approximation that trades accuracy for speed.", "why_wrong": "It computes exact softmax attention (Theorem 1); the speed comes from where intermediate values live, not from dropping terms."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Figure 2 (left) reports, for GPT-2 medium attention forward+backward on an A100: standard attention 66.6 GFLOPs and 40.3 GB of HBM traffic; FlashAttention 75.2 GFLOPs and 4.4 GB. Which implementation runs faster, and roughly by what factor: closer to the FLOP ratio (~0.9x) or the HBM ratio (~9x)?",
+          "format": "short",
+          "answer": "FlashAttention is faster, by about 5.7x (41.7 ms vs 7.3 ms), far closer to the HBM ratio than to the FLOP ratio.",
+          "why": "Attention is memory-bound (§2.1), so runtime tracks bytes moved through HBM. The extra 13% of FLOPs from recomputation is nearly free; cutting HBM traffic 9x is what the 5.7x comes from (the gap to 9x is the part of runtime not spent on HBM).",
+          "targets_misconception": "An algorithm with fewer FLOPs is faster on a GPU."
+        },
+        "transfer": {
+          "q": "A new kernel keeps the exact standard-attention FLOP count but writes the N×N score matrix to HBM in 8-bit instead of 16-bit, and reads it back the same way; everything else is unchanged. In the IO-aware view, what direction does its runtime move relative to the 16-bit standard kernel, and does it reach FlashAttention?",
+          "format": "short",
+          "answer": "Faster than the 16-bit standard kernel (roughly halves the dominant N² bytes) but still far from FlashAttention, because the traffic is still Θ(N²) bytes; only the constant changed, not the scaling.",
+          "why": "IO-awareness counts bytes between HBM and SRAM. Halving the width of the N² matrix halves that term; FlashAttention removes the N² term entirely (Theorem 2), which no bit-width change can do.",
+          "varies": "the byte width of the materialized N×N matrix (functional dimension: same algorithm, different constant)",
+          "invariant": "the N×N matrix is still written to and read from HBM, so HBM traffic stays quadratic in N",
+          "surface_cue_broken": "kept-but-misleading: 'fewer bytes' sounds like FlashAttention's trick, but the item asks about scaling, not constants",
+          "transfer_distance": "near",
+          "target_kp": "fa-io-aware-framing",
+          "contrast_kp": "fa-standard-attention-hbm-traffic"
+        },
+        "check": {
+          "q": "Two replacement kernels for a memory-bound attention layer. Kernel X is approximate: it cuts FLOPs by 40% but still writes the full N×N score matrix to HBM and reads it back. Kernel Y is exact: it does 15% more FLOPs than the baseline but moves 6x fewer bytes between HBM and SRAM. Which kernel should give the larger wall-clock speedup over the baseline, and why?",
+          "format": "choice",
+          "choices": ["Neither, because the FLOP and byte changes roughly cancel out", "Kernel X, because runtime here follows the number of FLOPs done", "Kernel X, because approximate kernels trade accuracy for speed", "Kernel Y, because runtime here follows bytes moved through HBM"],
+          "answer": "Kernel Y, because runtime here follows bytes moved through HBM",
+          "why": "§2.1: a memory-bound operation's time 'is determined by the number of memory accesses'. Fig. 2 shows exactly this pattern: FlashAttention does more FLOPs (75.2 vs 66.6 GFLOPs) but 9x less HBM traffic (4.4 vs 40.3 GB) and runs 5.7x faster. Kernel X leaves the dominant N² HBM traffic unchanged, so its FLOP cut barely matters (§1: FLOP reduction 'may not correlate with wall-clock speed').",
+          "distractor_from": "'Kernel X ... FLOPs' encodes 'an algorithm with fewer FLOPs is faster on a GPU'; 'approximate kernels trade accuracy for speed' encodes the belief that speed comes from approximation; 'cancel out' treats FLOPs and bytes as equally weighted, ignoring that the op is memory-bound.",
+          "targets_misconception": "An algorithm with fewer FLOPs is faster on a GPU.",
+          "varies": "hypothetical pair of kernels with stated FLOP and byte changes instead of Fig. 2's measured numbers or a bit-width change (domain)",
+          "invariant": "for a memory-bound op wall-clock time tracks HBM bytes, not FLOPs",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In the paper's definition, what does an IO-aware algorithm account for, and between which two GPU memories?", "answer": "Reads and writes (memory accesses) between fast on-chip SRAM and slow high-bandwidth memory (HBM)."},
+          {"q": "Which is larger for FlashAttention than for standard attention: GFLOPs, HBM traffic, or runtime?", "answer": "GFLOPs (75.2 vs 66.6); HBM traffic and runtime are both much smaller."},
+          {"q": "Why do many approximate attention methods fail to give wall-clock speedup even though they cut FLOPs?", "answer": "They focus on FLOP reduction and ignore memory-access (IO) overhead; attention is memory-bound, so FLOPs may not correlate with wall-clock speed."}
+        ],
+        "self_explain": "Why does the extra recomputation FLOP cost in FlashAttention barely show up in the runtime?"
+      },
+      "presentations": [
+        {"type": "figure", "action": "compare", "ref": "fa:fig2"},
+        {"type": "formula-step", "action": "restate", "ref": "fa:§2.1"}
+      ]
+    },
+    {
+      "id": "fa-standard-attention-hbm-traffic",
+      "label": "Standard attention materializes S and P: Θ(Nd + N²) HBM accesses",
+      "kind": "quantity",
+      "statement": "Standard attention (Algorithm 0) computes S = QKᵀ, writes the N×N matrix S to HBM, reads it back for the row-wise softmax, writes P, and reads P again for O = PV, so its HBM traffic is Θ(Nd + N²), dominated by N² whenever N ≫ d.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:§2.2", "role": "computation", "quote": "Standard attention implementations materialize the matrices S and P to HBM, which takes O(N²) memory. Often N≫d (e.g., for GPT2, N=1024 and d=64)."},
+          {"source": "fa_paper", "ref": "fa:alg0:L1", "role": "computation", "quote": "Load Q,K by blocks from HBM, compute S=QKᵀ, write S to HBM."},
+          {"source": "fa_paper", "ref": "fa:alg0:L2", "role": "computation", "quote": "Read S from HBM, compute P=softmax(S), write P to HBM."},
+          {"source": "fa_paper", "ref": "fa:thm2", "role": "computation", "quote": "Standard attention (Algorithm 0) requires Θ(Nd+N²) HBM accesses"},
+          {"source": "fa_paper", "ref": "fa:§C:thm2-proof", "role": "computation", "quote": "In the second step of computing P=softmax(S), the input S is read from HBM and the output P is written to HBM (Algorithm 0 line 2). This incurs Θ(N²) HBM accesses."},
+          {"source": "lecture_05", "ref": "lecture_05.pdf:p51", "role": "claim", "quote": "Attention computation: 3 matrix multiplies (K, Q, V) with a softmax in between"}
+        ],
+        "filtering_note": "Theorem 2 counts accesses in elements, not bytes, and absorbs the number of times S/P cross HBM (write S, read S, write P, read P: four N² passes) into the Θ. The course's p51 recap names the matmuls and the softmax but never counts the N² traffic. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-io-aware-framing", "basis": "teaching-order"}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_02:matmul-flops", "basis": "author-inference", "note": "Learner must already separate the FLOP count (2N²d per matmul) from the byte count."}
+      ],
+      "misconceptions": [
+        {"belief": "The N² cost of attention is the QKᵀ FLOPs, so the traffic is also only a matmul cost.", "why_wrong": "The matmul could stream; the Θ(N²) traffic comes from writing S and P to HBM and reading them back (Algorithm 0 lines 1-3), which is a choice of the implementation, not of the math."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One head, N = 4096, d = 64. Count the elements standard attention (Algorithm 0) moves through HBM for the N×N matrices alone: write S, read S, write P, read P. How many elements, and how does that compare with reading Q, K, V once (3Nd)?",
+          "format": "short",
+          "answer": "4 × 4096² ≈ 67.1 million elements, versus 3 × 4096 × 64 ≈ 0.79 million for the inputs: about 85x more.",
+          "why": "Each of the four crossings is N² = 16.8M elements; the inputs are only Nd each. With N/d = 64 the quadratic term dominates by roughly 4N²/(3Nd) ≈ 85, which is why Theorem 2 writes Θ(Nd + N²) and the N² term is what FlashAttention attacks.",
+          "targets_misconception": "The N² cost of attention is the QKᵀ FLOPs, so the traffic is also only a matmul cost."
+        },
+        "transfer": {
+          "q": "Keep N fixed and double the head dimension d (so 2Nd input elements become 4Nd). In Algorithm 0, which term of Θ(Nd + N²) changes, and does the total HBM traffic roughly double, roughly stay put, or roughly quadruple when N ≫ d?",
+          "format": "choice",
+          "choices": ["roughly stays put: the N² term dominates and does not depend on d", "roughly doubles: traffic is proportional to d", "roughly quadruples: traffic scales with d²"],
+          "answer": "roughly stays put: the N² term dominates and does not depend on d",
+          "why": "Only the Nd term grows; S and P are N×N regardless of d. With N ≫ d the quadratic term dominates, so the total barely moves. (Contrast: FlashAttention's Θ(N²d²/M) quadruples with d.)",
+          "distractor_from": "'roughly doubles' and 'quadruples' both come from treating the traffic as a matmul cost that scales with the inner dimension",
+          "varies": "head dimension d (functional dimension), N held fixed",
+          "invariant": "S and P are N×N and still cross HBM four times, independent of d",
+          "surface_cue_broken": "removed: the item never mentions S or P, so the learner must recall that they, not QKV, carry the dominant traffic",
+          "transfer_distance": "near",
+          "target_kp": "fa-standard-attention-hbm-traffic",
+          "contrast_kp": "fa-io-complexity"
+        },
+        "retrieval": [
+          {"q": "State the HBM access count of standard attention and say which term dominates when N ≫ d.", "answer": "Θ(Nd + N²); the N² term."},
+          {"q": "Name the two N×N matrices standard attention writes to HBM and reads back.", "answer": "S = QKᵀ and P = softmax(S)."},
+          {"q": "Which step of standard attention is a pure Θ(N²) HBM read-then-write with no Nd term?", "answer": "Line 2: read S, compute softmax, write P.", "layer": "detail"}
+        ],
+        "self_explain": "Why does writing S to HBM happen at all in Algorithm 0: what forces the kernel boundary between the matmul and the softmax?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compute", "ref": "fa:§C:thm2-proof", "faded": false, "steps": [
+          {"do": "Algorithm 0 line 1: read Q and K (2Nd elements), compute S = QKᵀ, write S (N²).", "why": "The proof's first step, Θ(Nd + N²). S is N×N whatever d is."},
+          {"do": "Line 2: read S (N²), compute P = softmax(S), write P (N²).", "why": "The softmax runs as its own pass, so S makes a round trip through HBM: Θ(N²)."},
+          {"do": "Line 3: read P (N²) and V (Nd), compute O = PV, write O (Nd).", "why": "Θ(Nd + N²): the N×N matrix is read a second time to multiply it by V."},
+          {"tex": "\\underbrace{4N^2}_{S,P\\text{ written and read}} + \\underbrace{4Nd}_{Q,K,V\\text{ read},\\,O\\text{ written}} = \\Theta(Nd + N^2)", "do": "Add the three steps.", "why": "S and P each cross HBM twice; Q, K, V are read once and O is written once. Θ drops the 4s (Theorem 2 counts elements, not bytes)."},
+          {"do": "§2.2's GPT-2 example, N = 1024, d = 64: 4N² = 4,194,304 elements vs 4Nd = 262,144, so 16× = N/d.", "why": "With N ≫ d the quadratic term dominates, and that term is the one FlashAttention removes."}
+        ]},
+        {"type": "code", "action": "trace", "ref": "fa:alg0"},
+        {"type": "interactive", "action": "compare", "ref": "fixture:flashattention--io-ledger", "notice": "The standard line's 4N² part (S and P each written and read once) dwarfs its 4Nd part, so changing d barely moves it, while changing N moves it quadratically."}
+      ]
+    },
+    {
+      "id": "fa-softmax-decomposition",
+      "label": "Tiling the softmax: m and ℓ from the halves, with rescale e^{m(x⁽¹⁾)−m(x)}",
+      "kind": "mechanism",
+      "statement": "For x = [x⁽¹⁾ x⁽²⁾], m(x) = max(m(x⁽¹⁾), m(x⁽²⁾)) and ℓ(x) = e^{m(x⁽¹⁾)−m(x)} ℓ(x⁽¹⁾) + e^{m(x⁽²⁾)−m(x)} ℓ(x⁽²⁾), so a softmax can be accumulated one block at a time by carrying (m, ℓ) and rescaling the old sum whenever the max rises; Algorithm 1 line 11 is this rule with m_i, ℓ_i as the running statistics and m̃_ij, ℓ̃_ij as the new block's.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:§3.1", "role": "claim", "quote": "Softmax couples columns of K, so we decompose the large softmax with scaling"},
+          {"source": "fa_paper", "ref": "fa:§3.1:softmax-decomp", "role": "computation", "quote": "Therefore if we keep track of some extra statistics (m(x),ℓ(x)), we can compute softmax one block at a time."},
+          {"source": "fa_paper", "ref": "fa:alg1:L10", "role": "computation", "quote": "On chip, compute m̃_ij=rowmax(S_ij)∈R^{B_r}, P̃_ij=exp(S_ij−m̃_ij)∈R^{B_r×B_c} (pointwise), ℓ̃_ij=rowsum(P̃_ij)∈R^{B_r}"},
+          {"source": "fa_paper", "ref": "fa:alg1:L11", "role": "computation", "quote": "On chip, compute m_i^new=max(m_i,m̃_ij)∈R^{B_r}, ℓ_i^new=e^{m_i−m_i^new}ℓ_i+e^{m̃_ij−m_i^new}ℓ̃_ij∈R^{B_r}"},
+          {"source": "lecture_05", "ref": "lecture_05.pdf:p53", "role": "claim", "quote": "To keep track of the max, incrementally update the max, and set up a telescoping sum"}
+        ],
+        "filtering_note": "The paper presents the two-block identity (§3.1) and cites it to [60, 51, 66]; Appendix B.1 says it omits max-shifting 'for simplicity'. The course shows the same rule as an image of two algorithm boxes (p53) and names it the 'telescoping sum'. Lecture 5's KP online-softmax covers the scalar rule; this KP adds the paper's exact notation (m̃, ℓ̃, both rescale factors), where the second factor e^{m̃−m^new} is 1 whenever the new block holds the max. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-standard-attention-hbm-traffic", "basis": "teaching-order", "note": "The decomposition exists to avoid materializing S for the row-wise softmax."}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_05:online-softmax", "basis": "teaching-order", "note": "Same rule in scalar form; the course teaches it on p53 before the forward pass."}
+      ],
+      "misconceptions": [
+        {"belief": "Softmax over a row needs the whole row's max before any exponential can be taken, so tiling it is impossible.", "why_wrong": "Exponentials taken against a stale max are off by exactly one factor e^{m_old − m_new} per row, so the running sum can be corrected with one multiply when the max rises (§3.1)."},
+        {"belief": "If a new block's max is below the running max, the old sum still needs rescaling.", "why_wrong": "Then m^new = m_i and e^{m_i − m^new} = 1; the correction is on the new block's terms, e^{m̃ − m^new} < 1, not on the old sum."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "For one row, the running statistics after some blocks are m_i = 1.0, ℓ_i = 2.0. The next block has row max m̃ = 3.0 and block sum ℓ̃ = 1.2 (its exponentials were taken against 3.0). Apply Algorithm 1 line 11: what are m^new and ℓ^new?",
+          "format": "short",
+          "answer": "m^new = 3.0; ℓ^new = e^{1−3}·2.0 + e^{3−3}·1.2 = 0.2707 + 1.2 ≈ 1.471.",
+          "why": "Every term already in ℓ_i was exp(x − 1); multiplying by e^{−2} turns each into exp(x − 3). The new block's terms are already against 3.0 so their factor is e^0 = 1. The result equals what a single pass with the true max 3.0 would have produced.",
+          "targets_misconception": "Softmax over a row needs the whole row's max before any exponential can be taken, so tiling it is impossible."
+        },
+        "transfer": {
+          "q": "Same numbers (m_i = 1.0, ℓ_i = 2.0, m̃ = 3.0, ℓ̃ = 1.2), but an implementer drops the factor e^{m_i − m^new} and simply adds: ℓ^new = ℓ_i + e^{m̃−m^new} ℓ̃. In which direction is the resulting normalizer wrong, by what factor on the old part, and what does that do to the attention weights of the earlier keys?",
+          "format": "short",
+          "answer": "Too large: the old part is overcounted by e² ≈ 7.39 (3.2 instead of ≈1.47). Earlier keys' probabilities, if their numerators are rescaled correctly, are divided by too big a normalizer, so the row no longer sums to 1 and early keys are underweighted (and if numerators are not rescaled either, they are overweighted by e²).",
+          "why": "The old sum is in units of exp(x − 1), the new terms in units of exp(x − 3); adding them without converting is the whole error the rescale factor exists to prevent. The magnitude is e^{m_new − m_old}, which grows without bound as the max rises across blocks.",
+          "varies": "the update rule itself: the rescale factor is omitted (functional dimension)",
+          "invariant": "the arithmetic of the exponentials and the block order are unchanged; only the bookkeeping of which max each term was taken against differs",
+          "surface_cue_broken": "kept-but-misleading: the same numbers as the mechanism example, so the learner cannot pattern-match on new values and must reason about the missing factor",
+          "transfer_distance": "near",
+          "target_kp": "fa-softmax-decomposition",
+          "contrast_kp": "fa-output-rescale-update"
+        },
+        "check": {
+          "q": "One row of Algorithm 1. Running statistics after earlier blocks: m_i = 4.0, ℓ_i = 3.0. The next block has row max m̃ = 2.5 and block sum ℓ̃ = 2.0 (its exponentials were taken against 2.5). Apply the update ℓ^new = e^{m_i − m^new} ℓ_i + e^{m̃ − m^new} ℓ̃ with m^new = max(m_i, m̃). What is ℓ^new? Type only the number, to 3 decimals.",
+          "format": "number",
+          "answer": "3.446",
+          "tolerance": 0.03,
+          "value": 3.446,
+          "why": "m^new = max(4.0, 2.5) = 4.0, so the old sum's factor is e^0 = 1 and the correction falls on the new block: ℓ^new = 3.0 + e^{2.5−4.0}·2.0 = 3.0 + 0.2231·2.0 = 3.446. Adding without the correction gives 5.0; rescaling the old sum instead (e.g. by e^{2.5−4.0}) gives 0.669 + 2.0 = 2.669; both are rejected.",
+          "targets_misconception": "If a new block's max is below the running max, the old sum still needs rescaling.",
+          "varies": "new block's max is below the running max (the opposite case from predict/transfer, where the max rises) (functional)",
+          "invariant": "sums must be converted to a common max before adding; the factor is e^{(own max) − m^new}",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Write the paper's update for ℓ(x) when x = [x⁽¹⁾ x⁽²⁾], in terms of m(x⁽¹⁾), m(x⁽²⁾), m(x), ℓ(x⁽¹⁾), ℓ(x⁽²⁾).", "answer": "ℓ(x) = e^{m(x⁽¹⁾)−m(x)} ℓ(x⁽¹⁾) + e^{m(x⁽²⁾)−m(x)} ℓ(x⁽²⁾), with m(x) = max of the two block maxes."},
+          {"q": "In FlashAttention's forward pass, which three quantities are computed on chip from the score tile S_ij before the running statistics are touched?", "answer": "m̃_ij = rowmax(S_ij), P̃_ij = exp(S_ij − m̃_ij), ℓ̃_ij = rowsum(P̃_ij)."},
+          {"q": "What value does the factor e^{m_i − m_i^new} take when the new block does not raise the running max?", "answer": "Exactly 1 (m_i^new = m_i)."}
+        ],
+        "self_explain": "Why can the rescale factor e^{m_i − m^new} never exceed 1, and what would it mean numerically if the paper had defined it the other way round?"
+      },
+      "presentations": [
+        {"type": "animation", "action": "trace", "ref": "fixture:online-softmax-blocks", "notice": "When a block raises the running max, the accumulated denominator is multiplied by exp(m_old − m_new) rather than recomputed; when the max is unchanged the factor is 1 and the new block's terms are simply added."},
+        {"type": "formula-step", "action": "compute", "ref": "fa:alg1:L11", "faded": true, "steps": [
+          {"tex": "m(x) = \\max\\big(m(x^{(1)}),\\, m(x^{(2)})\\big)", "do": "Max of the concatenation x = [x⁽¹⁾ x⁽²⁾] (§3.1).", "why": "The max over all entries is the larger of the two block maxes."},
+          {"tex": "f(x) = \\big[\\,e^{m(x^{(1)})-m(x)} f(x^{(1)})\\;\\; e^{m(x^{(2)})-m(x)} f(x^{(2)})\\,\\big]", "do": "Rescale each block's exponentials to the common max.", "why": "f(x⁽¹⁾) holds e^{x−m(x⁽¹⁾)}; multiplying by e^{m(x⁽¹⁾)−m(x)} turns it into e^{x−m(x)}, the reference the full softmax uses."},
+          {"tex": "\\ell(x) = e^{m(x^{(1)})-m(x)}\\,\\ell(x^{(1)}) + e^{m(x^{(2)})-m(x)}\\,\\ell(x^{(2)})", "do": "Sum f(x) to get the normalizer.", "why": "ℓ is the sum of f, and each block's constant factor comes out of its block's sum."},
+          {"tex": "m_i^{new} = \\max(1.0, 3.0) = 3.0,\\quad \\ell_i^{new} = e^{1-3}\\cdot 2.0 + e^{3-3}\\cdot 1.2 \\approx 0.271 + 1.2 = 1.471", "do": "Algorithm 1 line 11 on the predict's row: m_i = 1.0, ℓ_i = 2.0, m̃_ij = 3.0, ℓ̃_ij = 1.2.", "why": "(m_i, ℓ_i) summarize all earlier blocks and play x⁽¹⁾; (m̃_ij, ℓ̃_ij) are the new block, x⁽²⁾. The new block holds the max, so its factor is e⁰ = 1 and only the old sum is rescaled."}
+        ]}
+      ]
+    },
+    {
+      "id": "fa-forward-loop-structure",
+      "label": "Algorithm 1: outer loop over K/V blocks, inner over Q blocks (v1 order)",
+      "kind": "procedure",
+      "statement": "Algorithm 1 sets B_c = ⌈M/4d⌉, B_r = min(⌈M/4d⌉, d), loops j over the T_c = ⌈N/B_c⌉ K/V blocks (loading K_j, V_j to SRAM once each) and, inside that, i over the T_r Q blocks, loading Q_i, O_i, ℓ_i, m_i from HBM, computing S_ij on chip and writing updated O_i, ℓ_i, m_i back to HBM every inner iteration, so S is never materialized but O is rewritten T_c times.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:alg1:L1", "role": "computation", "quote": "Set block sizes B_c=⌈M/4d⌉, B_r=min(⌈M/4d⌉,d)"},
+          {"source": "fa_paper", "ref": "fa:alg1:L5", "role": "computation", "quote": "for 1≤j≤T_c do ... Load K_j,V_j from HBM to on-chip SRAM."},
+          {"source": "fa_paper", "ref": "fa:alg1:L7", "role": "computation", "quote": "for 1≤i≤T_r do ... Load Q_i,O_i,ℓ_i,m_i from HBM to on-chip SRAM."},
+          {"source": "fa_paper", "ref": "fa:alg1:L13", "role": "computation", "quote": "Write ℓ_i←ℓ_i^new, m_i←m_i^new to HBM."},
+          {"source": "fa_paper", "ref": "fa:fig1", "role": "figure", "quote": "In the outer loop (red arrows), FlashAttention loops through blocks of the K and V matrices and loads them to fast on-chip SRAM. In each block, FlashAttention loops over blocks of Q matrix (blue arrows), loading them to SRAM, and writing the output of the attention computation back to HBM."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "claim", "quote": "For each block of K and V, we iterate over all blocks of Q (Algorithm 1 line 8) to compute the intermediate values, resulting in Θ(NdM⁻¹) passes over Q."},
+          {"source": "lecture_05", "ref": "lecture_05.pdf:p52", "role": "figure", "quote": "This figure 1 from the paper is literally just tiling for a KQV matrix multiply.."}
+        ],
+        "filtering_note": "This is the FlashAttention-1 ordering as printed: K/V outer, Q inner, with O_i, ℓ_i, m_i round-tripping through HBM each inner step (lines 8, 12, 13). The paper does not say why the 4 in M/4d (author inference: four B×d blocks K_j, V_j, Q_i, O_i must co-reside) nor why B_r is capped at d (Appendix C: so the B_r×B_c tile S_ij also fits, B_r B_c = O(M)). FlashAttention-2 swaps the loops so each Q block's output stays on chip; that is not evidenced here. The course shows Figure 1 and calls it 'just tiling' without stating the loop order. Basis: evidence for the order and sizes, inference for the reasons."
+      },
+      "prerequisites": [
+        {"kp": "fa-softmax-decomposition", "basis": "teaching-order", "note": "The inner iteration is one application of the (m, ℓ) update."},
+        {"kp": "supp-sram-size-m", "basis": "author-inference", "note": "M sets the block sizes on line 1."}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_05:tiling-shared-memory", "basis": "teaching-order", "note": "Same load-tile / compute / next-tile structure as the course's tiled matmul."},
+        {"kp": "lecture_05:flash-attention-forward", "basis": "teaching-order", "note": "The course's single-stop summary of this algorithm."}
+      ],
+      "misconceptions": [
+        {"belief": "Each Q block is loaded once and its output finished before moving on.", "why_wrong": "In Algorithm 1 the outer loop is over K/V blocks; every Q block (and its O_i, ℓ_i, m_i) is reloaded for each of the T_c K/V blocks, so Q and O make T_c passes through HBM while K and V make one."},
+        {"belief": "Bigger SRAM lets you use bigger Q blocks without limit.", "why_wrong": "B_r is capped at d (line 1) so that the on-chip tile S_ij of size B_r × B_c keeps fitting (Appendix C: B_r B_c = O(M))."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "d = 128 and the SRAM budget is M = 32768 elements. Using Algorithm 1 line 1, what are B_c and B_r, and for N = 2048 how many K/V blocks T_c and Q blocks T_r are there?",
+          "format": "short",
+          "answer": "B_c = ⌈32768/512⌉ = 64; B_r = min(64, 128) = 64; T_c = 2048/64 = 32; T_r = 32.",
+          "why": "M/4d = 64 leaves room for four 64×128 blocks (K_j, V_j, Q_i, O_i); the min with d does not bind here because 64 < 128. Each of the 32 K/V blocks is loaded once; each of the 32 Q blocks is loaded 32 times.",
+          "targets_misconception": "Each Q block is loaded once and its output finished before moving on."
+        },
+        "transfer": {
+          "q": "Same SRAM (M = 32768 elements) but a small head, d = 32. Which of the two expressions in B_r = min(⌈M/4d⌉, d) now binds, and what does that say about the shape of the on-chip S_ij tile compared with the d = 128 case?",
+          "format": "short",
+          "answer": "⌈M/4d⌉ = 256 but B_r = min(256, 32) = 32: the cap at d binds. B_c = 256, so S_ij is 32 × 256 (8192 elements) rather than the square 64 × 64; the Q-side block is kept small so the score tile B_r × B_c stays O(M).",
+          "why": "Appendix C's proof of Theorem 2 adds the constraint B_r B_c = O(M) for the S_ij tile; with tiny d, M/d is huge and the tile would overflow unless B_r is capped, and d is the choice that makes B_r B_c = (M/d)·d = M.",
+          "varies": "head dimension d (functional dimension), M fixed",
+          "invariant": "all of K_j, V_j, Q_i, O_i and the S_ij tile must fit in M at once",
+          "surface_cue_broken": "removed: the numbers no longer let the learner read B_r off M/4d, which is the pattern the predict item rewarded",
+          "transfer_distance": "near",
+          "target_kp": "fa-forward-loop-structure",
+          "contrast_kp": "fa-io-complexity"
+        },
+        "check": {
+          "q": "Algorithm 1 with SRAM size M = 16384 elements, head dimension d = 32 and sequence length N = 2048. Block sizes come from line 1: B_c = ⌈M/4d⌉, B_r = min(⌈M/4d⌉, d). Over the whole forward pass, how many times in total is a Q block (some Q_i) loaded from HBM into SRAM? Count every load separately. Type only the number.",
+          "format": "number",
+          "answer": "1024",
+          "tolerance": 0.02,
+          "value": 1024,
+          "why": "⌈M/4d⌉ = ⌈16384/128⌉ = 128, so B_c = 128 and B_r = min(128, 32) = 32 (the cap at d binds). T_c = 2048/128 = 16 K/V blocks, T_r = 2048/32 = 64 Q blocks. The outer loop is over the 16 K/V blocks and the inner loop reloads every one of the 64 Q blocks each time, so 16 × 64 = 1024 Q-block loads. Loading each Q block once gives 64; ignoring the cap (B_r = 128, T_r = 16) gives 256.",
+          "targets_misconception": "Each Q block is loaded once and its output finished before moving on.",
+          "varies": "asks for a total load count under a config where the d cap binds, instead of block sizes or which term binds (functional)",
+          "invariant": "outer loop over K/V blocks, inner over Q blocks: Q is reloaded T_c times; B_r capped at d",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In FlashAttention's forward pass, which matrices are loaded in the outer loop and which in the inner loop?", "answer": "Outer (j): K_j and V_j. Inner (i): Q_i together with O_i, ℓ_i, m_i."},
+          {"q": "In FlashAttention's forward pass, what is written to HBM at the end of every inner iteration?", "answer": "The updated output block O_i and the statistics ℓ_i, m_i."},
+          {"q": "Give FlashAttention's block-size rule for B_c and B_r in terms of the SRAM size M and head dimension d.", "answer": "B_c = ⌈M/4d⌉; B_r = min(⌈M/4d⌉, d).", "layer": "detail"}
+        ],
+        "self_explain": "Why does the v1 ordering make O travel through HBM T_c times, and which loop would you swap to avoid it?"
+      },
+      "presentations": [
+        {"type": "animation", "action": "trace", "ref": "fixture:flashattention--alg1-loop", "notice": "When the outer loop moves from K₁, V₁ to K₂, V₂, Q₁ and O₁ are loaded and written again: every Q block and its O block cross HBM once per K/V block (T_c times), K_j and V_j once, and no S tile ever reaches HBM."},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:flashattention--io-ledger", "notice": "B_c = ⌈M/4d⌉ sizes the K/V block; once ⌈M/4d⌉ exceeds d the Q block is capped at B_r = d and the S tile turns rectangular, and the Q-block load count is T_c × T_r, not T_r."},
+        {"type": "code", "action": "trace", "ref": "fa:alg1"}
+      ]
+    },
+    {
+      "id": "fa-output-rescale-update",
+      "label": "Line 12: un-normalize O_i by ℓ_i, rescale, add P̃V_j, re-normalize by ℓ^new",
+      "kind": "mechanism",
+      "statement": "Because Algorithm 1 stores O_i already divided by ℓ_i, line 12 updates it as O_i ← diag(ℓ^new)⁻¹ (diag(ℓ_i) e^{m_i − m^new} O_i + e^{m̃_ij − m^new} P̃_ij V_j): multiply the old output back up by ℓ_i, rescale it to the new max, add the new block's unnormalized contribution, and divide by the new normalizer.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:alg1:L12", "role": "computation", "quote": "Write O_i←diag(ℓ_i^new)⁻¹(diag(ℓ_i)e^{m_i−m_i^new}O_i+e^{m̃_ij−m_i^new}P̃_ijV_j) to HBM."},
+          {"source": "fa_paper", "ref": "fa:§3.1", "role": "claim", "quote": "By scaling the output of each block by the right normalization factor before adding them up, we get the correct result at the end."},
+          {"source": "fa_paper", "ref": "fa:§C:thm1-proof", "role": "computation", "quote": "When j=T_c, we conclude that the final value of O in HBM is softmax(S)V=softmax(QKᵀ)V."},
+          {"source": "fa_paper", "ref": "fa:§B.5", "role": "claim", "quote": "FlashAttention instead incrementally updates the output (Algorithm 1 line 12) after processing each block, so only one copy of the output is needed (instead of K copies for K blocks)."}
+        ],
+        "filtering_note": "The correctness proof (Appendix C, Theorem 1) is an induction on j showing O^(j) = P_{:,:j} V_{:j} after each outer iteration; the step that makes it work is diag(ℓ_i) undoing the previous division. The course never shows this line; its p54 summary stops at 'tile-wise computation of the softmax'. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-softmax-decomposition", "basis": "teaching-order"},
+        {"kp": "fa-forward-loop-structure", "basis": "teaching-order", "note": "Line 12 is the body of the inner loop."}
+      ],
+      "misconceptions": [
+        {"belief": "O_i can be accumulated unnormalized and divided by ℓ once at the end, so the diag(ℓ_i) factor is unnecessary.", "why_wrong": "That would also be exact (and is what Rabe & Staats effectively do), but it is not Algorithm 1: line 12 stores O_i normalized every step, so the next step must multiply by ℓ_i before rescaling; dropping diag(ℓ_i) while keeping diag(ℓ^new)⁻¹ double-normalizes the old part."},
+        {"belief": "The new block's term P̃_ij V_j needs no exponential factor because P̃ was just computed.", "why_wrong": "P̃_ij was taken against the block max m̃_ij, so it carries e^{m̃_ij − m^new} (equal to 1 only when the block holds the row max)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One row, d = 1. After previous blocks: O_i = 0.5 (already normalized), ℓ_i = 2.0, m_i = 1.0. New block: m̃ = 3.0, ℓ̃ = 1.2, and P̃_ij V_j = 0.9. Compute ℓ^new and the new O_i from Algorithm 1 lines 11-12.",
+          "format": "short",
+          "answer": "ℓ^new ≈ 1.4707. O_i ← (2.0·e^{−2}·0.5 + e^{0}·0.9)/1.4707 = (0.1353 + 0.9)/1.4707 ≈ 0.704.",
+          "why": "diag(ℓ_i)·O_i = 1.0 recovers the old unnormalized numerator; e^{−2} converts it to the new max; adding 0.9 gives 1.0353 in consistent units; dividing by ℓ^new renormalizes. The weight of the earlier keys fell from all of it to 0.1353/1.0353 ≈ 13% because the new block holds a much larger score.",
+          "targets_misconception": "The new block's term P̃_ij V_j needs no exponential factor because P̃ was just computed."
+        },
+        "transfer": {
+          "q": "A port of line 12 forgets diag(ℓ_i) but keeps everything else: O_i ← diag(ℓ^new)⁻¹ (e^{m_i − m^new} O_i + e^{m̃ − m^new} P̃V_j). With the numbers above (O_i = 0.5, ℓ_i = 2.0, e^{m_i−m^new} = e^{−2}, P̃V_j = 0.9, ℓ^new ≈ 1.4707), what does it produce, and in which direction is the old block's contribution wrong?",
+          "format": "short",
+          "answer": "(e^{−2}·0.5 + 0.9)/1.4707 = (0.0677 + 0.9)/1.4707 ≈ 0.658 instead of ≈0.704: the earlier keys' contribution is undercounted by the factor ℓ_i = 2, because it is divided by a normalizer twice (once already stored, once by ℓ^new).",
+          "why": "O_i on HBM is softmax-normalized at every step; the stored value is numerator/ℓ_i. Any further rescale-and-add must operate on the numerator, which is why line 12 multiplies by diag(ℓ_i) first. The error factor is exactly ℓ_i, which grows with every block processed.",
+          "varies": "the update rule: diag(ℓ_i) omitted (functional dimension)",
+          "invariant": "the stored O_i is normalized by the previous ℓ_i; the rescale factor and the new block's term are unchanged",
+          "surface_cue_broken": "kept-but-misleading: identical numbers to the predict item so the learner cannot tell the two by their inputs, only by the rule",
+          "transfer_distance": "near",
+          "target_kp": "fa-output-rescale-update",
+          "contrast_kp": "fa-softmax-decomposition"
+        },
+        "check": {
+          "q": "One row, d = 1, of Algorithm 1. Stored after earlier blocks: O_i = 0.2 (already normalized), ℓ_i = 1.5, m_i = 2.0. New block: m̃ = 1.0, ℓ̃ = 0.8, and P̃_ij V_j = 0.9 (unnormalized, taken against m̃). Apply lines 11-12 exactly: O_i ← diag(ℓ^new)⁻¹ (diag(ℓ_i) e^{m_i − m^new} O_i + e^{m̃ − m^new} P̃_ij V_j). What is the new O_i? Type only the number, to 3 decimals.",
+          "format": "number",
+          "answer": "0.352",
+          "tolerance": 0.03,
+          "value": 0.352,
+          "why": "m^new = max(2.0, 1.0) = 2.0. ℓ^new = e^0·1.5 + e^{−1}·0.8 = 1.5 + 0.2943 = 1.7943. Numerator = 1.5·1·0.2 + e^{−1}·0.9 = 0.3 + 0.3311 = 0.6311. O_i = 0.6311/1.7943 = 0.352. Dropping diag(ℓ_i) gives 0.296; dropping the new block's factor e^{m̃−m^new} gives 0.669; both are rejected.",
+          "targets_misconception": "The new block's term P̃_ij V_j needs no exponential factor because P̃ was just computed.",
+          "varies": "new block's max is below the running max, so the exponential falls on the new block's term rather than the old output (functional)",
+          "invariant": "un-normalize stored O by ℓ_i, put both parts on the common max, add, divide by ℓ^new",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In FlashAttention's output update, which factor undoes the normalization of the previously stored O_i?", "answer": "diag(ℓ_i), the previous running normalizer."},
+          {"q": "What is the final value of O after FlashAttention's last outer iteration?", "answer": "softmax(QKᵀ)V, the exact attention output."},
+          {"q": "How does FlashAttention's incremental O update change the memory needed compared with keeping a temporary output per block?", "answer": "Only one copy of the output is needed instead of one per block."}
+        ],
+        "self_explain": "Why does the paper choose to keep O normalized at every step rather than normalizing once at the end, given both are exact?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compute", "ref": "fa:alg1:L12", "faded": false, "steps": [
+          {"tex": "\\mathrm{diag}(\\ell_i)\\,O_i = 2.0 \\times 0.5 = 1.0", "do": "Un-normalize the stored output (the predict's row: O_i = 0.5, ℓ_i = 2.0, m_i = 1.0).", "why": "O_i is stored already divided by ℓ_i; multiplying by ℓ_i gives back the numerator Σ e^{s−m_i} v over the earlier keys, which is what can be rescaled and added to."},
+          {"tex": "e^{m_i - m_i^{new}} \\cdot 1.0 = e^{1-3} = 0.1353", "do": "Rescale the old numerator to the new max m_i^new = 3.0.", "why": "Same conversion as line 11 for ℓ: the old terms were relative to e^{s−1}, the new ones to e^{s−3}."},
+          {"tex": "0.1353 + e^{\\tilde m_{ij} - m_i^{new}}\\,\\tilde P_{ij}V_j = 0.1353 + e^{0}\\cdot 0.9 = 1.0353", "do": "Add the new block's unnormalized contribution P̃_ij V_j = 0.9.", "why": "P̃_ij was taken against m̃_ij = 3.0 = m_i^new, so its factor is 1; both parts are now relative to the same max."},
+          {"tex": "O_i \\leftarrow \\mathrm{diag}(\\ell_i^{new})^{-1}\\cdot 1.0353 = 1.0353 / 1.4707 \\approx 0.704", "do": "Re-normalize by ℓ_i^new from line 11 and write O_i back to HBM.", "why": "The stored O_i must again be a softmax-weighted average, because the next inner iteration starts by multiplying it by diag(ℓ_i)."}
+        ]},
+        {"type": "formula-step", "action": "trace", "ref": "fa:§C:thm1-proof", "steps": [
+          {"tex": "m^{(j)} = \\mathrm{rowmax}(S_{:,:j}),\\quad \\ell^{(j)} = \\mathrm{rowsum}(\\exp(S_{:,:j}-m^{(j)})),\\quad O^{(j)} = P_{:,:j}V_{:j}", "do": "Claim: after outer iteration j, HBM holds the exact statistics and the exact attention output over the first j K/V blocks.", "why": "Induction on j: if the claim holds at j = T_c, O is softmax(QKᵀ)V."},
+          {"do": "Base case j = 0: line 2 initializes O = 0, ℓ = 0, m = −∞.", "why": "These are the values of the claim for an empty set of keys."},
+          {"tex": "m^{(j+1)} = \\max(m^{(j)},\\tilde m) = \\mathrm{rowmax}(S_{:,:j+1}),\\quad \\ell^{(j+1)} = e^{m^{(j)}-m^{(j+1)}}\\ell^{(j)} + e^{\\tilde m - m^{(j+1)}}\\tilde\\ell", "do": "Step for the statistics: the line 11 update gives the rowmax and rowsum over j+1 blocks.", "why": "This is the §3.1 decomposition with the first j blocks as x⁽¹⁾ and block j+1 as x⁽²⁾."},
+          {"tex": "\\mathrm{diag}(\\ell^{(j)})\\,e^{m^{(j)}-m^{(j+1)}}\\,O^{(j)} = \\mathrm{diag}(\\ell^{(j)})\\,e^{m^{(j)}-m^{(j+1)}}\\,\\mathrm{diag}(\\ell^{(j)})^{-1}\\exp(S_{:,:j}-m^{(j)})V_{:j} = \\exp(S_{:,:j}-m^{(j+1)})V_{:j}", "do": "Step for O: substitute the hypothesis O^{(j)} = P_{:,:j}V_{:j} into line 12's old-output term.", "why": "diag(ℓ^{(j)}) cancels the stored normalization, and e^{m^{(j)}−m^{(j+1)}}·e^{−m^{(j)}} = e^{−m^{(j+1)}} moves it to the new max."},
+          {"tex": "O^{(j+1)} = \\mathrm{diag}(\\ell^{(j+1)})^{-1}\\exp\\big([S_{:,:j}\\;S_{:,j:j+1}]-m^{(j+1)}\\big)\\begin{bmatrix}V_{:j}\\\\V_{j:j+1}\\end{bmatrix} = \\mathrm{softmax}(S_{:,:j+1})\\,V_{:j+1}", "do": "Add the new block's term exp(S_{:,j:j+1} − m^{(j+1)})V_{j:j+1} and divide by ℓ^{(j+1)}.", "why": "The two partial products are two column blocks of one product, and ℓ^{(j+1)} is that product's row sum, so the claim holds at j+1."}
+        ]}
+      ]
+    },
+    {
+      "id": "fa-backward-recomputation",
+      "label": "Backward: store O, ℓ, m and recompute P per block instead of saving N×N",
+      "kind": "mechanism",
+      "statement": "FlashAttention saves only O and the row statistics (ℓ, m) from the forward pass (plus the dropout RNG state) and, in the backward pass, recomputes each block P_ij = diag(ℓ_i)⁻¹ exp(S_ij − m_i) on chip from Q_i, K_j, using D_i = rowsum(dO_i ∘ O_i) instead of a length-N reduction over P_i: dP_i:, which costs extra FLOPs but keeps backward HBM traffic at Θ(N²d²M⁻¹) and extra memory at O(N).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:§3.1", "role": "claim", "quote": "by storing the output O and the softmax normalization statistics (m,ℓ), we can recompute the attention matrix S and P easily in the backward pass from blocks of Q,K,V in SRAM. This can be seen as a form of selective gradient checkpointing"},
+          {"source": "fa_paper", "ref": "fa:§3.1", "role": "claim", "quote": "In contrast, even with more FLOPs, our recomputation speeds up the backward pass due to reduced HBM accesses (Fig. 2)."},
+          {"source": "fa_paper", "ref": "fa:alg4:L13", "role": "computation", "quote": "On chip, compute P_ij=diag(l_i)⁻¹exp(S_ij^masked−m_i)"},
+          {"source": "fa_paper", "ref": "fa:eq4", "role": "computation", "quote": "D_i=P_i:ᵀdP_i: ... =do_iᵀo_i"},
+          {"source": "fa_paper", "ref": "fa:alg4:L19", "role": "computation", "quote": "On chip, compute D_i=rowsum(dO_i∘O_i)"},
+          {"source": "fa_paper", "ref": "fa:thm5", "role": "computation", "quote": "Standard attention (Algorithm 0) backward pass requires Θ(Nd+N²) HBM accesses, while FlashAttention backward pass (Algorithm 4) requires Θ(N²d²M⁻¹) HBM accesses."},
+          {"source": "lecture_05", "ref": "lecture_05.pdf:p54", "role": "claim", "quote": "(We won’t cover the backward pass – but they recompute tile-by-tile..)"}
+        ],
+        "filtering_note": "The main text gives only the idea (§3.1 'Recomputation'); Algorithm 4 and Theorem 5 are in Appendix B.4. The paper's second observation there (D_i = do_iᵀ o_i avoids reducing over a length-N row that may not fit in SRAM) is the piece that makes block-wise backward possible and is easy to miss. The course explicitly skips the backward pass. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-forward-loop-structure", "basis": "teaching-order", "note": "Algorithm 4 reuses the same block loops and the saved (ℓ, m)."},
+        {"kp": "fa-io-aware-framing", "basis": "teaching-order", "note": "More FLOPs for fewer bytes is only a win under the memory-bound thesis."}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_05:flash-attention-forward", "basis": "teaching-order"}
+      ],
+      "misconceptions": [
+        {"belief": "Recomputing attention in the backward pass must slow it down, as with ordinary gradient checkpointing.", "why_wrong": "The recompute happens on chip from blocks already loaded; it replaces reading the N×N matrix P from HBM, and since the pass is memory-bound the net effect is faster (§3.1, Fig. 2: 75.2 vs 66.6 GFLOPs but 7.3 vs 41.7 ms)."},
+        {"belief": "The backward pass needs ℓ and m only to rebuild P; the softmax gradient still needs the whole row of P and dP.", "why_wrong": "Eq. 4 rewrites the row reduction D_i = P_i:ᵀ dP_i: as do_iᵀ o_i, a length-d dot product of saved quantities, so no length-N row is ever needed on chip."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Per head and per layer, standard attention stores the N×N matrix P for the backward pass. FlashAttention stores O (N×d), ℓ and m (N each). For N = 16384, d = 64, how many elements does each save, and what is the ratio?",
+          "format": "short",
+          "answer": "Standard: 16384² ≈ 268M elements. FlashAttention: 16384×64 + 2×16384 ≈ 1.08M. Ratio ≈ 248x.",
+          "why": "FlashAttention's saved state is linear in N (Theorem 1: O(N) extra beyond inputs and output) because P is rebuilt block by block in Algorithm 4 from Q, K and the statistics; the ratio is roughly N/(d+2).",
+          "targets_misconception": "Recomputing attention in the backward pass must slow it down, as with ordinary gradient checkpointing."
+        },
+        "transfer": {
+          "q": "An engineer keeps FlashAttention's forward pass but, for the backward, loads each row's full P_i: and dP_i: into SRAM to compute D_i = Σ_j P_ij dP_ij the textbook way. For which sequence lengths does this break, given SRAM holds M elements per row-group, and what does Eq. 4 replace it with?",
+          "format": "short",
+          "answer": "It breaks once N (the row length) exceeds what fits in SRAM alongside the blocks, i.e. for N on the order of M or more; Eq. 4 replaces the N-length reduction with D_i = do_iᵀ o_i, a d-length dot product of two saved N×d matrices' rows.",
+          "why": "Appendix B.4 observation 2: P_i: and dP_i: 'might not fit into SRAM', so the reduction over N is rewritten as a reduction over d using the identity that Σ_j P_ij (do_iᵀ v_j) = do_iᵀ Σ_j P_ij v_j = do_iᵀ o_i.",
+          "varies": "the backward implementation of D_i (functional dimension); forward unchanged",
+          "invariant": "the identity D_i = P_i:ᵀdP_i: = do_iᵀo_i holds for exact softmax attention regardless of blocking",
+          "surface_cue_broken": "changed: the item is about a reduction, not about 'storing P', so recalling 'recompute P' alone does not answer it",
+          "transfer_distance": "near",
+          "target_kp": "fa-backward-recomputation",
+          "contrast_kp": "fa-forward-loop-structure"
+        },
+        "check": {
+          "q": "FlashAttention's backward pass (Algorithm 4) for N = 32768 and head dimension d = 96. For a single query row i, the softmax gradient needs D_i, which the paper computes using Eq. 4. How many elementwise products are summed to form that one row's D_i? Type only the number.",
+          "format": "number",
+          "answer": "96",
+          "tolerance": 0.02,
+          "value": 96,
+          "why": "Eq. 4 rewrites D_i = P_i:ᵀ dP_i: (a length-N reduction, 32768 terms) as do_iᵀ o_i, and Algorithm 4 computes D_i = rowsum(dO_i ∘ O_i): a dot product of the saved output row and its gradient, both of length d = 96. So 96 products, and no length-N row of P or dP is needed on chip.",
+          "targets_misconception": "The backward pass needs ℓ and m only to rebuild P; the softmax gradient still needs the whole row of P and dP.",
+          "varies": "asks for the size of the reduction under concrete N, d instead of when the textbook form breaks (modality: count instead of explanation)",
+          "invariant": "D_i = Σ_j P_ij dP_ij = do_iᵀ o_i, a length-d reduction of saved quantities",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Which three quantities (besides inputs) does FlashAttention save from the forward pass to make the backward pass possible?", "answer": "The output O and the softmax statistics ℓ and m (and the pseudo-random generator state for dropout)."},
+          {"q": "Write the identity that lets FlashAttention's softmax gradient avoid a length-N reduction.", "answer": "D_i = P_i:ᵀ dP_i: = do_iᵀ o_i."},
+          {"q": "What is the backward-pass HBM access count of FlashAttention?", "answer": "Θ(N²d²M⁻¹), the same order as the forward pass."}
+        ],
+        "self_explain": "Why does FlashAttention's recomputation count as 'selective' gradient checkpointing rather than the usual whole-layer kind?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "trace", "ref": "fa:eq4", "steps": [
+          {"tex": "dP_{ij} = do_i^\\top v_j", "do": "From O = PV: dP = dO Vᵀ.", "why": "O is linear in P, so the gradient with respect to P is the upstream gradient times Vᵀ."},
+          {"tex": "dS_{i:} = (\\mathrm{diag}(P_{i:}) - P_{i:}P_{i:}^\\top)\\,dP_{i:} = P_{i:}\\circ dP_{i:} - (P_{i:}^\\top dP_{i:})\\,P_{i:}", "do": "Back through the row-wise softmax P_{i:} = softmax(S_{i:}).", "why": "The Jacobian of y = softmax(x) is diag(y) − yyᵀ; the second term needs the scalar P_{i:}ᵀdP_{i:}, a sum over the whole row."},
+          {"tex": "D_i = P_{i:}^\\top dP_{i:} = \\sum_j P_{ij}\\, do_i^\\top v_j = do_i^\\top \\sum_j P_{ij} v_j = do_i^\\top o_i", "do": "Eq. 4: rewrite that scalar.", "why": "do_i does not depend on j, so it comes out of the sum, and what is left, Σ_j P_ij v_j, is the output row o_i saved by the forward pass."},
+          {"tex": "dS_{ij} = P_{ij}\\,(dP_{ij} - D_i)", "do": "Each entry of dS now needs only P_ij, dP_ij and D_i.", "why": "P_ij is recomputed on chip from Q_i, K_j and the saved (ℓ_i, m_i) (Algorithm 4 line 13), dP_ij from dO_i and V_j, and D_i from the saved O_i and dO_i (line 19), so no full row of P or dP has to be held."}
+        ]},
+        {"type": "code", "action": "trace", "ref": "fa:alg4"},
+        {"type": "interactive", "action": "compare", "ref": "fixture:flashattention--saved-state", "notice": "Saving O, ℓ, m instead of P shrinks the stored state by about N/(d + 2), and, while d² ≪ M, the backward pass still moves fewer HBM elements even though it recomputes every P_ij (push d up with a small SRAM and the readout flips to \"more\"); Fig. 2 shows the same trade measured: 13% more FLOPs, 9× fewer bytes, 5.7× faster."}
+      ]
+    },
+    {
+      "id": "fa-io-complexity",
+      "label": "Theorem 2: FlashAttention makes Θ(N²d²M⁻¹) HBM accesses",
+      "kind": "quantity",
+      "statement": "With SRAM size M (d ≤ M ≤ Nd), FlashAttention performs Θ(N²d²/M) HBM accesses versus Θ(Nd + N²) for standard attention, because K and V are loaded once while Q and O make T_c = Θ(Nd/M) passes of Θ(Nd) elements each; for typical d (64-128) and M (~100 KB), d² ≪ M so the saving is many-fold.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:thm2", "role": "computation", "quote": "Let N be the sequence length, d be the head dimension, and M be size of SRAM with d≤M≤Nd. Standard attention (Algorithm 0) requires Θ(Nd+N²) HBM accesses, while FlashAttention (Algorithm 1) requires Θ(N²d²M⁻¹) HBM accesses."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "claim", "quote": "For typical values of d (64-128) and M (around 100KB), d² is many times smaller than M, and thus FlashAttention requires many times fewer HBM accesses than standard implementation."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "computation", "quote": "Each pass loads Θ(Nd) elements, which amounts to Θ(N²d²M⁻¹) HBM accesses."},
+          {"source": "fa_paper", "ref": "fa:§C:thm2-proof", "role": "computation", "quote": "each element of K and V is loaded from HBM once (Algorithm 1 line 6). We make T_c passes over Q and O, each pass loading all of Q and all of O to HBM (Algorithm 1 line 8)."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "claim", "quote": "As block size increases, the number of HBM accesses decreases (as we make fewer passes over the input), and runtime decreases. For large enough block size (beyond 256), the runtime is then bottlenecked by other factors (e.g., arithmetic operations)."},
+          {"source": "fa_paper", "ref": "fa:§1", "role": "claim", "quote": "up to 9× fewer, as shown in Fig. 2"}
+        ],
+        "filtering_note": "Theorem 2 counts elements and hides constants; the §3.2 sentence mixes units (M 'around 100KB' against d² in elements). The 'up to 9x fewer' in §1 is the Figure 2 ratio 40.3/4.4. Figure 2 (middle) is the empirical version: runtime falls with block size until ~256 and then flattens. The course never states the theorem; Lecture 5's flash-attention-forward KP says O(N·d) traffic, which is the M = Θ(Nd) end of this formula, not the general one. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-forward-loop-structure", "basis": "teaching-order", "note": "The count is T_c passes over Q and O, read straight off the loops."},
+        {"kp": "fa-standard-attention-hbm-traffic", "basis": "teaching-order"}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_05:tiling-shared-memory", "basis": "author-inference", "note": "Same shape of argument as the factor-T reduction in a tiled matmul."}
+      ],
+      "misconceptions": [
+        {"belief": "FlashAttention's HBM traffic is O(Nd), linear in N.", "why_wrong": "It is Θ(N²d²/M): still quadratic in N for fixed M. It reaches Θ(Nd) only when M = Θ(Nd), i.e. when a whole K/V fits in SRAM; the linear quantity is its extra memory (Theorem 1), not its traffic."},
+        {"belief": "Doubling d halves the benefit because the inputs are twice as large.", "why_wrong": "Doubling d quadruples FlashAttention's accesses (d² in the numerator): the blocks shrink to half as many rows, so there are twice as many passes, each twice as large."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "N = 4096, d = 64, M = 32768 elements. Using the proof's count (K, V once; Q and O for T_c = N/B_c passes with B_c = M/4d), how many HBM accesses in elements does FlashAttention make, and how does it compare with the 4N² ≈ 67.1M that standard attention spends on S and P alone?",
+          "format": "short",
+          "answer": "B_c = 128, T_c = 32; Q and O: 2 × 32 × 4096 × 64 ≈ 16.8M; K and V: 2 × 4096 × 64 ≈ 0.5M; total ≈ 17.3M, about 3.9x fewer than 67.1M.",
+          "why": "The constant inside Θ(N²d²/M) is set by the M/4d block rule: each of the T_c = 4Nd/M passes moves 2Nd elements (Q in, O in and out is really 3Nd if counted separately), so the traffic is ≈ 8N²d²/M = 8·4096²·64²/32768 ≈ 16.8M. The N² term never appears.",
+          "targets_misconception": "FlashAttention's HBM traffic is O(Nd), linear in N."
+        },
+        "transfer": {
+          "q": "A next-generation GPU doubles the usable SRAM M but changes nothing else; you keep N and d fixed and re-run Algorithm 1 with block sizes recomputed from line 1. In which direction and by what factor does FlashAttention's HBM access count change, and what happens to standard attention's count?",
+          "format": "short",
+          "answer": "FlashAttention's accesses halve (M⁻¹ dependence: blocks double, passes over Q and O halve); standard attention's Θ(Nd + N²) is unchanged because it never depends on M.",
+          "why": "Theorem 2's M⁻¹ is the number of K/V blocks T_c = Θ(Nd/M); doubling M doubles B_c and halves T_c, hence halves the Q/O re-reads that dominate. Figure 2 (middle) shows the same trend empirically as block size grows, until arithmetic becomes the bottleneck.",
+          "varies": "SRAM size M (functional dimension); N, d fixed",
+          "invariant": "K and V are loaded once; the only M-dependent term is the number of passes over Q and O",
+          "surface_cue_broken": "kept-but-misleading: 'bigger memory' invites the answer 'more memory for S', but S is never in HBM; the gain is fewer passes",
+          "transfer_distance": "near",
+          "target_kp": "fa-io-complexity",
+          "contrast_kp": "fa-standard-attention-hbm-traffic"
+        },
+        "check": {
+          "q": "Use the Theorem 2 proof's count of the dominant traffic: Q and O are each read in full once per K/V block, i.e. 2·T_c·N·d elements, with T_c = N/B_c and B_c = M/(4d). Keep N and the SRAM size M fixed and raise the head dimension d from 64 to 128. By what factor does this Q/O traffic get multiplied? Type only the number.",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.1,
+          "value": 4,
+          "why": "2·T_c·N·d = 2·N·d·N·4d/M = 8N²d²/M. Doubling d halves B_c, so T_c doubles, and each pass moves twice as many elements: 2 × 2 = 4 (the d² in Θ(N²d²/M)).",
+          "targets_misconception": "Doubling d halves the benefit because the inputs are twice as large.",
+          "varies": "changes head dimension d instead of SRAM size M (functional: the d² vs M⁻¹ dependence)",
+          "invariant": "traffic = passes (Nd/M) × elements per pass (Nd) = Θ(N²d²/M)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "State FlashAttention's HBM access count in terms of N, d, M.", "answer": "Θ(N²d²M⁻¹) (standard attention: Θ(Nd + N²))."},
+          {"q": "In FlashAttention's IO analysis, which matrices are loaded exactly once and which make T_c passes?", "answer": "K and V once; Q and O make T_c = Θ(Nd/M) passes."},
+          {"q": "Why does FlashAttention's IO advantage hold for typical d and M: which inequality?", "answer": "d² ≪ M (d = 64-128, M around 100 KB), so N²d²/M ≪ N²."}
+        ],
+        "self_explain": "Why does the formula contain d² and not d, when a Q block is only d wide?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compute", "ref": "fa:§C:thm2-proof", "faded": false, "steps": [
+          {"do": "K and V: each element is loaded from HBM once (Algorithm 1 line 6), 2Nd in total.", "why": "The outer loop visits each K_j, V_j once and keeps it on chip for the whole inner loop."},
+          {"tex": "\\Theta(Nd + Nd\\,T_c) = \\Theta(Nd\\,T_c)", "do": "Q and O: T_c passes, each loading all of Q and all of O (line 8).", "why": "The inner loop sweeps every Q_i, O_i once per K/V block. Writing O_i back (line 12) adds another Nd per pass, a constant factor the Θ hides."},
+          {"tex": "B_c d = O(M) \\Rightarrow B_c = \\Theta(M/d),\\qquad T_c = N/B_c = \\Theta(Nd/M)", "do": "Block-size condition from the proof.", "why": "K_j and V_j (B_c × d each) must fit in SRAM of size M, so the largest block has Θ(M/d) rows."},
+          {"tex": "\\Theta(Nd\\,T_c) = \\Theta\\!\\left(Nd\\cdot\\frac{Nd}{M}\\right) = \\Theta\\!\\left(\\frac{N^2d^2}{M}\\right)", "do": "Multiply the elements per pass by the number of passes.", "why": "Θ(Nd) per pass times Θ(Nd/M) passes. No N² term appears, because S never reaches HBM."},
+          {"do": "The predict's numbers, N = 4096, d = 64, M = 32768: B_c = M/4d = 128, T_c = 32. Q and O: 2 × 32 × 4096 × 64 = 16,777,216; K and V: 2 × 4096 × 64 = 524,288; total ≈ 17.3M, against 4N² ≈ 67.1M for S and P in standard attention.", "why": "With Algorithm 1's own constant (B_c = M/4d) the Q/O term is 8N²d²/M, which equals the 16.8M above."}
+        ]},
+        {"type": "figure", "action": "predict-trend", "ref": "fa:fig2"},
+        {"type": "interactive", "action": "predict-trend", "ref": "fixture:flashattention--io-ledger", "notice": "Along the M axis the FlashAttention curve falls as 1/M while the standard line stays flat; pin a configuration and double M to see the Q/O term halve, or double d to see it grow ×4."},
+        {"type": "animation", "action": "trace", "ref": "fixture:flashattention--alg1-loop", "notice": "The Q and O counters reach T_c = 3 while K and V stay at 1: the traffic is passes over Q and O (T_c = Θ(Nd/M)) times Θ(Nd) elements per pass."}
+      ]
+    },
+    {
+      "id": "fa-lower-bound",
+      "label": "Proposition 3: no exact algorithm beats Θ(N²d²M⁻¹) for all M",
+      "kind": "quantity",
+      "statement": "No exact-attention algorithm achieves o(N²d²M⁻¹) HBM accesses for every M in [d, Nd]: at the top of the range, M = Θ(Nd), the bound becomes Ω(Nd), and any algorithm must at least read the Nd-sized inputs and write the output, so the FlashAttention count cannot be improved asymptotically over the whole range (it may be improvable for particular M).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:prop3", "role": "computation", "quote": "There does not exist an algorithm to compute exact attention with o(N²d²M⁻¹) HBM accesses for all M in the range [d,Nd]."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "computation", "quote": "The proof relies on the fact that for M=Θ(Nd) any algorithm must perform Ω(N²d²M⁻¹)=Ω(Nd) HBM accesses."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "claim", "quote": "This type of lower bound over a subrange of M is common in the streaming algorithms literature [88]. We leave proving parameterized complexity [27] lower bounds in terms of M as exciting future work."},
+          {"source": "fa_paper", "ref": "fa:§C:prop3-proof", "role": "computation", "quote": "the input to attention (matrices Q,K,V) and the output O have size Nd and they start out being in HBM, so if the algorithm computes exact attention it must incur at least Ω(Nd) HBM accesses."}
+        ],
+        "filtering_note": "The abstract says FlashAttention 'is optimal for a range of SRAM sizes'; the proposition is weaker than it sounds: it rules out an algorithm that is asymptotically better at every M simultaneously, by exhibiting one M (Θ(Nd)) where the trivial input/output bound already matches. The authors say so themselves ('we leave ... lower bounds in terms of M as exciting future work'). Not in the course. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-io-complexity", "basis": "teaching-order"}
+      ],
+      "misconceptions": [
+        {"belief": "Proposition 3 proves FlashAttention is optimal at every SRAM size.", "why_wrong": "It proves no algorithm can be asymptotically better for all M at once; the argument only uses M = Θ(Nd), where reading the input already costs Ω(Nd). For a fixed small M, a better bound is explicitly left open."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Set M = Nd (the top of the allowed range) in Theorem 2's FlashAttention count Θ(N²d²/M). What does it simplify to, and what everyday fact about the inputs and output gives the same number as a lower bound for any exact algorithm?",
+          "format": "short",
+          "answer": "Θ(Nd). Q, K, V and O each have Nd elements and start (or must end) in HBM, so any algorithm must move Ω(Nd) elements.",
+          "why": "That coincidence at one M is the whole proof of Proposition 3: an algorithm with o(N²d²/M) accesses for all M would need o(Nd) at M = Θ(Nd), contradicting the input/output bound.",
+          "targets_misconception": "Proposition 3 proves FlashAttention is optimal at every SRAM size."
+        },
+        "transfer": {
+          "q": "Someone announces an exact attention kernel that, for the specific case M = d (the bottom of the range), uses only Θ(N²d) HBM accesses instead of FlashAttention's Θ(N²d²/d) = Θ(N²d). Then a second claim: for M = 10d it uses Θ(N²d/10)... and in general Θ(N²d²/M) · (1/log M). Which of the two claims does Proposition 3 rule out, and why?",
+          "format": "short",
+          "answer": "Only the second. The first is the same order as FlashAttention at that M, so nothing is contradicted. The second is o(N²d²/M) for all M, which at M = Θ(Nd) would give o(Nd) accesses, below the input/output bound.",
+          "why": "The proposition's quantifier is 'for all M in [d, Nd]'; it bites only on claims that are uniformly better, by exhibiting the M where the trivial bound already matches FlashAttention.",
+          "varies": "the quantifier of the improvement claim: one M versus all M (functional dimension)",
+          "invariant": "at M = Θ(Nd), any exact algorithm needs Ω(Nd) accesses",
+          "surface_cue_broken": "kept-but-misleading: the first claim 'beats' nothing but looks like a counterexample",
+          "transfer_distance": "near",
+          "target_kp": "fa-lower-bound",
+          "contrast_kp": "fa-io-complexity"
+        },
+        "check": {
+          "q": "Four kernels are announced for exact attention with head dimension d and SRAM size M, where FlashAttention makes Θ(N²d²/M) HBM accesses for d ≤ M ≤ Nd. Which claimed kernel, if real, would contradict Proposition 3?",
+          "format": "choice",
+          "choices": ["Θ(N²) accesses at M = d, FlashAttention's count elsewhere", "Θ(N²d²/M)/8 accesses at every M in [d, Nd]", "Θ(N²d³/M²) accesses at every M in [d, Nd]", "Θ(Nd) accesses at M = Nd, FlashAttention's count elsewhere"],
+          "answer": "Θ(N²d³/M²) accesses at every M in [d, Nd]",
+          "why": "Proposition 3 rules out o(N²d²/M) for all M in [d, Nd]. N²d³/M² = (N²d²/M)·(d/M) is o(N²d²/M) as M grows and at M = Nd equals Θ(d), far below the Ω(Nd) needed just to read Q, K, V and write O. The /8 kernel is a constant factor, not o(·). Beating FlashAttention only at M = d is left open (no claim about fixed small M). Θ(Nd) at M = Nd equals FlashAttention's count there and matches the input/output bound.",
+          "distractor_from": "'/8 at every M' confuses a constant-factor gain with an asymptotic one; 'Θ(N²) at M = d' encodes 'Proposition 3 proves FlashAttention is optimal at every SRAM size'; 'Θ(Nd) at M = Nd' mistakes meeting the bound for beating it.",
+          "targets_misconception": "Proposition 3 proves FlashAttention is optimal at every SRAM size.",
+          "varies": "polynomial (not log) improvement that matches FlashAttention at M = d, plus constant-factor and single-M claims (functional)",
+          "invariant": "the bound only bites on claims that are uniformly asymptotically better; at M = Θ(Nd) any algorithm needs Ω(Nd)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "What range of M does FlashAttention's IO lower bound quantify over, and what does it rule out?", "answer": "M in [d, Nd]; an exact algorithm with o(N²d²M⁻¹) HBM accesses for all M in that range."},
+          {"q": "At which value of M does the proof of FlashAttention's IO lower bound derive its contradiction, and what is the lower bound there?", "answer": "M = Θ(Nd); Ω(Nd), from the size of the inputs and output.", "layer": "detail"},
+          {"q": "What stronger lower-bound result do the FlashAttention authors explicitly leave as future work?", "answer": "Parameterized lower bounds in terms of M (i.e. for each fixed M).", "layer": "detail"}
+        ],
+        "self_explain": "Why is a lower bound 'over a subrange of M' the natural thing to prove here, and what would a per-M lower bound have to account for?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "trace", "ref": "fa:§C:prop3-proof", "steps": [
+          {"do": "Suppose an exact algorithm makes o(N²d²/M) HBM accesses for every M in [d, Nd].", "why": "Proof by contradiction: the proposition is about the quantifier 'for all M', so one bad M is enough to refute it."},
+          {"tex": "M = \\Theta(Nd):\\quad o\\!\\left(\\frac{N^2d^2}{Nd}\\right) = o(Nd)", "do": "Take the top of the range.", "why": "That is where FlashAttention's own count Θ(N²d²/M) falls to Θ(Nd), as low as it goes."},
+          {"do": "But Q, K, V and O have Nd elements each and start (or must end) in HBM, so any exact algorithm makes Ω(Nd) accesses. Contradiction.", "why": "Reading the inputs and writing the output is a floor no schedule can avoid; at M = Θ(Nd) FlashAttention already sits on it."}
+        ]},
+        {"type": "interactive", "action": "distinguish", "ref": "fixture:flashattention--io-ledger", "notice": "At the right end of the M axis (M = Nd) the FlashAttention curve comes down to a constant multiple (2.5×) of the 4Nd floor that every exact algorithm pays; further left it sits far above the floor, where Proposition 3 says nothing."}
+      ]
+    },
+    {
+      "id": "fa-block-sparse",
+      "label": "Block-sparse FlashAttention: skip zero blocks, traffic scales with sparsity s",
+      "kind": "mechanism",
+      "statement": "Given a block mask M ∈ {0,1}^{N/B_r × N/B_c}, block-sparse FlashAttention runs Algorithm 1 but skips masked-out blocks, giving Θ(Nd + N²d²M⁻¹ s) HBM accesses where s is the fraction of nonzero blocks (Proposition 4); with s = N^{−1/2} or (log N)/N this becomes Θ(N√N) or Θ(N log N), and on LRA it runs 2.8x vs 2.4x for dense FlashAttention at on-par accuracy.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:§3.3", "role": "claim", "quote": "The algorithm is identical to Algorithm 1, except we skip zero blocks."},
+          {"source": "fa_paper", "ref": "fa:prop4", "role": "computation", "quote": "Block-sparse FlashAttention (Algorithm 5) requires Θ(Nd+N²d²M⁻¹s) HBM accesses where s is the fraction of nonzero blocks in the block-sparsity mask."},
+          {"source": "fa_paper", "ref": "fa:§3.3", "role": "claim", "quote": "For large sequence lengths N, s is often set to N^{−1/2} [11] or N^{−1}logN [92, 3, 17], resulting in Θ(N√N) or Θ(NlogN) IO complexity."},
+          {"source": "fa_paper", "ref": "fa:§3.3", "role": "claim", "quote": "On the LRA benchmark, block-sparse FlashAttention achieves 2.8× speedup, while performing on par with standard attention (Section 4)."},
+          {"source": "fa_paper", "ref": "fa:§3.3", "role": "claim", "quote": "For downstream experiments, we use the fixed butterfly sparsity pattern [17], which has been shown to be able to approximate arbitrary sparsity [16]."}
+        ],
+        "filtering_note": "The main-body Θ hides the Nd term's meaning: with sparsity the once-per-run loads of K and V (and the single O write) are no longer dominated, so the Nd term is written out explicitly in Proposition 4 unlike Theorem 2. The sparsity pattern (butterfly) and the masked-softmax definition S ⊙ 1_M (−∞ where masked) are stated but no quality-vs-s sweep is given; Table 3 gives one point (59.6 avg vs 59.8 dense). Not in the course. Basis: evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-io-complexity", "basis": "teaching-order"},
+        {"kp": "fa-forward-loop-structure", "basis": "teaching-order", "note": "Skipping a (j, i) pair is skipping one inner iteration."}
+      ],
+      "misconceptions": [
+        {"belief": "Block-sparse FlashAttention is still exact attention.", "why_wrong": "It computes attention under a fixed block mask (masked scores set to −∞), which is an approximation of dense attention; the paper calls it 'an approximate attention algorithm' and reports its accuracy separately (Table 3, Table 6)."},
+        {"belief": "Sparsity s reduces every term of the IO count proportionally.", "why_wrong": "Only the N²d²M⁻¹ term is multiplied by s; the Nd term for loading K, V once and writing O remains (Proposition 4)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Dense FlashAttention on some configuration makes 17.3M HBM accesses of which 0.5M are the one-time K/V loads. A block mask keeps 1 block in 4 (s = 0.25). Using Proposition 4's structure, about how many accesses does block-sparse FlashAttention make?",
+          "format": "number",
+          "answer": "4700000",
+          "tolerance": 0.1,
+          "why": "Only the pass term scales with s: 0.25 × 16.8M ≈ 4.2M, plus the unchanged ≈0.5M for K, V (and O), ≈ 4.7M. The speedup is less than 4x because the Nd term does not shrink.",
+          "targets_misconception": "Sparsity s reduces every term of the IO count proportionally."
+        },
+        "transfer": {
+          "q": "You scale N up by 16x and choose the mask so that s = N^{−1/2} as in §3.3. By what factor does the sparse term N²d²M⁻¹s of the IO count grow (d, M fixed), compared with the 256x growth of the dense term?",
+          "format": "short",
+          "answer": "64x: N² grows 256x, s shrinks by 4x (√16), so N²·s grows 256/4 = 64x; the dense term grows 256x.",
+          "why": "With s = N^{−1/2} the sparse term is Θ(N^{3/2}d²/M), i.e. Θ(N√N) in N; scaling N by 16 multiplies N√N by 16·4 = 64. The gap to the dense term is exactly the √N saved by the sparsity schedule.",
+          "varies": "sequence length N with s tied to N by the schedule N^{−1/2} (functional dimension)",
+          "invariant": "the IO count's sparse term is N²d²M⁻¹ multiplied by s, and the Nd term is untouched",
+          "surface_cue_broken": "changed: no fixed s is given, so the learner must apply the schedule rather than multiply by a constant",
+          "transfer_distance": "near",
+          "target_kp": "fa-block-sparse",
+          "contrast_kp": "fa-io-complexity"
+        },
+        "check": {
+          "q": "Block-sparse FlashAttention with the mask density set to s = (log N)/N, as in §3.3. You raise N from 1024 to 4096, keeping d and M fixed. By what factor does the sparse term N²d²M⁻¹s of the IO count grow? Type only the number.",
+          "format": "number",
+          "answer": "4.8",
+          "tolerance": 0.05,
+          "value": 4.8,
+          "why": "N²·s = N²·(log N)/N = N log N. Ratio = (4096·log 4096)/(1024·log 1024) = 4 × (12/10) = 4.8 (the base of the log cancels). The dense term would grow 16x.",
+          "targets_misconception": "Sparsity s reduces every term of the IO count proportionally (here: treating the sparse term as scaling like the dense N² term).",
+          "varies": "the (log N)/N sparsity schedule and a 4x scale-up instead of s = N^{-1/2} with 16x (functional)",
+          "invariant": "sparse IO term = N²d²M⁻¹·s; with s a function of N the growth is N²·s(N)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "State the HBM access count for block-sparse FlashAttention and say what s denotes.", "answer": "Θ(Nd + N²d²M⁻¹ s), s = fraction of nonzero blocks in the block-sparsity mask."},
+          {"q": "Which sparsity pattern does the paper use for its downstream block-sparse experiments?", "answer": "The fixed butterfly pattern.", "layer": "detail"},
+          {"q": "On LRA, what speedups do dense and block-sparse FlashAttention report, and what happens to average accuracy?", "answer": "2.4x and 2.8x; accuracy on par (59.8 vs 59.6 average, Transformer 59.3).", "layer": "detail"}
+        ],
+        "self_explain": "Why does the paper call block-sparse FlashAttention a 'primitive' for approximate attention rather than a new approximate method?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compare", "ref": "fa:prop4", "steps": [
+          {"tex": "\\Theta(Nd + Nd\\,T_c) = \\Theta\\!\\left(Nd + \\frac{N^2d^2}{M}\\right)", "do": "Start from Theorem 2's count for dense Algorithm 1: one load of K, V plus T_c passes over Q and O.", "why": "Algorithm 5 is Algorithm 1 with zero blocks skipped, so the same accounting applies."},
+          {"do": "Skip every (i, j) pair whose mask block is 0: only a fraction s of the inner iterations run, so the pass term becomes s·N²d²/M.", "why": "The proof of Proposition 4: only nonzero blocks are loaded, so the Q/O traffic scales with s."},
+          {"tex": "\\Theta\\!\\left(Nd + \\frac{N^2d^2}{M}\\,s\\right)", "do": "Keep the Nd term written out.", "why": "O (N × d) must still be written however small s is, so for small s the Nd term need not be dominated; Theorem 2 could absorb it, Proposition 4 cannot."},
+          {"do": "§3.3's schedules, d and M fixed: s = N^{−1/2} makes the sparse term ∝ N^{3/2}, i.e. Θ(N√N); s = (log N)/N makes it ∝ N log N.", "why": "N²·s is the only N-dependence of the sparse term, so the schedule for s sets the exponent."}
+        ]},
+        {"type": "figure", "action": "predict-trend", "ref": "fa:fig2"},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:flashattention--block-sparse", "notice": "Only the pass term is multiplied by s, so the IO saving stays below 1/s; with s tied to N the sparse curve's slope drops from N² to N√N or N log N."}
+      ]
+    },
+    {
+      "id": "fa-experimental-claims",
+      "label": "What the experiments showed, as printed, and what the paper says it cannot do",
+      "kind": "comparison",
+      "statement": "As printed: BERT-large 17.4±1.4 vs 20.0±1.5 min (15%, Table 1); GPT-2 small 2.7 days vs 9.5 HuggingFace / 4.7 Megatron (3.5x / 1.7x) at the same 18.2 ppl (Table 2); LRA 2.4x at 59.8 vs 59.3 avg (Table 3); 4K context 3.6 days vs Megatron 1K 4.7 days with 17.5 vs 18.2 ppl (Table 4); MIMIC-III +4.3 and ECtHR +8.5 F1 from longer sequences (Table 5); Path-X 61.4 and, block-sparse, Path-256 63.1 where all baselines fail (Table 6); attention kernel up to 3x faster than PyTorch for N ≤ 2K and up to 20x less memory (Fig. 3); limitations: per-variant CUDA kernels, not portable across GPU generations, single-GPU analysis only.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:table1", "role": "figure", "quote": "Nvidia MLPerf 1.1 [58] 20.0 ± 1.5 FlashAttention (ours) 17.4 ± 1.4"},
+          {"source": "fa_paper", "ref": "fa:table2", "role": "figure", "quote": "GPT-2 small - FlashAttention 18.2 2.7 days (3.5 ×)"},
+          {"source": "fa_paper", "ref": "fa:table2", "role": "figure", "quote": "GPT-2 medium - Huggingface [87] 14.2 21.0 days (1.0 ×)"},
+          {"source": "fa_paper", "ref": "fa:table2", "role": "figure", "quote": "GPT-2 medium - FlashAttention 14.3 6.9 days (3.0 ×)"},
+          {"source": "fa_paper", "ref": "fa:§4.1", "role": "claim", "quote": "FlashAttention achieves the same perplexity as the other two implementations, as we do not change the model definition."},
+          {"source": "fa_paper", "ref": "fa:table3", "role": "figure", "quote": "FlashAttention 37.6 63.9 81.4 43.5 72.7 59.8 2.4 ×"},
+          {"source": "fa_paper", "ref": "fa:table4", "role": "figure", "quote": "GPT-2 small - FlashAttention 4k 17.5 3.6 days (1.3 ×)"},
+          {"source": "fa_paper", "ref": "fa:table5", "role": "figure", "quote": "MIMIC-III [47] 52.8 50.7 51.7 54.6 56.4 57.1 ECtHR [6] 72.2 74.3 77.1 78.6 80.7 79.2"},
+          {"source": "fa_paper", "ref": "fa:table6", "role": "figure", "quote": "FlashAttention 61.4 ✗ Block-sparse FlashAttention 56.0 63.1"},
+          {"source": "fa_paper", "ref": "fa:§4.3", "role": "claim", "quote": "FlashAttention is up to 20× more memory efficient than exact attention baselines, and is more memory-efficient than the approximate attention baselines."},
+          {"source": "fa_paper", "ref": "fa:§4.3", "role": "claim", "quote": "The approximate attention runtimes begin to cross over with FlashAttention at sequences between 512 and 1024."},
+          {"source": "fa_paper", "ref": "fa:§5", "role": "claim", "quote": "Implementations may also not be transferrable across GPU architectures."},
+          {"source": "fa_paper", "ref": "fa:§5", "role": "claim", "quote": "Our IO-aware implementation of attention is optimal within constants for computing attention on a single GPU."},
+          {"source": "fa_paper", "ref": "fa:§E.5", "role": "claim", "quote": "We generally see 2-4× speedup, and we see more speedup when using dropout and masking due to kernel fusion."}
+        ],
+        "filtering_note": "Headline numbers drift between places: the abstract says '3× speedup on GPT-2' while Table 2's small-model row prints 3.5x; §4.1 text says 1.7x over Megatron while the §4 bullet says 1.8x; §4.1 says FlashAttention 'achieves the same perplexity as the other two implementations', which is exact for GPT-2 small (18.2) but not for medium, where HuggingFace prints 14.2 and Megatron-LM and FlashAttention 14.3; '6.4 points of lift' is the average of +4.3 (MIMIC) and +8.5 (ECtHR), and ECtHR actually falls from 80.7 at 8K to 79.2 at 16K. Only Table 1 reports variance (10 runs); the GPT-2 and LRA rows are single runs. The attention-kernel benchmark (Fig. 3) is on one A100 40GB with dropout and padding mask; Appendix E.5 gives 2-4x on A100, 2.5-4.5x on RTX 3090 and less speedup at d = 128. The course cites none of these numbers. Basis: evidence for the numbers; the drift list is author observation."
+      },
+      "prerequisites": [
+        {"kp": "fa-io-complexity", "basis": "teaching-order"},
+        {"kp": "fa-block-sparse", "basis": "teaching-order"}
+      ],
+      "misconceptions": [
+        {"belief": "FlashAttention improves perplexity at a fixed context length.", "why_wrong": "At the same context (1K) perplexity matches the baselines (Table 2): GPT-2 small is 18.2 for all three implementations, and GPT-2 medium is 14.3 for both FlashAttention and Megatron-LM against 14.2 for HuggingFace, a 0.1 gap that favours the baseline; the 0.7 improvement in Table 4 comes from training with 4K context, which FlashAttention makes affordable."},
+        {"belief": "Longer context monotonically helps on long-document classification.", "why_wrong": "ECtHR peaks at 8K (80.7) and drops at 16K (79.2); MIMIC-III dips at 1K-2K before rising (Table 5)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Table 2 reports GPT-2 small at 18.2 perplexity for HuggingFace, Megatron-LM and FlashAttention alike. What does the paper say explains the identical perplexity, and which table is the one where FlashAttention's perplexity differs from Megatron's?",
+          "format": "short",
+          "answer": "The model definition is unchanged (FlashAttention is exact), so only speed differs; Table 4, where FlashAttention trains with 2K/4K context (17.6/17.5) versus Megatron's 1K (18.2).",
+          "why": "Exactness makes the forward and backward numerically equivalent to the baselines (§4.1: 'as we do not change the model definition'); quality gains in the paper all come from affording longer sequences, not from the kernel.",
+          "targets_misconception": "FlashAttention improves perplexity at a fixed context length."
+        },
+        "transfer": {
+          "q": "A blog post summarizes the paper as 'FlashAttention gives a 3x speedup on attention at every sequence length, and the paper shows longer context always helps'. Using Fig. 3 / §4.3 and Table 5 as printed, name one sequence-length regime and one dataset where each half of that sentence is wrong.",
+          "format": "short",
+          "answer": "Speed: 'up to 3x' applies to common lengths up to 2K, and between 512 and 1024 some approximate methods already cross over to be faster than FlashAttention (§4.3), so 'every length' overstates it. Context: ECtHR drops from 80.7 (8K) to 79.2 (16K), and MIMIC-III falls from 52.8 (512) to 50.7 (1K) before recovering (Table 5).",
+          "why": "The paper's own text bounds the speed claim ('up to 3× ... up to 2K', crossover 'between 512 and 1024') and Table 5 is non-monotone; the '6.4 points of lift' headline averages two end-points.",
+          "varies": "the claim's scope: a universal statement versus the printed ranges (functional dimension)",
+          "invariant": "the printed numbers in Fig. 3 / §4.3 and Table 5",
+          "surface_cue_broken": "kept-but-misleading: both halves quote real numbers from the paper ('3x', 'longer context helps'), so the learner must check the ranges, not the keywords",
+          "transfer_distance": "far",
+          "target_kp": "fa-experimental-claims",
+          "contrast_kp": "supp-exact-vs-approximate"
+        },
+        "check": {
+          "q": "Table 4: GPT-2 small with Megatron-LM at 1K context reaches 18.2 perplexity in 4.7 days; with FlashAttention at 2K context it reaches 17.6 in 3.0 days. What does the paper's evidence say is responsible for the 0.6 lower perplexity?",
+          "format": "choice",
+          "choices": ["The kernel, since FlashAttention computes softmax more exactly", "The 2K context, since at 1K both implementations reach 18.2", "The extra compute, since the 2K run trained for more GPU-days", "Sparsity, since FlashAttention skips the uninformative blocks"],
+          "answer": "The 2K context, since at 1K both implementations reach 18.2",
+          "why": "Table 4's FlashAttention 1K row (and Table 2) gives 18.2, the same as Megatron at 1K, because the model definition is unchanged (§4.1). The only difference in the 2K row is context length, which FlashAttention makes affordable. The run took fewer GPU-days (3.0 vs 4.7), and dense FlashAttention does not skip blocks (that is the separate block-sparse variant).",
+          "distractor_from": "'The kernel ... more exactly' encodes 'FlashAttention improves perplexity at a fixed context length'; 'extra compute' contradicts the printed 3.0 vs 4.7 days; 'sparsity' confuses dense FlashAttention with block-sparse FlashAttention.",
+          "targets_misconception": "FlashAttention improves perplexity at a fixed context length.",
+          "varies": "the 2K row of Table 4 instead of the 4K row or Table 2's identical perplexities (domain)",
+          "invariant": "exact kernel gives identical quality at equal context; quality gains come only from the longer context it enables",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Which result table is the only one that reports variance across runs, and what are its two numbers?", "answer": "Table 1 (BERT-large, 10 runs): 20.0 ± 1.5 min for the MLPerf record vs 17.4 ± 1.4 for FlashAttention.", "layer": "detail"},
+          {"q": "What accuracy does FlashAttention reach on Path-X, and which variant is the one that scores on Path-256?", "answer": "61.4 on Path-X; block-sparse FlashAttention scores 63.1 on Path-256 (dense FlashAttention does not).", "layer": "detail"},
+          {"q": "Name two limitations the FlashAttention paper lists.", "answer": "Each attention variant needs a hand-written CUDA kernel (not portable across GPU architectures); the IO analysis is single-GPU and does not cover inter-GPU transfer."},
+          {"q": "By up to what factor is FlashAttention's memory footprint smaller than exact attention baselines, and how does it scale with sequence length?", "answer": "Up to 20x; linearly in sequence length."}
+        ],
+        "self_explain": "Which of the headline claims in the abstract (15%, 3x, 2.4x, 0.7 ppl, 6.4 points, 61.4%) can you trace to a table with the same number, and which need an extra computation or a different row?"
+      },
+      "presentations": [
+        {"type": "figure", "action": "compare", "ref": "fa:table2"},
+        {"type": "figure", "action": "distinguish", "ref": "fa:table5"},
+        {"type": "example", "action": "distinguish", "ref": "discovered.json:findings"}
+      ]
+    },
+    {
+      "id": "supp-sram-size-m",
+      "label": "Supplement: what M (SRAM size) is in practice and why it bounds the blocks",
+      "kind": "quantity",
+      "statement": "M in Theorems 2-5 is the on-chip SRAM capacity available to one kernel, in elements; on an A100 the paper quotes 192 KB of SRAM per streaming multiplexer (108 SMs) at ~19 TB/s versus 40-80 GB of HBM at 1.5-2.0 TB/s, so M is tens of thousands of fp16 elements, 'around 100KB' in the paper's words, which is why B_c = ⌈M/4d⌉ is in the tens to hundreds and why d² ≪ M holds for d = 64-128.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:§2.1", "role": "claim", "quote": "the A100 GPU has 40-80GB of high bandwidth memory (HBM) with bandwidth 1.5-2.0TB/s and 192KB of on-chip SRAM per each of 108 streaming multiprocessors with bandwidth estimated around 19TB/s"},
+          {"source": "fa_paper", "ref": "fa:§2.1", "role": "claim", "quote": "The on-chip SRAM is an order of magnitude faster than HBM but many orders of magnitude smaller in size."},
+          {"source": "fa_paper", "ref": "fa:§3.2", "role": "claim", "quote": "For typical values of d (64-128) and M (around 100KB)"},
+          {"source": "fa_paper", "ref": "fa:§C:thm2-proof", "role": "computation", "quote": "We need the blocks K_j and V_j of size B_c×d to fit into on-chip memory"},
+          {"source": "lecture_05", "ref": "lecture_05.pdf:p10", "role": "claim", "quote": "SRAM (shared/cache memory) is much more expensive (100x) but ~ 8x faster than DRAM (Global memory)"}
+        ],
+        "filtering_note": "The paper never states M's units; Theorem 2's range d ≤ M ≤ Nd only makes sense in elements, while §3.2 says '100KB'. Converting 192 KB at 2 bytes per fp16 element gives ~98K elements per SM, consistent with 'around 100KB' only if one reads it as bytes; the factor 4 in M/4d (four co-resident B×d blocks) and the B_r ≤ d cap (so S_ij fits) are the author's reading of Appendix C. The course gives the same hierarchy on p10 with H100 numbers from Lecture 6. Status supplement: the paper assumes the reader can place M on the hierarchy. Basis: inference."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {"kp": "lecture_05:gpu-memory-hierarchy", "basis": "teaching-order", "note": "Lecture 5 covers the hierarchy on p10-p12 before anything about attention."}
+      ],
+      "misconceptions": [
+        {"belief": "M is the whole GPU's SRAM, so a big GPU can hold a whole K and V in SRAM.", "why_wrong": "SRAM is per SM (192 KB on A100) and a kernel's block sees only its own SM's share; even summed over 108 SMs (~20 MB) it is three to four orders of magnitude below HBM, and the per-kernel M is what sets B_c."},
+        {"belief": "SRAM is faster than HBM by a few percent, so where tiles live hardly matters.", "why_wrong": "The paper's numbers are ~19 TB/s vs 1.5-2.0 TB/s, an order of magnitude; the course's p10 says ~8x. That gap is the entire budget FlashAttention spends."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Take M = 192 KB of SRAM in fp16 (2 bytes per element) and d = 64. How many elements is M, and what B_c does Algorithm 1 line 1 give?",
+          "format": "short",
+          "answer": "M = 98304 elements; B_c = ⌈98304/256⌉ = 384.",
+          "why": "M/4d = 98304/256 = 384 rows per K/V block, leaving room for four 384×64 fp16 blocks (K_j, V_j, Q_i, O_i) at once. In practice the kernel uses less than the full 192 KB, which is why the paper says 'around 100KB' and why Figure 2 (middle) sweeps block sizes up to 256.",
+          "targets_misconception": "M is the whole GPU's SRAM, so a big GPU can hold a whole K and V in SRAM."
+        },
+        "transfer": {
+          "q": "A GPU vendor ships a chip with the same SRAM per SM but a 2x faster HBM (bandwidth doubles, capacity unchanged). Without re-deriving anything, say in which direction the paper's speedup over standard attention moves on this chip and name the sentence in Appendix E.5 that supports your answer.",
+          "format": "short",
+          "answer": "The speedup shrinks: standard attention's N² traffic becomes cheaper while FlashAttention was already less memory-bound. E.5: the RTX 3090 shows higher speedups (2.5-4.5x) 'since the memory bandwidth on an RTX 3090 is lower than on an A100'.",
+          "why": "FlashAttention's gain is proportional to how expensive HBM traffic is relative to compute; faster HBM narrows the gap that IO-awareness exploits, exactly the inverse of the 3090 observation.",
+          "varies": "HBM bandwidth (domain dimension: a different chip), SRAM unchanged",
+          "invariant": "the access counts of both algorithms are unchanged; only the cost per access moves",
+          "surface_cue_broken": "changed: no numbers to plug in; the learner must reason from the memory-bound thesis",
+          "transfer_distance": "far",
+          "target_kp": "supp-sram-size-m",
+          "contrast_kp": "fa-io-aware-framing"
+        },
+        "check": {
+          "q": "On an A100 each streaming multiprocessor has 192 KB of SRAM (1 KB = 1024 bytes). Suppose one kernel's block can use its SM's full 192 KB as M, the tensors are stored in fp32 (4 bytes per element), and the head dimension is d = 128. What block size B_c = ⌈M/4d⌉ does Algorithm 1 line 1 give, with M counted in elements? Type only the number.",
+          "format": "number",
+          "answer": "96",
+          "tolerance": 0.05,
+          "value": 96,
+          "why": "M = 192·1024 bytes / 4 bytes = 49152 elements (per SM, not summed over the 108 SMs). B_c = ⌈49152/(4·128)⌉ = ⌈96⌉ = 96. Using fp16 gives 192, using bytes instead of elements gives 384, and summing over 108 SMs gives ~10368; all rejected.",
+          "targets_misconception": "M is the whole GPU's SRAM, so a big GPU can hold a whole K and V in SRAM.",
+          "varies": "fp32 storage and d = 128 instead of fp16 and d = 64 (domain)",
+          "invariant": "M is the per-SM SRAM capacity in elements; B_c = ⌈M/4d⌉",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "What SRAM size and bandwidth does the paper quote for an A100 SM, and what HBM bandwidth?", "answer": "192 KB per SM at ~19 TB/s; HBM 40-80 GB at 1.5-2.0 TB/s."},
+          {"q": "Which four blocks must co-reside in SRAM in FlashAttention's forward pass, explaining the 4 in B_c = ⌈M/4d⌉?", "answer": "K_j, V_j, Q_i and O_i (author inference; the paper does not say).", "layer": "detail"},
+          {"q": "What range of SRAM size M does FlashAttention's IO analysis assume, and what does each end mean?", "answer": "d ≤ M ≤ Nd: at least one row of d elements fits; at most all of K (or Q) fits."}
+        ],
+        "self_explain": "Why does the paper's analysis treat M as fixed while the block-size sweep in Figure 2 (middle) treats it as a knob?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compute", "ref": "fa:alg1:L1", "steps": [
+          {"tex": "M = \\frac{192 \\times 1024\\ \\text{bytes}}{2\\ \\text{bytes/element}} = 98{,}304\\ \\text{elements}", "do": "Convert one SM's 192 KB (§2.1) to fp16 elements (the predict's case).", "why": "Theorem 2's range d ≤ M ≤ Nd only makes sense in elements, and one kernel's block sees one SM's SRAM, not the sum over 108 SMs."},
+          {"tex": "B_c = \\lceil M/4d\\rceil = \\lceil 98304/256\\rceil = 384", "do": "Line 1 with d = 64.", "why": "Four blocks of B × d elements (K_j, V_j, Q_i, O_i) have to fit on chip at once; the 4 is the author's reading of Appendix C."},
+          {"tex": "B_r = \\min(\\lceil M/4d\\rceil,\\, d) = \\min(384, 64) = 64,\\qquad B_r B_c = 64 \\times 384 = 24{,}576 \\le M", "do": "Line 1's second size.", "why": "Capping B_r at d keeps the B_r × B_c score tile S_ij within O(M), the third condition in the proof of Theorem 2."}
+        ]},
+        {"type": "figure", "action": "compare", "ref": "lecture_05.pdf:p10"},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:flashattention--io-ledger", "notice": "M counts elements of one SM's SRAM: KB × 1024 / bytes per element, so switching fp16 to fp32 halves M and B_c; nothing is summed over the 108 SMs."}
+      ]
+    },
+    {
+      "id": "supp-exact-vs-approximate",
+      "label": "Supplement: why 'exact' is the property the results rest on",
+      "kind": "comparison",
+      "statement": "FlashAttention returns the same O = softmax(QKᵀ)V as standard attention (Theorem 1), so it is a drop-in kernel: same model, same gradients, same perplexity at the same context (Table 2), and every quality gain in the paper is from longer context; approximate methods (sparse, low-rank) change the function, so they need their accuracy re-measured (Table 3: Linformer 54.9 vs Transformer 59.3 avg on LRA) and often give no wall-clock gain anyway.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {"source": "fa_paper", "ref": "fa:thm1", "role": "computation", "quote": "Algorithm 1 returns O=softmax(QKᵀ)V with O(N²d) FLOPs and requires O(N) additional memory beyond inputs and output."},
+          {"source": "fa_paper", "ref": "fa:§1", "role": "claim", "quote": "Approximate attention methods have attempted to address this problem by trading off model quality to reduce the compute complexity, but often do not achieve wall-clock speedup."},
+          {"source": "fa_paper", "ref": "fa:§4.1", "role": "claim", "quote": "FlashAttention achieves the same perplexity as the other two implementations, as we do not change the model definition."},
+          {"source": "fa_paper", "ref": "fa:table3", "role": "figure", "quote": "Linformer [84] 35.6 55.9 77.7 37.8 67.6 54.9 2.5 ×"},
+          {"source": "fa_paper", "ref": "fa:§1", "role": "claim", "quote": "Up to sequence length of 512, FlashAttention is both faster and more memory-efficient than any existing attention method, whereas for sequence length beyond 1K, some approximate attention methods (e.g., Linformer) start to become faster."}
+        ],
+        "filtering_note": "The paper states exactness (title, Theorem 1) and the 'same model definition' consequence, but never spells out the practical corollary that exact kernels need no re-validation of quality and compose with any trained checkpoint; that is the student line's addition. Numerical equivalence is claimed up to floating point ('as numerically stable as the baselines', Appendix E). Basis: inference built on evidence."
+      },
+      "prerequisites": [
+        {"kp": "fa-io-aware-framing", "basis": "author-inference"}
+      ],
+      "misconceptions": [
+        {"belief": "FlashAttention and block-sparse FlashAttention are both exact; the sparse one is just faster.", "why_wrong": "Block-sparse applies a fixed mask and is called 'an approximate attention algorithm' in the abstract; its LRA accuracy (59.6) and Path-X accuracy (56.0 vs 61.4) are reported separately because they can differ."},
+        {"belief": "Approximate attention always wins on speed once sequences are long.", "why_wrong": "The paper's crossover is between 512 and 1024 for some methods, and block-sparse FlashAttention is faster than all approximate baselines at every length tested (§4.3)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two kernels are swapped into an already-trained GPT-2 checkpoint with no further training: (a) FlashAttention, (b) Linformer-style low-rank attention. For which one should the validation perplexity be unchanged (up to floating point), and which paper result is the evidence?",
+          "format": "short",
+          "answer": "(a) FlashAttention: Theorem 1 says it returns exactly softmax(QKᵀ)V, and Table 2 shows identical 18.2 ppl across implementations 'as we do not change the model definition'. (b) changes the function, so perplexity changes and the model would normally be retrained.",
+          "why": "Exactness is a property of the output, independent of how the tiles are scheduled; an approximation replaces the attention map itself.",
+          "targets_misconception": "FlashAttention and block-sparse FlashAttention are both exact; the sparse one is just faster."
+        },
+        "transfer": {
+          "q": "Table 3 gives LRA averages: Transformer 59.3 (speedup -), FlashAttention 59.8 (2.4x), Linformer 54.9 (2.5x), Linear Attention 59.6 (2.3x). A reviewer says Linformer is 'as good a trade as FlashAttention since it is also ~2.5x faster'. What does the IO-aware framing plus exactness say is wrong with treating the two 2.5x's as the same kind of number?",
+          "format": "short",
+          "answer": "FlashAttention's 2.4x comes with no change in the function (59.8 vs 59.3 is run-to-run noise on the same model); Linformer's 2.5x is bought by changing the model and costs 4.4 points. One is an implementation speedup that composes with anything; the other is a model change whose accuracy must be re-measured per task.",
+          "why": "An exact kernel's speedup is a property of the schedule (fewer HBM accesses, Theorem 2); an approximation's speedup is a property of a different model, and §1 notes such methods often do not even deliver wall-clock gains.",
+          "varies": "the source of the speedup: schedule versus model change (functional dimension)",
+          "invariant": "the measured speedups are both ~2.5x on the same benchmark",
+          "surface_cue_broken": "kept-but-misleading: equal headline speedups invite equating them",
+          "transfer_distance": "far",
+          "target_kp": "supp-exact-vs-approximate",
+          "contrast_kp": "fa-block-sparse"
+        },
+        "check": {
+          "q": "Three kernels are swapped, without retraining, into a trained model that used standard attention: dense FlashAttention, block-sparse FlashAttention, and Linformer. Which of them are guaranteed to reproduce the original attention outputs up to floating-point error?",
+          "format": "choice",
+          "choices": ["Both FlashAttention kernels, since they share the same tiled kernel", "Dense FlashAttention only, since the other two change the function", "All three, since each one computes softmax attention IO-efficiently", "None of them, since tiling the softmax adds an approximation error"],
+          "answer": "Dense FlashAttention only, since the other two change the function",
+          "why": "Theorem 1: Algorithm 1 returns exactly softmax(QKᵀ)V. Block-sparse FlashAttention applies a fixed block mask and the abstract calls it 'an approximate attention algorithm' (its Path-X accuracy 56.0 differs from dense 61.4); Linformer is a low-rank approximation (LRA 54.9 vs 59.3). The tiled softmax with (m, ℓ) rescaling is exact, not approximate.",
+          "distractor_from": "'Both FlashAttention kernels' encodes 'FlashAttention and block-sparse FlashAttention are both exact'; 'All three' treats IO-efficiency as implying exactness; 'None' encodes the belief that tiling the softmax is an approximation.",
+          "targets_misconception": "FlashAttention and block-sparse FlashAttention are both exact; the sparse one is just faster.",
+          "varies": "drop-in swap of three kernels including block-sparse FlashAttention, instead of comparing LRA speedups (domain)",
+          "invariant": "only an exact kernel leaves the model function unchanged; any mask or low-rank change is a different model",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "What does FlashAttention's forward algorithm return, and how much extra memory does it need?", "answer": "O = softmax(QKᵀ)V exactly; O(N) additional memory beyond inputs and output."},
+          {"q": "Why is GPT-2's perplexity identical across the HuggingFace, Megatron-LM and FlashAttention implementations?", "answer": "Because the model definition is unchanged; FlashAttention computes the same function."},
+          {"q": "Which approximate attention method does the FlashAttention paper name as becoming faster than it beyond sequence length 1K?", "answer": "Linformer.", "layer": "detail"}
+        ],
+        "self_explain": "Why does an exact kernel let the authors attribute the 0.7-perplexity gain in Table 4 to context length alone?"
+      },
+      "presentations": [
+        {"type": "figure", "action": "compare", "ref": "fa:table3"},
+        {"type": "example", "action": "distinguish", "ref": "fa:thm1"}
+      ]
+    }
+  ]
+}

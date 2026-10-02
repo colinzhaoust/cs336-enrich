@@ -1,0 +1,37 @@
+{
+ "external/RoFormer/README.md:L32": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/RoFormer/README.md",
+  "start": 32,
+  "end": 32,
+  "text": "a = tf.einsum('bjhd,bkhd->bhjk', qw, kw)",
+  "sha256": "60db852bc403"
+ },
+ "external/RoFormer/README.md:L22-L23": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/RoFormer/README.md",
+  "start": 22,
+  "end": 23,
+  "text": "cos_pos = repeat_elements(sinusoidal_pos[..., None, 1::2], rep=2, axis=-1)\nsin_pos = repeat_elements(sinusoidal_pos[..., None, ::2], rep=2, axis=-1)",
+  "sha256": "60db852bc403"
+ },
+ "external/RoFormer/README.md:L24-L29": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/RoFormer/README.md",
+  "start": 24,
+  "end": 29,
+  "text": "qw2 = stack([-qw[..., 1::2], qw[..., ::2]], 4)\nqw2 = reshape(qw2, shape(qw))\nqw = qw * cos_pos + qw2 * sin_pos\nkw2 = K.stack([-kw[..., 1::2], kw[..., ::2]], 4)\nkw2 = K.reshape(kw2, K.shape(kw))\nkw = kw * cos_pos + kw2 * sin_pos",
+  "sha256": "60db852bc403"
+ },
+ "external/RoFormer/train.py:L119-L126": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/RoFormer/train.py",
+  "start": 119,
+  "end": 126,
+  "text": "    bert = build_transformer_model(\n        config_path,\n        checkpoint_path=None,\n        model='roformer',\n        with_mlm='linear',\n        ignore_invalid_weights=True,\n        return_keras_model=False\n    )",
+  "sha256": "0e926e0db312"
+ },
+ "README.md:L22-L32": {
+  "path": "/Users/colin/Desktop/cs336_enrich/README.md",
+  "start": 22,
+  "end": 32,
+  "text": "1. Read `VIDEO_LINKS.md` and open the official course page.\n2. Match each recording to the file listed in the course schedule.\n3. Open lecture PDFs directly, or inspect the corresponding `lecture_XX.py`.\n\nExecutable lecture sources are available for lectures 01, 02, 06, 07, 10, 12,\n13, 14, and 17. The other core lecture materials are PDFs.\n\nTo create an EdTrace execution trace locally:\n\n```bash\ncd official/lectures",
+  "sha256": "4c2a93d75d44"
+ }
+}

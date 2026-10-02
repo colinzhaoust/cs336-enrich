@@ -1,0 +1,79 @@
+{
+  "fixture": "rope-shared-shift",
+  "family": "planar-rotation",
+  "scene": "RotaryShiftScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "rope-relative-position"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "16.600000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 1.6,
+      "caption": "unrotated q and k",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 5.1,
+      "caption": "rotate q by m\u03b8, k by n\u03b8",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 9.2,
+      "caption": "shift both positions by s",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s3",
+      "time": 13.3,
+      "caption": "control: shift only q",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s2",
+      "claim": "The dot-product readout does not change while both arrows rotate by the same angle.",
+      "evidence": [
+        "readout",
+        "q",
+        "k"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "The readout changes as soon as only one arrow rotates.",
+      "evidence": [
+        "readout",
+        "q"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

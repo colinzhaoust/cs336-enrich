@@ -1,0 +1,93 @@
+{
+ "algs/GRPO/grpo.py:L169-L171": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 169,
+  "end": 171,
+  "text": "            raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio        = torch.exp(logratio)",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/GRPO/grpo.py:L165-L176": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 165,
+  "end": 176,
+  "text": "        else:\n            # 2. standard PPO\n            # loss = - E[ min(ratio * A, clip(ratio) * A)]\n            # ratio = pi / pi_old\n            raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio        = torch.exp(logratio)\n\n            # 3. compute loss as raw sums, will be normalized later\n            unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()",
+  "sha256": "ae8a5bf841ff"
+ },
+ "rollouts/base.py:L131-L136": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py",
+  "start": 131,
+  "end": 136,
+  "text": "        denom = len(samples) # number of samples in the group\n        if len(samples) > 1:\n            rewards_array = np.array(stats['rewards'])\n            mean_scores = rewards_array.sum() / denom\n            # Bessel's correction (n-1) for unbiased sample std with small n_samples\n            std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))",
+  "sha256": "570ce155411a"
+ },
+ "rollouts/base.py:L151-L155": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py",
+  "start": 151,
+  "end": 155,
+  "text": "            zscore = torch.zeros_like(sample['token_rewards'], dtype=torch.float)\n            zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)\n            sample[\"token_zscores\"] = zscore\n            if self.reward_broadcast:\n                sample[\"token_zscores\"][prompt_len:] = zscore[-1]",
+  "sha256": "570ce155411a"
+ },
+ "algs/GRPO/grpo.py:L313-L316": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 313,
+  "end": 316,
+  "text": "            # zscore is normalized rewards using the number of samples for each proompt (X -mu) / (std + eps)\n            # this is a simple baseline for policy gradients (PPO in this code) as it reflects relative quality\n            # among that prompt’s samples.\n            advs      = micro_batch['zscore'][:, :-1].to(device, non_blocking=True)",
+  "sha256": "ae8a5bf841ff"
+ },
+ "rollouts/base.py:L131-L155": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py",
+  "start": 131,
+  "end": 155,
+  "text": "        denom = len(samples) # number of samples in the group\n        if len(samples) > 1:\n            rewards_array = np.array(stats['rewards'])\n            mean_scores = rewards_array.sum() / denom\n            # Bessel's correction (n-1) for unbiased sample std with small n_samples\n            std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))\n\n        else:\n            # For a single sample, we don't normalize (i.e. advantage is 0 if we subtract mean)\n            # but usually for n=1 we keep the raw reward.\n            mean_scores = 0.0\n            std_scores  = 1.0\n\n        if is_per_token:\n            raise ValueError(\"per token rewards are not supported yet as normalization is done assuming per response rewards\")\n\n        # now update the rewards in the samples\n        for i, sample in enumerate(samples):\n            # sample['reward']: [T] where prompt tokens would get 0\n            # sample['reward'][-1]: means the last token reward\n            zscore = torch.zeros_like(sample['token_rewards'], dtype=torch.float)\n            zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)\n            sample[\"token_zscores\"] = zscore\n            if self.reward_broadcast:\n                sample[\"token_zscores\"][prompt_len:] = zscore[-1]",
+  "sha256": "570ce155411a"
+ },
+ "algs/GRPO/grpo.py:L174-L176": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 174,
+  "end": 176,
+  "text": "            unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/GRPO/grpo.py:L182-L188": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 182,
+  "end": 188,
+  "text": "        if ref_logprobs is not None and self.kl_coeff > 0.0:\n            kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs)\n            # avoid calculating kl for padded tokens.\n            kl_dist = torch.where(mask_bool, kl_dist, torch.zeros_like(kl_dist))\n            kl_sum  = (kl_dist * mask).sum()\n\n        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/GRPO/grpo.py:L165-L188": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 165,
+  "end": 188,
+  "text": "        else:\n            # 2. standard PPO\n            # loss = - E[ min(ratio * A, clip(ratio) * A)]\n            # ratio = pi / pi_old\n            raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio        = torch.exp(logratio)\n\n            # 3. compute loss as raw sums, will be normalized later\n            unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()\n\n        # 4. compute entropy loss (raw sum)\n        if entropies is not None and self.ent_coeff > 0.0:\n            ent_sum = (entropies * mask).sum()\n\n        if ref_logprobs is not None and self.kl_coeff > 0.0:\n            kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs)\n            # avoid calculating kl for padded tokens.\n            kl_dist = torch.where(mask_bool, kl_dist, torch.zeros_like(kl_dist))\n            kl_sum  = (kl_dist * mask).sum()\n\n        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/RL/common.py:L131-L139": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/common.py",
+  "start": 131,
+  "end": 139,
+  "text": "        log_ratio = logprobs - ref_logprobs\n        # pi_ref/pi = exp(ref_logprobs - logprobs)\n        exponent = torch.clamp(ref_logprobs - logprobs, min=-10.0, max=10.0)\n        #if exponent.max().item() > 10.0:\n        #    print(f\"[WARNING] compute_kl_distance: extreme divergence detected, max exponent={exponent.max().item():.1f}\")\n\n        ratio_inv = torch.exp(exponent)\n        kl_dist = log_ratio + ratio_inv - 1\n        return kl_dist",
+  "sha256": "593d1ce02e77"
+ },
+ "algs/GRPO/grpo.py:L198-L202": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 198,
+  "end": 202,
+  "text": "            # approx KL (var-reduced): log(pi/pi_old) + pi_old/pi - 1\n            # logratio = log(pi/pi_old)\n            ratio_inv = torch.exp(-logratio)\n            approx_kl_t = logratio + ratio_inv - 1.0\n            approx_kl = (approx_kl_t.to(dtype=dtype) * mask).sum() / denom",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/GRPO/grpo.py:L98-L101": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 98,
+  "end": 101,
+  "text": "        if self.ref_model_path and self.kl_coeff > 0.0:\n            ref_model = self.load_single_model(model_path=self.ref_model_path, dtype=self.model_dtype, model_name=\"ref\")\n        else:\n            ref_model = None",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/RL/common.py:L120-L139": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/common.py",
+  "start": 120,
+  "end": 139,
+  "text": "    def compute_kl_distance(self, logprobs, ref_logprobs):\n        '''\n            Compute KL divergence between two policies.\n            using var_reduced form:\n            kl = E[log pi/pi_ref] + pi_ref/pi - 1\n        '''\n        # [B, T-1]\n        # Perform KL math in float32 for numerical stability under bf16/fp16.\n        logprobs = logprobs.to(torch.float32)\n        ref_logprobs = ref_logprobs.to(torch.float32)\n\n        log_ratio = logprobs - ref_logprobs\n        # pi_ref/pi = exp(ref_logprobs - logprobs)\n        exponent = torch.clamp(ref_logprobs - logprobs, min=-10.0, max=10.0)\n        #if exponent.max().item() > 10.0:\n        #    print(f\"[WARNING] compute_kl_distance: extreme divergence detected, max exponent={exponent.max().item():.1f}\")\n\n        ratio_inv = torch.exp(exponent)\n        kl_dist = log_ratio + ratio_inv - 1\n        return kl_dist",
+  "sha256": "593d1ce02e77"
+ }
+}

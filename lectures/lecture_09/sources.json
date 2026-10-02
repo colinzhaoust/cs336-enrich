@@ -1,0 +1,129 @@
+{
+  "lecture_09": {
+    "title": "CS336 Spring 2026, Lecture 9: Scaling laws - basics",
+    "kind": "slides",
+    "path": "official/lectures/lecture_09.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_09 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_09.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1; 57 content pages, p58 empty)",
+    "note": "Evidence is the text layer of the slides (lecture_09.txt), split page-by-page by discover_slides.py into discovered.json. Most plots (Kaplan's three L(N)/L(D)/L(C) fits, the Hestness exponent table, the critical-batch S/E curve, the Chinchilla IsoFLOP parabolas and its a/b exponents, the data-repetition formula) are screenshots whose numbers are not in the text layer; each KP's filtering_note says when a number is figure-only. Stacked fractions and bracketed expressions on p17, p19 and p43 are mangled by layout extraction (listed under `dropped` in discovered.json); the reconstructed form is stated in the KP with the mangled text quoted verbatim."
+  },
+  "lecture_09_video": {
+    "title": "CS336 Spring 2026, Lecture 9: Scaling laws - basics (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=Q15rhEWZPQ4",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:six-nd, lecture_02:napkin-training-time); see atlas/lectures/lecture_02/knowledge_points.json. Supplies C = 6ND, which the deck assumes when it writes N_opt and D_opt as functions of C."
+  },
+  "kaplan_2020": {
+    "title": "Scaling Laws for Neural Language Models (Kaplan, McCandlish, Henighan, Brown, et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2001.08361",
+    "note": "Cited on p13, p15, p30 ('Kaplan+ 2021' on p30 is the same paper), p43, p45, p50. The deck prints only the compute-optimal exponents N_opt = C^0.73, D_opt = C^0.27 (p45/p50); the L(N), L(D), L(C) power-law exponents and the L(N,D) bracket form are shown as figure screenshots."
+  },
+  "hoffmann_2022": {
+    "title": "Training Compute-Optimal Large Language Models (Hoffmann et al., 2022; 'Chinchilla')",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2203.15556",
+    "note": "Spelled 'Hoffman' on p45. Source of the three fitting methods (p46-p49) and the 20 tokens/parameter figure (p54). Chinchilla's own fitted exponents (a, b near 0.5) are not printed in the deck's text layer."
+  },
+  "hestness_2017": {
+    "title": "Deep Learning Scaling is Predictable, Empirically (Hestness et al., 2017)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1712.00409",
+    "note": "p10-p11 (earliest large-scale neural scaling study; MT, LM, speech; 'emergence', compute scaling), p14 (logistic-like curve shape), p18 (measured exponents, figure only), p32 (Adam vs SGD on RHNs)."
+  },
+  "banko_brill_2001": {
+    "title": "Scaling to Very Very Large Corpora for Natural Language Disambiguation (Banko & Brill, 2001)",
+    "kind": "paper",
+    "url": "https://aclanthology.org/P01-1005/",
+    "note": "p8: log-linear scaling with data; figure only."
+  },
+  "kolachina_2012": {
+    "title": "Prediction of Learning Curves in Machine Translation (Kolachina et al., 2012)",
+    "kind": "paper",
+    "url": "https://aclanthology.org/P12-1004/",
+    "note": "p9: early test of functional forms; power-law relation between data and downstream (BLEU) performance."
+  },
+  "bahri_2021": {
+    "title": "Explaining Neural Scaling Laws (Bahri, Dyer, Kaplan, Lee, Sharma, 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2102.06701",
+    "note": "p20: intrinsic-dimensionality account of the exponent alpha; the deck calls the argument 'not airtight'."
+  },
+  "hashimoto_2021": {
+    "title": "Model Performance Scaling with Multiple Data Sources (Hashimoto, 2021)",
+    "kind": "paper",
+    "url": "https://proceedings.mlr.press/v139/hashimoto21a.html",
+    "note": "p22: data composition shifts the offset, not the slope (figure attribution '[Hashimoto 2021]')."
+  },
+  "muennighoff_2023": {
+    "title": "Scaling Data-Constrained Language Models (Muennighoff et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2305.16264",
+    "note": "p24 shows the effective-data formula with the legend D' / U_D / R_D / R_D* but names no author in the text layer; the attribution to this paper is the atlas author's identification of the notation (inference)."
+  },
+  "rosenfeld_2020": {
+    "title": "A Constructive Prediction of the Generalization Error Across Scales (Rosenfeld, Rosenfeld, Belinkov, Shavit, 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1909.12673",
+    "note": "p43-p44: joint data-model law Error = n^-alpha + m^-beta + C; fit on small models and small data, predict the rest."
+  },
+  "tay_2022": {
+    "title": "Scaling Laws vs Model Architectures: How does Inductive Bias Influence Scaling? (Tay et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2207.10551",
+    "note": "p31: cross-architecture scaling (figure only)."
+  },
+  "tay_2023": {
+    "title": "Scale Efficiently: Insights from Pre-training and Fine-tuning Transformers (Tay et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2109.10686",
+    "note": "p41: downstream scaling can be much less predictable than upstream loss. Cited as 'Tay et al 2023' on the slide."
+  },
+  "yang_2022": {
+    "title": "Tensor Programs V: Tuning Large Neural Networks via Zero-Shot Hyperparameter Transfer (Yang et al., 2022; muP / muTransfer)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2203.03466",
+    "note": "p40: optimal learning rate drifts with width under standard parametrization; muP makes it transferable."
+  },
+  "yao_2024": {
+    "title": "Yao et al 2024 (cited on p40 next to Yang et al 2022 for scale-aware learning-rate choices)",
+    "kind": "paper",
+    "note": "Only the author-year string appears in the text layer; the deck gives no title or link, so the exact paper is not identified here."
+  },
+  "besiroglu_2024": {
+    "title": "Chinchilla Scaling: A Replication Attempt (Besiroglu, Erdil, Barnett, You, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2404.10102",
+    "note": "p53: data forensics on Chinchilla's Figure 4; re-fitting method 3 brings it in line with methods 1 and 2."
+  },
+  "mccandlish_2018": {
+    "title": "An Empirical Model of Large-Batch Training (McCandlish, Kaplan, Amodei, OpenAI, 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1812.06162",
+    "note": "p38's 'ratio of the trace of the gradient covariance and squared norm of the gradient' is this paper's gradient noise scale; the deck does not name the paper in its text layer (atlas author's identification)."
+  },
+  "gulrajani_2023": {
+    "title": "Likelihood-Based Diffusion Language Models (Gulrajani & Hashimoto, 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2305.18619",
+    "note": "p55: IsoFLOP analysis applied to diffusion LMs."
+  },
+  "abnar_2025": {
+    "title": "Parameters vs FLOPs: Scaling Laws for Optimal Sparsity for Mixture-of-Experts Language Models (Abnar et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.12370",
+    "note": "p55: IsoFLOP analysis applied to MoEs; p35-p36 mention MoE scaling laws without a citation in the text layer."
+  },
+  "cmu_vc_slides": {
+    "title": "CMU 10-701 lecture 16: VC dimension (Eric Xing)",
+    "kind": "reading",
+    "url": "https://www.cs.cmu.edu/~epxing/Class/10701/slides/lecture16-VC.pdf",
+    "note": "p6: classical sample-complexity bounds for finite hypothesis classes; context for 'these are upper bounds, not realized loss values'."
+  }
+}

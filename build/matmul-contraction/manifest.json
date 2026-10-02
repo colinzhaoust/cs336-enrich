@@ -1,0 +1,94 @@
+{
+  "fixture": "matmul-contraction",
+  "family": "tensor-contraction",
+  "scene": "ContractionScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "einsum",
+    "matmul-flops",
+    "backward-2x-forward"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "20.800000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "layout",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 4.4,
+      "caption": "one output cell = one row \u00b7 one column",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 9.0,
+      "caption": "same row, next column",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 13.6,
+      "caption": "next row",
+      "frame": "frames/s3.png",
+      "notices": []
+    },
+    {
+      "id": "s4",
+      "time": 17.0,
+      "caption": "B\u00b7K cells, each 2\u00b7D FLOPs",
+      "frame": "frames/s4.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s5",
+      "time": 18.8,
+      "caption": "total = 2BDK",
+      "frame": "frames/s5.png",
+      "notices": []
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "The contracted axis 'in' is walked on both inputs and does not exist in the output.",
+      "evidence": [
+        "A.row",
+        "W.col",
+        "Y.cell"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s4",
+      "claim": "Total FLOPs = (number of output cells) \u00d7 2D = 2\u00b7B\u00b7D\u00b7K.",
+      "evidence": [
+        "counter"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

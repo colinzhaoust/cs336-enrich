@@ -1,0 +1,3082 @@
+{
+  "lecture": "lecture_05",
+  "title": "GPUs",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are slide pages in official/lectures/lecture_05.pdf (convention lecture_05.pdf:pNN, pages from the form feeds in lecture_05.txt; see discovered.json, produced by discover_slides.py). Because the slides carry most numbers in figures rather than text, the professor's own recap the next lecture (lecture_06.py L39-L141, review_of_gpus) is used as evidence for hardware numbers and anchored as lecture_06.py:Lxx. Cross-lecture prerequisites are listed under external_prerequisites (the validator only checks in-file ids). Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer (pilot, 2026-10-01): anchors with ref 'video:M:SS-M:SS' and role 'spoken' quote the human-made YouTube captions in transcript.json (source lecture_05_video; verified by tools/check_anchors.py, ±8 s). Filtering notes that begin 'Spoken evidence' record what the audio adds to or corrects in the written source. Status 'spoken' marks KPs whose testable content exists only in the audio. Top-level spoken_filtering lists every explicit skip, deferral and aside, reviewed by hand from the full transcript; see research/10-spoken-layer-pilot.md.",
+  "knowledge_points": [
+    {
+      "id": "gpu-vs-cpu-throughput",
+      "label": "GPU vs CPU: many slow threads for throughput, few fast threads for latency",
+      "kind": "comparison",
+      "statement": "A CPU spends its die on control logic and cache so a few threads finish quickly (latency); a GPU spends it on many tiny ALUs so that a huge number of threads make progress together (throughput), at the cost of branching support.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p8",
+            "role": "claim",
+            "quote": "CPUs optimize for a few, fast threads while GPUs optimize for many many threads"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p8",
+            "role": "claim",
+            "quote": "Many tiny compute units (ALUs). ... Much less support for branching (control, cache) ... CPUs optimize for latency (each thread finishes quickly) ... GPUs optimize for throughput (total processed data)"
+          },
+          {
+            "source": "cuda_refresher_blog",
+            "ref": "CUDA refresher: origins of GPU computing",
+            "role": "figure"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:7:45-8:14",
+            "role": "spoken",
+            "quote": "a CPU is designed for quick, serial execution where you have complex branching logic ... a CPU, generally speaking, has really big control units ... In contrast, the GPU is really about throughput."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:8:26-8:48",
+            "role": "spoken",
+            "quote": "even though your tasks don't finish quickly, you're getting large aggregate throughput across all of your tasks"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:5:25-5:44",
+            "role": "spoken",
+            "quote": "making transistors smaller does not necessarily mean that your transistors go faster"
+          }
+        ],
+        "filtering_note": "The slide shows the NVIDIA die-area cartoon (CPU: big control + cache, GPU: sea of ALUs) but gives no numbers for core counts or clock rates; the contrast is qualitative. Pages p5-p7 (Kaplan scaling, Dennard scaling tapped out, '>1000x in 10 years' from Dally's keynote) are motivation and are not made into KPs. Spoken evidence (video 8:26-8:48): the throughput trade is made concrete aloud: a GPU task may be started, paused while another runs, and resumed, so no single task finishes quickly but aggregate throughput is high. The slide gives only the die-area cartoon. Also spoken: why clock scaling stopped (smaller transistors no longer switch faster, 5:25-5:44), which motivates the move to parallel hardware."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "A GPU is a faster CPU, so any program runs faster on it.",
+          "why_wrong": "Each GPU thread is slower and branch-poor; the GPU wins only when there are enough independent threads to keep thousands of ALUs busy. A single dependent chain of work is a CPU workload."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Workload A: one million independent tiny tasks. Workload B: one chain of one million steps where each step needs the previous result. Which one does the GPU beat the CPU on, per slide 8's design split?",
+          "format": "choice",
+          "choices": [
+            "A only",
+            "B only",
+            "both",
+            "neither"
+          ],
+          "answer": "A only",
+          "why": "The GPU optimizes throughput across many threads; B has no parallelism to feed those ALUs, and each GPU thread is individually slower than a CPU thread.",
+          "targets_misconception": "A GPU is a faster CPU, so any program runs faster on it."
+        },
+        "transfer": {
+          "q": "A kernel where each element runs a data-dependent while-loop of unpredictable length runs badly on a GPU. Which resource that slide 8 says GPUs have 'much less support for' explains this?",
+          "format": "short",
+          "answer": "Branching / control logic (and cache): CPUs devote die area to it, GPUs devote it to ALUs.",
+          "why": "Unpredictable control flow is exactly what CPU control hardware (branch prediction, big caches) handles; a GPU's SIMT execution serializes it (see control-divergence)."
+        },
+        "check": {
+          "q": "By slide 8's design split, which of these GPU kernels is the worst fit for the hardware?",
+          "format": "choice",
+          "choices": [
+            "elementwise ReLU, one thread per float",
+            "matmul tiles, one block per output tile",
+            "graph walks whose length differs per thread",
+            "tree reduction summing 1e8 floats"
+          ],
+          "answer": "graph walks whose length differs per thread",
+          "distractor_from": [
+            "'tree reduction summing 1e8 floats' <- misconception: 'A GPU is a faster CPU, so any program runs faster on it.' (inverted: suspects any reduction)",
+            "'matmul tiles, one block per output tile' <- plausible: large and complex looks hard, but it is the GPU's best case",
+            "'elementwise ReLU, one thread per float' <- control option: throughput work with no branching"
+          ],
+          "why": "GPUs spend die area on ALUs rather than control logic, and have 'much less support' for branching (p8). Threads in a warp whose loop lengths differ cannot run in lockstep, so the warp serialises; the other three are uniform throughput work.",
+          "targets_misconception": "A GPU is a faster CPU, so any program runs faster on it.",
+          "varies": "the learner picks the branch-heavy workload from several instead of naming the missing resource",
+          "invariant": "GPUs trade control logic for throughput, so data-dependent control flow runs poorly",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does a CPU optimize for, and what does a GPU optimize for, per the lecture?",
+            "answer": "CPU: latency (each thread finishes quickly). GPU: throughput (total data processed)."
+          },
+          {
+            "q": "What does a GPU trade away, in die area terms, to fit many tiny ALUs?",
+            "answer": "Control logic and cache, i.e. support for branching."
+          }
+        ],
+        "self_explain": "Why would adding more control logic per core reduce a GPU's throughput?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "lecture_05.pdf:p8"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:8:26-8:48",
+          "notice": "single tasks finish slowly; aggregate throughput is what the GPU optimizes"
+        }
+      ]
+    },
+    {
+      "id": "execution-hierarchy",
+      "label": "Threads, warps, blocks, SMs",
+      "kind": "definition",
+      "statement": "A GPU has many SMs that independently execute blocks; a block is a group of threads that runs on one SM with its own shared memory; threads execute in warps of 32 consecutively numbered threads that run the same instruction (SIMT).",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p9",
+            "role": "claim",
+            "quote": "GPUs have many SM (streaming ... multiprocessors) that independently ... execute ‘blocks’ (jobs). ... Each SM further contains many SPs ... (streaming processor) that can ... execute ‘threads’ in parallel"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p11",
+            "role": "claim",
+            "quote": "Blocks: Blocks are groups of threads. Each block runs on a SM w/ its own shared memory. Warp: Threads always execute in a 'warp' of 32 consecutively numbered threads each."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L42-L44",
+            "role": "claim",
+            "quote": "| Accelerator | A100 | H100 | B200 | ... | # SMs | 108 | 132 | 148 |"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L83-L84",
+            "role": "claim",
+            "quote": "threads are grouped into warps (32 threads per warp). Example: thread block has 64 threads => it has 2 warps."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:9:25-9:56",
+            "role": "spoken",
+            "quote": "the basic unit of a GPU is SM, a streaming multiprocessor ... It has streaming processors inside of it that can then execute different threads in parallel"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:14:26-15:09",
+            "role": "spoken",
+            "quote": "a block is guaranteed to run on a single SM ... Threads are going to execute in groups of 32 consecutively numbered threads ... This decreases the overhead of a scheduler deciding which threads to run."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:15:22-15:32",
+            "role": "spoken",
+            "quote": "Is it all threads in a block or all threads in a warp? ... All threads in a warp are going to get executed."
+          }
+        ],
+        "filtering_note": "The slides never state how many SMs a GPU has or how many SPs per SM; the SM counts (108/132/148) come from the lecture 6 table. The 'grid' level (collection of blocks, lecture_06.py:L62) is not named in the slides at all. Why a block is pinned to one SM (shared memory is physically in the SM) is stated on p11 and p12 but not argued. Spoken evidence (video 14:51-15:09): the reason for warps is said only aloud: grouping 32 threads 'decreases the overhead of a scheduler deciding which threads to run'. SIMT is framed as a trade between programmability and efficiency (14:17-14:21), and a student question pins lockstep execution to the warp, not the block (15:22-15:32). Spoken errors not imported: the professor says 'A100 will have 128 SMs' (10:08) and 'A100 might have something 132' (20:53), but later 'the A100 has 108 SMs' (1:08:45). The lecture 6 table (108/132/148 for A100/H100/B200) is correct and stays the evidence. To 'How many warps are in a block?' he answers 'hardware-dependent' (29:55-30:02); in CUDA the programmer sets it (block size ÷ 32, lecture_06.py L84)."
+      },
+      "prerequisites": [
+        {
+          "kp": "gpu-vs-cpu-throughput",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A block can be spread across several SMs to run faster.",
+          "why_wrong": "A block's threads share one SM's shared memory, so the whole block is scheduled on a single SM; parallelism across SMs comes from launching many blocks."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A block has 96 threads. How many warps is that?",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.01,
+          "why": "Warps are fixed groups of 32 consecutively numbered threads: 96 / 32 = 3."
+        },
+        "transfer": {
+          "q": "A block has 100 threads. How many warps does the hardware form, and how many lanes in the last warp sit idle?",
+          "format": "short",
+          "answer": "4 warps; 28 idle lanes",
+          "why": "Warps are always 32 wide: ceil(100/32) = 4, and the last warp holds only 4 live threads. Block sizes that are multiples of 32 avoid the waste."
+        },
+        "check": {
+          "q": "A block has 200 threads. How many lanes sit idle in its last warp? Type only the number.",
+          "format": "number",
+          "answer": "24",
+          "value": 24,
+          "tolerance": 0.01,
+          "why": "Warps are always 32 wide: ceil(200 / 32) = 7 warps, 7 × 32 = 224 lanes, 224 − 200 = 24 idle (p9, p11).",
+          "varies": "block size",
+          "invariant": "threads are grouped into 32-wide warps, and a partial last warp wastes the remaining lanes",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which unit of work does an SM execute independently, and what does that unit get its own of?",
+            "answer": "A block; its own shared memory (so it runs on exactly one SM)."
+          },
+          {
+            "q": "How many threads are in a warp, and what property do they share when executing?",
+            "answer": "32 consecutively numbered threads; they execute the same instruction (SIMT / lockstep)."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "lecture_05.pdf:p11"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "lecture_06.py:L83-L85"
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_05--warps-occupancy",
+          "notice": "Threads are grouped in 32-wide warps: any block size that is not a multiple of 32 leaves hollow (idle) lanes in its last warp."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:14:51-15:09",
+          "notice": "why threads are scheduled in groups of 32 (less scheduler overhead)"
+        }
+      ]
+    },
+    {
+      "id": "gpu-memory-hierarchy",
+      "label": "GPU memory hierarchy: registers, shared/L1, L2, global (HBM)",
+      "kind": "quantity",
+      "statement": "Memory closer to the SM is faster and smaller: registers and L1/shared memory sit inside the SM, L2 is on-die, global memory (HBM) is off-chip; on an H100 the bandwidths fall roughly ~401 TB/s (registers), ~33 TB/s (L1/shared), ~12 TB/s (L2), 3.35 TB/s (HBM) while sizes grow 256 KB, 256 KB, 50 MB, 80 GB.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p10",
+            "role": "claim",
+            "quote": "The closer the memory to the SM, the faster it is – L1 and shared memory is inside the SM. L2 cache is on die, and global memory are the memory chips next to the GPU"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p10",
+            "role": "claim",
+            "quote": "SRAM (shared/cache memory) is much more expensive (100x) but ~ 8x faster than DRAM (Global memory)"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p12",
+            "role": "claim",
+            "quote": "Each thread can access its own register, and shared memory within the block. Information that goes across blocks need to be read/written to global memory (slow)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L46-L54",
+            "role": "claim",
+            "quote": "Register size (per SM) | 256 KB ... shared memory (per SM) | 192 KB | 256 KB ... L2 cache size | 40 MB | 50 MB ... HBM size | 80 GB | 80 GB ... ~116 TB/s | ~401 TB/s ... shared memory bandwidth | ~19 TB/s | ~33 TB/s ... ~5-8 TB/s | ~12 TB/s ... HBM bandwidth | 2 TB/s | 3.35 TB/s"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:11:00-11:20",
+            "role": "spoken",
+            "quote": "the L1 and shared memory, these are very fast. In something like 20 to 30 cycles you, can read and get data from them. ... if you're hitting global memory, that's 10 times slower than the L1 cache."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:12:10-12:30",
+            "role": "spoken",
+            "quote": "if shared memory is so nice, why don't you build a whole chip out of shared memory? ... It's much more expensive, hundreds of times."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:10:15-1:10:33",
+            "role": "spoken",
+            "quote": "SRAM needs to be powered the whole time to hold value, very energy hungry"
+          }
+        ],
+        "filtering_note": "Slide p10's figure presumably carries per-level numbers, but the text layer has only '100x more expensive' and '~8x faster'; the per-level sizes and bandwidths quoted here are from the professor's lecture 6 table. Neither the slides nor lecture 6 give latency numbers (cycles or ns) for any level, so latency is stated only qualitatively ('slow'). The '~8x' on p10 and the ~10x L1/HBM bandwidth ratio in the lecture 6 table are the same order of magnitude but not the same measurement; treat both as rough. Spoken evidence, which corrects the note above: it says neither source gives latency numbers, but in class the professor reads an A100 latency table aloud (video 11:00-11:20): L1/shared memory in about 20-30 cycles, global memory about 10x slower than L1. Also spoken: why chips are not built entirely from SRAM: hundreds of times more expensive, power-hungry, must sit physically close (12:10-12:30, 1:10:15-1:10:33). An all-SRAM design (Groq) suits some inference workloads (12:34-12:46). A GPU's advertised memory (e.g. 'H200 ... 144 gigs') is global memory (11:23-11:34). Constant memory is mentioned and dismissed as rarely used (16:36)."
+      },
+      "prerequisites": [
+        {
+          "kp": "execution-hierarchy",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "L2 cache is inside the SM like L1.",
+          "why_wrong": "Only registers and L1/shared memory are inside the SM; L2 is a shared on-die cache, and global memory is separate HBM chips."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "H100: HBM bandwidth is 3.35 TB/s (lecture 6 table). Slide 10 says L1/shared memory is roughly an order of magnitude faster. About how many TB/s is that, and how many times higher than HBM?",
+          "format": "short",
+          "answer": "~33 TB/s, ~10×",
+          "why": "3.35 × 10 ≈ 33 TB/s. Slide 10 gives the same order of magnitude as '~8x faster than DRAM'. Moving inward, bandwidth rises and capacity falls, but not by a fixed factor per level: about 3.35 (HBM) → 12 (L2) → 33 (L1/shared) → 401 TB/s (registers), while sizes shrink 80 GB → 50 MB → 256 KB.",
+          "targets_misconception": "L2 cache is inside the SM like L1."
+        },
+        "transfer": {
+          "q": "Two thread blocks running on different SMs must exchange partial sums. Which memory level must the exchange go through, and where does it sit in the bandwidth order?",
+          "format": "short",
+          "answer": "Global memory (HBM, possibly served from L2); the slowest level.",
+          "why": "Shared memory is private to a block's SM (p11, p12), so anything crossing blocks is read/written through global memory, which is why cross-block communication is expensive."
+        },
+        "check": {
+          "q": "Threads in different warps of the same thread block must exchange partial sums. What is the fastest memory level through which they can do it?",
+          "format": "choice",
+          "choices": [
+            "registers",
+            "shared memory (L1)",
+            "L2 cache",
+            "global memory (HBM)"
+          ],
+          "answer": "shared memory (L1)",
+          "distractor_from": [
+            "'L2 cache' <- misconception: 'L2 cache is inside the SM like L1.' (treats L2 as the block-local fast level)",
+            "'registers' <- plausible: registers are faster but private to each thread",
+            "'global memory (HBM)' <- the transfer's answer for different blocks, misapplied to one block"
+          ],
+          "why": "A block runs on one SM and has its own shared memory there, so threads in it can communicate through shared memory/L1. Registers are per-thread; only across blocks does the exchange need global memory (p10-p12).",
+          "targets_misconception": "L2 cache is inside the SM like L1.",
+          "varies": "the threads share a block, the inverse of the cross-block case",
+          "invariant": "shared memory is private to a block on its SM; anything wider goes through L2/HBM",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Order the four GPU memory levels from fastest to slowest and say which two live inside the SM.",
+            "answer": "Registers, L1/shared memory, L2, global (HBM). Registers and L1/shared are inside the SM."
+          },
+          {
+            "q": "What are the H100's HBM bandwidth and capacity?",
+            "answer": "3.35 TB/s; 80 GB.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the professor say SRAM is 100x more expensive yet only ~8x faster, and why does that make the hierarchy pyramid-shaped?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "lecture_05.pdf:p10"
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:lecture_05--memory-levels",
+          "notice": "Pick who shares the data: one thread keeps it in registers (401 TB/s), warps of one block meet in shared memory (33 TB/s, about 10× HBM), and different blocks can only meet through L2/HBM (3.35 TB/s)."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:11:00-11:20",
+          "notice": "the latency figures the slide text lacks: 20-30 cycles for L1/shared, ~10x that for global memory"
+        }
+      ]
+    },
+    {
+      "id": "shared-memory-vs-l1",
+      "label": "Shared memory is programmed, L1 is automatic",
+      "kind": "comparison",
+      "statement": "Shared memory and the L1 cache are both SRAM inside the SM, but L1 is a hardware-managed cache of recently used data, while shared memory is a programmer-managed scratchpad that a block's threads explicitly load and reuse. Tiling relies on shared memory.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05_video",
+            "ref": "video:12:54-13:18",
+            "role": "spoken",
+            "quote": "The cache is really just a cache thing that is storing recently accessed data elements. Shared memory is a programmable element that you'll actually interact with, that you can put things in and out of."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:28:02-28:23",
+            "role": "spoken",
+            "quote": "The cache just operates on its own. You don't get to control the L1 cache. ... they're both SRAM"
+          }
+        ],
+        "filtering_note": "Spoken only, in answers to two student questions (video 12:54-13:18 and 28:02-28:23). Slide p10 puts 'L1 and shared memory' together inside the SM, and p12 says threads access shared memory within the block, but neither says one is controlled by the programmer and the other is not. That difference is why tiling (p41) can 'load into shared memory' at all. The professor hedges on the physics ('if I remember right, they're both SRAM')."
+      },
+      "prerequisites": [
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "teaching-order",
+          "note": "Where L1/shared sit relative to L2 and HBM."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The L1 cache will keep a reused tile resident automatically, so a kernel never needs to stage data itself.",
+          "why_wrong": "L1 is not under program control and may evict the tile; guaranteed reuse across a block's threads requires an explicit load into shared memory."
+        },
+        {
+          "belief": "Shared memory is shared by all blocks on the GPU.",
+          "why_wrong": "It belongs to one SM and is visible only within a block; data crossing blocks goes through global memory (p12)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A matmul kernel wants every thread in a block to reuse the same 64×64 tile of A many times. Where does the kernel author explicitly put that tile?",
+          "format": "choice",
+          "choices": [
+            "L1 cache",
+            "Shared memory",
+            "L2 cache",
+            "Registers of one thread"
+          ],
+          "answer": "Shared memory",
+          "why": "Shared memory is the programmable on-SM SRAM the block's threads can all address; L1 and L2 are caches you do not control, and one thread's registers are private.",
+          "targets_misconception": "The L1 cache will keep a reused tile resident automatically, so a kernel never needs to stage data itself.",
+          "distractor_from": "automatic-cache belief; thread-private register confusion"
+        },
+        "transfer": {
+          "q": "A kernel reads each element of x exactly once, by exactly one thread, with consecutive threads reading consecutive addresses. What is the sensible memory choice?",
+          "format": "choice",
+          "choices": [
+            "Stage it through shared memory first",
+            "Read it directly from global memory",
+            "Copy it into constant memory first",
+            "Offload it to host (CPU) memory"
+          ],
+          "answer": "Read it directly from global memory",
+          "why": "Shared memory pays off through reuse across threads. With no reuse, staging adds a copy and saves nothing; a coalesced direct read is already the cheapest path.",
+          "varies": "reuse count (many → one)",
+          "invariant": "shared memory is an explicit staging area whose benefit is reuse",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A block loads one 64×64 tile into shared memory once, and each element of the tile is then used 64 times by the block's threads. How many global-memory reads per element does this save compared with fetching from global memory on every use?",
+          "format": "number",
+          "answer": "63",
+          "tolerance": 0.02,
+          "why": "64 uses would be 64 global reads; staging costs 1 global read plus 64 shared-memory reads, so 63 global reads are saved per element.",
+          "varies": "surface: counting reads instead of choosing a memory",
+          "invariant": "explicit staging converts repeated global reads into one"
+        },
+        "retrieval": [
+          {
+            "q": "Name the key difference between the L1 cache and shared memory on a GPU.",
+            "answer": "L1 is a hardware-managed cache you cannot control; shared memory is programmer-managed and explicitly loaded by a block's threads. Both are SRAM inside the SM."
+          },
+          {
+            "q": "Why does a tiled matmul use shared memory rather than relying on L1?",
+            "answer": "Reuse must be guaranteed and shared across the block's threads; only shared memory can be explicitly loaded and kept resident for the tile's lifetime."
+          }
+        ],
+        "self_explain": "Why would a hardware cache be a poor substitute for an explicit tile in shared memory, even though both are equally fast SRAM?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_05--memory-levels",
+          "notice": "Tick 'stage the tile in shared memory': global reads per element fall from k to 1, so the saving is k − 1; with a single use (k = 1) staging saves nothing."
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:12:54-13:18",
+          "notice": "who controls each memory: the cache 'operates on its own', shared memory you put things in and out of"
+        }
+      ]
+    },
+    {
+      "id": "tpu-matmul-unit-granularity",
+      "label": "TPU vs GPU: few big matrix units vs many small",
+      "kind": "comparison",
+      "statement": "TPUs and GPUs share one blueprint (matrix-multiply units, vector units, slow HBM plus fast local memory) but differ in granularity: a TPU has a few large matrix units (about 8, vs about 528 tensor cores on an H100-class GPU), so it runs efficiently only on big matmuls, while the GPU's many small units are more flexible.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05_video",
+            "ref": "video:20:53-21:19",
+            "role": "spoken",
+            "quote": "A TPU will only have two units. ... will have 528 matrix multiply units, whereas a TPU will have just 8."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:21:23-22:03",
+            "role": "spoken",
+            "quote": "the TPU is relying on much bigger, smaller numbers of matrix multiply units ... Because the tensor core refuses to accept anything smaller than a 64-dimensional input."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:17:51-18:23",
+            "role": "spoken",
+            "quote": "TPUs are very similar to GPUs at a high level. ... And they have much bigger matrix multiply units."
+          }
+        ],
+        "filtering_note": "Spoken only for the testable part. Slide p13 has the count comparison ('A GPU has more SMs, TPUs has fewer TCs (but similar matmul perf)') and the path note treated p13-p14 as context. The consequence, that few big units lock you into big matmuls, comes only in the audio, with the professor's own example: a batch-size sweep in his paper 'stops at 64' because the unit 'refuses to accept anything smaller than a 64-dimensional input' (21:46-22:03). Real hardware pads small operands rather than refusing them, so 'refuses' is best read as 'cannot use efficiently'. The 132 SMs / 528 tensor cores he attributes to 'A100' (20:53) are H100 numbers (132 × 4); an A100 has 108 SMs and 432 tensor cores. The statement says 'H100-class'. Also spoken: 'tensor core' names a whole processor on a TPU but a matmul unit on a GPU (20:30-20:53), and the biggest TPU/GPU difference is networking, not covered (19:02-19:21)."
+      },
+      "prerequisites": [
+        {
+          "kp": "execution-hierarchy",
+          "basis": "teaching-order",
+          "note": "SMs as the GPU's units."
+        },
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "teaching-order",
+          "note": "Same HBM-plus-fast-local-memory structure on both chips."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Two chips with equal peak matmul FLOP/s perform equally on any matmul.",
+          "why_wrong": "Peak assumes operands big enough to fill each unit; a chip with a few huge units wastes most of each unit on small operands."
+        },
+        {
+          "belief": "A 'tensor core' is the same thing on a TPU and on a GPU.",
+          "why_wrong": "On a TPU it is a whole processor (the SM analogue); on a GPU it is the matrix-multiply circuit inside an SM (the MXU analogue)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A GPU and a TPU have similar peak matmul FLOP/s. You run a matmul whose batch dimension is only 16. Which chip is more likely to run far below its peak?",
+          "format": "choice",
+          "choices": [
+            "The TPU, whose few large matrix units need big operands",
+            "The GPU, because it has more units to coordinate",
+            "Neither, since equal peak FLOP/s means equal utilization",
+            "Both equally, since small matmuls are memory-bound"
+          ],
+          "answer": "The TPU, whose few large matrix units need big operands",
+          "why": "Each TPU matrix unit is large; a 16-wide operand fills a small fraction of it. The GPU's many small tensor cores can be spread over small problems.",
+          "targets_misconception": "Two chips with equal peak matmul FLOP/s perform equally on any matmul.",
+          "distractor_from": "coordination-overhead guess; equal-peak belief; memory-bound blanket answer"
+        },
+        "transfer": {
+          "q": "You design an accelerator with a fixed matmul FLOP/s budget, built either as 4 units of 256×256 or as 256 units of 32×32. Which design wastes less on a workload made of many independent 32×32 matmuls?",
+          "format": "choice",
+          "choices": [
+            "4 units of 256×256",
+            "256 units of 32×32",
+            "They waste the same",
+            "It depends only on memory bandwidth"
+          ],
+          "answer": "256 units of 32×32",
+          "why": "Many small units map one small matmul each; a 256×256 unit given a 32×32 problem uses (32/256)² of its array.",
+          "varies": "from comparing real chips to choosing a design",
+          "invariant": "utilization = operand size ÷ unit size, capped at 1",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A matrix unit works on operands in 128-wide blocks and pads anything smaller. A matmul whose batch dimension is 16 keeps what fraction of that unit's work useful? Give a decimal.",
+          "format": "number",
+          "answer": "0.125",
+          "tolerance": 0.05,
+          "why": "16 of every 128 rows are real; the other 112 are padding: 16/128 = 0.125.",
+          "varies": "surface: a padding fraction instead of a chip choice",
+          "invariant": "utilization = operand size ÷ unit size"
+        },
+        "retrieval": [
+          {
+            "q": "What is the main hardware difference between TPU and GPU matmul units, and what does it cost the TPU?",
+            "answer": "A TPU has a few large matrix units, a GPU many small tensor cores; the TPU is efficient only on big matmuls, so small operands waste it (less flexible)."
+          },
+          {
+            "q": "What does 'tensor core' mean on a TPU and on a GPU?",
+            "answer": "On a TPU, a whole processor (the SM analogue); on a GPU, the matrix-multiply unit inside an SM.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does putting the same FLOP budget into fewer, larger units reduce flexibility?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "compare",
+          "ref": "video:21:23-22:03",
+          "notice": "the cost of a few big matrix units: a batch sweep that cannot go below 64"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_05--matrix-unit-fill",
+          "notice": "Shrink the batch rows m below the unit size: grey padding grows and the useful fraction falls as m/U; on many 32×32 matmuls the 256 small units stay full while the 4 big ones use 1/64 of their arrays."
+        }
+      ]
+    },
+    {
+      "id": "tensor-cores-matmul-special",
+      "label": "Tensor cores make matmuls >10x faster than other FLOPs",
+      "kind": "rule-of-thumb",
+      "statement": "Since Volta/Turing, GPUs contain tensor cores, dedicated matrix-multiply circuits, so a FLOP inside a matmul is >10x cheaper than a FLOP in any other floating-point op; matmuls are fast and special, everything else is not.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p17",
+            "role": "claim",
+            "quote": "Tensor cores (introduced in V, T series) are specialized matrix multiplication circuits. Matmuls are >10x faster than other floating point ops!"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p16",
+            "role": "claim",
+            "quote": "Early days of NVIDIA GPUs – programmable shaders. Researchers hacked this to do matmuls"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p26",
+            "role": "claim",
+            "quote": "Lots of operations in modern GPUs are accelerated via low / mixed precision operations ... Tensor cores"
+          },
+          {
+            "source": "stosic_tensor_cores_tutorial",
+            "ref": "tensor core precision table",
+            "role": "figure"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:24:35-25:31",
+            "role": "spoken",
+            "quote": "as of the V100, NVIDIA decided here is a piece of hardware that will do your matrix multiplies for you. ... matmuls became the one privileged operation in machine learning ... any near future machine learning architecture that we see that scales with compute is going to have a matrix multiply in it"
+          }
+        ],
+        "filtering_note": "The '>10x' is stated without the datasheet numbers behind it; the figure on p17 (a spec table) is not in the text layer. Lecture 2 gives H100 numbers that make it concrete: ~990 TFLOP/s bf16 tensor-core vs ~67 TFLOP/s fp32 non-tensor. The p26 table of which precisions tensor cores accept is shown, not explained. Spoken evidence (video 25:08-25:31): the professor draws a design consequence the slide leaves out: because tensor cores make matmul FLOPs more than 10x cheaper, any near-future architecture that scales with compute will be built around matrix multiplies."
+      },
+      "prerequisites": [
+        {
+          "kp": "execution-hierarchy",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:mfu",
+          "basis": "author-inference",
+          "note": "Lecture 2 introduced the H100 peak FLOP/s figures that quantify the >10x."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "All FLOPs on a GPU cost the same; total FLOP count predicts runtime.",
+          "why_wrong": "A FLOP inside a matmul runs on tensor cores and is >10x cheaper than a FLOP in a softmax or activation, so a 1%-of-FLOPs non-matmul op can take a large share of the time."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "An H100 runs a bf16 matmul on tensor cores at ≈ 990 TFLOP/s (lecture 2 numbers). A kernel of pure fp32 elementwise ops gets ≈ 67 TFLOP/s. If a layer's FLOPs are 99% matmul and 1% elementwise, what fraction of its compute time is the elementwise part, roughly?",
+          "format": "number",
+          "answer": "0.13",
+          "tolerance": 0.2,
+          "why": "Time ∝ FLOPs / rate: 0.01/67 over (0.99/990 + 0.01/67) = 1% × 15 / (99% × 1 + 1% × 15) ≈ 0.13. The non-matmul 1% costs ~13% of the time because its path is ~15× slower (990 / 67), consistent with slide 17's '>10x'. Part of the gap is precision (bf16 vs fp32) and part is the dedicated circuit.",
+          "targets_misconception": "All FLOPs on a GPU cost the same; total FLOP count predicts runtime."
+        },
+        "transfer": {
+          "q": "In an attention layer the softmax is about 1% of the FLOPs, the two matmuls the rest. Why can the softmax still take a large fraction of the wall-clock time, per slide 17's rule?",
+          "format": "short",
+          "answer": "Softmax FLOPs run on the ordinary (non-tensor-core) units, >10x slower per FLOP, and it is memory-bound besides; 1% of FLOPs at >10x the cost per FLOP is >10% of the time.",
+          "why": "Tensor cores only accelerate matrix multiplies; everything else pays full price. This is one motivation for fusing softmax into FlashAttention."
+        },
+        "check": {
+          "q": "Non-matmul ops run 16x slower per FLOP than tensor-core matmuls. What is the largest fraction of a layer's FLOPs they can be if they are to take no more than half of the layer's compute time? Give a decimal; type only the number.",
+          "format": "number",
+          "answer": "0.059",
+          "value": 0.0588,
+          "tolerance": 0.03,
+          "why": "Let f be the non-matmul FLOP fraction. Time is proportional to 16f for them and (1 − f) for matmuls. Equal halves: 16f = 1 − f, so f = 1/17 ≈ 0.059. Under 6% of the FLOPs can be half the time, because tensor cores only speed up matmuls (p17).",
+          "targets_misconception": "All FLOPs on a GPU cost the same; total FLOP count predicts runtime.",
+          "varies": "the inverse direction: a time budget is given and the FLOP share is asked",
+          "invariant": "runtime is weighted by per-FLOP cost, and matmul FLOPs are much cheaper than other FLOPs",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What hardware unit makes matmuls 'special' on modern GPUs, and roughly how much faster than other floating-point ops does the lecture say they are?",
+            "answer": "Tensor cores; >10x."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "lecture_05.pdf:p17"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:24:48-25:31",
+          "notice": "the architectural consequence: anything that scales with compute will be built around matmuls"
+        }
+      ]
+    },
+    {
+      "id": "memory-wall-roofline",
+      "label": "Memory wall: compute outgrows bandwidth, so avoid being memory-bound",
+      "kind": "mechanism",
+      "statement": "FLOP/s has grown faster than memory bandwidth across GPU generations, so the roofline kink keeps moving right and more operations become memory-bound; the whole of Part 2 is about raising arithmetic intensity so compute units stay fed.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p18",
+            "role": "claim",
+            "quote": "FLOPs scale faster than memory – it's hard to keep our compute units fed with data!"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p21",
+            "role": "claim",
+            "quote": "The roofline model ... Key to this section: how do we avoid being memory bound?"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p30",
+            "role": "claim",
+            "quote": "Think of a GPU like a factory – inputs come from a warehouse (memory) and is processed at a factory ... Compute scales up, memory doesn't"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p19",
+            "role": "claim",
+            "quote": "Compute (and esp matmuls) have scaled faster than memory ... We have to respect the memory hierarchy to make things go fast."
+          },
+          {
+            "source": "memory_wall_blog",
+            "ref": "AI and Memory Wall figure",
+            "role": "figure"
+          },
+          {
+            "source": "horace_brrr",
+            "ref": "factory/warehouse analogy",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:25:52-26:28",
+            "role": "spoken",
+            "quote": "Green is our memory bandwidth. ... Blue is parallelism. This is how fast we can connect different GPU devices. That's also going very slowly. ... we're going to see a bigger and bigger gap between compute and memory."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:31:24-32:09",
+            "role": "spoken",
+            "quote": "up until a certain point, we will be memory-limited ... there's a memory-bound region, which is diagonal, and then a compute-bound region, which is flat"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:47:55-48:07",
+            "role": "spoken",
+            "quote": "So think of a GPU as a factory. ... If you scale up your compute, you're going to be bottlenecked by your little belt conveyor."
+          }
+        ],
+        "filtering_note": "The memory-wall plot (p18) and the roofline (p21) are figures with no numbers in the text layer; the growth rates are not quoted. The roofline itself is treated as already known from lecture 2 (arithmetic intensity, accelerator intensity ≈ 295 FLOP/byte for H100 bf16), which the slide only names. Spoken evidence (video 25:52-26:43): the professor reads the memory-wall figure aloud. Compute (gray) grows fast; memory bandwidth (green) and interconnect between GPUs (blue) both grow slowly. The interconnect curve is the seed of the parallelism lectures. Aside (28:56-29:47): inference is even more memory-bound than training, which has led to prefill/decode disaggregation across different chips."
+      },
+      "prerequisites": [
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "tensor-cores-matmul-special",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "The slide assumes the learner knows FLOPs/byte and the memory- vs compute-bound test."
+        },
+        {
+          "kp": "lecture_02:roofline",
+          "basis": "author-inference",
+          "note": "p21 shows the roofline without re-deriving it."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A new GPU generation with more FLOP/s makes every kernel proportionally faster.",
+          "why_wrong": "Bandwidth grows more slowly, so memory-bound kernels speed up only by the bandwidth ratio, and some previously compute-bound kernels drop below the new, higher kink."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Over one GPU generation, peak FLOP/s grows 10x and HBM bandwidth grows 3x. On the roofline, which way does the kink (accelerator intensity) move?",
+          "format": "choice",
+          "choices": [
+            "left",
+            "right",
+            "stays put"
+          ],
+          "answer": "right",
+          "why": "Accelerator intensity = FLOP/s ÷ bytes/s rises by 10/3 ≈ 3.3x, so an op needs 3.3x more FLOPs per byte to stay compute-bound. This is the memory wall on slide 18.",
+          "targets_misconception": "A new GPU generation with more FLOP/s makes every kernel proportionally faster."
+        },
+        "transfer": {
+          "q": "An elementwise kernel has arithmetic intensity 0.25 FLOP/byte on an H100 whose bf16 kink is ~295 FLOP/byte (lecture 2). What fraction of peak FLOP/s can it reach at best?",
+          "format": "number",
+          "answer": "0.00085",
+          "tolerance": 0.3,
+          "why": "min(1, 0.25/295) ≈ 8.5e-4, under 0.1% of peak. That is why every trick in Part 2 (fusion, tiling, low precision, recompute) is about bytes, not FLOPs."
+        },
+        "retrieval": [
+          {
+            "q": "In Horace He's factory analogy, what is the warehouse and what is the factory, and which one 'doesn't scale'?",
+            "answer": "Warehouse = memory, factory = compute units; memory (bandwidth) is the one that doesn't scale."
+          },
+          {
+            "q": "What single question does the lecture pose as the key to writing fast GPU code?",
+            "answer": "How do we avoid being memory bound?"
+          }
+        ],
+        "self_explain": "Why does a faster factory make the road from the warehouse a bigger problem, not a smaller one?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "lecture_05.pdf:p18"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_05--roofline-wall",
+          "notice": "Raise peak FLOP/s with bandwidth fixed: the kink slides right (10× FLOP/s with 3× bandwidth moves it 3.3×), and at only 2× FLOP/s the 1024 matmul already drops under the sloped, memory-bound roof."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:25:52-26:43",
+          "notice": "three curves: compute grows fast; memory bandwidth and GPU-to-GPU interconnect grow slowly"
+        }
+      ]
+    },
+    {
+      "id": "control-divergence",
+      "label": "Control divergence: branches inside a warp serialize",
+      "kind": "mechanism",
+      "statement": "All 32 threads of a warp execute the same instruction, so if threads in one warp take different branches the hardware runs each branch in turn with the other threads masked off; conditionals are legal but cost the sum of the branch lengths.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p23",
+            "role": "claim",
+            "quote": "GPUs operate in a SIMT model – every thread in a warp is executing the same instruction ... Conditionals are fine, but lead to significant overhead from the execution model"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p22",
+            "role": "claim",
+            "quote": "1. Control divergence (not a memory bottleneck..)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L86-L89",
+            "role": "claim",
+            "quote": "All threads within a warp must execute same instructions in lockstep on an SM. Control divergence: if different threads in a warp need to execute different instructions (if A, else B), must be done sequentially (bad) | AAAAAAAAA....................... | .........BBBBBBBBBBBBBBBBBBBBBBB |"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:33:28-34:10",
+            "role": "spoken",
+            "quote": "every thread will execute both If and the Else. But if you're not part of If branch, you will just mask out that computation."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:34:21-34:38",
+            "role": "spoken",
+            "quote": "if you have a ReLU, you'll often find you're multiplying with zeros or multiplying with masks instead of doing an If statement"
+          }
+        ],
+        "filtering_note": "The slide flags divergence as the one non-memory item in the list and moves on; the masking mechanism (inactive lanes idle while the other branch executes) is only drawn, and appears in words in lecture 6. Neither source quantifies the overhead beyond 'significant'. Spoken evidence (video 34:21-34:44): the practical fix appears only in the audio: GPU code replaces branches with arithmetic masks (a ReLU written as a multiply by a 0/1 mask), because the multiply runs for all lanes at once while an if/else issues both sides."
+      },
+      "prerequisites": [
+        {
+          "kp": "execution-hierarchy",
+          "basis": "teaching-order",
+          "note": "Needs the warp = 32 lockstep threads definition."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "If only 8 of 32 threads take the slow branch, the warp pays 8/32 of its cost.",
+          "why_wrong": "The warp executes the branch as a whole with 24 lanes masked; time is the branch's full length, and then the other branch's full length too."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In one warp, 8 threads take branch A (10 instructions) and 24 threads take branch B (10 instructions). How many instruction-slots does the warp spend on the if/else?",
+          "format": "number",
+          "answer": "20",
+          "tolerance": 0.01,
+          "why": "SIMT runs A for the whole warp (24 lanes masked), then B for the whole warp (8 lanes masked): 10 + 10 = 20, not 10 and not a lane-weighted average.",
+          "targets_misconception": "If only 8 of 32 threads take the slow branch, the warp pays 8/32 of its cost."
+        },
+        "transfer": {
+          "q": "Same if/else, but the condition depends only on the block index, so every thread in a given warp takes the same side. Instruction-slots per warp now?",
+          "format": "number",
+          "answer": "10",
+          "tolerance": 0.01,
+          "why": "Divergence is a within-warp phenomenon; if a whole warp agrees, only one branch is issued. Arranging data so warps agree is the standard fix."
+        },
+        "retrieval": [
+          {
+            "q": "What happens, step by step, when threads within one warp disagree on an if/else?",
+            "answer": "The warp executes one branch with the disagreeing lanes masked off, then the other branch with the first group masked; the two run sequentially."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "example",
+          "action": "trace",
+          "ref": "lecture_06.py:L87-L89",
+          "steps": [
+            {
+              "do": "Warp of 32: 8 threads take branch A, 24 take branch B, each branch 10 instructions. The warp first issues A's 10 instructions with the B lanes masked off (the snippet's first row: A lanes busy, dots idle).",
+              "why": "All threads of a warp execute the same instruction in lockstep (SIMT), so A cannot run on 8 lanes while B runs on the other 24."
+            },
+            {
+              "do": "Then it issues B's 10 instructions with the A lanes masked off (the second row).",
+              "why": "The lanes that sat idle get their turn; the two branches run one after the other, 'sequentially (bad)'."
+            },
+            {
+              "do": "Total: 10 + 10 = 20 instruction slots, as if every thread had run both branches.",
+              "why": "The cost is the sum of the branch lengths whatever the split; 8 of 32 lanes on A does not make A cost 8/32."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:34:21-34:44",
+          "notice": "the fix: multiply by a mask instead of branching"
+        }
+      ]
+    },
+    {
+      "id": "low-precision-intensity",
+      "label": "Low precision halves the bytes, not the FLOPs",
+      "kind": "quantity",
+      "statement": "For an elementwise op the FLOPs are fixed but bytes moved scale with element size, so going fp32 → fp16 halves the traffic: the slide's ReLU example goes from 8 bytes/FLOP to 4 bytes/FLOP, and tensor cores additionally run low-precision matmuls faster.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p25",
+            "role": "computation",
+            "quote": "(Float 32 case) Memory access: 1 read (x), 1 write (if x < 0), float 32 = 4 bytes per op. Operations: 1 comparison op, 1 FLOP. Intensity: 8 bytes / FLOP ... (Float 16) ... float 16 = 2 bytes per op ... Intensity: 4 bytes / FLOP"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p24",
+            "role": "claim",
+            "quote": "If you have fewer bits, you have fewer bits to move"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p26",
+            "role": "claim",
+            "quote": "Lots of operations in modern GPUs are accelerated via low / mixed precision operations"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:35:42-36:13",
+            "role": "spoken",
+            "quote": "If I'm on float 32, I need to do one read to read my number. ... total of 8 bytes for my memory access ... Sorry, this is the inverse of arithmetic intensity."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:35:05-35:32",
+            "role": "spoken",
+            "quote": "Actually, a pretty nontrivial part of this is number representations."
+          }
+        ],
+        "filtering_note": "Slide 25 writes intensity as bytes/FLOP, the inverse of lecture 2's FLOPs/byte; the direction of 'better' flips accordingly (lower bytes/FLOP is better). The slide also says the write happens only 'if x < 0' yet counts read+write = 8 bytes unconditionally, i.e. it takes the worst case. Slides p27-p29 (MXFP8: E4M3 elements with E8M0 scale factors 1 per 32; MXFP4 with 1 per 16 scaling; transposes must be re-quantized) are frontier material stated without mechanism and are not made into a KP. Spoken evidence: the professor flags the slide's bytes/FLOP inversion himself ('Sorry, this is the inverse of arithmetic intensity', 36:11), confirming the note above. He attributes 'a pretty nontrivial part' of the ~1000x GPU FLOP curve to smaller number formats (35:05-35:32). The mechanics of low-precision matmuls and why the speedup is less than 2x are split out as spoken KPs (tensor-core-fp32-accumulate, low-bit-speedup-diluted)."
+      },
+      "prerequisites": [
+        {
+          "kp": "memory-wall-roofline",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:dtype-bytes",
+          "basis": "author-inference",
+          "note": "Bytes per element for fp32/fp16/bf16/fp8."
+        },
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Low precision only helps because tensor cores compute bf16 faster than fp32.",
+          "why_wrong": "For memory-bound (elementwise) ops the FLOP rate is irrelevant; the gain is that half the bytes cross the memory bus. Slide 25 shows this with ReLU, which has no matmul at all."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Slide 25 counts elementwise ReLU in fp32 as 1 read + 1 write of 4 bytes for 1 FLOP, i.e. 8 bytes/FLOP. Run the same op in bf16. Bytes per FLOP?",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.01,
+          "why": "FLOPs unchanged (1 compare), bytes per element halve (2 + 2). Precision changes traffic, not work.",
+          "targets_misconception": "Low precision only helps because tensor cores compute bf16 faster than fp32."
+        },
+        "transfer": {
+          "q": "A memory-bound elementwise kernel takes 10 µs in fp32 on a fixed bandwidth. Estimate its time in bf16, assuming it stays memory-bound.",
+          "format": "number",
+          "answer": "5",
+          "tolerance": 0.1,
+          "why": "Time = bytes ÷ bandwidth; bytes halve, so time halves, regardless of compute speed. If the kernel were compute-bound instead, the answer would depend on the ALU rate for bf16."
+        },
+        "retrieval": [
+          {
+            "q": "In the lecture's ReLU example, how many bytes per FLOP are moved in fp32 and in fp16?",
+            "answer": "8 bytes/FLOP in fp32; 4 bytes/FLOP in fp16.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which quantity in an elementwise op does switching to lower precision change, and which does it leave alone?",
+            "answer": "Changes bytes moved; leaves the FLOP count alone."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_05.pdf:p25",
+          "faded": false,
+          "steps": [
+            {
+              "do": "fp32 ReLU, per element: 1 read of x and 1 write of the result, 4 bytes each: 8 bytes.",
+              "why": "An elementwise op has no reuse: every element comes from global memory once and goes back once (p25 counts the write)."
+            },
+            {
+              "do": "Work per element: 1 comparison, counted as 1 FLOP.",
+              "why": "The FLOP count depends on the operation, not on how many bits each number has."
+            },
+            {
+              "tex": "\\frac{8\\ \\text{bytes}}{1\\ \\text{FLOP}} = 8\\ \\text{bytes/FLOP}",
+              "do": "fp32 intensity in the slide's bytes-per-FLOP form.",
+              "why": "Slide 25 writes intensity as bytes/FLOP, the inverse of lecture 2's FLOPs/byte, so lower is better here."
+            },
+            {
+              "do": "fp16: the same read and write at 2 bytes each, 4 bytes for the same 1 FLOP: 4 bytes/FLOP.",
+              "why": "Halving the element size halves the bytes while the work stays fixed: precision changes traffic, not FLOPs."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_05--roofline-wall",
+          "notice": "Pick ReLU and switch fp32 → bf16: bytes per FLOP fall from 8 to 4, the dot moves right along the sloped roof and the time halves, while the FLOP count and the roof stay put."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:35:05-35:32",
+          "notice": "how much of the GPU FLOP growth comes from smaller number formats"
+        }
+      ]
+    },
+    {
+      "id": "tensor-core-fp32-accumulate",
+      "label": "Low-precision matmuls accumulate in fp32",
+      "kind": "mechanism",
+      "statement": "A low-precision tensor-core matmul downcasts its inputs before multiplying but accumulates the partial sums in full precision (fp32) and may emit fp32 outputs. The precision given up is in the operands, not in the running sum.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05_video",
+            "ref": "video:36:34-36:57",
+            "role": "spoken",
+            "quote": "you're actually not going to keep everything in low precision. You're going to downcast before you take your product. And when you sum up your partial summands in your matrix multiply, you're going to do this in full precision. And then you might emit your outputs or your results in FP32."
+          }
+        ],
+        "filtering_note": "Spoken only (video 36:34-36:57). Slide p26 shows a tensor-core precision table as an image with no text, and lecture 2 gives only 'bf16 for parameters, activations, gradients'. Neither says the accumulator stays fp32. The professor adds that the craft of low precision is choosing a format per operation: matmul weights and activations low, softmax and exponentials probably fp32 (37:05-37:24), found by 'slow, incremental, empirical work' (37:24-37:51). The bf16 swamping arithmetic in the prompts (a bf16 running sum of ones stops at 256) is the author's illustration of why."
+      },
+      "prerequisites": [
+        {
+          "kp": "low-precision-intensity",
+          "basis": "teaching-order",
+          "note": "Low precision as fewer bytes to move."
+        },
+        {
+          "kp": "tensor-cores-matmul-special",
+          "basis": "author-inference",
+          "note": "Tensor cores are the hardware doing the mixed-precision multiply-accumulate."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A bf16 matmul does all its arithmetic in bf16, including the running sums.",
+          "why_wrong": "Only the operands are bf16; products are summed in an fp32 accumulator, which is what keeps long dot products accurate."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A bf16 tensor-core matmul computes dot products of length K = 8192. In what precision are the partial sums accumulated?",
+          "format": "choice",
+          "choices": [
+            "bf16, same as the inputs",
+            "fp32",
+            "fp8, to save bandwidth",
+            "fp64"
+          ],
+          "answer": "fp32",
+          "why": "Inputs are downcast; the partial summands are added in full precision and the result may be emitted in fp32.",
+          "targets_misconception": "A bf16 matmul does all its arithmetic in bf16, including the running sums.",
+          "distractor_from": "operand precision = accumulator precision; lower-is-better guess; over-precision guess"
+        },
+        "transfer": {
+          "q": "Why it matters. bf16 keeps 8 significant bits, so between 256 and 512 representable values are 2 apart. If you add 4096 copies of 1.0 using a bf16 accumulator (round to nearest even after each add), what value does the sum end at?",
+          "format": "number",
+          "answer": "256",
+          "tolerance": 0.01,
+          "why": "At 256, adding 1 gives 257, a tie between 256 and 258 that rounds to even (256). The sum is stuck at 256 instead of 4096, which is why the accumulator is fp32.",
+          "varies": "accumulator precision (fp32 → bf16)",
+          "invariant": "operands are exactly representable 1.0s",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "Same 4096 ones, but accumulated in fp32 as tensor cores do, and the final result then cast to bf16 for output. What value is stored?",
+          "format": "number",
+          "answer": "4096",
+          "tolerance": 0.01,
+          "why": "fp32 represents every integer up to 2^24 exactly, so the sum reaches 4096; 4096 = 2^12 is exactly representable in bf16 too.",
+          "varies": "accumulator back to fp32",
+          "invariant": "same operands"
+        },
+        "retrieval": [
+          {
+            "q": "In a low-precision tensor-core matmul, which parts are low precision and which are full precision?",
+            "answer": "Inputs (operands) are downcast to low precision; partial sums are accumulated in fp32; outputs may be emitted in fp32."
+          },
+          {
+            "q": "Why must the accumulator of a long dot product stay in fp32 even when the inputs are bf16?",
+            "answer": "A bf16 running sum loses small addends once it is large (with 8 significant bits, adding 1 to 256 does nothing), so long sums would stall."
+          }
+        ],
+        "self_explain": "Why can the operands be cut to 8 or 16 bits while the accumulator cannot?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:36:34-36:57",
+          "notice": "what is low precision and what is not: downcast the inputs, accumulate in full precision"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_05--bf16-accumulator",
+          "notice": "With a bf16 accumulator the running sum climbs exactly to 256 and then stalls (256 + 1 rounds back to 256); the fp32 accumulator stays on the diagonal."
+        }
+      ]
+    },
+    {
+      "id": "low-bit-speedup-diluted",
+      "label": "FP8 matmuls: 20-30% faster, not 2x",
+      "kind": "rule-of-thumb",
+      "statement": "Halving the bits does not halve matmul time in practice: the professor quotes 20-30% savings on FP8 training matmuls rather than 2x, because quantizing and dequantizing (and, for MXFP8, keeping a separately quantized transposed copy) adds overhead, and only layers judged safe are quantized.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05_video",
+            "ref": "video:42:27-42:46",
+            "role": "spoken",
+            "quote": "you're probably going to get 20% to 30% savings, maybe more, depending on the size of your matrix. Unfortunately, it's not going to be a 2x speedup because you have to do all these quantization operations. There's a big overhead doing this."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:41:16-41:34",
+            "role": "spoken",
+            "quote": "it actually creates two copies of every quantized matrix, one for your original matrix, one for the transpose"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:45:31-45:43",
+            "role": "spoken",
+            "quote": "For compute, you get basically linear improvements for just multiplying the quantized numbers. But the fact that you have to quantize and dequantize means that the benefits are more diluted."
+          }
+        ],
+        "filtering_note": "Spoken only for the testable part. Slides p27-p28 say 'transposes are now nontrivial' and 'not all weights in MXFP8, transposes also separately quantized', but give no speedup. The 20-30% (versus a naive 2x) and its cause, quantize/dequantize overhead, exist only in the audio. 'Maybe more, depending on the size of your matrix' makes the number a range, not a constant. The first and last layers being hard to quantize was raised by a student; the professor has an intuition only for the last layer ('it drives a ton of the loss', 42:57-43:15). The step-time arithmetic in the prompts is the author's."
+      },
+      "prerequisites": [
+        {
+          "kp": "tensor-core-fp32-accumulate",
+          "basis": "teaching-order",
+          "note": "What a low-precision matmul does internally."
+        },
+        {
+          "kp": "low-precision-intensity",
+          "basis": "teaching-order",
+          "note": "Fewer bits, fewer bytes."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "FP8 has half the bits of bf16, so FP8 matmuls take half the time.",
+          "why_wrong": "The raw multiply may be about 2x faster, but quantizing inputs, keeping transposed copies and dequantizing outputs eat much of the gain: the professor quotes 20-30%."
+        },
+        {
+          "belief": "A 25% faster matmul makes the whole training step 25% faster.",
+          "why_wrong": "Only the matmul share of the step speeds up (Amdahl); everything else is unchanged."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A training step spends 60% of its time in matmuls. Switching those matmuls from bf16 to FP8 gives the matmul-time saving the professor quotes in practice (take 25%). By what fraction does total step time fall? Give a decimal.",
+          "format": "number",
+          "answer": "0.15",
+          "tolerance": 0.1,
+          "why": "0.60 × 0.25 = 0.15. Someone expecting 'half the bits, half the time' would answer 0.30.",
+          "targets_misconception": "FP8 has half the bits of bf16, so FP8 matmuls take half the time."
+        },
+        "transfer": {
+          "q": "A wider model spends 90% of its step time in matmuls. With the same 25% FP8 matmul saving, by what fraction does step time fall? Give a decimal.",
+          "format": "number",
+          "answer": "0.225",
+          "tolerance": 0.1,
+          "why": "0.90 × 0.25 = 0.225. Bigger matmuls raise both the matmul share and, per the professor, possibly the saving itself.",
+          "varies": "matmul share of the step (0.6 → 0.9)",
+          "invariant": "25% saving on the matmul part only",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In FP8 the raw multiply takes 0.5 of the bf16 matmul time, but quantizing the inputs and building the transposed copy adds 0.25 of the bf16 time. What fraction of the bf16 matmul time is saved? Give a decimal.",
+          "format": "number",
+          "answer": "0.25",
+          "tolerance": 0.1,
+          "why": "New time = 0.5 + 0.25 = 0.75 of the original, so the saving is 0.25. The overhead turns a 2x raw speedup into a 25% saving.",
+          "varies": "surface: where the diluted saving comes from",
+          "invariant": "overhead adds to the shortened multiply"
+        },
+        "retrieval": [
+          {
+            "q": "Roughly what matmul saving did the professor quote for FP8 training, and why is it not 2x?",
+            "answer": "About 20-30% (more for large matrices); quantize/dequantize operations and transposed copies add overhead that dilutes the raw 2x."
+          },
+          {
+            "q": "Why does MXFP8 training keep two quantized copies of each matrix?",
+            "answer": "Its per-block scale factors run along one axis, so the transpose has a different block pattern and would need requantizing; a separately quantized transposed copy is kept ready.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Where does the other half of the 'half the bits' speedup go?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:42:27-42:46",
+          "notice": "the quoted figure (20-30%, not 2x) and the stated reason (quantization overhead)"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_05--fp8-step-saving",
+          "notice": "Raise the quantize/transposed-copy overhead from 0 to 0.25: the matmul saving falls from the naive 50% into the quoted 20–30% band, and the step saving is that times the matmul share."
+        }
+      ]
+    },
+    {
+      "id": "operator-fusion",
+      "label": "Operator fusion: one kernel instead of a round trip per op",
+      "kind": "mechanism",
+      "statement": "Each unfused pointwise op is a kernel that reads its input from and writes its output to global memory; fusing a chain into one kernel keeps intermediates in registers, so the chain costs one read and one write instead of one per op (sin²x + cos²x: 5 kernels → 1).",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p31",
+            "role": "claim",
+            "quote": "What if we have to do many operations? Shipping back and forth is somewhat silly ... Naïve (non-fused) / Fused kernel"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p32",
+            "role": "claim",
+            "quote": "Computing sin 2 𝑥 + cos 2 𝑥 naively launches 5 CUDA kernels (back and forth)"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p33",
+            "role": "claim",
+            "quote": "All 5 pointwise operations can be fused into a single CUDA kernel call. 'Easy' fusions like this can be done automatically by compilers (torch.compile)"
+          },
+          {
+            "source": "horace_brrr",
+            "ref": "factory/warehouse figure",
+            "role": "figure"
+          },
+          {
+            "source": "pytorch2_fusion_blog",
+            "ref": "sin^2+cos^2 example",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:48:24-48:36",
+            "role": "spoken",
+            "quote": "wouldn't it be better if I just had a one giant factory ... I only have to pay for memory bandwidth twice"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:48:57-49:08",
+            "role": "spoken",
+            "quote": "each of these will be a factory, so to speak. You will read and write from global memory each time one of these is called."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:49:39-50:08",
+            "role": "spoken",
+            "quote": "a compiler can automatically do this for you ... The advanced version sometimes require manual intervention."
+          }
+        ],
+        "filtering_note": "The slide states '5 kernels' without listing them (sin, square, cos, square, add) and does not count bytes; the per-element traffic in the prompts is the author's arithmetic. Why fusion is 'easy' for pointwise ops but hard across a reduction (softmax) is left to Part 3. Spoken evidence (video 49:39-50:13): easy pointwise fusions are left to torch.compile or the JAX compiler; 'the advanced version sometimes require manual intervention', with more promised later (50:01). The professor also says 'you'll be surprised at how much this doesn't already happen' (47:51)."
+      },
+      "prerequisites": [
+        {
+          "kp": "memory-wall-roofline",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "author-inference",
+          "note": "Intermediates stay in registers/shared memory rather than global memory."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Fusion saves time by reducing kernel-launch overhead.",
+          "why_wrong": "Launch overhead is real but small; the lecture's point is memory traffic: every unfused op ships the whole tensor to global memory and back, and those bytes dominate for memory-bound ops."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Per slide 32, computing sin²x + cos²x elementwise the naive way launches how many CUDA kernels, and how many after fusion?",
+          "format": "short",
+          "answer": "5, then 1",
+          "why": "sin, square, cos, square, add are five pointwise ops, each a kernel with its own global-memory round trip; all five fuse into one kernel that touches x once and writes the result once.",
+          "targets_misconception": "Fusion saves time by reducing kernel-launch overhead."
+        },
+        "transfer": {
+          "q": "y = relu(2·x + 1) on an fp32 tensor. Naive: how many kernels, and how many bytes of global-memory traffic per element in total? Fused?",
+          "format": "short",
+          "answer": "Naive: 3 kernels, 24 bytes per element (each kernel reads 4 and writes 4). Fused: 1 kernel, 8 bytes per element.",
+          "why": "Every unfused pointwise op costs a read and a write of the whole tensor; fusion pays the read and write once and keeps 2x and 2x+1 in registers. A 3x traffic reduction on a memory-bound op is a ~3x speedup."
+        },
+        "check": {
+          "q": "y = tanh(x)·3 + x on a bf16 tensor (2 bytes per element). Unfused, each of the 3 ops is its own kernel that reads its inputs from and writes its output to global memory; the final add reads two tensors. Fused, one kernel reads x once and writes y once. By what factor does fusion cut global-memory traffic per element? Type only the number.",
+          "format": "number",
+          "answer": "3.5",
+          "value": 3.5,
+          "tolerance": 0.03,
+          "why": "Unfused: tanh 2 + 2, multiply 2 + 2, add (reads two tensors, writes one) 4 + 2 = 14 bytes per element. Fused: read 2 + write 2 = 4 bytes. 14 / 4 = 3.5. Every unfused op pays a round trip to HBM; fusion keeps the intermediates in registers (p31-p33).",
+          "targets_misconception": "Fusion saves time by reducing kernel-launch overhead.",
+          "varies": "dtype, op chain, and a binary op that rereads its input",
+          "invariant": "each unfused op reads and writes HBM; fused, the chain pays only the first read and the last write",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Where do the intermediate values live in a fused kernel, versus in the naive sequence of kernels?",
+            "answer": "Fused: in registers (on the SM). Naive: written to and re-read from global memory between every op."
+          },
+          {
+            "q": "Which tool does the lecture say performs 'easy' pointwise fusions automatically?",
+            "answer": "torch.compile."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "compare",
+          "ref": "fixture:lecture_05--sincos-fusion",
+          "notice": "Naive sin²x + cos²x: the compute lane idles while HBM writes each intermediate and the next kernel reads it back (6 reads + 5 writes); fused, HBM sees one read of x and one write of y."
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "lecture_05.pdf:p31"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "lecture_05.pdf:p32-p33",
+          "steps": [
+            {
+              "do": "Naive sin²x + cos²x is five pointwise kernels: sin, square, cos, square, add.",
+              "why": "Each op launches its own CUDA kernel (p32), so the expression makes five separate passes over the tensor."
+            },
+            {
+              "do": "Naive global-memory traffic: sin reads x, its square reads sin x, cos reads x, its square reads cos x, the add reads both squares (6 tensor reads); each kernel writes its output (5 tensor writes).",
+              "why": "A kernel's output must land in global memory for the next kernel to read it; intermediates cannot stay on the SM between kernels."
+            },
+            {
+              "do": "Fused (p33): one kernel reads x once, keeps sin x, cos x and both squares in registers, and writes the result once: 1 read, 1 write.",
+              "why": "Inside one kernel the intermediates never leave the SM, so only the chain's input and final output touch global memory."
+            },
+            {
+              "do": "Traffic falls from 11 tensor passes to 2, about 5.5×; a memory-bound chain speeds up by about as much.",
+              "why": "The saving is in bytes moved, not FLOPs or launches alone: every sin, cos, square and add still runs."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "recomputation-memory-traffic",
+      "label": "Recomputation can reduce memory traffic, not just memory",
+      "kind": "mechanism",
+      "statement": "For cheap ops like a stack of sigmoids, storing and re-reading every activation for backward costs more memory accesses than recomputing them from the input during backward: the slide's 3-sigmoid stack drops from 8 read/writes to 5/8 of that, so throwing work away can be faster.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p34",
+            "role": "claim",
+            "quote": "In backpropagation, we store the activations (yellow) and compute Jacobians (green)"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p35",
+            "role": "claim",
+            "quote": "Let's say we stack 3 sigmoids on top of each other. This is really terrible for perf – 8 mem read/writes, very low arithmetic intensity."
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p36",
+            "role": "claim",
+            "quote": "Throwing away computation can actually be optimal, w/ 5/8 th the memory accesses!"
+          },
+          {
+            "source": "pytorch_min_cut_recompute",
+            "ref": "min-cut recomputation post",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:51:19-51:36",
+            "role": "spoken",
+            "quote": "one memory read for x, three memory writes for S2, S1 out ... So this is a total of eight memory reads and writes"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:52:12-52:29",
+            "role": "spoken",
+            "quote": "So I've gone from eight total memory accesses to just five."
+          }
+        ],
+        "filtering_note": "The slide does not itemize the 8 accesses or the 5; the tally lives in the figure (from the PyTorch min-cut post) and cannot be checked from the text layer. Lecture 2 presented recomputation (activation checkpointing) purely as a memory-for-compute trade with O(√L) memory; this slide adds the second motive, fewer bytes moved, which is why 'optimal' here means faster, not just smaller. Spoken evidence, which fills the gap noted above: the slide does not itemize the accesses, but the professor counts them aloud (video 51:19-52:29). Stored version: forward reads x and writes S2, S1 and out (4); backward reads them back and writes dx (4); total 8. Recompute version: forward reads x and writes out; backward reads dout and x and writes dx; total 5, i.e. 5/8 with the same FLOPs plus one re-forward. Precondition, said aloud: 'imagine you're in a world where computation is super, super cheap' (51:47)."
+      },
+      "prerequisites": [
+        {
+          "kp": "operator-fusion",
+          "basis": "teaching-order",
+          "note": "Same lever: keep intermediates out of global memory."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:activation-checkpointing",
+          "basis": "author-inference",
+          "note": "Lecture 2's version of recomputation is the memory-saving one; this KP reframes it as traffic-saving."
+        },
+        {
+          "kp": "lecture_02:backward-2x-forward",
+          "basis": "author-inference",
+          "note": "Why activations are stored at all."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Recomputation always trades speed for memory; it can only make training slower.",
+          "why_wrong": "For memory-bound ops the FLOPs are nearly free and the saved read/writes are the expensive part, so recomputing during backward can be faster as well as smaller (5/8 the accesses on slide 36)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Three sigmoids stacked. Version A stores every intermediate activation for backward; version B stores only the input and recomputes the sigmoids in backward. Which version moves fewer bytes through global memory?",
+          "format": "choice",
+          "choices": [
+            "A (store)",
+            "B (recompute)",
+            "equal"
+          ],
+          "answer": "B (recompute)",
+          "why": "Storing means writing each activation in forward and reading it back in backward, 8 read/writes in the slide's count; recomputing keeps them on-chip and needs 5/8 of the accesses. The extra sigmoid FLOPs are negligible for a memory-bound op.",
+          "targets_misconception": "Recomputation always trades speed for memory; it can only make training slower."
+        },
+        "transfer": {
+          "q": "Which kind of op is a good candidate for the slide-36 trick and which is a bad one: (a) a chain of elementwise activations, (b) a large matmul? Give the deciding property.",
+          "format": "short",
+          "answer": "(a) good, (b) bad. Deciding property: arithmetic intensity. Recomputing a cheap memory-bound op costs few FLOPs and saves a round trip; recomputing a compute-bound matmul re-pays the expensive part.",
+          "why": "Recompute wins when FLOPs are cheap relative to the bytes saved, i.e. low intensity. PyTorch's min-cut recomputation formalizes exactly this choice."
+        },
+        "check": {
+          "q": "Which of these activations is the best candidate to throw away in the forward pass and recompute during backward, in the spirit of slide 36?",
+          "format": "choice",
+          "choices": [
+            "the QKV projection (d × 3d) output",
+            "the MLP up-projection (d × 4d) output",
+            "the GeLU output on the MLP hidden layer",
+            "the LM head (d × vocab) logits output"
+          ],
+          "answer": "the GeLU output on the MLP hidden layer",
+          "distractor_from": [
+            "'MLP up-projection output' <- misconception: 'Recomputation always trades speed for memory; it can only make training slower.' (recompute is chosen for memory alone, so the biggest tensor looks best)",
+            "'QKV projection output' <- same misconception",
+            "'LM head logits output' <- same misconception: the largest activation, but recomputing it re-pays a large matmul"
+          ],
+          "why": "Recomputation saves time when the op is cheap and memory-bound: recomputing GeLU costs a few FLOPs per element and saves a write and a read of a large tensor. Recomputing a matmul output re-pays the expensive, compute-bound part (p35-p36; PyTorch min-cut recomputation).",
+          "targets_misconception": "Recomputation always trades speed for memory; it can only make training slower.",
+          "varies": "named transformer activations instead of the two abstract op classes",
+          "invariant": "recompute when FLOPs per byte saved is low (low arithmetic intensity)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "For the 3-stacked-sigmoid example, what fraction of the store-everything memory accesses does recomputation need?",
+            "answer": "5/8.",
+            "layer": "detail"
+          },
+          {
+            "q": "Besides saving activation memory, what second benefit can recomputation bring?",
+            "answer": "Fewer global-memory read/writes, so it can be faster for memory-bound ops."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "lecture_05.pdf:p35-p36"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:51:19-52:33",
+          "notice": "the itemized count: 8 accesses when storing activations, 5 when recomputing"
+        }
+      ]
+    },
+    {
+      "id": "memory-coalescing",
+      "label": "Memory coalescing: a warp's loads should hit one DRAM burst",
+      "kind": "mechanism",
+      "statement": "DRAM is read in bursts (a 128-byte cache line per transaction), so a warp's 32 loads are coalesced into one transaction only if they fall in the same burst; consecutive threads reading consecutive addresses is the coalesced pattern, threads striding down a column of a row-major matrix is not.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p37",
+            "role": "claim",
+            "quote": "DRAM (global memory) is read in 'burst mode' – each read gives you many bytes! ... Burst mode comes from the slow per-row copy to the sense amplifier"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p38",
+            "role": "claim",
+            "quote": "Memory accesses are coalesced if all the threads (in a warp) fall within the same burst ... Reminder: a warp is a set of 32 consecutively numbered threads that execute together in a block. Memory accesses happen together"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p39",
+            "role": "claim",
+            "quote": "For row-major matrices – threads that move along rows are not coalesced. Note how the second diagram reads the entire vector at each step!"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L127-L130",
+            "role": "claim",
+            "quote": "When the 32 threads in a warp access HBM, memory accesses combined into transactions of 128 bytes (cache lines). ... Best case: full coalescing, all threads access the same cache line (32 threads x 4 bytes = 128 bytes)."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:53:54-54:24",
+            "role": "spoken",
+            "quote": "you might have something like 128 bytes worth of a burst ... a memory access is coalesced ... if all of the threads in a warp fall in the same burst"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:56:22-56:39",
+            "role": "spoken",
+            "quote": "threads that move along the major axis are not coalesced"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:57:00-57:37",
+            "role": "spoken",
+            "quote": "Imagine that I have threads that are trying to read each column, each clock cycle. ... Notice that each one of these limit a different burst window."
+          }
+        ],
+        "filtering_note": "The slides never give the burst size; '128 bytes' and '32 threads x 4 bytes' come from lecture 6. Slide 39's phrase 'threads that move along rows are not coalesced' is terse: the uncoalesced case is a warp whose threads each read a different row of a row-major matrix (each thread walks its own row, so the warp's simultaneous addresses are one row apart). The DRAM sense-amplifier explanation of bursts is cited (CSDN blog, YouTube) and not derived. Spoken evidence, which corrects the note above: it says 'the slides never give the burst size', but the professor says it aloud in lecture 5: 'something like 128 bytes worth of a burst' (53:54). He walks the 4×4 row-major example: reading one column per step touches a different burst for every element, so the whole matrix is read to get one column (57:00-57:37). In Q&A he explains bursts by DRAM rows selected by sense amplifiers (55:09-55:50)."
+      },
+      "prerequisites": [
+        {
+          "kp": "execution-hierarchy",
+          "basis": "teaching-order",
+          "note": "Coalescing is a property of a warp's simultaneous accesses."
+        },
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-row-major-layout",
+          "basis": "author-inference",
+          "note": "Slide 39 assumes the learner knows which addresses are adjacent in a row-major matrix."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Each thread's load is its own transaction, so 32 loads always cost 32 transactions.",
+          "why_wrong": "The hardware merges a warp's loads that share a 128-byte line into one transaction; the cost depends on how many distinct lines the 32 addresses touch, from 1 to 32."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A warp's 32 threads each load one fp32 (4 bytes), thread t loading element t of a contiguous array starting on a 128-byte boundary. How many 128-byte memory transactions?",
+          "format": "number",
+          "answer": "1",
+          "tolerance": 0.01,
+          "why": "32 x 4 = 128 bytes, all inside one burst/cache line: fully coalesced (lecture_06.py:L130).",
+          "targets_misconception": "Each thread's load is its own transaction, so 32 loads always cost 32 transactions."
+        },
+        "transfer": {
+          "q": "Same warp, but thread t loads A[t][k] for a fixed column k of a row-major 32x32 fp32 matrix. How many 128-byte transactions, and by what factor did useful bytes per transaction fall?",
+          "format": "short",
+          "answer": "32 transactions; useful bytes per transaction fall 32x (4 of 128).",
+          "why": "Consecutive threads now hit addresses 128 bytes apart, one per row, so each lands in a different burst. Reading rows instead of columns (or transposing the layout) restores coalescing."
+        },
+        "check": {
+          "q": "A warp's 32 threads each load one fp32 (4 bytes); thread t loads element 2t of a contiguous array that starts on a 128-byte boundary. How many 128-byte memory transactions does the warp need? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "value": 2,
+          "tolerance": 0.01,
+          "why": "The addresses run from byte 0 to byte 62 × 4 = 248 (+4), spanning 256 bytes, which is two 128-byte bursts. Half of each burst is wasted, but the loads still coalesce into 2 transactions, not 32 (p37-p39).",
+          "targets_misconception": "Each thread's load is its own transaction, so 32 loads always cost 32 transactions.",
+          "varies": "a stride of 2 elements instead of a whole row, giving a partial loss",
+          "invariant": "a warp needs one transaction per distinct 128-byte burst its addresses touch",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "State the condition under which a warp's memory accesses are coalesced, and the size of one memory transaction.",
+            "answer": "All threads in the warp fall within the same burst; transactions are 128 bytes (a cache line)."
+          },
+          {
+            "q": "Why does DRAM deliver bursts rather than single bytes?",
+            "answer": "The slow step is copying a whole row into the sense amplifier; once copied, many bytes come out cheaply."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "lecture_05.pdf:p38"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_05--warp-access",
+          "notice": "With stride 1 the warp's 32 fp32 loads land in one 128-byte transaction; each doubling of the stride doubles the transactions, and reading down a column of a row-major matrix costs one transaction per thread."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:57:00-57:37",
+          "notice": "reading one column of a row-major matrix touches every burst"
+        }
+      ]
+    },
+    {
+      "id": "tiling-shared-memory",
+      "label": "Tiling: stage tiles in shared memory to cut global reads by T",
+      "kind": "mechanism",
+      "statement": "A tiled matmul loads a T×T tile of each input into shared memory, computes all partial sums that use them, then loads the next tiles; each input element is read from global memory N/T times instead of N, a factor-T reduction, and the tile loads can be coalesced.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p40",
+            "role": "claim",
+            "quote": "Tiling is the idea of grouping and ordering threads to minimize global memory access. ... Note that memory access is not coalesced, and repeated (M0,0 and N1,0)"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p41",
+            "role": "claim",
+            "quote": "Cut up the matrix into smaller ‘tiles’, and load this into shared memory ... Compute the matrix multiply in ‘phases’ ... tiles into SHM ... Compute partial sums for ... Advantages: repeated reads now access shared, not global memory"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p42",
+            "role": "claim",
+            "quote": "Non-tiled matrix multiply: each input is read 𝑁 times from global memory ... Tiled matrix multiply: each input is read 𝑁/𝑇 times from global memory, and 𝑇 times within each tile. This is a factor of 𝑇 reduction in global memory access"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:58:58-59:07",
+            "role": "spoken",
+            "quote": "each entry will be read n times in an N by N matrix multiply, naively"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:00:19-1:00:48",
+            "role": "spoken",
+            "quote": "each input is going to be read N over T times from global memory and then T times within each tile. ... If T is equal to N, I read it once from global memory"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:02:01-1:02:12",
+            "role": "spoken",
+            "quote": "any matmul kernel that you call will do tiling underneath"
+          }
+        ],
+        "filtering_note": "On p42 the fraction N/T is typeset as a stacked fraction, so the text layer reads 'each input is read times from global memory' with a lone N and T on separate lines; the N/T is reconstructed from layout and the closing sentence ('factor of T reduction'). The phase list on p41 stops at '4. …'. The slides do not say how the T threads of a block cooperate to load a tile (each thread loads one element), nor mention the barrier between load and compute. Spoken evidence (video 1:00:19-1:00:48): the N/T that the note above reconstructs from a broken stacked fraction is said aloud ('read N over T times from global memory and then T times within each tile'), which confirms the statement. The professor adds the limiting case T = N (read once from global memory). Tiling exists only because the whole matrix does not fit in SRAM (1:01:00-1:01:15). Every library matmul kernel already tiles (1:02:07-1:02:12), so tiling matters to users writing their own kernels."
+      },
+      "prerequisites": [
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "teaching-order",
+          "note": "Shared memory is the per-SM, per-block level the tiles land in."
+        },
+        {
+          "kp": "memory-coalescing",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:matmul-flops",
+          "basis": "author-inference",
+          "note": "Each output cell is a length-N dot product; tiling reorders that sum into T-length chunks."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Tiling reduces the number of multiply-adds.",
+          "why_wrong": "FLOPs are identical (2N³ for square); tiling only changes where operands are read from, moving N−N/T of the reads per element from global to shared memory."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Square N×N matmul, N = 1024, untiled: each input element is read from global memory N = 1024 times. With T = 32 tiles, how many global-memory reads per input element?",
+          "format": "number",
+          "answer": "32",
+          "tolerance": 0.01,
+          "why": "N/T = 1024/32 = 32 global reads; the other 31 of every 32 uses are served from shared memory. FLOPs are unchanged.",
+          "targets_misconception": "Tiling reduces the number of multiply-adds."
+        },
+        "transfer": {
+          "q": "Each phase holds one T×T tile of M and one of N in shared memory, fp32. If a block may use at most 128 KB of shared memory, what is the largest power-of-two T?",
+          "format": "number",
+          "answer": "128",
+          "tolerance": 0.01,
+          "why": "2 tiles × T² × 4 bytes ≤ 131072 bytes gives T² ≤ 16384, so T = 128 (T = 256 would need 512 KB). Shared memory size is the first of slide 43's tile-size constraints; the H100 has 256 KB of L1+shared per SM in total (lecture_06.py:L47)."
+        },
+        "retrieval": [
+          {
+            "q": "By what factor does tiling with tile size T reduce global-memory reads in a matmul, and what memory absorbs the reads it removes?",
+            "answer": "Factor T; shared memory (inside the SM)."
+          },
+          {
+            "q": "List the phase loop of a tiled matmul.",
+            "answer": "Load a tile of M and a tile of N into shared memory; compute partial sums for the output tile; load the next pair of tiles; repeat, accumulating."
+          }
+        ],
+        "self_explain": "Why does the reduction factor equal T and not T²?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:tiling-sweep",
+          "notice": "Each pair of input tiles is loaded into shared memory once and then reused for all T×T partial products before the next pair loads; the global-read counter advances only on tile loads."
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_05.pdf:p42",
+          "faded": false,
+          "steps": [
+            {
+              "do": "Untiled, N = 1024: output P[i][j] reads row i of M and column j of N from global memory. M[i][k] is needed by every output of row i (j = 0…N−1), so it is fetched N = 1024 times.",
+              "why": "Without a shared copy each thread loads what it needs itself, so reuse turns into repeated global reads (p40: 'repeated (M0,0 and N1,0)')."
+            },
+            {
+              "do": "Tiled, T = 32: a block computing one T × T tile of P loads a T × T tile of M into shared memory once per phase, and each loaded element serves the T outputs of its row in that tile.",
+              "why": "The block's threads read the value from shared memory, so one global load covers T uses (p41)."
+            },
+            {
+              "do": "The N outputs of row i fall in N/T = 1024/32 = 32 output tiles, and M[i][k] is loaded once per tile: 32 global reads, each used 32 times from shared memory.",
+              "why": "The number of uses stays N = (N/T) × T; tiling changes only how many of them go to global memory. The same holds for the elements of N."
+            },
+            {
+              "tex": "\\frac{N}{N/T} = T = 32",
+              "do": "Global reads fall by a factor of T.",
+              "why": "FLOPs are unchanged; tiling cuts global-memory traffic by the reuse inside one tile (p42)."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:00:19-1:00:48",
+          "notice": "'N over T' said aloud, and the limiting case T = N"
+        }
+      ]
+    },
+    {
+      "id": "tile-wave-quantization",
+      "label": "Matrix mystery: tile quantization, alignment and wave quantization",
+      "kind": "quantity",
+      "statement": "Matmul time is not smooth in matrix size: tiles that do not divide the dimension leave partial tiles (low utilization), tiles that do not align with DRAM bursts need padding, and the tile count is scheduled onto SMs in waves, so 1792→1793 with 256×128 tiles jumps from 7×14 = 98 tiles to 8×15 = 120, more than an A100's 108 SMs can run in one wave.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p43",
+            "role": "claim",
+            "quote": "Tile sizes may not divide the matrix size and lead to low utilization. Factors affecting tile sizes • Coalesced memory access • Shared memory size • Divisibility of the matrix dim"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p44",
+            "role": "claim",
+            "quote": "Memory comes in bursts. Loading tiles are fast if bursts align with the matrix ... Coalesced accesses may be impossible depending on the dimension of the matrix.. (have to do padding)"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p48",
+            "role": "computation",
+            "quote": "This happens at 1792 to 1793 size. Why? Using a tile size of 256 × 128, there are ... = 7 × 14 = 98 ... tiles. If we increase this to 1793, we have ... 8 × 15 = 120 ... tiles. An A100 has 108 SMs, so it cannot execute all 120"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L134-L137",
+            "role": "claim",
+            "quote": "B200 has 148 SMs, if we launch 160 thread blocks, first wave has 148 blocks, second wave has 12 blocks. Wave quantization problem: last wave has fewer thread blocks, leaving some SMs idle (low block occupancy). Solution: make number of thread blocks divide # SMs."
+          },
+          {
+            "source": "thonking_matmul_shapes",
+            "ref": "matrix mystery plots",
+            "role": "figure"
+          },
+          {
+            "source": "nvidia_matmul_perf_guide",
+            "ref": "#tile-quant",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:02:40-1:02:58",
+            "role": "spoken",
+            "quote": "If my matrices are 256 by 256, life is good. ... Now, I've generated two very skinny tiles with basically nothing inside of them."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:08:12-1:09:17",
+            "role": "spoken",
+            "quote": "it happens between 1792 to 1793 ... the A100 has 108 SMs ... that's called wave quantization"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:03:31-1:03:53",
+            "role": "spoken",
+            "quote": "there's a compiler option called max-autotune ... it's trying all sorts of different tile sizes on your matrices and trying to figure out which one is actually faster"
+          }
+        ],
+        "filtering_note": "The runtime-vs-size plots (p45-p47) are figures from Horace He's post with no numbers in the text layer; 'Why is it faster to have bigger matrices?' is answered only qualitatively ('tiling has a major impact through alignment'). On p48 the fractions 1792/256 and 1792/128 are stacked in the layout and appear as loose tokens ('1792 1792', '256', '128'); reconstructed from '7 × 14 = 98'. Note 1792/128 = 14 exactly while 1792/256 = 7, so 1793 forces a partial tile in both dimensions. The slide stops at 'cannot execute all 120' and does not compute the resulting two waves. Spoken evidence (video 1:03:31-1:03:59): tile sizes are found by benchmarking, not by derivation. torch.compile's max-autotune spends about 15 minutes trying tile sizes per shape and gives 'nontrivial benefits'. The professor calls wave quantization the part 'Percy calls GPU trivia' (1:08:03). The divisibility rule of thumb read from the plot is split out as the spoken KP dim-divisibility-padding."
+      },
+      "prerequisites": [
+        {
+          "kp": "tiling-shared-memory",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "execution-hierarchy",
+          "basis": "teaching-order",
+          "note": "One tile is one block scheduled onto one SM."
+        },
+        {
+          "kp": "memory-coalescing",
+          "basis": "teaching-order",
+          "note": "Alignment with bursts is the p44 half of the mystery."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Runtime of a matmul grows smoothly with matrix size.",
+          "why_wrong": "Adding one row can add a whole row of partial tiles and push the tile count past a multiple of the SM count, so time jumps by a full wave; sizes that are multiples of the tile size and align with bursts are disproportionately fast."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Square matmul with 256×128 output tiles on an A100 (108 SMs). Going from 1792 to 1793 on each side, what happens to runtime?",
+          "format": "choice",
+          "choices": [
+            "unchanged",
+            "up by roughly 0.2%",
+            "jumps by a large step"
+          ],
+          "answer": "jumps by a large step",
+          "why": "Tiles go from 7×14 = 98 to 8×15 = 120; 98 fit in one wave on 108 SMs, 120 need two waves, and the added row/column of tiles is nearly empty (partial tiles). Time roughly doubles for 0.17% more work.",
+          "targets_misconception": "Runtime of a matmul grows smoothly with matrix size."
+        },
+        "transfer": {
+          "q": "Same 1793×1793 problem (120 tiles) moved to an H100 with 132 SMs (lecture 6 table). How many waves, and how many SMs idle in the last wave?",
+          "format": "short",
+          "answer": "1 wave; 12 SMs idle",
+          "why": "ceil(120/132) = 1 wave; 132 − 120 = 12 SMs have no tile. On the H100 the size-1793 cliff disappears (though the partial tiles still waste work), which shows the cliff's location is a property of tile count vs SM count, not of the matrix alone."
+        },
+        "check": {
+          "q": "A 2048 × 2048 square matmul uses 256 × 128 output tiles on an A100 with 108 SMs. How many SMs have a tile to work on in the second wave? Type only the number.",
+          "format": "number",
+          "answer": "20",
+          "value": 20,
+          "tolerance": 0.01,
+          "why": "Tiles: (2048 / 256) × (2048 / 128) = 8 × 16 = 128. The first wave runs 108, and the second runs the remaining 20 while 88 SMs sit idle (p43-p48).",
+          "varies": "matrix size and the question (second-wave occupancy on the A100 instead of the H100 count)",
+          "invariant": "tiles are scheduled onto SMs in waves; the last wave's size is tile count mod SM count",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the three factors the lecture lists as affecting tile size.",
+            "answer": "Coalesced memory access, shared memory size, divisibility of the matrix dimension."
+          },
+          {
+            "q": "What is wave quantization, and what is the one-line fix?",
+            "answer": "Blocks are scheduled onto SMs in waves; a last wave with fewer blocks than SMs leaves SMs idle. Fix: make the number of blocks a multiple of the number of SMs (the lecture writes 'make number of thread blocks divide # SMs')."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_05--wave-grid",
+          "notice": "Step M from 1792 to 1793: tiles jump 98 → 120, more than the A100's 108 SMs, so a second wave runs 12 tiles while 96 SMs sit idle; on the H100 (132 SMs) the same 120 tiles fit in one wave."
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_05.pdf:p48",
+          "steps": [
+            {
+              "tex": "\\frac{1792}{256}\\times\\frac{1792}{128} = 7 \\times 14 = 98",
+              "do": "Count output tiles at size 1792 with 256 × 128 tiles.",
+              "why": "Each tile is one thread block, and a block runs on one SM."
+            },
+            {
+              "do": "At 1793 both counts round up: ⌈1793/256⌉ × ⌈1793/128⌉ = 8 × 15 = 120 tiles.",
+              "why": "A partial tile still costs a whole block, although the new row and column of tiles cover only one extra row or column of the matrix."
+            },
+            {
+              "do": "Waves on an A100 (108 SMs): 98 tiles fit in one wave; 120 need two, and the second runs 120 − 108 = 12 tiles while 96 SMs sit idle.",
+              "why": "Blocks are scheduled onto SMs in waves, so time follows the number of waves, not the tile count."
+            },
+            {
+              "do": "So about 0.17% more FLOPs ((1793/1792)³ − 1) roughly doubles the runtime.",
+              "why": "The step comes from the tile count crossing the SM count, plus nearly empty partial tiles, not from the extra arithmetic (p48)."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:03:31-1:03:59",
+          "notice": "tile sizes are chosen empirically (max-autotune), not derived"
+        }
+      ]
+    },
+    {
+      "id": "dim-divisibility-padding",
+      "label": "Pad matrix dims to a multiple of 32",
+      "kind": "rule-of-thumb",
+      "statement": "Matmul dimensions should be divisible by a large-enough power of two (16-32 on the A100 plot); past the burst size more divisibility does not help, and padding a dimension up to such a multiple can make the matmul faster even though it adds work (nanoGPT vocab 50257 → 50304: about 25% faster).",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:05:15-1:05:35",
+            "role": "spoken",
+            "quote": "when I increase my vocab size to 50,257 to 50,304, I got a 25% speedup"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:06:40-1:07:38",
+            "role": "spoken",
+            "quote": "the blue ones are essentially only divisible by 1. ... 16 or 32 perform equally well. ... It's because 16 and 32 are sufficiently large that it has the right burst window property."
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:10:44-1:11:01",
+            "role": "spoken",
+            "quote": "as long as it divides by your burst size, then you're good to go. It's a divisor property."
+          }
+        ],
+        "filtering_note": "Spoken only for the testable part. Slide p47 says only 'Tiling has a major impact through alignment', and the colour-coded plot (p45-p47) has no numbers in the text layer. The professor reads the legend aloud: divisible by 1, 2, 8, 16, 32, with 16 and 32 equally good (1:06:40-1:07:24). He states the rule 'generally, powers of 2, ideally divisible also by 32' (1:06:03-1:06:15) and, when asked, says that divisibility beyond the burst size does not help here, while 'there are other phenomena where you might get benefits from larger divisors' (1:10:44-1:11:07). The Karpathy anecdote is spoken only (1:05:15). He also filters for the learner: 'You don't want to think about tile sizes per se ... unless you're writing your own kernels', but do think about matrix sizes (1:05:53-1:06:03). And he warns against doing it by rote: 'I don't want you guys to be the kind of people that cargo cult, 32 multipliers for your matrices' (1:17:44)."
+      },
+      "prerequisites": [
+        {
+          "kp": "tile-wave-quantization",
+          "basis": "teaching-order",
+          "note": "Partial tiles and burst misalignment are the mechanism."
+        },
+        {
+          "kp": "memory-coalescing",
+          "basis": "author-inference",
+          "note": "Burst size sets where divisibility stops mattering."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Padding a dimension always costs time, because it adds FLOPs.",
+          "why_wrong": "A misaligned dimension forces partial tiles and uncoalesced tile loads; the padded shape does slightly more arithmetic but runs much faster (50257 → 50304 gave ~25%)."
+        },
+        {
+          "belief": "The bigger the power of two dividing the dimension, the faster: 1024 beats 1056.",
+          "why_wrong": "On the A100 plot 16 and 32 perform equally; once the dimension divides the burst size, more divisibility gives nothing (1056 = 32 × 33 is fine)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You can keep a vocabulary at 50,257 or pad it to 50,304 (= 64 × 786), adding 47 unused rows to the output matmul. On a GPU, what happens to that matmul's time?",
+          "format": "choice",
+          "choices": [
+            "It falls despite the extra rows",
+            "It rises in proportion to the rows",
+            "Unchanged: 0.2% more work is noise",
+            "It rises because padding adds reads"
+          ],
+          "answer": "It falls despite the extra rows",
+          "why": "50,257 is odd, so tiles and bursts misalign; 50,304 divides cleanly. Karpathy reported a ~25% speedup from exactly this change.",
+          "targets_misconception": "Padding a dimension always costs time, because it adds FLOPs.",
+          "distractor_from": "FLOPs-only reasoning; noise argument; padding-costs-bandwidth belief"
+        },
+        "transfer": {
+          "q": "A model has hidden size 3000 and you are free to pad it. Following the professor's rule (divisible by 32), what is the smallest hidden size ≥ 3000 you should use?",
+          "format": "number",
+          "answer": "3008",
+          "tolerance": 0.0003,
+          "why": "3000 / 32 = 93.75, so round up to 94 × 32 = 3008.",
+          "varies": "which dimension (vocab → hidden) and the starting size",
+          "invariant": "round up to a multiple of the burst-sized divisor",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In the professor's discussion of the A100 throughput plot (and his answer to the student who asked about going higher), moving from dimensions divisible by 32 to dimensions divisible by 64, does matmul throughput go up, go down or stay the same?",
+          "format": "trend",
+          "answer": "same: past the burst size, extra divisibility gives no further gain",
+          "why": "'As long as it divides by your burst size, then you're good to go. It's a divisor property.' 16 and 32 already perform equally.",
+          "varies": "divisor 32 → 64",
+          "invariant": "burst-window alignment already satisfied"
+        },
+        "retrieval": [
+          {
+            "q": "Why did padding nanoGPT's vocabulary from 50,257 to 50,304 speed training up even though it adds work?",
+            "answer": "50,257 is not divisible by any useful power of two, so tiles and DRAM bursts misalign (partial tiles, uncoalesced loads); 50,304 divides cleanly, and alignment matters more than 0.1% extra FLOPs."
+          },
+          {
+            "q": "Past what point does more power-of-two divisibility stop helping, and why?",
+            "answer": "Once the dimension is divisible by about 16-32 (enough to fill the memory burst window), the alignment benefit is already captured; it is a divisor property, not 'powers of two are magic'."
+          }
+        ],
+        "self_explain": "Why can doing more arithmetic (padding) make a matmul faster?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:06:40-1:07:38",
+          "notice": "the divisibility legend read aloud (1, 2, 8, 16, 32) and why 16 and 32 tie"
+        },
+        {
+          "type": "video-span",
+          "action": "predict-trend",
+          "ref": "video:1:05:15-1:05:35",
+          "notice": "the worked case: vocab 50,257 → 50,304, about 25% faster"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_05--warp-access",
+          "notice": "Try C = 50257, then 50304: with the odd width almost every row starts off a 128-byte boundary and a 32-element row read needs about 2 transactions; padded to a multiple of 32, every row read needs 1."
+        }
+      ]
+    },
+    {
+      "id": "online-softmax",
+      "label": "Online softmax: running max plus a telescoping rescaled sum",
+      "kind": "mechanism",
+      "statement": "Softmax can be computed tile-by-tile by carrying a running max m and a running sum l of exp(x − m); when a new tile raises the max from m_old to m_new, the old sum is multiplied by exp(m_old − m_new) before the new terms are added, so the normalizer is exact without a second pass over the row.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p53",
+            "role": "claim",
+            "quote": "Normal softmax / Online softmax ... To keep track of the max, incrementally update the max, and set up a telescoping sum. This lets you compute the softmax tile-by-tile"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p52",
+            "role": "claim",
+            "quote": "But what do we do about the softmax?"
+          },
+          {
+            "source": "online_softmax_2018",
+            "ref": "arXiv:1805.02867",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:14:28-1:15:08",
+            "role": "spoken",
+            "quote": "there's a different way of computing this online ... every time you encounter a bigger number than what you've seen before, you're going to swap out the maximum ... at the end, you'll just divide everything by the accumulator"
+          }
+        ],
+        "filtering_note": "The slide shows the two algorithm boxes (normal vs online) as an image; the update rule itself (m_new = max(m_old, m_tile); l_new = l_old · exp(m_old − m_new) + Σ exp(x_tile − m_new)) is not in the text layer and is reproduced here from the cited Milakov & Gimelshein paper, which the slide misspells as 'Mikailov'. Why the max is subtracted at all (overflow safety) is assumed known. Spoken evidence (video 1:15:08-1:15:28): the professor names what online softmax buys: because it proceeds block by block, 'I don't need to see the rest of the tiles in order to compute this'."
+      },
+      "prerequisites": [
+        {
+          "kp": "tiling-shared-memory",
+          "basis": "teaching-order",
+          "note": "The problem only arises once you insist on processing K in tiles."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Softmax needs the whole row before any exponential can be computed, so attention scores must be fully materialized.",
+          "why_wrong": "The normalizer is a sum, and a sum computed with a stale max can be corrected by a single multiplicative factor exp(m_old − m_new); so each tile's exponentials can be computed and accumulated immediately."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "After tile 1 the running max is m = 2 and the running sum is l = 1.5. Tile 2 contains the value 5 (new max 5). By what factor is l multiplied before tile 2's exponentials are added?",
+          "format": "number",
+          "answer": "0.0498",
+          "tolerance": 0.1,
+          "why": "exp(m_old − m_new) = exp(2 − 5) = e⁻³ ≈ 0.0498. Every term already in l was exp(x − 2); multiplying by e⁻³ turns each into exp(x − 5), the same as if the max had been known from the start.",
+          "targets_misconception": "Softmax needs the whole row before any exponential can be computed, so attention scores must be fully materialized."
+        },
+        "transfer": {
+          "q": "You process the same row's tiles in a different order. How does the final normalizer l compare?",
+          "format": "choice",
+          "choices": [
+            "identical",
+            "different, depends on order",
+            "identical only if the max is in the first tile"
+          ],
+          "answer": "identical",
+          "why": "The telescoping rescale makes l equal Σ exp(x_i − m_final) whatever order the tiles arrive; the max and the sum are both order-independent. (Floating-point rounding differs slightly, the value does not.)"
+        },
+        "retrieval": [
+          {
+            "q": "Name the two running quantities online softmax carries across tiles and the correction applied when the first one changes.",
+            "answer": "Running max m and running sum l; l is multiplied by exp(m_old − m_new)."
+          },
+          {
+            "q": "What property of softmax makes the tile-by-tile computation possible?",
+            "answer": "The normalizer is a telescoping sum: a sum taken against an old max can be rescaled to a new max by one factor."
+          }
+        ],
+        "self_explain": "Why does the rescale factor only ever shrink the old sum, never grow it?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:online-softmax-blocks",
+          "notice": "When a tile raises the running max, the accumulated denominator is multiplied by exp(m_old − m_new) rather than recomputed from scratch; when the max is unchanged the factor is 1."
+        },
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "lecture_05.pdf:p53",
+          "steps": [
+            {
+              "tex": "m = \\max_{i \\le t} x_i,\\qquad l = \\sum_{i \\le t} e^{x_i - m}",
+              "do": "Carry two numbers across tiles: the running max m and the running sum l of exponentials shifted by that max.",
+              "why": "Subtracting the max keeps every exponential at most 1; m and l are all a later tile needs to know about earlier ones."
+            },
+            {
+              "do": "After tile 1: m = 2, l = 1.5. Tile 2 contains 5, so m_new = max(2, 5) = 5.",
+              "why": "The max can only grow, and the new one is known as soon as the tile is loaded."
+            },
+            {
+              "tex": "l \\leftarrow l\\,e^{m_{old} - m_{new}} = 1.5\\,e^{2-5} = 1.5 \\times 0.0498 \\approx 0.0747",
+              "do": "Rescale the old sum before adding anything.",
+              "why": "Every term in l was e^{x−2}; multiplying by e^{−3} turns each into e^{x−5}, what it would have been had the max been known from the start."
+            },
+            {
+              "tex": "l \\leftarrow l + \\sum_{x \\in \\text{tile 2}} e^{x - 5}",
+              "do": "Add tile 2's exponentials, shifted by the new max.",
+              "why": "All terms now share the same shift m_new, so they can be summed."
+            },
+            {
+              "tex": "\\mathrm{softmax}(x)_i = \\frac{e^{x_i - m}}{l}",
+              "do": "After the last tile, m and l are the max and the normaliser of the whole row.",
+              "why": "The rescales telescope (p53), so the normaliser is exact after one pass over the row, without a second pass."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flash-attention-forward",
+      "label": "FlashAttention forward = tiled QKᵀ + fused exp + online softmax",
+      "kind": "mechanism",
+      "statement": "FlashAttention computes attention exactly without ever writing the N×N score matrix to HBM: it tiles Q, K, V like a matmul, computes each S tile in shared memory, applies the exponential in the same kernel, and folds the softmax normalizer with the online (telescoping) trick, so HBM traffic is O(N·d) instead of O(N²).",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p50",
+            "role": "claim",
+            "quote": "Flash attention [Dao et al] dramatically accelerates attention.. But how?"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p51",
+            "role": "claim",
+            "quote": "Attention computation: 3 matrix multiplies (K, Q, V) with a softmax in between"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p52",
+            "role": "figure",
+            "quote": "This figure 1 from the paper is literally just tiling for a KQV matrix multiply.."
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p54",
+            "role": "claim",
+            "quote": "From Dao 2023, we see • Tile-wise computation of the inner products, (𝑆) • Fusion of the exponential operator • Tile-wise computation of the softmax via the online, telescoping sum trick (We won't cover the backward pass – but they recompute tile-by-tile..)"
+          },
+          {
+            "source": "flash_attention_paper",
+            "ref": "arXiv:2205.14135, Figure 1 and Algorithm 1",
+            "role": "paper"
+          },
+          {
+            "source": "flash_attention_2_paper",
+            "ref": "arXiv:2307.08691, Algorithm 1 (forward)",
+            "role": "paper"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:12:46-1:13:00",
+            "role": "spoken",
+            "quote": "We apply tiling and recomputation. ... subquadratically in the number of memory accesses"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:13:46-1:14:02",
+            "role": "spoken",
+            "quote": "The thing that is tricky about flash attention, and you'll see this in the assignment, is there's a big global softmax"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:1:16:49-1:17:12",
+            "role": "spoken",
+            "quote": "I'm not going to cover this or talk about it. ... throw it all away and recompute everything tile by tile on the backward pass"
+          }
+        ],
+        "filtering_note": "The slides read the paper's figure and algorithm box; no speedup number, no N×N byte count, and no tile sizes are in the text. 'Dao 2023' on p54 is FlashAttention-2 while p50 cites 'Dao et al' (2022). The backward pass is explicitly skipped ('they recompute tile-by-tile'), tying back to the recomputation trick. Slide 51's '3 matrix multiplies (K, Q, V)' is loose: the attention core is two matmuls (QKᵀ and PV); the projections are a third kind. Spoken evidence: the assignment mention (1:13:46) points to implementing the global-softmax handling, which the lecture covers for the forward pass, so the status stays 'cited', not 'deferred-to-assignment'. The backward pass is explicitly skipped (1:16:49) but described in one sentence: recompute the N² activations tile by tile instead of storing them. The spoken 'three matrix multiplies and one softmax' (1:13:19) repeats the slide's loose count noted above."
+      },
+      "prerequisites": [
+        {
+          "kp": "tiling-shared-memory",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "operator-fusion",
+          "basis": "teaching-order",
+          "note": "The exponential is fused into the matmul kernel."
+        },
+        {
+          "kp": "online-softmax",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "recomputation-memory-traffic",
+          "basis": "teaching-order",
+          "note": "The skipped backward pass recomputes S tile-by-tile."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:matmul-flops",
+          "basis": "author-inference"
+        },
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "The win is bytes, not FLOPs; the learner must be able to say which one is bounding."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "FlashAttention is faster because it does fewer FLOPs (an approximation).",
+          "why_wrong": "It is exact and does the same matmul FLOPs (plus a little extra for rescaling and backward recompute); the speedup comes from not reading and writing the N×N scores and probabilities through HBM."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One head, sequence N = 8192, bf16. Standard attention writes the N×N score matrix to HBM and reads it back for softmax. How many MB is that matrix, and how many MB of it does FlashAttention write?",
+          "format": "short",
+          "answer": "≈134 MB (8192² × 2 bytes); FlashAttention writes 0 MB of it",
+          "why": "8192² = 67.1M entries × 2 bytes = 134 MB, written and read at least twice (scores, probabilities). FlashAttention keeps each S tile in shared memory and writes only the N×d output (8192 × 128 × 2 = 2 MB for d = 128) plus the running max/sum.",
+          "targets_misconception": "FlashAttention is faster because it does fewer FLOPs (an approximation)."
+        },
+        "transfer": {
+          "q": "Double the sequence length N (fixed d). By what factor does standard attention's score-matrix HBM traffic grow, and by what factor does FlashAttention's output traffic grow? What happens to the matmul FLOPs in both?",
+          "format": "short",
+          "answer": "Standard: 4x (N²). Flash: 2x (N·d). FLOPs: 4x in both.",
+          "why": "FlashAttention changes the traffic exponent from 2 to 1 but leaves the compute at O(N²·d); at long N it turns a memory-bound op into a compute-bound one, which is the roofline goal from slide 21."
+        },
+        "check": {
+          "q": "One attention head with sequence length N = 16,384 and head dimension d = 128, in bf16. Standard attention writes the N × N score matrix to HBM; FlashAttention writes only the N × d output. The score matrix is how many times larger than the output? Type only the number.",
+          "format": "number",
+          "answer": "128",
+          "value": 128,
+          "tolerance": 0.02,
+          "why": "N² / (N·d) = N / d = 16,384 / 128 = 128 (about 537 MB versus 4.2 MB). The traffic FlashAttention avoids grows with N relative to what it keeps, while the FLOPs are the same O(N²·d) in both (p50-p54).",
+          "targets_misconception": "FlashAttention is faster because it does fewer FLOPs (an approximation).",
+          "varies": "a single size comparison instead of scaling under a doubling",
+          "invariant": "standard attention materialises O(N²) scores in HBM; FlashAttention writes O(N·d)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "List the three techniques the FlashAttention forward pass combines, as the lecture gives them.",
+            "answer": "Tile-wise computation of the inner products S; fusion of the exponential; tile-wise softmax via the online telescoping-sum trick."
+          },
+          {
+            "q": "What does FlashAttention avoid materializing, and in which memory would it otherwise live?",
+            "answer": "The N×N score/probability matrix; in global memory (HBM)."
+          }
+        ],
+        "self_explain": "Which of Part 2's tricks handles the softmax's need to see the whole row, and why couldn't plain fusion do it?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:flash-forward-tiles",
+          "notice": "Only one S tile exists at a time, in shared memory; the HBM traffic counter advances for Q, K, V tile loads and the final O write, never for an N×N matrix."
+        },
+        {
+          "type": "figure",
+          "action": "restate",
+          "ref": "lecture_05.pdf:p54"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:16:49-1:17:12",
+          "notice": "the skipped backward pass in one sentence: recompute tile by tile instead of storing N² activations"
+        }
+      ]
+    },
+    {
+      "id": "supp-latency-hiding",
+      "label": "Supplement: latency hiding by warp switching and occupancy",
+      "kind": "mechanism",
+      "statement": "An SM keeps many warps resident and switches to another at zero cost when one stalls on a global-memory access, so memory latency is hidden by having enough warps; register use per thread caps how many warps fit (occupancy), e.g. 128 threads × 160 registers on a 65536-register SM allows 3 blocks = 12 of 64 warps (occupancy 0.1875).",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p15",
+            "role": "claim",
+            "quote": "Threads are 'lightweight' and can be stopped and started"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L90",
+            "role": "claim",
+            "quote": "SM runs multiple warps and switches between them (e.g., when one warp is blocked on HBM reads/writes) with zero cost."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L93-L95",
+            "role": "claim",
+            "quote": "Each thread can use between 0 and 255 registers. The more registers threads use, the fewer threads can be scheduled on an SM (low occupancy). Low occupancy isn't necessarily bad if each thread is doing more work."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L100-L112",
+            "role": "computation",
+            "quote": "num_threads_per_block = 128; num_registers_per_thread = 160; max_registers = 65536; max_warps = 64 ... num_blocks = max_registers // num_registers_per_block; num_warps = num_blocks * num_threads_per_block / 32; occupancy = num_warps / max_warps"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:23:24-23:51",
+            "role": "spoken",
+            "quote": "these threads are always very lightweight. ... The scheduler can decide that, OK, I have another warp that's better to run. ... That allows for much higher throughput if certain jobs are stalled"
+          }
+        ],
+        "filtering_note": "Lecture 5 says only that threads are 'lightweight' and 'can be stopped and started' (p15) and that GPUs optimize throughput (p8); it never says why many slow threads still finish work quickly. The mechanism, zero-cost warp switching while another warp waits on HBM, is stated in lecture 6 and is what makes 'many threads' a latency-hiding strategy rather than just a parallelism one. Numbers in the statement are the lecture 6 example, evaluated by the author (the @inspect values are not in discovered.json). Spoken evidence, which partly corrects the note above: lecture 5 does say aloud why lightweight threads matter: the scheduler swaps in another warp when one is stalled, and this raises throughput (video 23:24-23:51). Occupancy and register limits are still only in lecture 6."
+      },
+      "prerequisites": [
+        {
+          "kp": "execution-hierarchy",
+          "basis": "author-inference"
+        },
+        {
+          "kp": "gpu-memory-hierarchy",
+          "basis": "author-inference",
+          "note": "The stall being hidden is a global-memory access."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "When a warp waits on an HBM read, the SM idles until the data arrives.",
+          "why_wrong": "The SM switches to another resident warp with ready work at zero cost; the stall is only exposed when no other warp is ready, i.e. when occupancy is too low."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A warp issues a global-memory load that takes hundreds of cycles. What do the SM's compute units do during that wait, per lecture 6?",
+          "format": "choice",
+          "choices": [
+            "idle until the load returns",
+            "run instructions from another resident warp",
+            "speculatively continue the same warp"
+          ],
+          "answer": "run instructions from another resident warp",
+          "why": "Warp switching is free, so as long as other warps are resident and ready, the latency is hidden. This is the throughput design of slide 8 in action.",
+          "targets_misconception": "When a warp waits on an HBM read, the SM idles until the data arrives."
+        },
+        "transfer": {
+          "q": "Blocks of 128 threads, 160 registers per thread, an SM with 65536 registers and a limit of 64 resident warps. How many blocks fit, and what is the warp occupancy?",
+          "format": "short",
+          "answer": "3 blocks; occupancy 12/64 = 0.1875",
+          "why": "128 × 160 = 20480 registers per block; 65536 // 20480 = 3 blocks; 3 × 128 / 32 = 12 warps of a possible 64. Lecture 6 adds that low occupancy is acceptable when each thread does more work (thread coarsening)."
+        },
+        "check": {
+          "q": "Blocks of 256 threads use 96 registers per thread on an SM with 65,536 registers and a limit of 64 resident warps. What is the warp occupancy (resident warps / 64)? Give a decimal; type only the number.",
+          "format": "number",
+          "answer": "0.25",
+          "value": 0.25,
+          "tolerance": 0.01,
+          "why": "256 × 96 = 24,576 registers per block; 65,536 // 24,576 = 2 blocks; 2 × 256 / 32 = 16 warps; 16 / 64 = 0.25 (lecture_06.py:L93-L112).",
+          "varies": "block size and registers per thread",
+          "invariant": "register use per thread caps resident blocks, hence warps available to hide latency",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What resource per thread most directly limits how many warps an SM can keep resident, and what is the per-thread maximum?",
+            "answer": "Registers; up to 255 per thread."
+          },
+          {
+            "q": "Why is a GPU able to tolerate slow global memory even though each thread is slow?",
+            "answer": "The SM overlaps one warp's memory stall with other warps' compute by switching warps at zero cost (latency hiding)."
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L100-L112"
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_05--warps-occupancy",
+          "notice": "Raise registers per thread: fewer blocks fit in the 65,536-register file, so fewer of the 64 warp slots fill and fewer warps are left to switch to while one waits on memory."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:23:24-23:51",
+          "notice": "the scheduler swaps in another warp when one is stalled"
+        }
+      ]
+    },
+    {
+      "id": "supp-row-major-layout",
+      "label": "Supplement: row-major layout and address stride",
+      "kind": "definition",
+      "statement": "In row-major layout element (i, j) of a matrix with C columns and s bytes per element sits at byte offset (i·C + j)·s, so neighbours along a row are s bytes apart and neighbours down a column are C·s bytes apart.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p39",
+            "role": "claim",
+            "quote": "For row-major matrices – threads that move along rows are not coalesced"
+          },
+          {
+            "source": "lecture_05",
+            "ref": "lecture_05.pdf:p44",
+            "role": "claim",
+            "quote": "Loading tiles are fast if bursts align with the matrix"
+          },
+          {
+            "source": "lecture_05_video",
+            "ref": "video:56:43-56:57",
+            "role": "spoken",
+            "quote": "Imagine I have this 4 by 4 matrix. This is row major. ... This is the linear ordering in memory address."
+          }
+        ],
+        "filtering_note": "Slides 39 and 44 reason about which matrix accesses land in the same burst but never define row-major or state the address formula. A learner who cannot compute the byte distance between A[i][j] and A[i+1][j] cannot decide whether a warp's accesses coalesce, so the student line makes the layout explicit."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "Elements that are adjacent in the matrix picture are adjacent in memory.",
+          "why_wrong": "Only row neighbours are adjacent in row-major memory; column neighbours are a full row (C·s bytes) apart, which is what breaks coalescing when threads walk a column."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Row-major 1024×1024 fp32 matrix. Byte distance between A[i][j] and A[i+1][j]?",
+          "format": "number",
+          "answer": "4096",
+          "tolerance": 0.01,
+          "why": "Moving one row down skips C = 1024 elements of 4 bytes = 4096 bytes; moving one column right skips 4 bytes.",
+          "targets_misconception": "Elements that are adjacent in the matrix picture are adjacent in memory."
+        },
+        "transfer": {
+          "q": "A warp's threads t = 0..31 each read A[t][k] for one fixed k from that matrix. How many distinct 128-byte lines do the 32 reads touch?",
+          "format": "number",
+          "answer": "32",
+          "tolerance": 0.01,
+          "why": "Consecutive threads are 4096 bytes apart, far more than one 128-byte line, so every read is its own line: the uncoalesced pattern of slide 39. Reading A[k][t] instead would touch one line."
+        },
+        "retrieval": [
+          {
+            "q": "Write the byte offset of A[i][j] for a row-major matrix with C columns and s bytes per element.",
+            "answer": "(i·C + j)·s"
+          }
+        ]
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_05.pdf:p39",
+          "steps": [
+            {
+              "tex": "\\text{offset}(i, j) = (i\\cdot C + j)\\cdot s",
+              "do": "Row-major stores row 0, then row 1, and so on; row i starts after i full rows of C elements.",
+              "why": "A flat address space can keep only one index contiguous, and row-major picks j."
+            },
+            {
+              "do": "One column right, (i, j) → (i, j+1): the offset grows by s, 4 bytes for fp32.",
+              "why": "Neighbours along a row are adjacent in memory."
+            },
+            {
+              "do": "One row down, (i, j) → (i+1, j): the offset grows by C·s = 1024 × 4 = 4096 bytes for a 1024-column fp32 matrix.",
+              "why": "A whole row of C elements lies in between, so elements next to each other in a column of the picture are C·s bytes apart in memory."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_05--warp-access",
+          "notice": "Switch between 'along a row' and 'down a column': row neighbours are s bytes apart, column neighbours C·s bytes apart, so the column read touches 32 separate 128-byte lines."
+        }
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Slide order in lecture_05.pdf mapped to KPs. Pages p1-p7 (title, outline, credits, scaling motivation), p13-p14 (TPU side thread), p19-p22 and p49 (recaps and outlines), p27-p29 (MXFP8/MXFP4 frontier), p45-p47 (matrix-mystery plots) and p55 (lecture recap) are context, not KPs; where they carry a claim the nearest KP's filtering_note records it. Spoken-only KPs (status 'spoken', from the lecture captions) are placed at the moment they are said: shared-memory-vs-l1 (12:54) and tpu-matmul-unit-granularity (20:53, from the TPU side thread whose testable consequence is only spoken) after gpu-memory-hierarchy; tensor-core-fp32-accumulate (36:34) and low-bit-speedup-diluted (42:27) after low-precision-intensity; dim-divisibility-padding (1:05:15-1:07:38) after tile-wave-quantization.",
+    "stops": [
+      "gpu-vs-cpu-throughput",
+      "execution-hierarchy",
+      "gpu-memory-hierarchy",
+      "shared-memory-vs-l1",
+      "tpu-matmul-unit-granularity",
+      "tensor-cores-matmul-special",
+      "memory-wall-roofline",
+      "control-divergence",
+      "low-precision-intensity",
+      "tensor-core-fp32-accumulate",
+      "low-bit-speedup-diluted",
+      "operator-fusion",
+      "recomputation-memory-traffic",
+      "memory-coalescing",
+      "tiling-shared-memory",
+      "tile-wave-quantization",
+      "dim-divisibility-padding",
+      "online-softmax",
+      "flash-attention-forward"
+    ],
+    "supplements": [
+      "supp-latency-hiding",
+      "supp-row-major-layout"
+    ]
+  },
+  "spoken_filtering": [
+    {
+      "at": "3:09",
+      "kind": "defer-assignment",
+      "quote": "your assignment will have things that look a little bit like those exercises",
+      "what_was_filtered": "Practice problems on GPU/TPU performance, pointed to the scaling book's exercises.",
+      "kp": null
+    },
+    {
+      "at": "5:25",
+      "kind": "aside",
+      "quote": "And one interesting side note.",
+      "what_was_filtered": "Why transistor shrinking no longer raises clock speed (Dennard scaling ended).",
+      "kp": "gpu-vs-cpu-throughput"
+    },
+    {
+      "at": "6:03",
+      "kind": "defer-later",
+      "quote": "Percy's going to talk about more advanced topics next lecture. But after that, it's going to be parallelism.",
+      "what_was_filtered": "Multi-GPU parallel scaling, left to the parallelism lectures.",
+      "kp": null
+    },
+    {
+      "at": "16:36",
+      "kind": "aside",
+      "quote": "there's also constant memory, which I don't think I've seen very much used",
+      "what_was_filtered": "Constant memory, mentioned and dismissed.",
+      "kp": "gpu-memory-hierarchy"
+    },
+    {
+      "at": "19:02",
+      "kind": "defer-later",
+      "quote": "the main difference that I won't get into today is the networking for these accelerators",
+      "what_was_filtered": "TPU vs GPU networking, called the biggest real difference, left to the parallelism lecture.",
+      "kp": "tpu-matmul-unit-granularity"
+    },
+    {
+      "at": "26:48",
+      "kind": "skip",
+      "quote": "I can't possibly give you a 20-minute lecture that fully helps you understand what the GPU hardware is.",
+      "what_was_filtered": "The hardware part is a deliberately partial model ('a flavor').",
+      "kp": null
+    },
+    {
+      "at": "28:31",
+      "kind": "aside",
+      "quote": "This is not inherent, by the way. One additional side thing is that the equivalent to L2 cache in TPUs is much faster",
+      "what_was_filtered": "Memory latency gaps are a design choice; TPUs make the L2-equivalent faster.",
+      "kp": "gpu-memory-hierarchy"
+    },
+    {
+      "at": "28:56",
+      "kind": "aside",
+      "quote": "One of the things that I really didn't want to talk about but now you forced me to, is the inference landscape for hardware",
+      "what_was_filtered": "Prefill/decode disaggregation and per-layer accelerator splits for inference.",
+      "kp": "memory-wall-roofline"
+    },
+    {
+      "at": "34:46",
+      "kind": "aside",
+      "quote": "that's a separate story from all this memory stuff, which is the main narrative",
+      "what_was_filtered": "Control divergence is set aside as the one non-memory trick.",
+      "kp": "control-divergence"
+    },
+    {
+      "at": "42:57",
+      "kind": "aside",
+      "quote": "I do not have intuitions for the first layer.",
+      "what_was_filtered": "Why the first layer is hard to quantize (student question, left open).",
+      "kp": "low-bit-speedup-diluted"
+    },
+    {
+      "at": "43:15",
+      "kind": "aside",
+      "quote": "I put this up there almost because I think it's so ridiculous.",
+      "what_was_filtered": "MXFP4, shown as a curiosity (all representable values fit on one slide) and not developed.",
+      "kp": null
+    },
+    {
+      "at": "46:45",
+      "kind": "aside",
+      "quote": "empirically, it hasn't, I think, necessarily panned out",
+      "what_was_filtered": "Structured sparsity and structured matrices (student question).",
+      "kp": null
+    },
+    {
+      "at": "47:08",
+      "kind": "aside",
+      "quote": "you probably want to train a bigger model and then quantize down",
+      "what_was_filtered": "Quantization practice (QAT plus post-training quantization), called 'not fully well understood'.",
+      "kp": null
+    },
+    {
+      "at": "50:01",
+      "kind": "defer-later",
+      "quote": "I'll talk a little bit more about fusion later.",
+      "what_was_filtered": "Advanced fusions that need manual kernels (picked up in FlashAttention and the next lecture).",
+      "kp": "operator-fusion"
+    },
+    {
+      "at": "1:01:54",
+      "kind": "aside",
+      "quote": "All these parallelism look a little bit like tiling in some ways.",
+      "what_was_filtered": "Data/tensor parallelism as tiling across devices, left to the parallelism lectures.",
+      "kp": "tiling-shared-memory"
+    },
+    {
+      "at": "1:05:53",
+      "kind": "aside",
+      "quote": "tiles, you should normally think of as a lower level systems thing, unless you're writing your own kernels",
+      "what_was_filtered": "Choosing tile sizes, filtered out for most learners: think about matrix sizes instead.",
+      "kp": "dim-divisibility-padding"
+    },
+    {
+      "at": "1:08:03",
+      "kind": "aside",
+      "quote": "Percy calls this GPU trivia.",
+      "what_was_filtered": "Wave quantization flagged as contested 'trivia' between the two instructors.",
+      "kp": "tile-wave-quantization"
+    },
+    {
+      "at": "1:11:46",
+      "kind": "aside",
+      "quote": "That's a world that I'm not familiar with.",
+      "what_was_filtered": "Wafer-scale (Cerebras) compilation (student question).",
+      "kp": null
+    },
+    {
+      "at": "1:13:46",
+      "kind": "defer-assignment",
+      "quote": "and you'll see this in the assignment, is there's a big global softmax",
+      "what_was_filtered": "Implementing FlashAttention's tiled global softmax (the forward pass is still taught in class).",
+      "kp": "flash-attention-forward"
+    },
+    {
+      "at": "1:16:49",
+      "kind": "skip",
+      "quote": "And then I'm not going to cover this or talk about it.",
+      "what_was_filtered": "FlashAttention's backward pass (tile-by-tile recomputation), summarized in one sentence.",
+      "kp": "flash-attention-forward"
+    }
+  ],
+  "spoken_map": [
+    {
+      "from": "0:05",
+      "to": "5:10",
+      "kp": null,
+      "what": "Opening: systems part of the class, GPU-class survey, the matmul-throughput mystery plot, resources, outline, compute as currency"
+    },
+    {
+      "from": "5:10",
+      "to": "6:20",
+      "kp": "gpu-vs-cpu-throughput",
+      "what": "end of Dennard scaling: transistors no longer faster, so scale horizontally"
+    },
+    {
+      "from": "6:20",
+      "to": "7:25",
+      "kp": null,
+      "what": "Bill Dally FLOP-growth plot previewed: tensor cores, sparsity, low-precision formats"
+    },
+    {
+      "from": "7:25",
+      "to": "9:10",
+      "kp": "gpu-vs-cpu-throughput",
+      "what": "CPU: big control, few ALUs, low latency; GPU: many lightweight cores, throughput"
+    },
+    {
+      "from": "9:10",
+      "to": "10:15",
+      "kp": "execution-hierarchy",
+      "what": "the SM as the independent compute unit; 128 SMs on an A100"
+    },
+    {
+      "from": "10:15",
+      "to": "12:40",
+      "kp": "gpu-memory-hierarchy",
+      "what": "registers, L1/shared, L2, global; latency table; physical layout; SRAM cost"
+    },
+    {
+      "from": "12:40",
+      "to": "13:20",
+      "kp": "shared-memory-vs-l1",
+      "what": "Q&A: L1 is a cache, shared memory is programmable"
+    },
+    {
+      "from": "13:20",
+      "to": "15:30",
+      "kp": "execution-hierarchy",
+      "what": "threads (SIMT), blocks on one SM with shared memory, warps of 32"
+    },
+    {
+      "from": "15:30",
+      "to": "17:05",
+      "kp": "gpu-memory-hierarchy",
+      "what": "memory model: registers, local, shared, global, constant, host; leave shared memory and things get slow"
+    },
+    {
+      "from": "17:05",
+      "to": "19:20",
+      "kp": "tpu-matmul-unit-granularity",
+      "what": "TPUs as convergent evolution: same blueprint, simpler control, bigger matmul units"
+    },
+    {
+      "from": "19:20",
+      "to": "22:45",
+      "kp": "tpu-matmul-unit-granularity",
+      "what": "GPU-TPU mapping, tensor-core naming clash, 132 SMs vs 2 cores, 528 vs 8 MXUs, batch sweep stops at 64"
+    },
+    {
+      "from": "22:45",
+      "to": "23:55",
+      "kp": "supp-latency-hiding",
+      "what": "SIMT keeps programming easy; lightweight warps swapped in when others stall"
+    },
+    {
+      "from": "23:55",
+      "to": "25:50",
+      "kp": "tensor-cores-matmul-special",
+      "what": "matmuls on graphics shaders, then tensor cores since V100; matmul >10x faster than other FLOPs"
+    },
+    {
+      "from": "25:50",
+      "to": "26:45",
+      "kp": "memory-wall-roofline",
+      "what": "compute grows faster than memory bandwidth and interconnect"
+    },
+    {
+      "from": "26:45",
+      "to": "27:35",
+      "kp": null,
+      "what": "Recap of the GPU mental model; pause for questions"
+    },
+    {
+      "from": "27:35",
+      "to": "28:00",
+      "kp": "tensor-cores-matmul-special",
+      "what": "Q&A: no matmul unit before V100"
+    },
+    {
+      "from": "28:00",
+      "to": "28:40",
+      "kp": "shared-memory-vs-l1",
+      "what": "Q&A: L1 vs shared memory, both SRAM; TPU's faster L2"
+    },
+    {
+      "from": "28:40",
+      "to": "30:05",
+      "kp": null,
+      "what": "Inference-hardware aside: prefill/decode disaggregation, per-layer accelerators; warps-per-block Q&A"
+    },
+    {
+      "from": "30:05",
+      "to": "32:55",
+      "kp": "memory-wall-roofline",
+      "what": "the mystery plot vs the classic roofline: memory-bound diagonal, compute-bound flat; six tricks"
+    },
+    {
+      "from": "32:55",
+      "to": "34:50",
+      "kp": "control-divergence",
+      "what": "both branches executed with masking; masks instead of if statements"
+    },
+    {
+      "from": "34:50",
+      "to": "36:30",
+      "kp": "low-precision-intensity",
+      "what": "precision drives the FLOP curve; ReLU bytes per FLOP halve from fp32 to fp16"
+    },
+    {
+      "from": "36:30",
+      "to": "38:00",
+      "kp": "tensor-core-fp32-accumulate",
+      "what": "downcast inputs, accumulate in full precision; which ops can be low precision"
+    },
+    {
+      "from": "38:00",
+      "to": "40:35",
+      "kp": null,
+      "what": "FP8 formats E4M3/E5M2 and MXFP8 per-block E8M0 scale factors"
+    },
+    {
+      "from": "40:35",
+      "to": "42:50",
+      "kp": "low-bit-speedup-diluted",
+      "what": "transpose needs requantization, two copies kept; FP8 matmuls save 20-30%, not 2x"
+    },
+    {
+      "from": "42:50",
+      "to": "44:30",
+      "kp": null,
+      "what": "First/last-layer quantization Q&A; MXFP4 as a curiosity; FP4 training not yet in the wild"
+    },
+    {
+      "from": "44:30",
+      "to": "45:50",
+      "kp": "low-bit-speedup-diluted",
+      "what": "Q&A: quantize matmuls where it pays; compute gain diluted by quantize/dequantize"
+    },
+    {
+      "from": "45:50",
+      "to": "47:35",
+      "kp": null,
+      "what": "Q&A: how scale factors are chosen, structured sparsity, quantization practice"
+    },
+    {
+      "from": "47:35",
+      "to": "50:05",
+      "kp": "operator-fusion",
+      "what": "factory analogy; sin^2+cos^2 as one kernel; torch.compile fuses simple graphs"
+    },
+    {
+      "from": "50:05",
+      "to": "52:50",
+      "kp": "recomputation-memory-traffic",
+      "what": "three sigmoids: 8 memory accesses stored vs 5 recomputed"
+    },
+    {
+      "from": "52:50",
+      "to": "55:50",
+      "kp": "memory-coalescing",
+      "what": "DRAM burst sections, coalesced warp reads; Q&A on row activation"
+    },
+    {
+      "from": "55:50",
+      "to": "57:50",
+      "kp": "memory-coalescing",
+      "what": "row-major matrix: threads walking a column hit a burst each; flip the layout"
+    },
+    {
+      "from": "57:50",
+      "to": "1:00:03",
+      "kp": "tiling-shared-memory",
+      "what": "tiles loaded into shared memory and reused; 2x2 tiled matmul walkthrough"
+    },
+    {
+      "from": "1:00:03",
+      "to": "1:02:15",
+      "kp": "tiling-shared-memory",
+      "what": "N/T global reads per input; Q&A on SRAM-only chips, parallelism as tiling, library kernels tile"
+    },
+    {
+      "from": "1:02:15",
+      "to": "1:04:00",
+      "kp": "tile-wave-quantization",
+      "what": "257 rows leave skinny tiles; tile size is tuned; max-autotune"
+    },
+    {
+      "from": "1:04:00",
+      "to": "1:07:45",
+      "kp": "dim-divisibility-padding",
+      "what": "misaligned tiles need extra reads; Karpathy's 50,304 vocab; divisibility plot, 16 or 32 equal"
+    },
+    {
+      "from": "1:07:45",
+      "to": "1:09:17",
+      "kp": "tile-wave-quantization",
+      "what": "1792 to 1793: 98 to 120 tiles on 108 SMs, a second wave"
+    },
+    {
+      "from": "1:09:17",
+      "to": "1:10:00",
+      "kp": null,
+      "what": "Part-two recap: memory, memory, memory"
+    },
+    {
+      "from": "1:10:00",
+      "to": "1:10:40",
+      "kp": "gpu-memory-hierarchy",
+      "what": "Q&A: why not all SRAM (cost, distance, power)"
+    },
+    {
+      "from": "1:10:40",
+      "to": "1:11:10",
+      "kp": "dim-divisibility-padding",
+      "what": "Q&A: beyond the burst size it's a divisor property"
+    },
+    {
+      "from": "1:11:10",
+      "to": "1:12:00",
+      "kp": null,
+      "what": "Q&A: Cerebras wafer-scale compilation"
+    },
+    {
+      "from": "1:12:00",
+      "to": "1:14:00",
+      "kp": "flash-attention-forward",
+      "what": "FlashAttention = tiling + recomputation; tiled QK and V matmuls; the global softmax problem"
+    },
+    {
+      "from": "1:14:00",
+      "to": "1:15:20",
+      "kp": "online-softmax",
+      "what": "running max and running sum, corrected when a new max appears; computable tile by tile"
+    },
+    {
+      "from": "1:15:20",
+      "to": "1:17:15",
+      "kp": "flash-attention-forward",
+      "what": "FlashAttention-2 diagram: tiles in SRAM, running sums, multiply by V, divide at end; backward recomputes"
+    },
+    {
+      "from": "1:17:15",
+      "to": "1:18:35",
+      "kp": null,
+      "what": "Closing summary: understand the hardware, matmuls, data movement"
+    }
+  ]
+}

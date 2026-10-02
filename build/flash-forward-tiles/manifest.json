@@ -1,0 +1,78 @@
+{
+  "fixture": "flash-forward-tiles",
+  "family": "tile-sweep",
+  "scene": "TilingScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "flash-attention-forward"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "13.366667"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "one Q block against streamed K blocks",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 3.733,
+      "caption": "K block 1 in shared memory; S tile lives only in SRAM",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 7.467,
+      "caption": "K block 2; HBM traffic grows by one K tile, not by an S tile",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s3",
+      "time": 10.167,
+      "caption": "S tiles come and go; HBM saw Q, K (and V) tiles only",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s2",
+      "claim": "The HBM traffic counter advances for Q and K tile loads and never for the S tile.",
+      "evidence": [
+        "counter",
+        "shared"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "Only one S tile exists at any time; the full N\u00d7N matrix is never written to HBM.",
+      "evidence": [
+        "C.tile",
+        "counter"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

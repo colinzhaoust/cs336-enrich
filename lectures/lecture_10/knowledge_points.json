@@ -1,0 +1,3114 @@
+{
+  "lecture": "lecture_10",
+  "title": "Inference",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are line ranges in official/lectures/lecture_10.py (see sources.json; sha256 recorded in discovered.json). Status and anchors are evidence read from the executable lecture; prerequisite edges marked author-inference are hypotheses until a learner attempt confirms them. Cross-lecture prerequisites are listed under external_prerequisites (lecture_02:<id>, lecture_05:<id>); the validator only checks in-file ids. A lecture_04 thread landed on 2026-10-01; edges to lecture_04:mla-latent-kv-cache, supp-kv-cache-bytes, hybrid-attention-ratios, sparse-attention-dsa and gated-linear-attention-variants are drawn. Lecture 4 has no GQA/MQA KP, so gqa-kv-reduction has no lecture_04 edge. Every @inspect in this lecture is sympy or plain Python arithmetic (no GPU), so this thread re-evaluates the formulas at L291-L306 with the L317-L329 config and states the results (b1 8.02 ms, b64 23.80 ms, b256 71.87 ms, etc.) as 'evaluating the professor's formula gives'; numbers that exist only inside embedded figures from cited papers (GQA speed/accuracy, MLA tables, CLA results, speculative-sampling results, pruning results) are recorded as shown and never restated. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer (2026-10-01): anchors with ref 'video:M:SS-M:SS' and role 'spoken' quote the human-made YouTube captions in transcript.json (source lecture_10_video; verified by tools/check_anchors.py, ±8 s). Filtering notes that begin 'Spoken evidence' record what the audio adds to or corrects in the written source; 'Spoken slip' marks speech that disagrees with the code and was not imported. Status 'spoken' marks KPs whose testable content exists only in the audio. Top-level spoken_filtering lists every explicit skip, deferral and aside, read from the full transcript; spoken_map segments the whole talk by KP.",
+  "path": {
+    "basis": "teaching-order",
+    "note": "Order in which main() calls sections in lecture_10.py (L16-L60), mapped to KPs. landscape() (L63-L97) yields one KP (metrics); review_transformer() (L100-L115) is notation only and is folded into prefill-vs-decode's filtering note; review_of_arithmetic_intensity() and the MLP half of arithmetic_intensity_of_inference() are one KP because both compute the same quantity (intensity = batch). The 'From scratch recipe' / 'Distillation recipe' lists (L34-L41) and the summary (L55-L60) are not KPs. model_pruning() ends in '# TODO' (L504) and is kept as a KP because the three-step algorithm is stated. Spoken-only KPs (status 'spoken', from the lecture captions) are placed where they are said: kv-cache-needs-causality (22:24) after prefill-vs-decode, spec-draft-length-tradeoff (1:15:40) after speculative-sampling-exactness.",
+    "stops": [
+      "inference-metrics",
+      "mlp-intensity-batch",
+      "prefill-vs-decode",
+      "kv-cache-needs-causality",
+      "attention-decode-intensity",
+      "kv-cache-size",
+      "decode-bandwidth-bound",
+      "batch-latency-throughput-tradeoff",
+      "gqa-kv-reduction",
+      "mla-latent-kv",
+      "sliding-window-kv",
+      "quantization-inference",
+      "prune-then-distill",
+      "speculative-sampling-mechanism",
+      "speculative-sampling-exactness",
+      "spec-draft-length-tradeoff",
+      "continuous-batching",
+      "paged-attention"
+    ],
+    "supplements": []
+  },
+  "knowledge_points": [
+    {
+      "id": "inference-metrics",
+      "label": "Three inference metrics: TTFT, latency, throughput",
+      "kind": "definition",
+      "statement": "Inference speed is three different numbers: time-to-first-token (how long before any output, set by prefill), latency in seconds per token for one query, and throughput in tokens per second across many queries; interactive use cares about the first two, batch processing about the third.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L90-L93",
+            "role": "claim",
+            "quote": "Time-to-first-token (TTFT): how long user waits before any generation happens (for interactive applications) ... Latency (seconds/token): how fast tokens appear for *one* query (for interactive applications) ... Throughput (tokens/second): how fast tokens appear for *many* queries (for batch processing)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L95-L97",
+            "role": "claim",
+            "quote": "Training (supervised): you see all tokens, can parallelize over sequence (matmul in Transformer) ... Inference: you have to generate sequentially, can't parallelize over generation, so harder to fully utilize compute"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L69",
+            "role": "claim",
+            "quote": "training is one-time cost, inference is repeated many times"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L366",
+            "role": "claim",
+            "quote": "time-to-first-token (TTFT) is essentially a function of prefill time"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:41-2:26",
+            "role": "spoken",
+            "quote": "training is a one-time cost. ... But inference is a repeated cost. ... So OpenAI is estimated to produce 8.6 trillion tokens a day. ... So in less than four days, the number of tokens that OpenAI has to produce, and therefore the compute is at least DeepSeek-V4."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:3:20-3:51",
+            "role": "spoken",
+            "quote": "So most of the tokens that the agent produces is actually not for reading. ... But for an agent, there's no limit to how much a value you can get out of squeezing more out of inference."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:5:40-6:00",
+            "role": "spoken",
+            "quote": "as soon as tokens come in, it doesn't maybe have to be that fast, because if you're going to read it anyway, you can't read that fast."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:6:28-6:46",
+            "role": "spoken",
+            "quote": "So latency or one latency and throughput are clearly very related. ... But as we'll see later, there's actually a trade off here."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:7:18-8:07",
+            "role": "spoken",
+            "quote": "when you're doing training, you see all the tokens at once ... In inference, you can't do that. ... this is the fundamental problem of why inference is a very different workload than training, because you can't parallelize across the sequence dimension."
+          }
+        ],
+        "filtering_note": "The landscape section (L63-L88) lists where inference shows up (chatbots, evaluation, RL), the '~8.6T tokens per day' and '32T tokens' figures (L70-L71, cited to an article and the DeepSeek-V4 report), providers and four open-source stacks (vLLM, SGLang, TensorRT-LLM, llama.cpp, L83-L86). None of that is testable mechanism; only the three metrics and the sequential-generation observation are kept. The professor defines latency as seconds/token, not time per request. Spoken evidence (1:41-2:26): the 'one-time vs repeated' line (L69) gets its arithmetic aloud: at 8.6T tokens a day against DeepSeek-V4's 32T training tokens, inference matches the training token count 'in less than four days' (32 / 8.6 = 3.7). Spoken evidence (3:20-3:51, 5:40-6:00): why throughput matters more now: an agent's tokens are mostly 'not for reading', so there is no reading-speed ceiling, whereas a chatbot user mostly feels TTFT and the stream 'doesn't maybe have to be that fast' once it starts. Spoken evidence (6:28-6:46): latency and throughput usually improve together, with a trade-off (batch size) promised for later. The landscape (vLLM 'kind of a go-to', SGLang for agentic workloads, TensorRT 'more narrow', llama.cpp for CPU, 4:20-4:50) is narrated and still not a KP."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "A serving system that is 'fast' is fast on one number; improving throughput improves latency too.",
+          "why_wrong": "The lecture separates per-query latency from aggregate throughput (L92-L93) precisely because the main lever, batch size, moves them in opposite directions (L360-L361)."
+        },
+        {
+          "belief": "Time-to-first-token is just the latency of the first decode step.",
+          "why_wrong": "TTFT is dominated by prefill, which processes the whole prompt before the first token can be emitted (L366); it scales with prompt length, not with the per-token decode cost."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A chatbot provider doubles the batch size during generation and nothing else. Which of the three metrics gets worse for an individual user?",
+          "format": "choice",
+          "choices": [
+            "time-to-first-token",
+            "latency (seconds/token)",
+            "throughput (tokens/second)"
+          ],
+          "answer": "latency (seconds/token)",
+          "why": "Each decode step now reads a larger KV cache, so every token takes longer for everyone (L356); throughput improves because the parameter read is amortized over more tokens (L357). TTFT is a prefill quantity (L366).",
+          "targets_misconception": "A serving system that is 'fast' is fast on one number; improving throughput improves latency too."
+        },
+        "transfer": {
+          "q": "You run an overnight job that scores 2 million short documents with a model, and separately a code-completion popup that must feel instant. Name the one metric each workload should optimize, with the one-phrase reason from the lecture.",
+          "format": "short",
+          "answer": "Overnight job: throughput (tokens/second across many queries, batch processing). Code completion: time-to-first-token (the user waits before any generation happens).",
+          "why": "L91-L93 attach each metric to a use: TTFT and per-query latency to interactive applications, throughput to batch processing."
+        },
+        "check": {
+          "q": "A voice assistant must start speaking within 300 ms of the user finishing a question, then reads a long answer aloud at speaking pace. Which metric does the 300 ms requirement constrain?",
+          "format": "choice",
+          "choices": [
+            "latency (seconds per token)",
+            "throughput (tokens/s, all queries)",
+            "time-to-first-token"
+          ],
+          "answer": "time-to-first-token",
+          "why": "The wait before any output is time-to-first-token, set by prefill (L91); seconds per token governs the pace once speech starts, and throughput is the batch-processing metric (L93).",
+          "varies": "a new interactive workload, where the requirement is on the start of output rather than on the overall job",
+          "invariant": "TTFT, per-token latency and throughput are three different numbers, each tied to a different use",
+          "distractor_from": [
+            "'latency (seconds per token)' <- misconception: 'Time-to-first-token is just the latency of the first decode step.'",
+            "'throughput (tokens/s, all queries)' <- misconception: 'A serving system that is fast is fast on one number; improving throughput improves latency too.'"
+          ],
+          "targets_misconception": "Time-to-first-token is just the latency of the first decode step.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In the professor's units, what does 'latency' measure during inference?",
+            "answer": "Seconds per token for a single query."
+          },
+          {
+            "q": "Which inference stage determines time-to-first-token?",
+            "answer": "Prefill."
+          },
+          {
+            "q": "Why is inference harder to make compute-efficient than supervised training?",
+            "answer": "Training sees all tokens and parallelizes over the sequence; inference must generate sequentially and cannot parallelize over generation."
+          }
+        ],
+        "self_explain": "Why does the professor give TTFT its own name instead of treating it as the first latency measurement?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "lecture_10.py:L90-L97"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:7:18-8:07",
+          "notice": "listen for: why inference cannot parallelize over the sequence the way training does"
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:lecture_10--batch-sweep",
+          "notice": "Raising B moves the two plotted numbers apart: latency per token, which every user feels, rises, and throughput across all users rises too; time-to-first-token is a prefill quantity and is not on the plot."
+        }
+      ]
+    },
+    {
+      "id": "mlp-intensity-batch",
+      "label": "MLP arithmetic intensity equals the batch (tokens) dimension",
+      "kind": "quantity",
+      "statement": "For X (B×D) @ W (D×F) in bf16 the intensity is 2BDF / (2BD + 2DF + 2BF), which tends to B when B is much smaller than D and F; so a matmul against shared weights is compute-bound only when the number of tokens exceeds the accelerator intensity (989e12 / 3.35e12 ≈ 295 on H100), and B = 1 (a matrix-vector product, intensity 1) is maximally memory-bound.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L136-L144",
+            "role": "computation",
+            "quote": "assert flops == 2*B*D*F ... assert bytes_transferred == 2*B*D + 2*D*F + 2*B*F ... intensity = intensity.subs(D, c*B).subs(F, c*B).limit(c, oo).simplify() ... assert intensity == B"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L146-L154",
+            "role": "computation",
+            "quote": "flops_per_second = 989e12 ... memory_bandwidth = 3.35e12 ... assert round(accelerator_intensity) == 295 ... Conclusion: compute-bound iff B > 295"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L156-L159",
+            "role": "claim",
+            "quote": "Extreme case (B = 1, corresponding to matrix-vector product): ... Arithmetic intensity: 1 ... Memory-bound (read D x F matrix, perform only 2 D F FLOPs) ... This is basically what happens with inference..."
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L204-L211",
+            "role": "computation",
+            "quote": "assert flops == 6*B*T*D*F ... assert bytes_transferred == 4*B*T*D + 4*B*T*F + 6*D*F ... assert intensity == B*T"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L213-L217",
+            "role": "claim",
+            "quote": "Prefill: easy to make compute-bound (good) by making `B*T` large enough (large batches, long sequences) ... Generating one token at a time (T = 1) ... B is number of concurrent requests, unpredictable for interactive applications"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:15:33-15:48",
+            "role": "spoken",
+            "quote": "It's kind of a quadratic-like term, and matmuls are qubit. ... And remember, this is going to be important because that's how you're going to get high arithmetic intensity."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:16:51-17:04",
+            "role": "spoken",
+            "quote": "remember when we did arithmetic intensity for matmul, it was something like N/3. ... And this is the kind of analog, where instead of just having square matrices, we have non-square matrices."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:18:23-18:45",
+            "role": "spoken",
+            "quote": "You're reading this DF matrix, but B is only one. ... And this is basically the workload that you'll see in inference. ... You don't get these full matrices, you get these very thin matrices or tensors."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:27:46-28:01",
+            "role": "spoken",
+            "quote": "And it also makes sense because the batch dimension and the sequence length dimension are-- everything is independent. ... And for the MLP, they don't interact."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:28:33-28:59",
+            "role": "spoken",
+            "quote": "your arithmetic intensity is going to be B, but B in generation is the number of concurrent requests. ... So it's a bit unpredictable. ... So that's something we're going to address when we talk about continuous batching."
+          }
+        ],
+        "filtering_note": "The limit is taken by substituting D = cB, F = cB and sending c to infinity (L143, L210), i.e. it assumes B (or B*T) is much smaller than D and F; for realistic decode batches that holds. The gated MLP accounting (L187-L202) counts three weight matrices (Wup, Wgate, Wdown) and the writes of U and G, giving 6BTDF FLOPs and 4BTD + 4BTF + 6DF bytes; the professor states the limit B*T without showing the intermediate simplified expression (@inspect at L208 is a sympy expression). The H100 constants (989e12 FLOP/s dense bf16, 3.35e12 B/s) are the same ones lecture 2 used; they are spec-sheet numbers, not measurements. Spoken evidence (16:51-17:04): the limit B is presented as the non-square analogue of lecture 2's n/3 for square matmuls (lecture_02:arithmetic-intensity). Spoken evidence (27:47-28:01): why the gated MLP's intensity is B·T: batch and sequence positions 'don't interact' in an MLP, so together they act as one token dimension. Spoken evidence (28:33-28:59): at generation T = 1, so the intensity is B, and B is 'the number of concurrent requests', which a chatbot server does not choose ('a bit unpredictable'); this is the motive given for continuous batching. bf16 is said to be 'the case for inference' (15:08). The gated-MLP accounting is not stepped through aloud (26:12)."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "teaching-order",
+          "note": "L139 says 'Recall that arithmetic intensity is how much compute we do per byte transferred'; the definition and the 295 threshold were derived in lecture 2."
+        },
+        {
+          "kp": "lecture_02:matmul-flops",
+          "basis": "author-inference",
+          "note": "The 2BDF count is used without derivation (L132)."
+        },
+        {
+          "kp": "lecture_02:dtype-bytes",
+          "basis": "author-inference",
+          "note": "Every byte term carries a factor 2 'for bf16' (L128)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A bigger model (larger D, F) has higher arithmetic intensity, so large models are compute-bound at decode.",
+          "why_wrong": "In the limit the D and F factors cancel: intensity → B (L143-L144). Making the weight matrix larger increases FLOPs and bytes in the same proportion; only the number of tokens sharing the weight read changes the ratio."
+        },
+        {
+          "belief": "Decode is memory-bound because the GPU has too little memory.",
+          "why_wrong": "Memory-bound here means bandwidth-bound: at B = 1 the whole D×F matrix is read from HBM to do only 2DF FLOPs (L158), so the time is set by bytes moved, regardless of how much memory the GPU has."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You swap Llama 2 13B's MLP (D = 5120, F = 13824) for one four times wider (F = 55296) and keep decoding with 32 concurrent requests. In the professor's limit, how does the MLP arithmetic intensity change (up / down / same)?",
+          "format": "trend",
+          "answer": "same (unchanged, still about 32)",
+          "why": "Intensity → B*T = 32 × 1 after the limit (L210-L211); F cancels between FLOPs (6BTDF) and the dominant byte term (6DF).",
+          "targets_misconception": "A bigger model (larger D, F) has higher arithmetic intensity, so large models are compute-bound at decode."
+        },
+        "transfer": {
+          "q": "Decode on an H100 (989e12 FLOP/s, 3.35e12 B/s) with 64 concurrent requests, one token each. What is the MLP arithmetic intensity (FLOPs per byte) in the professor's limit?",
+          "format": "number",
+          "answer": "64",
+          "tolerance": 0.05,
+          "why": "Intensity = B*T = 64 × 1 (L211); the accelerator's intensity is 989e12 / 3.35e12 ≈ 295 (L149-L150), so this is about 4.6x short of compute-bound."
+        },
+        "retrieval": [
+          {
+            "q": "What does the MLP arithmetic intensity simplify to when B*T is much smaller than D and F?",
+            "answer": "B*T (the number of tokens processed together)."
+          },
+          {
+            "q": "What is the H100 accelerator intensity the professor computes, and from which two numbers?",
+            "answer": "About 295, from 989e12 FLOP/s divided by 3.35e12 bytes/s."
+          },
+          {
+            "q": "Why is the B = 1 case called a matrix-vector product, and what is its intensity?",
+            "answer": "X is a single row, so X @ W is one vector times a matrix; the whole D×F matrix is read for only 2DF FLOPs, intensity 1."
+          },
+          {
+            "q": "What are the two reasons generation is hard to make compute-bound?",
+            "answer": "One token at a time (T = 1), and B is the number of concurrent requests, which is unpredictable for interactive applications."
+          }
+        ],
+        "self_explain": "Why does the professor need the assumption 'B*T much smaller than D and F' before the intensity collapses to B*T, and what would the intensity look like without it?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_10.py:L123-L144"
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_10.py:L183-L211"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:28:20-28:59",
+          "notice": "listen for: at generation the MLP's intensity is the number of concurrent requests, which the server does not choose"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_10--intensity",
+          "notice": "In generation (T = 1) the MLP bar sits at about B and does not move when F is widened; it crosses the H100's 295 line only once B·T exceeds about 300 tokens."
+        }
+      ]
+    },
+    {
+      "id": "prefill-vs-decode",
+      "label": "KV cache turns O(T^3) naive generation into prefill + sequential decode",
+      "kind": "mechanism",
+      "statement": "Re-running the Transformer on the whole history for each new token costs O(T^3) FLOPs for T tokens; caching every layer's key and value vectors in HBM (one H-vector per sequence, token, layer and KV head) shares that work, splitting inference into a parallel prefill of the prompt and a sequential generation of one token per step.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L166-L167",
+            "role": "claim",
+            "quote": "Naive inference: to generate each token, feed history into Transformer ... Complexity: generating T tokens requires O(T^3) FLOPs (one feedforward pass is O(T^2))"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L169-L172",
+            "role": "claim",
+            "quote": "Observation: a lot of the work can be shared across prefixes ... Solution: store **KV cache** in HBM ... KV cache: for every sequence (B), token (S), layer (L), head (K), store an H-dimensional vector"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L174-L176",
+            "role": "claim",
+            "quote": "Two stages of inference: ... **Prefill**: given a prompt, encode into vectors (parallelizable like in training) ... **Generation**: generate new response tokens (sequential)"
+          },
+          {
+            "source": "scaling_book_inference",
+            "ref": "scaling-book inference chapter (naive-inference and cached-inference figures)",
+            "role": "figure"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:21:28-21:45",
+            "role": "spoken",
+            "quote": "each time you generate one token, you actually take order T squared time where T is the number of tokens that you've generated so far. ... So generate T tokens is actually T cubed because the attention is already T squared, and you have to do that once for every token."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:22:41-22:55",
+            "role": "spoken",
+            "quote": "the first obvious thing is to store a KV cache in HPM, so that, between successive token generations, you can just reuse the KV cache."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:24:41-25:08",
+            "role": "spoken",
+            "quote": "You encode the prompt into these vectors. ... And this is parallelizable just like in training because you see the entire prompt. ... But at least you don't have to pay for generating the KV cache of the tokens that you already looked at."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:20:11-20:23",
+            "role": "spoken",
+            "quote": "So k should be the number of groups, and g should be the number of the heads per one of those groups. ... I'll fix that later."
+          }
+        ],
+        "filtering_note": "The two figures at L165 and L171 are the scaling book's; the professor does not derive the O(T^3) (it is sum over t of O(t^2) per pass). 'Head (K)' at L172 already uses the GQA letter for KV heads, defined in the notation review (L114: N = K G). The notation review (L100-L115) also fixes F = 4D, D = NH and S = T during training; those conventions are not separate KPs. The KV cache stores key and value, so the 'H-dimensional vector' at L172 is really two of them (L297 counts '2 for key + value'). Correction (21:28-21:45): the note above says the professor does not derive the O(T^3); he gives the one-line argument aloud: each step costs O(T^2) because 'the attention is already T squared', and 'you have to do that once for every token'. Spoken evidence (22:27-22:41): the reason prefix work can be shared is causality; that became the spoken KP kv-cache-needs-causality. Notation (19:03-20:23, Q&A): a student points out that the scaling-book diagram swaps K and G; he agrees ('k should be the number of groups, and g should be the number of the heads per one of those groups ... I'll fix that later'), which matches L114 (N = K G). The transformer-block review is kept short because students implemented it in Assignment 1 (13:05)."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:flash-attention-forward",
+          "basis": "author-inference",
+          "note": "The attention accounting at L219 is 'focusing on the matrix multiplications with FlashAttention', i.e. it assumes the S×T score matrix never hits HBM."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The KV cache stores past tokens' hidden states so the model can skip recomputing them entirely.",
+          "why_wrong": "It stores the per-layer key and value projections, the only things past positions contribute to a new token's attention (L172, L297); the new token still runs through every layer's MLP and attention."
+        },
+        {
+          "belief": "Prefill and generation are the same computation at different sizes.",
+          "why_wrong": "Prefill processes S prompt tokens in parallel like training and is compute-bound; generation processes one token per step and is memory-bound (L175-L176, L256). The lecture's techniques target generation."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "With a KV cache in place, you generate 2000 tokens instead of 1000 from the same prompt. Ignoring the prompt, by roughly what factor does total attention FLOPs for generation grow?",
+          "format": "choice",
+          "choices": [
+            "about 2x",
+            "about 4x",
+            "about 8x"
+          ],
+          "answer": "about 4x",
+          "why": "Each decode step attends over all previous tokens, so step t costs O(t) and the sum over T steps is O(T^2); doubling T quadruples it. Without the cache it would be O(T^3), an 8x jump (L167).",
+          "targets_misconception": "The KV cache stores past tokens' hidden states so the model can skip recomputing them entirely."
+        },
+        "transfer": {
+          "q": "A request has a 3000-token prompt and asks for a 50-token answer. Which stage dominates its time-to-first-token, and which stage dominates the user-visible seconds-per-token afterwards? Name the stage and the bound (compute- or memory-) for each.",
+          "format": "short",
+          "answer": "TTFT: prefill of the 3000 tokens, compute-bound. Seconds/token afterwards: generation, one token per step, memory-bound.",
+          "why": "Prefill encodes the prompt in parallel (L175) and sets TTFT (L366); generation is sequential (L176) and memory-bound (L256)."
+        },
+        "check": {
+          "q": "A request has a 20-token prompt and asks for a 4,000-token story. Which stage dominates its total wall-clock time, and what bounds that stage?",
+          "format": "choice",
+          "choices": [
+            "prefill, memory-bound",
+            "prefill, compute-bound",
+            "generation, compute-bound",
+            "generation, memory-bound"
+          ],
+          "answer": "generation, memory-bound",
+          "why": "Prefill of 20 tokens is one short parallel pass; the 4,000 tokens are produced one per step (L176), and each step re-reads the weights and KV cache for little arithmetic, so it is memory-bound (L256).",
+          "varies": "prompt and output lengths are inverted (short prompt, long output) and total time is asked instead of TTFT",
+          "invariant": "prefill processes the prompt in parallel and is compute-bound; generation is sequential and memory-bound",
+          "distractor_from": [
+            "'generation, compute-bound' <- misconception: 'Prefill and generation are the same computation at different sizes.'",
+            "'prefill, compute-bound' <- plausible: carries over the TTFT answer, where prefill dominates",
+            "'prefill, memory-bound' <- combines both errors"
+          ],
+          "targets_misconception": "Prefill and generation are the same computation at different sizes.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What is the FLOP complexity of generating T tokens with naive (no cache) inference, and why?",
+            "answer": "O(T^3): each of the T passes over the history costs O(T^2)."
+          },
+          {
+            "q": "List the four index dimensions over which the KV cache stores an H-dimensional vector.",
+            "answer": "Sequence (B), token (S), layer (L), KV head (K)."
+          },
+          {
+            "q": "With a KV cache in place, what does each forward pass process in prefill, and what in generation?",
+            "answer": "Prefill: all prompt tokens at once, in parallel like training. Generation: one new token per sequence per step, sequentially."
+          }
+        ],
+        "self_explain": "Why can the work be shared across prefixes for keys and values but not for the new token's query?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "https://jax-ml.github.io/scaling-book/assets/img/cached-inference-1400.webp"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L166-L176"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:21:28-21:45",
+          "notice": "listen for: why naive generation is T cubed: T squared per step, once per token"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_10--intensity",
+          "notice": "Switching the stage from generation (T = 1) to prefill (T = S) lifts both bars from far below the 295 line to above it once the prompt is a few hundred tokens or longer: prefill is compute-bound, generation memory-bound."
+        }
+      ]
+    },
+    {
+      "id": "kv-cache-needs-causality",
+      "label": "The KV cache is exact only because attention is causal",
+      "kind": "mechanism",
+      "statement": "A KV cache can be reused only because the Transformer is causal: each token's keys and values depend only on itself and earlier tokens, so appending a token leaves every cached K and V exactly unchanged; in a bidirectional model every earlier token attends to the new one, so its keys and values in every layer above the first change and nothing above layer 1 could be reused.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10_video",
+            "ref": "video:22:09-22:24",
+            "role": "spoken",
+            "quote": "A lot of the work can actually be shared across prefixes. ... you're actually computing a lot of the same key values for never going to give."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:22:24-22:41",
+            "role": "spoken",
+            "quote": "So these tokens, they shouldn't change, OK? ... And this is because it's a causal transformer. ... If it was bidirectional, then if you attach a token, then everything changes. ... But if it's causal, then the activations here don't change based on any tokens you append."
+          }
+        ],
+        "filtering_note": "Spoken only (22:24-22:41). The code states the observation ('a lot of the work can be shared across prefixes', L169) and the fix (store the KV cache, L170), but never says why the shared work stays valid; aloud: 'this is because it's a causal transformer. If it was bidirectional, then if you attach a token, then everything changes.' 'Everything changes' is slightly loose: in a bidirectional model the first layer's K and V are projections of each token's own embedding and do not change; every deeper layer's do, because their inputs attended to the new token. The statement and the check say so (author refinement). The prefix-LM transfer is the author's changed case. Placed after prefill-vs-decode, inside whose stretch it is said."
+      },
+      "prerequisites": [
+        {
+          "kp": "prefill-vs-decode",
+          "basis": "teaching-order",
+          "note": "The cache whose validity is being explained."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The KV cache is a generic engineering trick that works for any Transformer, including bidirectional ones.",
+          "why_wrong": "It relies on causal masking. In a bidirectional model each earlier token attends to the newly appended token, so its hidden states, and hence its K and V in every layer above the first, change at every step (22:27-22:41)."
+        },
+        {
+          "belief": "Reusing cached keys and values is an approximation: the old tokens' values change a little when a token is appended, but not enough to matter.",
+          "why_wrong": "Under causal masking they do not change at all: a token cannot attend to later tokens, so its K and V are exactly the same however many tokens follow. The cache is exact."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A bidirectional (BERT-style) model is used to generate text: after each new token is appended, the whole sequence is rerun with full attention in every layer. Can the earlier tokens' keys and values from the previous step be reused?",
+          "format": "choice",
+          "choices": [
+            "No: above layer 1, every earlier token's K and V change",
+            "Yes: the earlier tokens are unchanged, so their K and V are",
+            "Only for tokens outside a recent window of the sequence",
+            "Partly: only the last layer's K and V need recomputing"
+          ],
+          "answer": "No: above layer 1, every earlier token's K and V change",
+          "why": "With full attention every earlier token attends to the new one, so from layer 2 up their inputs, and hence their K and V, change. Only a causal model keeps them fixed: 'If it was bidirectional, then if you attach a token, then everything changes' (22:30).",
+          "targets_misconception": "The KV cache is a generic engineering trick that works for any Transformer, including bidirectional ones.",
+          "distractor_from": "'Yes: tokens unchanged' <- misconception: the cache works for any Transformer (the tokens are the same, their contexts are not); 'recent window' <- confuses this with sliding-window attention; 'only the last layer' <- underestimates propagation: every layer from 2 up sees changed inputs"
+        },
+        "transfer": {
+          "q": "A prefix-LM attends bidirectionally within the prompt, while generated tokens attend causally to the prompt and to earlier generated tokens; prompt tokens never attend to generated ones. During generation, which keys and values can be cached and reused, and what change to the input would force recomputing the prompt's cache?",
+          "format": "short",
+          "answer": "All of them: prompt tokens never see generated tokens, so their K and V are fixed after prefill, and each generated token's K and V depend only on earlier tokens. Adding text inside the bidirectional prompt block (for example a new user turn treated as prompt) would change every prompt token's K and V above layer 1 and force recomputing that cache.",
+          "why": "The cache is valid exactly where a token's attention cannot reach later tokens. In a prefix-LM that holds for the prompt with respect to generated tokens, but not for new text added inside the prompt.",
+          "varies": "the attention mask: bidirectional inside the prompt, causal outside it",
+          "invariant": "a cached K or V is reusable only if that token cannot attend to anything appended later",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A 4-layer bidirectional encoder (every token attends to every token in every layer) has processed 100 tokens. You append one token and rerun. Layer 1's keys and values are projections of each token's own embedding. Counting one (token, layer) pair for each token's K and V in each layer, how many pairs must be computed in this step, including the new token's? Type only the number.",
+          "format": "number",
+          "answer": "304",
+          "value": 304,
+          "tolerance": 0.01,
+          "why": "The new token needs K and V in all 4 layers (4). The 100 old tokens keep their layer-1 K and V, but in layers 2-4 their inputs attended to the new token, so 100 × 3 = 300 must be recomputed: 304 in total. A causal model with a cache computes only the new token's 4.",
+          "targets_misconception": "The KV cache is a generic engineering trick that works for any Transformer, including bidirectional ones.",
+          "varies": "surface: count the recomputation instead of answering yes or no",
+          "invariant": "a token's K and V must be recomputed whenever anything it attends to (directly or through lower layers) changes",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Why does appending a token leave the cached keys and values unchanged in a decoder-only Transformer?",
+            "answer": "Causal masking: a token's keys and values depend only on itself and earlier tokens, so later tokens cannot change them."
+          },
+          {
+            "q": "What would break the KV cache in a bidirectional model?",
+            "answer": "Every earlier token attends to the new token, so its hidden states, and hence its K and V in every layer above the first, change at each step."
+          }
+        ],
+        "self_explain": "Why does causal masking make the cache exact rather than approximate, and why does a bidirectional model still keep its first-layer keys and values?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:22:24-22:41",
+          "notice": "listen for: 'this is because it's a causal transformer. If it was bidirectional ... everything changes'"
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:lecture_10--kv-recompute",
+          "notice": "Under the causal mask only the new token's column is computed; switching to bidirectional turns every earlier token's cells orange from layer 2 up, while layer 1 stays grey."
+        }
+      ]
+    },
+    {
+      "id": "attention-decode-intensity",
+      "label": "Attention intensity ST/(S+T): batching does not help at decode",
+      "kind": "quantity",
+      "statement": "Attention over S cached tokens for T new tokens does 4BSTD FLOPs against 4BSD + 4BTD bytes, intensity ST/(S+T) with no B: prefill (T = S) gives S/2, generation (T = 1) gives S/(S+1) < 1, and because every sequence reads its own KV cache, adding concurrent requests cannot raise it.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L235-L240",
+            "role": "computation",
+            "quote": "assert flops == 4*B*S*T*D ... assert bytes_transferred == 4*B*S*D + 4*B*T*D ... assert intensity == S*T / (S + T)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L243-L248",
+            "role": "computation",
+            "quote": "assert prefill_intensity == S/2  # Good! ... Generation: T = 1 ... assert generate_intensity < 1  # Bad!"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L250-L253",
+            "role": "claim",
+            "quote": "Unlike MLPs, no dependence on B, so batching doesn't help! ... In MLP layers, every sequence hits the same MLP weights (Wup, Wgate, Wdown don't depend on B) ... In attention layers, every sequence has its own KV cache vectors (Q, K, V all depend on B)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L255-L260",
+            "role": "claim",
+            "quote": "Prefill is compute-bound, generation is memory-bound ... Generation MLP intensity: `B` (requires concurrent requests) ... Generation attention intensity: `<1` (impossible to improve)"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:30:04-30:29",
+            "role": "spoken",
+            "quote": "So this should be always one degree higher of a polynomial than the bytes transferred because it's a MAmmoTH. ... So that factor for attention is S times T over S plus T."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:31:07-31:24",
+            "role": "spoken",
+            "quote": "So the generated nation intensity is S over S plus 1, and that's less than 1, or even let's just call it 1. ... We want it to be something like 295 for H100 to be to saturate the compute."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:32:09-32:58",
+            "role": "spoken",
+            "quote": "Every sequence hits the same MLP weights. ... Whereas, in attention layer, each sequence has its own KV cache. ... in the MLP case, having B being big actually is helpful because you get to load these MLP weights once."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:34:26-34:43",
+            "role": "spoken",
+            "quote": "But it is really the generation attention intensity which is a fundamental bottleneck, and that's it. ... If you're sticking with a transformer, you can't really improve this."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:32:14-32:27",
+            "role": "spoken",
+            "quote": "So these all depend on MLP."
+          }
+        ],
+        "filtering_note": "The accounting assumes FlashAttention (L219), so the S×T score matrix and softmax are never written to HBM; only Q, K, V reads and the Y write count. The shapes at L230 (softmax(A) as B×S×T×K×G, V as B×S×K×H) are written in GQA notation but the byte count uses D = NH for K and V, i.e. it is the MHA case; with K < N KV heads the K/V bytes shrink by N/K (that is the gqa-kv-reduction KP). 'impossible to improve' (L260) is the professor's phrasing for the MHA accounting at fixed S; the later sections reduce the bytes rather than raise the intensity. Spoken evidence (32:09-33:46): the reason batching does not help is told as weight reuse: in the MLP 'you get to load these MLP weights once' for every sequence, while in attention 'each sequence has its own KV cache', so each sequence is its own small matmul and 'doing more MAmmoTHs [matmuls] isn't helpful'. The B that appears in both attention operands is flagged in the notation review as the cause (12:23-12:45) and named again at 33:46. Spoken evidence (34:26-34:43): 'If you're sticking with a transformer, you can't really improve this', the spoken form of L260's 'impossible to improve', which points ahead to the KV-cache and architecture changes. Spoken slips: 'So these all depend on MLP' (32:23), where L251 and the following sentences say they depend on B; and the FLOPs read as 'B times S times T times D' (29:54) against L235's 4·B·S·T·D. Not imported."
+      },
+      "prerequisites": [
+        {
+          "kp": "prefill-vs-decode",
+          "basis": "teaching-order",
+          "note": "S (conditioned-on tokens) and T (generated tokens) are defined there (L179-L180)."
+        },
+        {
+          "kp": "mlp-intensity-batch",
+          "basis": "teaching-order",
+          "note": "The contrast 'unlike MLPs' (L250) needs the MLP result intensity = B*T."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "Same definition applied to attention."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Batching more requests makes decode compute-bound across the whole model.",
+          "why_wrong": "Only the MLP (shared-weight) intensity grows with B (L252, L259). Attention reads a separate KV cache per sequence, so its intensity ST/(S+T) has no B in it (L240, L250)."
+        },
+        {
+          "belief": "Longer contexts make decode attention more efficient because there is more work per step.",
+          "why_wrong": "At T = 1 the intensity is S/(S+1), which approaches 1 from below as S grows (L247-L248): the extra work comes with proportionally more KV bytes to read."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You raise the decode batch from 8 to 128 concurrent requests, each with 4096 cached tokens. What happens to the attention layers' arithmetic intensity (up / down / same)?",
+          "format": "trend",
+          "answer": "same (unchanged, about 1 regardless of B)",
+          "why": "Intensity is S*T/(S+T) = 4096/4097 regardless of B (L240, L250); each sequence's attention reads its own K and V.",
+          "targets_misconception": "Batching more requests makes decode compute-bound across the whole model."
+        },
+        "transfer": {
+          "q": "A serving system does prefill on a 4096-token prompt and then decodes. Using the professor's formula, what is the attention arithmetic intensity (FLOPs per byte) during prefill, to three significant figures?",
+          "format": "number",
+          "answer": "2048",
+          "tolerance": 0.01,
+          "why": "Prefill: T = S gives S/2 = 2048 (L245). Each decode step: T = 1 gives S/(S+1) = 4096/4097 ≈ 1 (L247-L248)."
+        },
+        "retrieval": [
+          {
+            "q": "What is the general attention arithmetic intensity in terms of S and T?",
+            "answer": "S*T / (S + T)."
+          },
+          {
+            "q": "Why does batching raise MLP intensity but not attention intensity?",
+            "answer": "Every sequence hits the same MLP weights, but every sequence has its own Q, K, V (KV cache) to read."
+          },
+          {
+            "q": "What is attention's arithmetic intensity in prefill (T = S) and in generation (T = 1), and does batch size change either?",
+            "answer": "Prefill: S/2. Generation: S/(S+1), less than 1. Neither depends on B, because every sequence reads its own KV cache."
+          }
+        ],
+        "self_explain": "Why does the professor say the attention bound is 'impossible to improve' while the next section goes on to speed attention up anyway?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_10.py:L222-L248"
+        },
+        {
+          "type": "formula-step",
+          "action": "predict-number",
+          "ref": "lecture_10.py:L240-L248",
+          "faded": false,
+          "steps": [
+            {
+              "tex": "\\frac{4BSTD}{4BSD + 4BTD} = \\frac{ST}{S+T}",
+              "do": "L240: divide the FLOPs by the bytes counted above.",
+              "why": "B and D appear in every term and cancel. Unlike the MLP, where the weights are shared across the batch, no B survives."
+            },
+            {
+              "tex": "T = S:\\quad \\frac{S^2}{2S} = \\frac{S}{2}",
+              "do": "L243-L245: prefill.",
+              "why": "All S prompt positions are queries at once, so each K and V byte read is reused by S queries: compute-bound."
+            },
+            {
+              "tex": "T = 1:\\quad \\frac{S}{S+1} < 1",
+              "do": "L246-L248: generation.",
+              "why": "One new query per sequence uses each cached K/V byte once. Every sequence reads its own KV cache, so more concurrent requests add bytes in proportion to FLOPs and the intensity stays below 1."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "compare",
+          "ref": "video:32:09-32:58",
+          "notice": "listen for: MLP weights are loaded once for the whole batch, but each sequence's KV cache is its own"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_10--intensity",
+          "notice": "Moving B leaves the attention bar exactly where it is (ST/(S+T) has no B) while the MLP bar moves with B; only prefill (T = S) lifts attention to S/2."
+        }
+      ]
+    },
+    {
+      "id": "kv-cache-size",
+      "label": "KV cache bytes: S × K × H × L × 2 × 2 per sequence, plus 2 × params",
+      "kind": "quantity",
+      "statement": "In bf16 a sequence of S tokens needs S · (K·H) · L · 2 · 2 bytes of KV cache (key and value, two bytes each) and the model needs 2 · num_params bytes, so total memory is B · S · 4KHL + 2 · params; it grows linearly in batch and in context, and for Llama 2 13B (K = 40, H = 128, L = 40) that is 819,200 bytes per token, 0.84 GB per 1024-token sequence, on top of about 26 GB of weights.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L291-L300",
+            "role": "computation",
+            "quote": "num_params = 2*V*D + D*F*3*L + (2*D*N*H + 2*D*K*H)*L ... parameter_size = 2*num_params  # 2 for bf16 (training requires a larger multiple) ... kv_cache_size_per_seq = S * (K*H) * L * 2 * 2  # 2 for key + value, 2 for bf16 ... memory = B * kv_cache_size_per_seq + parameter_size"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L317-L329",
+            "role": "computation",
+            "quote": "S: 1024,   # Sequence length ... D: 5120,   # Model dim ... F: 13824,  # Feed-forward dim ... N: 40,     # Number of query heads ... K: 40,     # Number of key/value heads ... H: 128,    # Head dimension ... L: 40,     # Number of layers ... V: 32000,  # Vocabulary size"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L351-L353",
+            "role": "computation",
+            "quote": "h100_memory = 80e9  # H100 memory in bytes ... assert b256.memory > h100_memory  # Doesn't fit in memory! ... doesn't fit into memory and throughput gains are diminishing too..."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:36:25-36:30",
+            "role": "spoken",
+            "quote": "There's no GQA here. ... So the N equals k"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:37:49-38:28",
+            "role": "spoken",
+            "quote": "Also in memory is the KV cache. ... You have one for the key and one for the value, and then you have multiple two for bf16. ... this is for each sequence you have B sequences. ... So that's B times that plus the parameter size."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:39:33-40:06",
+            "role": "spoken",
+            "quote": "So num parameters is 13 billion. ... Memory is this term, which is about 838 million times B. ... This is the parameters, which is double the number of params."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:46:20-46:44",
+            "role": "spoken",
+            "quote": "the KV cache takes up a lot of memory. ... And it could even be larger than the number of parameters if for a large enough batch size."
+          }
+        ],
+        "filtering_note": "The param count (L291) is 2VD (tied-size embedding and unembedding) + 3DFL (gated MLP) + (2DNH + 2DKH)L (Q and O projections at N heads, K and V at K heads); with the L317-L329 config it evaluates to 13.015e9, matching the '13B' name. Evaluating the formulas (plain Python, no GPU) gives per-sequence KV cache 0.839 GB and parameter bytes 26.03 GB; B = 64 gives 79.72 GB, which still fits an 80 GB H100 by 0.3 GB, and B = 256 gives 240.8 GB, which is what the assert at L352 checks. The professor's @inspect values (b1, b64, b256) are '@stepover' and never printed in the source; the numbers above are this thread's evaluation of his formula. The code makes K part of num_params, so changing K later (GQA) also shrinks the model. Spoken evidence (39:33-40:06): the trace values are read aloud: 13 billion parameters ('a good sanity check') and memory 'about 838 million times B' plus twice the parameter count, matching this thread's evaluation (0.839 GB per sequence); so the @stepover values are confirmed by the talk, not only by re-evaluation. Spoken evidence (46:20-46:44): the KV cache 'could even be larger than the number of parameters' at a large enough batch (at B = 64 it is about 53.7 GB against 26 GB of weights, author evaluation). The config is plain MHA: 'There's no GQA here. So the N equals k' (36:25)."
+      },
+      "prerequisites": [
+        {
+          "kp": "prefill-vs-decode",
+          "basis": "teaching-order",
+          "note": "The (B, S, L, K, H) index set of the cache is stated at L172 before it is turned into bytes at L297."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:dtype-bytes",
+          "basis": "author-inference",
+          "note": "The two factors of 2 for bf16 (L294, L297)."
+        },
+        {
+          "kp": "lecture_05:gpu-memory-hierarchy",
+          "basis": "author-inference",
+          "note": "The 80e9-byte H100 HBM capacity (L351) is the budget the cache must fit."
+        },
+        {
+          "kp": "lecture_04:supp-kv-cache-bytes",
+          "basis": "author-inference",
+          "note": "Lecture 4's supplement states the same per-token formula (2 · layers · heads · head_dim · bytes); L297 is its per-sequence form with K KV heads."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The KV cache is small compared with the weights, so memory is set by model size.",
+          "why_wrong": "Per sequence it is 0.84 GB at 1024 tokens for Llama 2 13B; at B = 64 the cache (53.7 GB) already exceeds the weights (26 GB), and at B = 256 it is 215 GB (L300, L352). It scales with B × S while weights do not."
+        },
+        {
+          "belief": "Doubling context length doubles the memory needed.",
+          "why_wrong": "Only the KV term B·S·4KHL doubles; the 2·params term is fixed (L300). At small B the total barely moves; at large B it nearly doubles."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Llama 2 13B in bf16 on an 80 GB H100 at S = 1024. The weights take about 26 GB. Roughly how many concurrent sequences fit before the KV cache fills the rest?",
+          "format": "choice",
+          "choices": [
+            "about 6",
+            "about 64",
+            "about 640"
+          ],
+          "answer": "about 64",
+          "why": "Per sequence 1024 × (40×128) × 40 × 4 = 0.839 GB (L297); (80 − 26) / 0.839 ≈ 64. The professor's B = 64 case lands at 79.7 GB and B = 256 does not fit (L352).",
+          "targets_misconception": "The KV cache is small compared with the weights, so memory is set by model size."
+        },
+        "transfer": {
+          "q": "A model has L = 32 layers, K = 8 KV heads, H = 128, bf16 cache. How many bytes of KV cache per token?",
+          "format": "number",
+          "answer": "131072",
+          "tolerance": 0.02,
+          "why": "Per token: K·H·L·2·2 = 8 × 128 × 32 × 4 = 131,072 bytes (128 KiB) (L297). For 32 concurrent sequences of 8192 tokens, multiply by S and B: 32 × 8192 × 131072 ≈ 34.4 GB (L300)."
+        },
+        "retrieval": [
+          {
+            "q": "Write the per-sequence KV cache size formula in bf16 and say what each factor of 2 is for.",
+            "answer": "S × (K×H) × L × 2 × 2; one 2 for key plus value, one 2 for bf16 bytes."
+          },
+          {
+            "q": "What two terms make up total inference memory during decoding?",
+            "answer": "B × kv_cache_size_per_seq plus parameter_size (2 bytes per parameter)."
+          },
+          {
+            "q": "Which batch size in the Llama 2 13B example fails the 80 GB check?",
+            "answer": "B = 256.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the KV cache formula involve K (KV heads) rather than N (query heads), and what does that suggest about how to shrink it?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:kv-cache-growth",
+          "notice": "The cache grows by 4·L·K·H bytes per generated token per sequence (bf16 key + value), linearly in S and in B, while the weight bar stays fixed at 2·params; at the Llama 2 13B shape the total crosses the 80 GB H100 when B × S reaches about 66k cached tokens."
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_10.py:L291-L300"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:39:33-40:06",
+          "notice": "listen for: memory is about 838 million bytes per sequence times B, plus twice the parameter count"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--kv-ledger",
+          "notice": "The orange KV bar grows by 0.84 GB per sequence at S = 1024 while the grey weight bar stays at 26 GB; 'sequences that fit' is (80 − 26) / 0.84."
+        }
+      ]
+    },
+    {
+      "id": "decode-bandwidth-bound",
+      "label": "Decode napkin math: latency = memory / bandwidth, throughput = B / latency",
+      "kind": "procedure",
+      "statement": "Because each decode step must read all parameters plus the whole KV cache, the best-case step latency is (2·params + B·kv_per_seq) / memory_bandwidth and throughput is B divided by that; for Llama 2 13B on an H100 (3.35e12 B/s) evaluating the formula gives 8.0 ms and 125 tokens/s at B = 1.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L302-L306",
+            "role": "computation",
+            "quote": "*Latency* is determined by memory IO (read all parameters and KV cache for each step) ... latency = memory / memory_bandwidth ... *Throughput* is the inverse of latency, but we're generating B tokens in parallel ... throughput = B / latency"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L333-L339",
+            "role": "claim",
+            "quote": "So we have shown that inference is memory-bound. ... Let us now compute the theoretical maximum latency and throughput of a single request. ... Assumption: can overlap compute and communication perfectly and ignore overhead. ... Instantiate latency and throughput for Llama 2 13B on an H100"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L327",
+            "role": "computation",
+            "quote": "memory_bandwidth: 3.35e12,  # Memory bandwidth (bytes/second)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L341-L342",
+            "role": "computation",
+            "quote": "# Batch size 1 ... b1 = stats.substitute(B, 1)  # @inspect b1 @stepover"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:35:27-35:58",
+            "role": "spoken",
+            "quote": "you just look at how much memory needs to be transferred ... assuming you overlap communication and computation, the bottleneck is going to be just the amount of memory that you have to deal with. ... it's frustrating that your accelerators are sitting there not doing anything."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:38:32-39:12",
+            "role": "spoken",
+            "quote": "The latency is determined by the memory I/O ... Throughput is the inverse of latency, but we're generating B tokens in parallel."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:41:40-41:59",
+            "role": "spoken",
+            "quote": "You get a latency of 0.008 seconds per token. ... And the throughput is 124 tokens per second."
+          }
+        ],
+        "filtering_note": "This is a lower bound on latency (and upper bound on throughput): it assumes perfect overlap, zero kernel-launch and scheduling overhead, and that reading bytes is the only cost (L335). Compute time is not modelled at all, which is consistent with the memory-bound conclusion but would break for very large B. Evaluating the formula with the L317-L329 config: B = 1: 26.87 GB read per step, 8.02 ms, 124.7 tokens/s. These are derived from the professor's code, not measured; a real H100 does not achieve 3.35e12 B/s sustained. The TransformerPerformanceStats docstring (L267) says num_params is 'in bytes', but the field is a count; parameter_size is the bytes. Spoken evidence (35:27-35:58): the assumption behind latency = memory / bandwidth is said aloud: 'assuming you overlap communication and computation', only the bytes matter, and the price is that 'your accelerators are sitting there not doing anything'. Spoken evidence (41:40-41:55): the B = 1 values are read from the rendered trace, 'a latency of 0.008 seconds per token' and '124 tokens per second', matching this thread's 8.02 ms and 124.7 tokens/s."
+      },
+      "prerequisites": [
+        {
+          "kp": "kv-cache-size",
+          "basis": "teaching-order",
+          "note": "memory at L300 is the numerator of latency at L303."
+        },
+        {
+          "kp": "mlp-intensity-batch",
+          "basis": "teaching-order",
+          "note": "'So we have shown that inference is memory-bound' (L333) licenses ignoring compute time."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:roofline",
+          "basis": "author-inference",
+          "note": "Time = bytes / bandwidth is the memory-bound leg of the roofline."
+        },
+        {
+          "kp": "lecture_05:memory-wall-roofline",
+          "basis": "author-inference",
+          "note": "Why HBM bandwidth, not FLOP/s, is the limiting resource at decode."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Tokens per second for one user is limited by how fast the GPU can do the model's FLOPs.",
+          "why_wrong": "At B = 1 the step does 2·params FLOPs but reads 2·params bytes; at intensity 1 against an accelerator intensity of 295, the FLOPs finish long before the bytes arrive, so latency is bytes / bandwidth (L302-L303)."
+        },
+        {
+          "belief": "Halving the number of parameters halves single-user latency at any context length.",
+          "why_wrong": "Latency is (parameter bytes + B·KV bytes) / bandwidth (L300, L303); the KV term is untouched by pruning parameters and dominates at long contexts or large batches."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "An 8B-parameter model in bf16 is served at B = 1 with a short prompt on an H100 (3.35e12 B/s). Compared with Llama 2 13B's roughly 125 tokens/s bound, is its tokens/s bound closer to 125, 200, or 1000?",
+          "format": "choice",
+          "choices": [
+            "about 125",
+            "about 200",
+            "about 1000"
+          ],
+          "answer": "about 200",
+          "why": "Bytes per step ≈ 2 × 8e9 = 16 GB; 16e9 / 3.35e12 = 4.8 ms per token, about 209 tokens/s (L294, L303, L306). The bound scales with bytes read, not with FLOP/s.",
+          "targets_misconception": "Tokens per second for one user is limited by how fast the GPU can do the model's FLOPs."
+        },
+        "transfer": {
+          "q": "A 70B-parameter model in bf16 is split evenly over 8 GPUs each with 3.35e12 B/s bandwidth, B = 1, KV cache negligible, perfect overlap. Using the professor's model (each GPU reads only its shard), what is the tokens/s bound?",
+          "format": "number",
+          "answer": "190",
+          "tolerance": 0.05,
+          "why": "Total bytes 2 × 70e9 = 140 GB; each GPU reads 17.5 GB per step; 17.5e9 / 3.35e12 = 5.22 ms (L303); 1 / 5.22 ms ≈ 191 tokens/s (L306). Sharding divides the bytes each device must read, which is the 'harder parallelism' at L364."
+        },
+        "retrieval": [
+          {
+            "q": "What single quantity determines decode latency in the professor's model, and what two things must be read each step?",
+            "answer": "Memory IO: all parameters and the KV cache."
+          },
+          {
+            "q": "How is throughput obtained from latency?",
+            "answer": "throughput = B / latency, because B tokens are generated in parallel per step."
+          },
+          {
+            "q": "Decode latency is estimated as the bytes read per step divided by memory bandwidth. What simplifying assumption makes that a valid estimate?",
+            "answer": "Compute and communication overlap perfectly and overhead is ignored."
+          }
+        ],
+        "self_explain": "Why does the napkin model not need the FLOP rate of the H100 at all, and when would that omission start to give wrong answers?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:decode-bound",
+          "notice": "Latency is (parameter bytes + B × KV-cache bytes) / bandwidth; the parameter bar does not change with B, so throughput B / latency rises with B until the KV-cache term dominates, then flattens toward bandwidth / KV-bytes-per-sequence."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_10.py:L287-L314"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:35:27-35:58",
+          "notice": "listen for: decode time is bytes moved over bandwidth, with the compute idle"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--batch-sweep",
+          "notice": "At B = 1 the latency is almost all weight read: halving the bytes (fewer parameters, a smaller dtype, or more GPUs sharing the read) halves the latency; no FLOP rate appears anywhere."
+        }
+      ]
+    },
+    {
+      "id": "batch-latency-throughput-tradeoff",
+      "label": "Batch size trades latency for throughput, with diminishing returns",
+      "kind": "rule-of-thumb",
+      "statement": "Raising the decode batch size worsens every user's latency (more KV cache to read per step) but raises throughput (the parameter read is amortized over more tokens) with diminishing returns as the KV term dominates; so use small batches for prefill (TTFT) and large batches for generation, and launching M independent copies raises throughput M-fold without touching latency.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L344-L350",
+            "role": "computation",
+            "quote": "b64 = stats.substitute(B, 64)  # @inspect b64 @stepover ... Result: worse latency, better throughput ... b256 = stats.substitute(B, 256)  # @inspect b256 @stepover ... Result: even worse latency, even better throughput"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L355-L361",
+            "role": "claim",
+            "quote": "Worsens latency because larger KV cache (O(B) size) to read/write ... Improves throughput because amortizes the cost of reading parameters ... Smaller batch sizes yield better latency but worse throughput ... Larger batch sizes yield better throughput but worse latency"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L363-L364",
+            "role": "claim",
+            "quote": "Easy parallelism: if you launch M copies of the model, latency is the same, throughput increases by M! ... Harder parallelism: shard the model and the KV cache"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L366-L368",
+            "role": "claim",
+            "quote": "Use smaller batch sizes during prefill for faster TTFT ... Use larger batch sizes during generation to improve throughput"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:40:20-41:00",
+            "role": "spoken",
+            "quote": "So notice that latency, as you increase B, grows because the KV cache grows. ... as you increase B, throughput does improve but up to a limit. ... So this asymptotes. ... throughput can't possibly go to infinity."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:41:14-41:24",
+            "role": "spoken",
+            "quote": "latency is a linear function in B. This is where the constant is the size of KV cache, and then this is the number of parameters. ... And then throughput is some proportional to B over B plus something."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:42:13-42:33",
+            "role": "spoken",
+            "quote": "fast actually has two meanings here, which actually, depending on which one you care about, is completely opposite. ... If you want to tune your batch size, that's going to really determine if you want latency or throughput."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:42:49-43:20",
+            "role": "spoken",
+            "quote": "your memory, you run out of memory because the memory, for storing this KV cache, is going to exceed your H100 memory. ... You'll never get to the asymptote because you'll hit the memory."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:43:40-43:59",
+            "role": "spoken",
+            "quote": "if you're an individual query, you have to wait for everyone to finish. ... you're waiting for a bus, and the latency is pretty high. ... Whereas, the throughput of a bus is pretty good because you can move everyone at once."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:44:47-44:58",
+            "role": "spoken",
+            "quote": "if you launch M copies of the model, the latency is the same, and the throughput increases by M."
+          }
+        ],
+        "filtering_note": "Evaluating the professor's formula for Llama 2 13B at S = 1024: B = 1: 8.0 ms, 125 tok/s; B = 64: 23.8 ms, 2690 tok/s; B = 256: 71.9 ms, 3562 tok/s (and 241 GB, which does not fit). Going 64 → 256 is 4x the batch for 1.32x the throughput: that is the 'diminishing' at L353. The reason, not spelled out in the lecture, is that throughput = B·bw / (2·params + B·kv) → bw / kv_per_seq ≈ 3.35e12 / 0.839e9 ≈ 3990 tok/s as B → ∞ (author inference from L300-L306). The 'M copies' claim (L363) assumes M times the hardware and ignores the fact that each copy also needs its own weights in memory. Correction (40:20-41:24, 43:13): the note above says the reason for the diminishing returns is 'not spelled out in the lecture'. It is, in words: latency is 'a linear function in B' whose slope is the KV-cache size and whose intercept is the parameters, so throughput is 'proportional to B over B plus something', 'asymptotes' and 'can't possibly go to infinity'; and in practice 'You'll never get to the asymptote because you'll hit the memory'. The numeric ceiling (about 3990 tokens/s) is still the author's. Spoken evidence (43:40-43:59): the trade-off as a bus: each rider waits for the whole batch (latency), but the bus moves everyone at once (throughput). The M-copies line is offered as 'a very trivial example' of parallelism, which is otherwise left to the scaling book (44:30-44:47)."
+      },
+      "prerequisites": [
+        {
+          "kp": "decode-bandwidth-bound",
+          "basis": "teaching-order",
+          "note": "The tradeoff is read off b1, b64, b256 computed by that formula."
+        },
+        {
+          "kp": "inference-metrics",
+          "basis": "teaching-order",
+          "note": "Latency and throughput were defined as separate metrics at L92-L93."
+        }
+      ],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "Throughput keeps scaling linearly with batch size as long as memory allows.",
+          "why_wrong": "Only the parameter read is amortized (L357); the KV cache read grows with B (L356), so throughput saturates at bandwidth / KV-bytes-per-sequence. 64 → 256 gives 4x batch for about 1.3x throughput on the Llama 2 13B numbers (L350-L353)."
+        },
+        {
+          "belief": "Larger batches help prefill and decode alike.",
+          "why_wrong": "Prefill is already compute-bound at modest B·S (L214) and larger prefill batches only delay the first token (L367); large batches pay off during memory-bound generation (L368)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "On the Llama 2 13B / H100 napkin model, B = 64 gives about 2690 tokens/s. If B = 256 fit in memory, would its throughput be closest to 10,800 (4x), 3,600, or 2,700 tokens/s?",
+          "format": "choice",
+          "choices": [
+            "about 10,800",
+            "about 3,600",
+            "about 2,700"
+          ],
+          "answer": "about 3,600",
+          "why": "Bytes per step = 26.03 GB + B × 0.839 GB. At 256 that is 240.8 GB → 71.9 ms → 256 / 0.0719 ≈ 3562 tok/s (L349-L353). The KV term now dominates, so throughput is approaching bandwidth / kv_per_seq ≈ 3990.",
+          "targets_misconception": "Throughput keeps scaling linearly with batch size as long as memory allows."
+        },
+        "transfer": {
+          "q": "Same model and GPU, but a context of S = 4096 instead of 1024. What is the asymptotic throughput ceiling (large B) in tokens/s?",
+          "format": "number",
+          "answer": "1000",
+          "tolerance": 0.05,
+          "why": "Ceiling = bandwidth / kv_per_seq (from throughput = B·bw / (2·params + B·kv), L300-L306). kv_per_seq quadruples with S (L297): 4096 × 5120 × 40 × 4 = 3.36 GB; 3.35e12 / 3.36e9 ≈ 998 tok/s, one quarter of the roughly 3990 tok/s ceiling at S = 1024."
+        },
+        "retrieval": [
+          {
+            "q": "Give the one-line reason larger batches worsen latency and the one-line reason they improve throughput.",
+            "answer": "Worse latency: larger KV cache (O(B)) to read/write each step. Better throughput: the cost of reading parameters is amortized."
+          },
+          {
+            "q": "What happens to latency and throughput when you launch M independent copies of the model?",
+            "answer": "Latency is unchanged; throughput increases by M."
+          },
+          {
+            "q": "Which stage should use smaller batches and which larger, and why?",
+            "answer": "Prefill smaller (faster TTFT); generation larger (better throughput)."
+          }
+        ],
+        "self_explain": "Why does amortizing the parameter read stop helping once the KV cache is bigger than the weights?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:decode-bound",
+          "notice": "Sliding B from 1 to 256 moves latency up linearly and throughput up concavely; the throughput curve bends where B × KV-bytes equals the parameter bytes (about B = 31 for Llama 2 13B at S = 1024)."
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_10.py:L341-L353"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:43:40-43:59",
+          "notice": "listen for: the bus: each rider waits for the batch, the bus moves everyone at once"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_10--batch-sweep",
+          "notice": "Throughput rises steeply until B* ≈ 31, where the KV read equals the weight read, then bends toward the dashed ceiling bandwidth / kv_per_seq, while latency keeps growing linearly in B."
+        }
+      ]
+    },
+    {
+      "id": "gqa-kv-reduction",
+      "label": "GQA/MQA shrink the KV cache by N/K; CLA shares it across layers",
+      "kind": "mechanism",
+      "statement": "Keeping N query heads but only K key/value heads (MHA: K = N; MQA: K = 1; GQA: in between) divides the KV cache by N/K, which, because decode is memory-bound, lowers per-step bytes and lets more sequences fit; cross-layer attention applies the same sharing across layers instead of heads.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L378-L381",
+            "role": "claim",
+            "quote": "Idea: N query heads, but only K key and value heads, each interacting with N/K query heads ... Multi-headed attention (MHA): K=N ... Multi-query attention (MQA): K=1 ... Group-query attention (GQA): K is somewhere in between"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L386-L388",
+            "role": "claim",
+            "quote": "Why does GQA improve latency and throughput? ... GQA reduces the KV cache by a factor of N/K. ... Reminder: reducing memory usage leads to speedup (since we're memory-bound)."
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L394-L402",
+            "role": "computation",
+            "quote": "config = llama2_13b_config({K: 8, B: 64})  # Use GQA with 1:5 ratio @stepover ... Result: Worse latency, but better throughput (and it fits in memory now!) ... config = llama2_13b_config({K: 8, B: 256})  # Increase batch size @stepover ... Result: Worse latency, but better throughput (and still fits in memory!)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L421-L424",
+            "role": "claim",
+            "quote": "Cross-layer attention (CLA) ... Idea: share KVs across **layers** (just as GQA shares KVs across heads) ... Empirically improves the pareto frontier of accuracy and KV cache size (latency and throughput)"
+          },
+          {
+            "source": "gqa_2023",
+            "ref": "GQA paper (speed and accuracy figures shown at L384, L405)",
+            "role": "citation"
+          },
+          {
+            "source": "cla_2024",
+            "ref": "CLA paper (diagram and results shown at L422, L425)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:47:36-47:54",
+            "role": "spoken",
+            "quote": "And so in the multi-headed attention, K is N, no reduction. ... There's something called multi query attention, which no one uses because it's really bad. ... And somewhere in between is hopefully where we'll find a balance between accuracy and speed."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:49:27-49:59",
+            "role": "spoken",
+            "quote": "That reduces the memory quite a bit, which, in turn, improves the latency and also improves the throughput. ... So it's not that latency and throughput are always at odds. ... If you reduce the amount of memory, then it improves both. ... That is the point of tension."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:50:15-50:40",
+            "role": "spoken",
+            "quote": "before, if we had a batch size of 256, we ran out of memory. ... But now, it fits in memory. ... the latency suffers a bit because we're increasing the batch size, but the throughput goes up proportionally."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:51:14-51:32",
+            "role": "spoken",
+            "quote": "with these accuracy values, I think you always have to take it with a grain of salt because this is for a particular model. ... Later, the deep sea paper should show that it actually does hurt."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:56:05-56:15",
+            "role": "spoken",
+            "quote": "Just like GQA shares K across heads, now I'm sharing KVs across layers."
+          }
+        ],
+        "filtering_note": "The GQA speed and accuracy plots (images/gqa-speed.png, gqa-accuracy.png) and CLA results (cla-results.png) are the papers' T5 / small-model measurements and are not restated. Evaluating the professor's formula: K = 40, B = 64: 79.7 GB, 23.8 ms, 2690 tok/s; K = 8, B = 64: 33.4 GB, 10.0 ms, 6417 tok/s; K = 8, B = 256: 65.6 GB, 19.6 ms, 13,068 tok/s. Two things in the text do not match the computation (author inference): (a) L397 says 'Worse latency' for k8_b64, but against k40_b64 latency improves (10.0 vs 23.8 ms); it is worse only against b1; (b) 'it fits in memory now' at L397 implies k40_b64 did not fit, but 79.72 GB < 80e9 by 0.3 GB. Also, because K enters num_params at L291, the K = 8 model has 11.3B parameters (22.7 GB), so part of the latency gain is from fewer weights, not only the cache. The '1:5 ratio' comment (L395) means K:N = 8:40. Spoken evidence (49:36-49:59): the talk sides with this thread's reading (a) above, not with L397's 'Worse latency': for k8_b64 against k40_b64 he says GQA 'improves the latency and also improves the throughput', and generalizes: 'it's not that latency and throughput are always at odds. If you reduce the amount of memory, then it improves both', batch size being 'the point of tension'. He does not retract the L397 text, so this is recorded as a disagreement between the code text and the talk, not as a correction. On (b): aloud the memory comparison is made at B = 256 ('before, if we had a batch size of 256, we ran out of memory. But now, it fits in memory', 50:15-50:22), which agrees with the computation. Spoken evidence (47:41, 51:14-51:24): MQA is something 'no one uses because it's really bad', and the GQA paper's accuracy result should be taken 'with a grain of salt' because the DeepSeek-V2 paper later found GQA 'does hurt'."
+      },
+      "prerequisites": [
+        {
+          "kp": "kv-cache-size",
+          "basis": "teaching-order",
+          "note": "K appears directly in S·(K·H)·L·2·2 (L297)."
+        },
+        {
+          "kp": "decode-bandwidth-bound",
+          "basis": "teaching-order",
+          "note": "'reducing memory usage leads to speedup (since we're memory-bound)' (L388) is the latency = bytes / bandwidth model."
+        }
+      ],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "GQA speeds up decode because attention does fewer FLOPs.",
+          "why_wrong": "Each of the N query heads still attends over the full cache; the saving is K·H instead of N·H key/value bytes per token per layer (L387), which matters because decode is bandwidth-bound (L388)."
+        },
+        {
+          "belief": "MQA (K = 1) is strictly better than GQA for serving.",
+          "why_wrong": "It gives the largest cache reduction but the lecture checks accuracy separately (L404-L405) and later notes MHA beats GQA in quality (L416); GQA is the middle point on that accuracy/size tradeoff (L381)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Llama 2 13B keeps N = 40 query heads but moves from K = 40 to K = 8 KV heads. Ignoring the parameter-count change, by what factor does the KV cache per token shrink?",
+          "format": "number",
+          "answer": "5",
+          "tolerance": 0.01,
+          "why": "Factor N/K = 40 / 8 (L387); per token the cache goes from 819,200 to 163,840 bytes (L297).",
+          "targets_misconception": "GQA speeds up decode because attention does fewer FLOPs."
+        },
+        "transfer": {
+          "q": "A 70B-class model has L = 80, N = 64, H = 128 and uses GQA with K = 8, bf16. How many KV-cache bytes per token does it store?",
+          "format": "number",
+          "answer": "327680",
+          "tolerance": 0.02,
+          "why": "Per token: K × H × L × 2 × 2 = 8 × 128 × 80 × 4 = 327,680 bytes (L297). MHA would set K = N = 64 (L379): 2,621,440 bytes, N/K = 8x more (L387)."
+        },
+        "retrieval": [
+          {
+            "q": "What value of K corresponds to MHA, and what value to MQA?",
+            "answer": "MHA: K = N. MQA: K = 1."
+          },
+          {
+            "q": "By what factor does GQA reduce the KV cache, and why does that translate into speed?",
+            "answer": "N/K; because decode is memory-bound, fewer bytes means less time."
+          },
+          {
+            "q": "What does cross-layer attention share, by analogy with what GQA shares?",
+            "answer": "KVs across layers, as GQA shares KVs across heads.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does a K = 8 model need a separate accuracy check when its arithmetic is otherwise identical to the K = 40 model?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "https://jax-ml.github.io/scaling-book/assets/img/gmqa.png"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:kv-cache-growth",
+          "notice": "Lowering K from 40 to 8 flattens the KV-cache growth line by 5x while the weight bar barely moves; the 80 GB crossing moves from about 66k to about 350k cached tokens."
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_10.py:L390-L402"
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:49:27-49:59",
+          "notice": "listen for: cutting memory improves latency and throughput together; only batch size trades one for the other"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--kv-ledger",
+          "notice": "Switching MHA to GQA shrinks the blue per-token bar by N/K (5× at K = 8) and multiplies the sequences that fit by about the same factor; the weight bar stays put."
+        }
+      ]
+    },
+    {
+      "id": "mla-latent-kv",
+      "label": "MLA caches a compressed latent c and up-projects K, V on demand",
+      "kind": "mechanism",
+      "statement": "Multi-head latent attention stores per token a low-dimensional latent c = W_c h instead of the full K and V, recomputing K = W_K c and V = W_V c when needed; DeepSeek-V2 compresses N·H = 16384 to C = 512, adding 64 dimensions for RoPE (576 total) because the compression is not compatible with rotary embeddings.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L409-L410",
+            "role": "claim",
+            "quote": "Normal attention: KV cache consists of K = W_K h, V = W_V h (N*H dimensions) ... MLA: store compressed vector c = W_c h (C dimensions), project up to K = W_K c, V = W_V c when needed"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L411-L413",
+            "role": "claim",
+            "quote": "DeepSeek v2: reduce N*H = 16384 to C = 512 ... Wrinkle: MLA is not compatible with RoPE, so need to add additional 64 dimensions for RoPE, so 512 + 64 = 576 total dimensions ... Latency/throughput improvements follow similarly from the KV cache reduction as argued earlier"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L416-L418",
+            "role": "claim",
+            "quote": "First, MHA is better than GQA (though more expensive) [Table 8] ... Second, MLA is even a bit better than MHA (and much cheaper) [Table 9]"
+          },
+          {
+            "source": "mla_2024",
+            "ref": "DeepSeek-V2 paper, Tables 8 and 9 (shown at L417, L419)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:52:43-53:07",
+            "role": "spoken",
+            "quote": "So MLA says I'm going to actually project these activations down into C dimensions. ... So DeepSeek-V2 reduced it from 16,000 to 512, so this is quite aggressive compression here. ... So now, I can just store C. This is much smaller."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:53:14-53:30",
+            "role": "spoken",
+            "quote": "MLA is not compatible with rope, which operates directly on the keys and values. ... So what they do is add additional dimensions for handling the rope."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:53:36-53:52",
+            "role": "spoken",
+            "quote": "So the latency and throughput improvements follow by just simple math. ... The smaller the KV cache, the faster you go. ... It's almost kind of linear scaling up until at some point."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:55:02-55:27",
+            "role": "spoken",
+            "quote": "These ablations don't show that. ... My guess is that reducing the model dimension just makes things worse because you're indiscriminately just reducing everything. ... I think the trick in all of this kind of is to find places in the model where you can squeeze."
+          }
+        ],
+        "filtering_note": "The accuracy tables (images/mla-accuracy.png, mla-accuracy2.png) are the paper's and are not restated; only the professor's two reading-off sentences are kept. He does not explain why RoPE is incompatible (the rotation depends on position and cannot be folded into W_c), nor that the up-projection W_K can be absorbed into the query projection so K is never materialized; both are in the paper. Per layer per token, MHA caches 2·N·H = 32768 values versus MLA's 576, about 57x fewer (author computation from L409-L412; the paper describes this as equivalent to GQA with 2.25 groups). Spoken evidence (53:36-53:52): the speed-up 'follow[s] by just simple math': the smaller the KV cache, the faster, 'almost kind of linear scaling up until at some point' (while decode stays memory-bound). Spoken evidence (55:02-55:27, Q&A): asked how MLA compares with shrinking the model dimension, he says the ablations do not show it and guesses that uniform shrinking is worse; 'the trick ... is to find places in the model where you can squeeze' (hedged, not part of this KP). Spoken slip (53:14): RoPE is said to operate 'directly on the keys and values'; RoPE rotates queries and keys, not values. Not imported. The note's 'does not explain why RoPE is incompatible' stands; '16,000' (52:50) is L412's 16384 rounded."
+      },
+      "prerequisites": [
+        {
+          "kp": "gqa-kv-reduction",
+          "basis": "teaching-order",
+          "note": "MLA is presented as the next step after GQA in reducing the cache, and compared against GQA and MHA (L416-L418)."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_04:mla-latent-kv-cache",
+          "basis": "teaching-order",
+          "note": "MLA was introduced as an architecture choice in lecture 4; lecture 10 reuses it as a KV-cache reducer and adds the RoPE wrinkle and the accuracy tables."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "MLA is a form of GQA: it shares a few KV heads across queries.",
+          "why_wrong": "MLA keeps all heads but stores a learned low-rank latent c of dimension C and regenerates per-head K and V from it (L410); the saving is C versus N·H, not K versus N."
+        },
+        {
+          "belief": "Because MLA stores less, it must lose accuracy relative to MHA.",
+          "why_wrong": "The professor reads off Table 9 that MLA is 'even a bit better than MHA (and much cheaper)' (L418); the compression is learned, not a truncation."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "DeepSeek-V2 attention has N·H = 16384. Per layer per token, MHA caches both K and V. Compared with MLA's 576-dimensional cache, is MHA's cache about 28x, 57x, or 114x larger?",
+          "format": "choice",
+          "choices": [
+            "about 28x",
+            "about 57x",
+            "about 114x"
+          ],
+          "answer": "about 57x",
+          "why": "MHA stores K and V, 2 × 16384 = 32768 values (L409); MLA stores one 576-dim vector (L412); 32768 / 576 ≈ 56.9. Choosing 28x forgets that both K and V are cached.",
+          "targets_misconception": "MLA is a form of GQA: it shares a few KV heads across queries."
+        },
+        "transfer": {
+          "q": "A model with 60 layers uses MLA with C = 512 plus 64 RoPE dimensions, bf16 cache. How many KV-cache bytes per token?",
+          "format": "number",
+          "answer": "69120",
+          "tolerance": 0.02,
+          "why": "Per token: (512 + 64) × 60 layers × 2 bytes = 69,120 (L412), one latent per layer replacing both K and V. A single 128k-token (131,072) context is then about 9.06 GB."
+        },
+        "retrieval": [
+          {
+            "q": "What does MLA store in the cache, and what does it compute from it at attention time?",
+            "answer": "A compressed vector c = W_c h; K = W_K c and V = W_V c are projected up when needed."
+          },
+          {
+            "q": "Why is the DeepSeek-V2 latent 576 and not 512 dimensions?",
+            "answer": "MLA is not compatible with RoPE, so 64 extra dimensions are added for RoPE.",
+            "layer": "detail"
+          },
+          {
+            "q": "How does the professor rank MHA, GQA and MLA on accuracy from the two DeepSeek-V2 tables?",
+            "answer": "MHA better than GQA; MLA a bit better than MHA while much cheaper."
+          }
+        ],
+        "self_explain": "Why can a learned projection W_c compress K and V together but not the position-dependent rotation RoPE applies to them?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "official/lectures/images/mla-schema.png"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L407-L413"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:52:43-53:07",
+          "notice": "listen for: store a 512-dimensional latent per token and rebuild K and V from it when needed"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_10--kv-ledger",
+          "notice": "With N = H = 128 the MLA bar (512 + 64 values per layer) is about 57× shorter than the MHA bar, which holds both K and V (2 × 16384 values)."
+        }
+      ]
+    },
+    {
+      "id": "sliding-window-kv",
+      "label": "Local (sliding-window) attention caps the KV cache independent of length",
+      "kind": "mechanism",
+      "statement": "If each layer attends only to a local window, the KV cache per sequence is bounded by the window rather than growing with sequence length, and information still propagates because the effective context grows linearly with depth; since pure local attention hurts accuracy, models interleave local layers with global ones.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L429-L433",
+            "role": "claim",
+            "quote": "Idea: just look at the local context, which is most relevant for modeling ... Effective context scales linearly with the number of layers ... KV cache is independent of sequence length! ... Problem: this can still hurt accuracy ... Solution: interleave local attention with global attention (hybrid layers)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L442-L446",
+            "role": "claim",
+            "quote": "Goal: reduce the KV cache size (since inference is memory-bound) without hurting accuracy ... Lower-dimensional KV cache (GQA, MLA, CLA) ... Local attention (truncates the KV cache) on some of the layers ... Other ideas: linear attention / state-space-models (Mamba 2, GatedDeltaNet), diffusion models"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L435-L440",
+            "role": "claim",
+            "quote": "DeepSeek v4 attention ... Supports 1M context length ... Compressed Sparse Attention (CSA): compresses every m tokens into 1 ... DeepSeek Sparse Attention (DSA): selects the top k ... Heavily Compressed Attention (HCA): compresses even more"
+          },
+          {
+            "source": "longformer_2020",
+            "ref": "Longformer sliding-window figure (shown at L428)",
+            "role": "citation"
+          },
+          {
+            "source": "mistral_7b_2023",
+            "ref": "Mistral 7B (sliding window attention in production)",
+            "role": "citation"
+          },
+          {
+            "source": "sparse_transformer_2019",
+            "ref": "Sparse Transformer local attention patterns",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:57:24-57:47",
+            "role": "spoken",
+            "quote": "For every token you generate, you just depend on the last K. ... So the KV cache is now independent of the sequence length. ... It's just the number of the batch times the other variables, which is great."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:57:51-58:05",
+            "role": "spoken",
+            "quote": "because of the number of layers, the effective context length is actually larger than the number of the stated context length because information can propagate farther in if you go down the layers."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:58:27-58:47",
+            "role": "spoken",
+            "quote": "the problem with this is that it actually still hurts accuracy. ... There's no free lunch here, or at least this was an expensive lunch. ... So the solution that people come up with is that they interleave local attention with global attention."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:02:56-1:03:32",
+            "role": "spoken",
+            "quote": "So compressed attention is going to basically compress every M tokens into one token. ... DeepSeek sparse attention, which basically selects a subset of those to keep. ... So a lightning fast way to figure out what tokens you need to keep."
+          }
+        ],
+        "filtering_note": "Three papers are linked at L427 without saying which claim comes from which; the window figure is Longformer's. 'Effective context scales linearly with the number of layers' (L430) is asserted, not derived: with window W, after l layers a position can be influenced by tokens up to l·W back. The DeepSeek-V4 CSA/DSA/HCA bullets (L438-L440) are three names with one-phrase glosses and the figure deepseek-v4-attention.png; they are kept as anchors for the summary 'truncate or compress the cache' but are not separately testable. Linear attention / SSMs / diffusion (L446) are named only. Spoken evidence (57:51-58:05): the linear-in-depth reach (L430) gets its reason aloud, 'information can propagate farther in if you go down the layers', still without the l·W arithmetic. Spoken evidence (58:27-58:47): local attention 'still hurts accuracy ... There's no free lunch', hence the interleaving. Spoken evidence (1:02:56-1:03:32): the DeepSeek-V4 bullets are narrated from the figure: CSA compresses every m tokens into one, DSA selects a subset with a small indexer attention ('a lightning fast way to figure out what tokens you need to keep'), then more compression, cut short 'in the interest of time' (1:03:40). The window is called 'the last K tokens' (57:14), reusing K, which elsewhere in this lecture counts KV heads. Linear attention, Mamba and DeltaNet come up only in Q&A (59:13-1:02:14), as more expressive than a sliding window but lossy on needle-in-a-haystack recall (lecture_04 thread)."
+      },
+      "prerequisites": [
+        {
+          "kp": "kv-cache-size",
+          "basis": "teaching-order",
+          "note": "The S factor in S·(K·H)·L·2·2 is what the window replaces."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_04:hybrid-attention-ratios",
+          "basis": "author-inference",
+          "note": "'Interleave local attention with global attention (hybrid layers)' (L433) is the same hybrid-layer pattern lecture 4 taught for linear/SSM layers."
+        },
+        {
+          "kp": "lecture_04:sparse-attention-dsa",
+          "basis": "author-inference",
+          "note": "DSA 'selects the top k' (L439) is the sparse-attention indexer from lecture 4."
+        },
+        {
+          "kp": "lecture_04:gated-linear-attention-variants",
+          "basis": "author-inference",
+          "note": "'linear attention / state-space-models (Mamba 2, GatedDeltaNet)' (L446) are named only here; lecture 4 has the mechanism."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "With a window of W tokens, the model can only ever use the last W tokens of context.",
+          "why_wrong": "Information propagates one window per layer, so the receptive field after L layers is about L·W tokens (L430); what is bounded is the cache per layer, not the model's reach."
+        },
+        {
+          "belief": "Sliding-window attention is a free KV-cache reduction with no quality cost.",
+          "why_wrong": "The lecture flags that it 'can still hurt accuracy' (L432) and that production models interleave global layers (L433); the summary says 'on some of the layers' (L445)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A 32-layer model attends with a 4096-token sliding window in every layer. A request has 100,000 tokens of context. How many tokens' worth of K and V does each layer hold in the cache?",
+          "format": "number",
+          "answer": "4096",
+          "tolerance": 0.0,
+          "why": "Local attention truncates the cache to the window regardless of sequence length (L431, L445); the 100k context only enters through the window-per-layer propagation (L430).",
+          "targets_misconception": "With a window of W tokens, the model can only ever use the last W tokens of context."
+        },
+        "transfer": {
+          "q": "Same 32-layer model, window 4096. A system interleaves one global-attention layer after every three local layers (8 global, 24 local). At a 32k-token context in bf16 with K = 8, H = 128, what is the KV cache per sequence compared with the all-global model, as a decimal fraction (e.g. 0.5)?",
+          "format": "number",
+          "answer": "0.34: global layers cache 32,768 tokens each, local ones 4,096; (8 × 32768 + 24 × 4096) / (32 × 32768) = 360,448 / 1,048,576 ≈ 0.344",
+          "tolerance": 0.03,
+          "why": "Each layer's cache is tokens × K·H·2·2 (L297); local layers hold the window (L431), global layers hold the full context (L433). The per-token constant cancels in the ratio."
+        },
+        "retrieval": [
+          {
+            "q": "How does the effective context of a sliding-window model grow?",
+            "answer": "Linearly with the number of layers."
+          },
+          {
+            "q": "What is the lecture's remedy for the accuracy loss of local attention?",
+            "answer": "Interleave local attention with global attention (hybrid layers)."
+          },
+          {
+            "q": "Name the two families of KV-cache reduction in the lecture's section summary and one example of each.",
+            "answer": "Lower-dimensional cache (GQA, MLA, CLA); local attention truncating the cache on some layers."
+          }
+        ],
+        "self_explain": "Why would a local layer and a global layer stacked together recover much of what pure local attention loses?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "official/lectures/images/longformer-attention.png"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L427-L446"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:58:27-58:47",
+          "notice": "listen for: local attention costs accuracy, so models interleave it with global layers"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--kv-ledger",
+          "notice": "With a window set, the green local layers stop at W tokens however long S gets, while the blue global layers keep growing with S; the per-sequence total is their mix."
+        }
+      ]
+    },
+    {
+      "id": "quantization-inference",
+      "label": "Quantization: scale and zero point, dtype bytes, QAT vs PTQ",
+      "kind": "procedure",
+      "statement": "Quantization maps x to round(x / scale) + zero_point and back to (q − zero_point) · scale, trading precision for bytes (bf16 2 B, fp8/int8 1 B, int4 0.5 B), which speeds memory-bound decode; it is either trained in (QAT, simulate quantize-dequantize in the forward pass) or applied after training (PTQ, calibrate scale and zero point on sample data; GPTQ uses Hessian information to update the not-yet-quantized weights to compensate for quantization error; AWQ uses activation statistics to protect the salient weight channels).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L450-L451",
+            "role": "claim",
+            "quote": "Key idea: reduce the precision of numbers ... Less memory means higher latency/throughput (since inference is memory-bound)."
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L455-L459",
+            "role": "computation",
+            "quote": "x = 5.2342  # @inspect x ... scale = 0.1 ... zero_point = 4 ... x_quant = round(x / scale) + zero_point  # Quantize  @inspect x_quant ... x_approx = (x_quant - zero_point) * scale  # Dequantize @inspect x_approx"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L462-L466",
+            "role": "claim",
+            "quote": "fp32 (4 bytes): needed for parameters and optimizer states during training ... bf16 (2 bytes): default for inference ... fp8 (1 byte) [-240, 240] for e4m3 on H100s: can train if you dare ... int8 (1 byte) [-128, 127]: less accurate but cheaper than fp8, but for inference only ... int4 (0.5 bytes) [-8, 7]: cheaper, even less accurate"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L470-L478",
+            "role": "claim",
+            "quote": "Quantization-aware training (QAT) ... During training, quantize-and-dequantize during the forward pass to simulate quantization errors ... Post-training quantization (PTQ): ... Run on sample data to determine scale and zero point for each layer or tensor ... GPTQ: use Hessian information to update non-quantized weights to account for quantization error"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L482-L486",
+            "role": "claim",
+            "quote": "Observation: some activation channels are large ... Weights that hit those matter more ... Idea: select which weights (0.1-1%) to keep in high precision based on activations ... fp16 → int3 produces 4x lower memory, 3.2x speedup"
+          },
+          {
+            "source": "awq_2023",
+            "ref": "AWQ paper (schema shown at L487)",
+            "role": "citation"
+          },
+          {
+            "source": "gptq_2022",
+            "ref": "GPTQ paper",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:05:11-1:05:45",
+            "role": "spoken",
+            "quote": "you train a model with quantization in mind. ... during the feedforward pass during training, you quantize and dequantize ... But the con is that it requires expensive large-scale training."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:05:59-1:06:33",
+            "role": "spoken",
+            "quote": "for every layer or tensor, you basically determine the scale and the 0 point for each, let's say, tensor. ... This generally doesn't work as well. ... GPTQ, which uses some Hessian information to quantize layer by layer. ... errors which get propagated into the non-quantized weights."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:07:16-1:07:39",
+            "role": "spoken",
+            "quote": "And some of these activation channels are large. ... you basically allocate like, let's say, fp16 for this channel. ... You keep everything else as in three."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:04:44-1:04:51",
+            "role": "spoken",
+            "quote": "Less memory means higher latency and throughput."
+          }
+        ],
+        "filtering_note": "The worked example is plain Python: 5.2342 / 0.1 = 52.342, round → 52, + 4 → x_quant = 56; x_approx = (56 − 4) × 0.1 = 5.2 (so the error is 0.0342, half a step at most). The dtype image (L461) is Baseten's and the fp8 training paper and fp8-vs-int8 paper are linked for the ranges (L464-L466); the e4m3 range ±240 is the H100-specific variant, not the IEEE-style ±448. 'fp16 → int3 produces 4x lower memory, 3.2x speedup' (L486) is AWQ's own reported number, read by the professor; it is quoted here as the paper's claim, not asserted. The lecture says 'higher latency/throughput' at L451 where it means lower latency / higher throughput. Which layers or tensors share one scale (per-tensor vs per-channel vs per-group) is not discussed. Correction (1:05:59-1:06:15): the note above says per-tensor vs per-channel scaling 'is not discussed'. Partly it is: one scale and zero point per layer or tensor is presented as the naive PTQ, which 'generally doesn't work as well'; per-channel and per-group are still not mentioned. Spoken evidence (1:06:18-1:06:33): GPTQ is described as L475 describes it: Hessian information, layer by layer, with the quantization error 'propagated into the non-quantized weights'. That is error compensation, not choosing weights to protect, so the statement's 'GPTQ and AWQ decide which weights to protect' fits AWQ only (flagged for review; the statement is unchanged because no written material was corrected). Spoken evidence (1:07:16-1:07:39): AWQ walked through on the figure: a few large-activation channels stay fp16, everything else int3. Spoken slip (1:04:48): 'Less memory means higher latency and throughput', repeating L451's wording where lower latency is meant. Not imported."
+      },
+      "prerequisites": [
+        {
+          "kp": "decode-bandwidth-bound",
+          "basis": "teaching-order",
+          "note": "'Less memory means higher latency/throughput (since inference is memory-bound)' (L451) is the bytes / bandwidth model."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:dtype-bytes",
+          "basis": "author-inference",
+          "note": "fp32 / bf16 / fp8 byte widths were introduced there; int8 and int4 are new here."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Quantizing weights to int8 halves decode latency because int8 arithmetic is twice as fast.",
+          "why_wrong": "The lecture's argument is about bytes, not arithmetic (L451): decode is memory-bound, so halving the weight bytes halves the parameter-read term in latency = memory / bandwidth; the KV cache term is unchanged unless it is quantized too."
+        },
+        {
+          "belief": "Post-training quantization needs no data.",
+          "why_wrong": "PTQ runs on sample data to determine the scale and zero point per layer or tensor (L477), and AWQ uses activation statistics to pick which weights to protect (L482-L485)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Using the lecture's scheme with scale = 0.1 and zero_point = 4, quantize x = −2.37 (giving the integer x_quant) and dequantize it. What is x_approx, the dequantized value?",
+          "format": "number",
+          "answer": "-2.4",
+          "tolerance": 0.0,
+          "why": "x_quant: round(−2.37 / 0.1) = round(−23.7) = −24; −24 + 4 = −20 (L458). Dequantize: (−20 − 4) × 0.1 = −2.4 (L459). The error 0.03 is under half a step.",
+          "targets_misconception": "Post-training quantization needs no data."
+        },
+        "transfer": {
+          "q": "Llama 2 13B (13.0e9 parameters) is served at B = 1, short context, on an H100 (3.35e12 B/s). Under the napkin model, what is the per-token latency bound in milliseconds with int4 weights (KV cache ignored)?",
+          "format": "number",
+          "answer": "1.9",
+          "tolerance": 0.05,
+          "why": "Bytes per parameter 0.5 for int4 vs 2 for bf16 (L463, L466); latency = bytes / bandwidth (L303): 0.5 × 13.0e9 / 3.35e12 ≈ 1.9 ms versus 2 × 13.0e9 / 3.35e12 ≈ 7.8 ms in bf16, 4x lower. The 4x is the memory ratio; the real speedup is smaller because the KV cache and overheads are not quantized away."
+        },
+        "retrieval": [
+          {
+            "q": "Write the quantize and dequantize formulas the lecture uses.",
+            "answer": "x_quant = round(x / scale) + zero_point; x_approx = (x_quant − zero_point) × scale."
+          },
+          {
+            "q": "How many bytes per number are fp32, bf16, fp8/int8 and int4?",
+            "answer": "4, 2, 1, 0.5."
+          },
+          {
+            "q": "What does QAT do during the forward pass, and what is its stated con?",
+            "answer": "Quantize-and-dequantize to simulate quantization error; it requires expensive large-scale training."
+          },
+          {
+            "q": "On what basis does AWQ choose the 0.1-1% of weights to keep in high precision?",
+            "answer": "Activations: weights that multiply large activation channels matter more.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the professor repeat 'since inference is memory-bound' when introducing quantization, and what would quantization buy during compute-bound prefill?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_10.py:L455-L459"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "lecture_10.py:L455-L459",
+          "faded": false,
+          "steps": [
+            {
+              "tex": "\\frac{x}{\\text{scale}} = \\frac{5.2342}{0.1} = 52.342",
+              "do": "Divide by the scale.",
+              "why": "scale is the real-valued size of one integer step, so this expresses x in steps."
+            },
+            {
+              "tex": "x_{\\text{quant}} = \\mathrm{round}(52.342) + 4 = 52 + 4 = 56",
+              "do": "L458: round, then add the zero point.",
+              "why": "Rounding is where the precision is lost; the zero point sets which integer stands for 0.0, so the stored integers can sit in the type's range."
+            },
+            {
+              "tex": "x_{\\text{approx}} = (56 - 4) \\times 0.1 = 5.2",
+              "do": "L459: dequantize by subtracting the zero point and multiplying by the scale.",
+              "why": "These undo the shift and the division exactly; only the rounding cannot be undone."
+            },
+            {
+              "do": "Error: 5.2342 − 5.2 = 0.0342, under half a step (0.05).",
+              "why": "Round-to-nearest is off by at most scale/2, so a smaller scale buys precision at the cost of range."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:1:05:59-1:06:33",
+          "notice": "listen for: naive per-tensor PTQ versus GPTQ pushing each error into the weights not yet quantized"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--batch-sweep",
+          "notice": "Switching bf16 to int4 weights at B = 1 cuts the bytes per step, and so the latency, by 4×; at large B the KV read dominates and the same switch helps little."
+        }
+      ]
+    },
+    {
+      "id": "prune-then-distill",
+      "label": "Pruning: remove layers/heads/dims, then distill from the original",
+      "kind": "procedure",
+      "statement": "Pruning makes a cheaper model by scoring the importance of layers, heads and hidden dimensions on a small calibration set, removing the unimportant ones, and then repairing the smaller model by distilling the original into it; this is the lecture's 'distillation recipe' for faster architectures as opposed to training a faster model from scratch.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L491-L492",
+            "role": "claim",
+            "quote": "Key idea: just rip out parts of an expensive model to make it cheaper ... and then fix it up."
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L496-L499",
+            "role": "claim",
+            "quote": "Identify important {layer, head, hidden dimension} on a small calibration dataset (1024 samples) ... Remove unimportant layers to get a smaller model ... Distill the original model into pruned model"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L34-L41",
+            "role": "claim",
+            "quote": "From scratch recipe: ... Define faster model architecture ... Train faster model ... Distillation recipe: ... Initialize weights using original model (which has a different architecture) ... Repair faster model (distillation)"
+          },
+          {
+            "source": "minitron_2024",
+            "ref": "NVIDIA pruning + distillation paper (loop and results figures shown at L495, L502)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:07:45-1:07:54",
+            "role": "spoken",
+            "quote": "So here you just take a large model, and you rip out pieces of it, and you fix it up. ... It's a very crude way, but it turns out to work."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:08:05-1:08:37",
+            "role": "spoken",
+            "quote": "you first have to estimate the importance of the different parts of the model and choose the most important parts. ... And then you basically remove different hidden units and different even layers. ... You train it some more on the data or the tasks that you care about to heal it."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:10:05-1:10:28",
+            "role": "spoken",
+            "quote": "you have a calibration set, and you pass the inputs through the model. ... And you're basically looking at the magnitude of the activations. ... especially if they're dead units, will be kind of close to 0. ... And the ones that are large, you want to keep."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:08:52-1:09:06",
+            "role": "spoken",
+            "quote": "So they were able to take a 15B model and reduce it to an 8B model. ... And it doesn't really hurt accuracy by too much."
+          }
+        ],
+        "filtering_note": "The section is a stub: it ends with '# TODO' at L504 and all results are in images/pruning-kd.png, which is the paper's and is not restated. The professor's step 2 says 'Remove unimportant layers' although step 1 scores layers, heads and hidden dimensions; the paper prunes along all three axes. How importance is scored (activation statistics on the calibration set) and what distillation loss is used are not stated. The 'From scratch' vs 'Distillation' recipes (L34-L41) sit in main() as the bridge between the KV-cache section and the lossy shortcuts; they are anchored here because pruning is their worked instance. Correction (1:10:05-1:10:28, Q&A): the note above says how importance is scored 'is not stated'. Aloud: pass a calibration set through the model and look at 'the magnitude of the activations'; near-zero ('dead') units go, large ones stay. In follow-ups he adds that this rests on the empirical fact that some channels are much larger than others (1:10:43-1:11:03), and that a constant high-mean, low-variance unit might be folded into a bias rather than removed (1:11:24-1:11:43, hedged). Spoken evidence (1:08:14): what is removed is 'different hidden units and different even layers', matching the paper's several axes rather than L497's 'layers'. The repair is described as training 'some more ... to heal it' and, in the summary, as distillation (1:09:39). The 15B to 8B result is the paper's, read aloud (1:08:55), and is not restated. 'a training way to reduce the KV cache' (1:08:37) is loose: pruning shrinks the parameters, and the KV cache only where layers or KV heads are removed."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "Pruning a model is a post-processing step that needs no further training.",
+          "why_wrong": "The algorithm's third step distills the original model into the pruned one to repair it (L499, L41); the lecture's phrase is 'rip out parts ... and then fix it up' (L491-L492)."
+        },
+        {
+          "belief": "Distillation requires the student to have the same architecture as the teacher.",
+          "why_wrong": "The distillation recipe explicitly initializes a model 'which has a different architecture' from the original's weights and then repairs it (L39-L41)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You prune 25% of a model's layers using importance scores from 1024 calibration samples and immediately evaluate it. Relative to the original and to the final distilled model, where does its accuracy sit?",
+          "format": "choice",
+          "choices": [
+            "about equal to the original",
+            "below the original, recovered by distillation",
+            "below the original, and distillation cannot help"
+          ],
+          "answer": "below the original, recovered by distillation",
+          "why": "Removing parts damages the model; the recipe's third step, distilling the original into the pruned model, is what repairs it (L497-L499).",
+          "targets_misconception": "Pruning a model is a post-processing step that needs no further training."
+        },
+        "transfer": {
+          "q": "A team wants a 4B model from an existing 8B model and has a budget far below pretraining a 4B model. Lay out the three steps the lecture's recipe prescribes and say what plays the role of the teacher.",
+          "format": "short",
+          "answer": "1. Score layers, heads and hidden dimensions on a small calibration set; 2. remove the unimportant ones to reach a 4B architecture, initializing from the 8B weights; 3. distill the 8B model (teacher) into the pruned 4B model (student).",
+          "why": "L497-L499 and the distillation recipe at L38-L41: initialize from the original, then repair by distillation."
+        },
+        "check": {
+          "q": "A 70B model has just been pruned to 40B by removing low-importance layers and heads scored on a small calibration set, and its accuracy has dropped. Which step does the lecture's recipe run next?",
+          "format": "choice",
+          "choices": [
+            "Distill the 40B model into the 70B model",
+            "Deploy the 40B model; pruning is done",
+            "Pretrain the 40B model from scratch",
+            "Distill the 70B model into the 40B model"
+          ],
+          "answer": "Distill the 70B model into the 40B model",
+          "why": "The recipe initializes the small model from the original's weights and repairs it by distillation with the original as teacher (L497-L499, L38-L41); pruning alone leaves the accuracy drop in place.",
+          "varies": "model sizes and the question (the next step after pruning, rather than the whole recipe)",
+          "invariant": "prune from the original, then repair by distilling the original (teacher) into the pruned model (student)",
+          "distractor_from": [
+            "'Deploy the 40B model; pruning is done' <- misconception: 'Pruning a model is a post-processing step that needs no further training.'",
+            "'Pretrain the 40B model from scratch' <- plausible: ignores that the recipe initializes from the original weights",
+            "'Distill the 40B model into the 70B model' <- plausible: swaps teacher and student"
+          ],
+          "targets_misconception": "Pruning a model is a post-processing step that needs no further training.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Along which three structural axes does the pruning algorithm identify important components?",
+            "answer": "Layer, head, hidden dimension."
+          },
+          {
+            "q": "How large is the calibration dataset in the lecture's pruning recipe?",
+            "answer": "1024 samples.",
+            "layer": "detail"
+          },
+          {
+            "q": "The lecture's from-scratch recipe defines a faster architecture and trains it. What does the distillation recipe do instead after defining the faster architecture?",
+            "answer": "It initializes the faster model's weights from the original model (despite the different architecture), then repairs the faster model by distillation from the original."
+          }
+        ],
+        "self_explain": "Why would initializing the small model from the big model's weights beat training the same small architecture from scratch for the same compute?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "trace",
+          "ref": "official/lectures/images/pruning-kd-loop.png"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L496-L499"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:10:05-1:10:28",
+          "notice": "listen for: importance is activation magnitude on a calibration set"
+        }
+      ]
+    },
+    {
+      "id": "speculative-sampling-mechanism",
+      "label": "Speculative sampling: cheap draft proposes, target verifies in parallel",
+      "kind": "mechanism",
+      "statement": "Because verifying tokens is a parallel, compute-bound prefill while generating them is a sequential, memory-bound loop, a cheap draft model p proposes a few tokens (e.g. 4) and the target model q scores all of them in one pass, keeping the accepted prefix and always producing at least one token, so several tokens come out per expensive target step.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L508-L511",
+            "role": "claim",
+            "quote": "Prefill: given a sequence, encode tokens in parallel (compute-bound) [note: also gives you probabilities] ... Generation: generate one token at a time (memory-bound) ... In other words, checking is faster than generation."
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L514-L515",
+            "role": "claim",
+            "quote": "Use a cheaper **draft model** p to guess a few tokens (e.g., 4) ... Evaluate with target model q (process tokens in parallel), and accept if it looks good"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L520-L522",
+            "role": "claim",
+            "quote": "This is modified rejection sampling with proposal p and target q ... Modification: always generate at least one candidate (rejection sampling will keep looping) ... Key property: guaranteed to be an **exact sample** from the target model!"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L537-L540",
+            "role": "claim",
+            "quote": "Target model has 70B parameters, draft model has 8B parameters ... Target model has 8B parameters, draft model has 1B parameters ... Try to make draft model as close to target (distillation)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L542-L544",
+            "role": "claim",
+            "quote": "Medusa: draft model generates multiple tokens in parallel ... EAGLE: draft model takes high-level features from target model"
+          },
+          {
+            "source": "spec_decoding_leviathan_2022",
+            "ref": "Leviathan et al. 2022",
+            "role": "citation"
+          },
+          {
+            "source": "spec_sampling_chen_2023",
+            "ref": "Chen et al. 2023 (algorithm figure shown at L519)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:12:16-1:12:30",
+            "role": "spoken",
+            "quote": "So checking is faster than generation. ... If I give you a sequence, it's fast to tell me how good it is, much faster than it is to generate one at a time. ... So you can exploit this asymmetry"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:12:50-1:13:11",
+            "role": "spoken",
+            "quote": "So things are kind of chosen to be balanced. ... The draft model is just smaller and cheaper. ... And so even though it's memory-bound, and it has to generate one at a time, is not too bad. ... Whereas, the target model is big and expensive"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:16:04-1:16:43",
+            "role": "spoken",
+            "quote": "ideally, you want the model draft model to be as close to the target, which means that you want to distill it ... If you're not happy with it, then it at least can be a draft model and you can use your main model to fix things up."
+          }
+        ],
+        "filtering_note": "The algorithm itself is an image (images/speculative-sampling-algorithm.png) plus a linked video and blog; the results and stats figures (L534-L535) are the papers' wall-clock speedups and acceptance rates and are not restated. The professor does not state the expected tokens per target pass; the fixture notice uses 1 + (number accepted), which follows from 'always generate at least one candidate' (L521): on the first rejection a token is drawn from the residual, and if all k are accepted the target's extra position yields one more. He also does not say that the draft must run sequentially k times (its cost is small because it is small, L538-L539). Medusa and EAGLE are one line each (L543-L544). Correction (1:12:50-1:13:11): the note above says he 'does not say that the draft must run sequentially k times'. He does: the draft, 'even though it's memory-bound, and it has to generate one at a time, is not too bad' because it is small, while the big target processes the drafted tokens in parallel; the two costs are 'chosen to be balanced'. Spoken evidence (1:12:16-1:12:26): the asymmetry in one line, 'checking is faster than generation'. Spoken evidence (1:16:04-1:16:43): the draft should be distilled to be close to the target, so the lecture's KV-cache-reduction tricks double as ways to build drafts: a reduced model you are not happy serving 'at least can be a draft model'. Later methods (Medusa, EAGLE, L542-L544) are skipped aloud (1:16:43)."
+      },
+      "prerequisites": [
+        {
+          "kp": "prefill-vs-decode",
+          "basis": "teaching-order",
+          "note": "'checking is faster than generation' (L511) restates prefill (parallel) versus generation (sequential)."
+        },
+        {
+          "kp": "mlp-intensity-batch",
+          "basis": "author-inference",
+          "note": "Scoring k draft tokens in one pass raises T from 1 to k+1 at almost no extra time because the step was bandwidth-bound; this is the intensity = B*T argument."
+        }
+      ],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "Speculative sampling saves time by running the big model less often on average while slightly changing its outputs.",
+          "why_wrong": "The outputs are exact samples from the target distribution (L522); the saving comes from the target scoring k+1 positions in one memory-bound pass instead of k+1 passes (L515, L511)."
+        },
+        {
+          "belief": "Verifying 4 draft tokens costs the target model about 4 times a normal decode step.",
+          "why_wrong": "A decode step is memory-bound: its time is set by reading weights and cache, which happens once per pass regardless of whether 1 or 5 positions are scored (L509-L511, L303)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The draft proposes 4 tokens; the target accepts the first 2 and rejects the third. How many new tokens does this target pass emit?",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.0,
+          "why": "3 = 2 accepted + 1 sampled from the residual at the rejection point: the accepted prefix is kept and a replacement is always produced at the first rejection (L521). The pass costs about one ordinary decode step, since the target scored all positions in one parallel, memory-bound pass (L515, L511).",
+          "targets_misconception": "Verifying 4 draft tokens costs the target model about 4 times a normal decode step."
+        },
+        "transfer": {
+          "q": "A deployment uses a 70B target with an 8B draft, k = 4, and observes that on average 3 of 4 drafts are accepted. Ignoring the draft's own cost, by what factor is target passes per generated token reduced versus plain decoding?",
+          "format": "number",
+          "answer": "4 (about 4x: 1 + 3 = 4 tokens per target pass versus 1)",
+          "tolerance": 0.05,
+          "why": "Tokens per target pass is 1 + accepted (always at least one, L521); plain decoding yields one token per pass. The draft's 4 sequential small-model steps eat into this in practice (L538)."
+        },
+        "retrieval": [
+          {
+            "q": "Which asymmetry does speculative sampling exploit, in the professor's four words?",
+            "answer": "Checking is faster than generation."
+          },
+          {
+            "q": "What are the roles of p and q in the lecture's notation?",
+            "answer": "p is the cheaper draft (proposal) model; q is the target model that verifies."
+          },
+          {
+            "q": "What modification to plain rejection sampling does speculative sampling make, and why?",
+            "answer": "It always generates at least one candidate token (on a rejection it samples from the residual instead of retrying), because plain rejection sampling could keep looping."
+          },
+          {
+            "q": "How do Medusa and EAGLE each change the draft?",
+            "answer": "Medusa: the draft generates multiple tokens in parallel. EAGLE: the draft takes high-level features from the target model.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does making the draft 'as close to target as possible' via distillation (L540) raise speed rather than accuracy?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_10--spec-rounds",
+          "notice": "The draft's four proposals are four short sequential bars; the target checks them in one bar about one decode step long and emits the accepted prefix plus one token of its own: 2 tokens in round 1 (one rejection), 5 in round 2 (all accepted)."
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L508-L522"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:12:50-1:13:11",
+          "notice": "listen for: why both costs are acceptable: the small draft runs sequentially, the big target checks in parallel"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--spec-sweet-spot",
+          "notice": "The pass row shows the accepted prefix in green, the first rejection in orange and the target's own token in gold: a pass emits accepted + 1 tokens, for any k."
+        }
+      ]
+    },
+    {
+      "id": "speculative-sampling-exactness",
+      "label": "Why speculative sampling is exact: accept q/p, resample from max(q−p, 0)",
+      "kind": "mechanism",
+      "statement": "A draft token x is accepted with probability min(1, q(x)/p(x)) and on rejection a token is drawn from the normalized residual max(q − p, 0); summing the two routes gives P[x] = q(x) exactly, as the two-token example shows: P[A] = p(A)·q(A)/p(A) = q(A) and P[B] = p(B) + p(A)(1 − q(A)/p(A)) = q(B).",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L524-L529",
+            "role": "claim",
+            "quote": "Proof by example: assume two vocabulary elements {A, B} ... Assume p(A) > q(A) [draft model oversamples A]. ... Therefore p(B) < q(B) [draft model undersamples B]. ... Residual probabilities max(q-p, 0): [0, 1]"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L530-L532",
+            "role": "claim",
+            "quote": "Compute the probabilities of speculatively sampling a token: ... P[sampling A] = p(A) * (q(A) / p(A)) + p(B) * 1 * 0 = q(A) ... P[sampling B] = p(B) * 1 + p(A) * (1 - q(A) / p(A)) * 1 = q(B)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L547-L548",
+            "role": "claim",
+            "quote": "Summary: ... Exact sampling from target model (thanks to math)!"
+          },
+          {
+            "source": "spec_sampling_chen_2023",
+            "ref": "Chen et al. 2023, Theorem 1 (exactness of modified rejection sampling)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:14:31-1:14:57",
+            "role": "spoken",
+            "quote": "You basically are going to accept with probability Min 1 over this ratio of q over p. ... the larger the q is, the more likely you want to accept it. ... And otherwise you sample from this residual distribution and exit."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:15:04-1:15:28",
+            "role": "spoken",
+            "quote": "So this is basically rejection sampling except for rejection sampling. ... Sometimes when you reject you get nothing. ... But here we always are guaranteed to get an exact sample from the target model. ... I'm going to skip this simple proof."
+          }
+        ],
+        "filtering_note": "The proof is by a two-element example only; the general statement (accept with min(1, q/p), resample from (q − p)+ normalized) is in the algorithm image at L519 and in the papers. In the example the residual [0, 1] is already normalized because max(q − p, 0) is zero on A; in general it must be divided by its sum. The term 'p(B) * 1 * 0' in L531 reads: draft proposes B (p(B)), accepted with probability min(1, q(B)/p(B)) = 1 since q(B) > p(B), and the residual puts mass 0 on A, so a rejection path to A has probability 0. Independence of acceptance decisions across positions within one pass is not discussed. Spoken evidence (1:15:04-1:15:20): the difference from plain rejection sampling is said aloud: there 'when you reject you get nothing', here a rejection still yields a token from the residual, so every pass produces an exact sample from the target. Oral filtering (1:15:20): 'I'm going to skip this simple proof': the two-token proof at L524-L532, on which this KP's statement and prompts are built, is in the code but was skipped in the talk ('basically the same arguments as rejection sampling', 1:15:28). The status stays 'said' because the proof is in the lecture text, and nothing is deferred to an assignment; a learner who only watches the video will not hear it."
+      },
+      "prerequisites": [
+        {
+          "kp": "speculative-sampling-mechanism",
+          "basis": "teaching-order",
+          "note": "p, q, accept/reject and the residual are introduced at L514-L521 before the proof."
+        }
+      ],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "A draft token is accepted whenever the target also assigns it high probability, so exactness is approximate.",
+          "why_wrong": "Acceptance is a coin with probability exactly min(1, q(x)/p(x)) and rejection redraws from max(q − p, 0) normalized; the two routes sum to q(x) (L531-L532). Nothing about 'high probability' enters."
+        },
+        {
+          "belief": "If the draft already samples a token with probability higher than the target does, the token is always accepted (the draft is 'confident').",
+          "why_wrong": "That is the oversampling case p(A) > q(A), where acceptance is q(A)/p(A) < 1 (L527, L531); over-proposed tokens are exactly the ones that must sometimes be rejected to bring their rate down to q(A)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two-token vocabulary. Target q = [0.3, 0.7]; draft p = [0.9, 0.1]. The draft proposes A. With what probability is A rejected? Give a decimal.",
+          "format": "number",
+          "answer": "0.667 (= 2/3)",
+          "tolerance": 0.01,
+          "why": "Accept with q(A)/p(A) = 0.3 / 0.9 = 1/3 (L531), so reject with 2/3. Because p oversamples A, rejections are needed to pull P[A] down to 0.3.",
+          "targets_misconception": "If the draft already samples a token with probability higher than the target does, the token is always accepted (the draft is 'confident')."
+        },
+        "transfer": {
+          "q": "Three-token vocabulary. Target q = [0.5, 0.3, 0.2]; draft p = [0.7, 0.1, 0.2]. Give the normalized residual distribution used on rejection, and verify P[sampling B] equals q(B).",
+          "format": "short",
+          "answer": "Residual max(q − p, 0) = [0, 0.2, 0] → normalized [0, 1, 0]. P[B] = p(B)·min(1, q(B)/p(B)) + P[reject]·1 = 0.1·1 + (0.7·(1 − 0.5/0.7))·1 = 0.1 + 0.2 = 0.3 = q(B).",
+          "why": "Only A is over-proposed, so only A can be rejected, with probability 0.7 × (2/7) = 0.2; all rejected mass goes to the residual, which is entirely on B (L529-L532). C is proposed and accepted with probability 0.2 = q(C)."
+        },
+        "check": {
+          "q": "Three-token vocabulary [A, B, C]. Target q = [0.2, 0.5, 0.3]; draft p = [0.6, 0.2, 0.2]. On rejection the token is drawn from the normalized residual max(q − p, 0). What probability does that normalized residual assign to B? Give a decimal.",
+          "format": "number",
+          "answer": "0.75",
+          "tolerance": 0.05,
+          "why": "max(q − p, 0) = [0, 0.3, 0.1], which sums to 0.4 and normalizes to [0, 0.75, 0.25]. Check: rejection happens only for A, with probability 0.6 × (1 − 0.2/0.6) = 0.4, so P[B] = 0.2 + 0.4 × 0.75 = 0.5 = q(B).",
+          "varies": "new distributions in which two tokens (B and C) are under-proposed, so the residual is split",
+          "invariant": "the residual holds exactly the mass the draft under-proposes, which makes accept + resample equal q",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In the two-token proof, what is the acceptance probability for a proposed A when p(A) > q(A)?",
+            "answer": "q(A) / p(A)."
+          },
+          {
+            "q": "What distribution is sampled from when the draft token is rejected?",
+            "answer": "The residual max(q − p, 0), normalized."
+          },
+          {
+            "q": "Write out the two routes that together give P[sampling B] = q(B).",
+            "answer": "Draft proposes B and it is accepted (p(B)·1), or draft proposes A, it is rejected (p(A)(1 − q(A)/p(A))), and the residual yields B."
+          }
+        ],
+        "self_explain": "Why must the residual be max(q − p, 0) rather than simply q itself for the two routes to sum to q(x)?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_10.py:L524-L532",
+          "steps": [
+            {
+              "do": "Assume p(A) > q(A): the draft oversamples A. Both distributions sum to 1, so p(B) < q(B).",
+              "why": "Whatever extra mass the draft puts on A it must take from B."
+            },
+            {
+              "tex": "\\max(q - p, 0) = [0,\\ q(B) - p(B)] \\;\\to\\; [0, 1]",
+              "do": "The residual, normalized.",
+              "why": "On rejection, mass should be added only where the draft undersamples, and here that is B alone."
+            },
+            {
+              "tex": "P[A] = p(A)\\cdot\\frac{q(A)}{p(A)} + p(B)\\cdot 1\\cdot 0 = q(A)",
+              "do": "Ways to end on A: propose A and accept it with min(1, q(A)/p(A)) = q(A)/p(A). Proposing B never ends on A.",
+              "why": "B is always accepted, since q(B)/p(B) > 1, and the residual puts 0 on A."
+            },
+            {
+              "tex": "P[B] = p(B)\\cdot 1 + p(A)\\left(1 - \\frac{q(A)}{p(A)}\\right)\\cdot 1 = p(B) + p(A) - q(A) = q(B)",
+              "do": "Ways to end on B: propose B and accept, or propose A, reject, and draw B from the residual.",
+              "why": "The rejected mass p(A) − q(A) is A's excess, which equals B's deficit q(B) − p(B), so the two routes add up to q(B)."
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "lecture_10.py:L531-L532",
+          "faded": true,
+          "steps": [
+            {
+              "do": "q = [0.3, 0.7], p = [0.9, 0.1]: p(A) > q(A), so A is oversampled, and the residual max(q − p, 0) = [0, 0.6] normalizes to [0, 1].",
+              "why": "Same shape as the proof above: only B is undersampled."
+            },
+            {
+              "tex": "P[A] = 0.9 \\times \\frac{0.3}{0.9} = 0.3",
+              "do": "A is proposed with probability 0.9 and accepted with 1/3.",
+              "why": "Rejecting A two times in three pulls it down from the draft's 0.9 to the target's 0.3."
+            },
+            {
+              "tex": "P[B] = 0.1 \\times 1 + 0.9 \\times \\left(1 - \\frac{1}{3}\\right) \\times 1 = 0.1 + 0.6 = 0.7 = q(B)",
+              "do": "B is proposed and accepted, or reached by rejecting A and drawing from the residual.",
+              "why": "The 0.6 rejected from A is exactly B's deficit, 0.7 − 0.1."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:15:04-1:15:28",
+          "notice": "listen for: how this differs from rejection sampling: a rejection still yields a token"
+        }
+      ]
+    },
+    {
+      "id": "spec-draft-length-tradeoff",
+      "label": "Speculative decoding: the draft length k has a sweet spot",
+      "kind": "rule-of-thumb",
+      "statement": "The number k of draft tokens per target pass has a sweet spot: with too few, the target's verification pass, which costs about one memory-bound decode step whether it checks one token or several, is under-used; with too many, later drafts are rejected more often (a draft token counts only if every earlier one was accepted), so the expected tokens per target pass saturates while the sequential draft work keeps growing; a draft closer to the target (higher acceptance) moves the sweet spot to larger k.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:15:40-1:16:04",
+            "role": "spoken",
+            "quote": "And generally, if you have too few draft tokens, you're not really leveraging the batching on the target model side. ... And if you have too many, then you're going to reject more often. ... So there's a sweet spot around, in this case, three or four."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:16:04-1:16:24",
+            "role": "spoken",
+            "quote": "ideally, you want the model draft model to be as close to the target, which means that you want to distill it"
+          }
+        ],
+        "filtering_note": "Spoken only (1:15:40-1:16:04). The code gives 'e.g., 4' draft tokens (L514) and shows the paper's speed-up figure (L534) without text; why there is an optimum is only spoken: too few 'you're not really leveraging the batching on the target model side', too many 'you're going to reject more often'. 'Three or four' is read off the paper's figure and belongs to that model pair, so it is not part of the statement. The expected-tokens formula used in the prompts, E(k) = (1 - α^(k+1)) / (1 - α) for independent per-token acceptance α, is from Leviathan et al. 2022 (spec_decoding_leviathan_2022 in sources.json), not from the lecture; the compute-bound transfer extends his 'leveraging the batching' reason (author inference from decode-bandwidth-bound). The link between draft quality and k is the author's reading of 'you want the model draft model to be as close to the target' (1:16:04). Placed after speculative-sampling-exactness, where it is said."
+      },
+      "prerequisites": [
+        {
+          "kp": "speculative-sampling-mechanism",
+          "basis": "teaching-order",
+          "note": "Draft proposes k tokens, target verifies them in one pass."
+        },
+        {
+          "kp": "speculative-sampling-exactness",
+          "basis": "teaching-order",
+          "note": "Acceptance with probability min(1, q/p): where the rejections come from."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "More draft tokens per pass always means proportionally more tokens per target pass, so k should be as large as possible.",
+          "why_wrong": "Draft token i counts only if all i - 1 before it were accepted, so its chance falls geometrically; the expected tokens per pass saturate near 1 / (1 - α), while the draft's sequential work grows linearly in k."
+        },
+        {
+          "belief": "The best draft length is a fixed constant (about 4) for every draft-target pair.",
+          "why_wrong": "It depends on how often the target accepts the draft and on whether the target's verification pass is still memory-bound; 'three or four' is one paper's setting (1:15:58)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Each draft token is accepted with probability 0.6, independently, and a draft token counts only if every earlier draft token in the pass was accepted; the target always adds one token of its own. Raising the draft length k from 4 to 16 changes the expected number of tokens per target pass how?",
+          "format": "choice",
+          "choices": [
+            "Barely rises, from about 2.3 to about 2.5",
+            "Roughly quadruples, from about 2.3 to about 9",
+            "Roughly doubles, from about 2.3 to about 4.6",
+            "Falls, from about 2.3 to about 1.6 per pass"
+          ],
+          "answer": "Barely rises, from about 2.3 to about 2.5",
+          "why": "E(k) = 1 + 0.6 + 0.6² + ... + 0.6^k = (1 - 0.6^(k+1)) / 0.4: 2.31 at k = 4 and 2.50 at k = 16, against a ceiling of 1 / 0.4 = 2.5. The draft does four times the work for 8% more tokens: 'if you have too many, then you're going to reject more often' (1:15:55).",
+          "targets_misconception": "More draft tokens per pass always means proportionally more tokens per target pass, so k should be as large as possible.",
+          "distractor_from": "'quadruples' <- misconception: tokens per pass scale with k; 'doubles' <- applies the 0.6 acceptance once instead of compounding it; 'falls' <- expected tokens never fall with k, only the cost per useful token rises"
+        },
+        "transfer": {
+          "q": "A server runs the target at such a large batch that its forward pass is compute-bound rather than memory-bound. What happens to the best draft length k and to the speed-up from speculative decoding, and why?",
+          "format": "short",
+          "answer": "Both shrink: the best k moves toward 1 and the speed-up fades, because verifying k drafted tokens now costs roughly k times a decode step instead of about one, so rejected drafts waste real target compute.",
+          "why": "The reason to draft at all is that a memory-bound target pass checks several tokens for the price of one ('leveraging the batching on the target model side', 1:15:45). When the target is compute-bound that free capacity is gone.",
+          "varies": "the target's regime: compute-bound at large batch instead of memory-bound at small batch",
+          "invariant": "drafting pays only while verifying extra tokens is nearly free for the target",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "The draft model is distilled to match the target more closely, raising its per-token acceptance rate. Which way does the best draft length k move? Start with up, down or same.",
+          "format": "trend",
+          "answer": "Up: with higher acceptance, later draft tokens are still likely to survive, so the expected tokens per pass keep growing over more of k and the ceiling 1 / (1 - α) rises.",
+          "value": "up",
+          "why": "Draft token i survives with probability α^i. Raising α slows that decay, so extra draft tokens keep paying for longer; the sweet spot moves to larger k. This is why the professor wants the draft 'as close to the target' as possible (1:16:04).",
+          "targets_misconception": "The best draft length is a fixed constant (about 4) for every draft-target pair.",
+          "varies": "the acceptance rate instead of the target's compute regime",
+          "invariant": "k is set by balancing tokens gained per pass against draft work and rejections",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In speculative decoding, what goes wrong with too few draft tokens, and what goes wrong with too many?",
+            "answer": "Too few: the target's verification pass, about as cheap for several tokens as for one, is under-used. Too many: later drafts are rejected more often, so the extra draft work buys little."
+          },
+          {
+            "q": "Why does the expected number of tokens per target pass saturate as the draft length grows?",
+            "answer": "A draft token counts only if all earlier ones were accepted, so the i-th contributes α^i; the sum approaches 1 / (1 - α)."
+          }
+        ],
+        "self_explain": "Why does a better draft model justify proposing more tokens per pass, and why would a compute-bound target justify fewer?"
+      },
+      "presentations": [
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:15:40-1:16:04",
+          "notice": "listen for: too few drafts waste the target's batching, too many get rejected"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_10--spec-sweet-spot",
+          "notice": "The bars (expected tokens per pass) flatten under the dashed ceiling 1/(1 − α) while the cost per pass keeps rising with k, so the speed-up dots peak at a small k; a higher α moves the peak right, a compute-bound target (large B) moves it to k = 1."
+        }
+      ]
+    },
+    {
+      "id": "continuous-batching",
+      "label": "Continuous batching: iteration-level scheduling and selective batching",
+      "kind": "mechanism",
+      "statement": "Live traffic is a ragged array (requests arrive and finish at different times, with different lengths), so Orca schedules at the level of a single decode iteration, admitting new requests every step, and batches selectively: non-attention ops run on all sequences concatenated along tokens ([3 + 9 + 5, H]) while attention runs per sequence.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L47-L50",
+            "role": "claim",
+            "quote": "Batching over sequences in live traffic is tricky because: ... Requests arrive at different times (waiting for batch is bad for early requests) ... Sequences have shared prefixes (e.g., system prompts, generating multiple samples) ... Sequences have different lengths (padding is inefficient)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L557-L558",
+            "role": "claim",
+            "quote": "Training: get a dense block of tokens (batch size x sequence length) ... Inference: requests arrive and finish at different times, so you have a ragged array"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L561-L563",
+            "role": "claim",
+            "quote": "Solution: iteration-level scheduling ... Decode step by step ... Add new requests to the batch as they arrive (so don't have to wait until generation completes)"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L569-L573",
+            "role": "claim",
+            "quote": "Solution: selective batching ... But we might have different lengths: [3, H], [9, H], [5, H], etc. ... Attention computation: process each sequence separately ... Non-attention computation: concatenate all the sequences together to [3 + 9 + 5, H]"
+          },
+          {
+            "source": "orca_2022",
+            "ref": "Orca, OSDI 2022 (linked with talk at L554)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:17:01-1:17:29",
+            "role": "spoken",
+            "quote": "The requests arrive at different times. ... They have different shared prefixes, and they have different lengths. ... It's far from this very simple training where you have these blocks of the same number of tokens all at once."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:17:56-1:18:34",
+            "role": "spoken",
+            "quote": "we're going to decode step by step. ... And then if you end, you just eject that sequence. ... batch is dynamically being updated with either old finished sequences being evicted and new ones coming in."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:19:01-1:19:34",
+            "role": "spoken",
+            "quote": "in the attention computation, you can't really do anything about this because attention depends on the length of your sequence. ... So if you have a 3 by 3, a 9 by 9 computation, you can't really share the tensor effectively."
+          }
+        ],
+        "filtering_note": "The static-batching diagram (L559) is Anyscale's blog figure. The lecture does not say how new requests' prefill is interleaved with ongoing decodes (Orca runs them in the same iteration; later systems chunk prefill), nor give any throughput numbers. 'Batching only works when all sequences have the same dimensionality (right?)' (L566) is a rhetorical setup for selective batching. The reason attention cannot be concatenated is implied (each sequence attends only over its own tokens and cache) but not stated. Correction (1:19:01-1:19:34): the note above says why attention cannot be concatenated is 'implied ... but not stated'. It is stated: 'attention depends on the length of your sequence', so a 3x3 and a 9x9 score matrix cannot share one tensor, while the MLP layers, 'which takes up a lot of FLOPs', run on the concatenated 'mega sequence'. Spoken evidence (28:33-28:59): the motive given earlier is that the decode MLP's intensity equals the number of concurrent requests, which a live server does not control. How new requests' prefill is mixed into decode steps is still not said."
+      },
+      "prerequisites": [
+        {
+          "kp": "batch-latency-throughput-tradeoff",
+          "basis": "teaching-order",
+          "note": "Continuous batching exists to keep B large during generation without making early requests wait."
+        }
+      ],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "To batch requests of different lengths you must pad them to the longest, as in training.",
+          "why_wrong": "Selective batching concatenates all sequences along the token axis for MLP and other per-token ops, so no padding is needed (L573); only attention is run per sequence (L572)."
+        },
+        {
+          "belief": "A batch is formed when a request arrives and stays fixed until every member finishes.",
+          "why_wrong": "That is static batching, which leaves slots idle as short sequences finish; iteration-level scheduling re-forms the batch every decode step (L561-L563)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Three requests of 4, 7 and 12 tokens are in flight. Under selective batching, what is the shape of the tensor fed to the MLP, and how many separate attention computations run?",
+          "format": "short",
+          "answer": "[23, H] for the MLP (4 + 7 + 12 concatenated); 3 separate attention computations, one per sequence",
+          "why": "Non-attention ops concatenate sequences along tokens (L573); attention processes each sequence separately (L572).",
+          "targets_misconception": "To batch requests of different lengths you must pad them to the longest, as in training."
+        },
+        "transfer": {
+          "q": "A static-batching server forms batches of 8 and waits for all 8 to finish. Requests generate between 20 and 400 tokens. Describe what happens to GPU batch occupancy over a batch's lifetime and what iteration-level scheduling changes about it.",
+          "format": "short",
+          "answer": "Occupancy drops as short requests finish (down to 1 of 8 slots busy for the last, longest request), and new arrivals wait for the whole batch to drain; iteration-level scheduling refills freed slots with new requests at every decode step, keeping B near 8 and removing the wait.",
+          "why": "L558 (requests finish at different times, ragged array) and L561-L563 (add new requests to the batch as they arrive)."
+        },
+        "check": {
+          "q": "A static-batching server runs a batch of 4 requests that generate 50, 100, 150 and 400 tokens, one token per request per decode step, admitting nothing new until all 4 finish. Averaged over the batch's 400 decode steps, what fraction of the 4 slots is busy?",
+          "format": "number",
+          "answer": "0.4375 (700 of 1,600 slot-steps)",
+          "tolerance": 0.05,
+          "why": "Busy slot-steps = 50 + 100 + 150 + 400 = 700 out of 4 × 400 = 1,600, so 0.4375. Iteration-level scheduling would refill each freed slot at the next step and keep occupancy near 1.",
+          "varies": "the occupancy is computed as a number instead of described",
+          "invariant": "requests finish at different times (a ragged array); a static batch holds freed slots idle until the longest member ends",
+          "targets_misconception": "A batch is formed when a request arrives and stays fixed until every member finishes.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "At what granularity does Orca schedule, and what does that let it do with new requests?",
+            "answer": "Per decode iteration; new requests join the batch as they arrive instead of waiting for generation to complete."
+          },
+          {
+            "q": "Which computations are run per sequence and which on the concatenation under selective batching?",
+            "answer": "Attention per sequence; non-attention computation on all sequences concatenated along tokens."
+          },
+          {
+            "q": "Name two of the three reasons the lecture gives for why batching live traffic is tricky.",
+            "answer": "Any two of: requests arrive at different times; sequences share prefixes (system prompts, multiple samples); sequences have different lengths (padding is inefficient)."
+          }
+        ],
+        "self_explain": "Why is attention the one operation that cannot be run on the [3 + 9 + 5, H] concatenation?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "https://images.ctfassets.net/xjan103pcp94/1LJioEsEdQQpDCxYNWirU6/82b9fbfc5b78b10c1d4508b60e72fdcf/cb_02_diagram-static-batching.png"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L556-L573"
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:1:19:01-1:19:34",
+          "notice": "listen for: attention depends on each sequence's length, so only the non-attention layers are concatenated"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_10--batch-schedule",
+          "notice": "Under static batching a slot whose request ends early stays grey until the batch's longest request ends; iteration-level scheduling fills it at the next step, so occupancy rises and everything finishes sooner. The selective-batching panel concatenates the sequences to [Σ tokens, H] with no padding and runs attention once per sequence."
+        },
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_10--continuous-batching",
+          "notice": "Under static batching the slots of B and C sit idle until A ends and D, E, F wait; under iteration-level scheduling each freed slot takes the next request in the following step, so the same six requests finish in 13 steps instead of 18."
+        }
+      ]
+    },
+    {
+      "id": "paged-attention",
+      "label": "PagedAttention: block-level KV allocation, prefix sharing, copy-on-write",
+      "kind": "mechanism",
+      "statement": "Pre-allocating a max-length KV slab per request wastes memory to internal fragmentation (unused tail) and external fragmentation (gaps between slabs); vLLM's PagedAttention stores each sequence's cache in fixed-size non-contiguous blocks mapped like OS pages, so blocks are allocated as tokens are generated and shared prefixes (system prompts, multiple samples per prompt) share physical blocks with copy-on-write.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L579-L585",
+            "role": "claim",
+            "quote": "Previous status quo: ... Allocate section of KV cache for prompt and response (up to a max length) ... Problem: fragmentation (what happens to your hard drive) ... But this is wasteful since we might generate much fewer tokens (internal fragmentation)! ... Might be extra unused space between sections (external fragmentation)!"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L587-L588",
+            "role": "claim",
+            "quote": "Solution: PagedAttention (remember operating systems) ... Divide the KV cache of a sequence into non-contiguous **blocks**"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L594-L599",
+            "role": "claim",
+            "quote": "In general, multiple types of sharing KV caches across sequences: ... Sharing the system prompt ... Sampling multiple responses per prompt (e.g., for program synthesis) ... Solution: share prefixes, copy-on-write at the block level"
+          },
+          {
+            "source": "lecture_10",
+            "ref": "lecture_10.py:L602-L607",
+            "role": "claim",
+            "quote": "Kernel to fuse block read and attention (reduce kernel launch overhead) ... Use latest kernels (FlashAttention, FlashDecoding) ... Use CUDA graphs to avoid kernel launch overhead ... Summary: use ideas from operating systems (paging) to make use of memory for dynamic workloads"
+          },
+          {
+            "source": "vllm_paper_2023",
+            "ref": "vLLM / PagedAttention paper (figures shown at L582-L600)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:20:19-1:20:50",
+            "role": "spoken",
+            "quote": "you have to allocate enough buffer so that-- because you don't when you're going to stop. ... So you might have a max token limit of 1,024. ... That's internal fragmentation. ... there could be space between different requests. ... So that's just wasted space."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:21:58-1:22:24",
+            "role": "spoken",
+            "quote": "if you have, system prompts, then you can actually just cache these system prompts, the KV cache and the system prompts, once. ... if a lot of people are using the same system prompt, then you don't have to compute the cache for every request."
+          },
+          {
+            "source": "lecture_10_video",
+            "ref": "video:1:23:02-1:23:22",
+            "role": "spoken",
+            "quote": "And then this is called copy on write semantics. ... if they had happened to sample let's say the same token, you just continue with that. ... But if they sample different tokens, you split the block, and then you can continue there."
+          }
+        ],
+        "filtering_note": "Five figures (fragmentation, blocks, logical-to-physical mapping, sharing, parallel sampling) are the vLLM paper's; the block size (16 tokens in vLLM) and the paper's reported waste percentages are not stated in the lecture and are not restated here. The block table (logical block → physical block) is shown only as an image (L592). The 'other vLLM optimizations' (L602-L605) are a list without mechanism and are anchored for completeness. Why internal fragmentation is bounded by one block per sequence is implied by 'non-contiguous blocks' but not said. Spoken evidence (1:20:19-1:20:50): both kinds of fragmentation are explained: internal, because a request's end is unknown, so a max-length buffer (1,024 tokens in his example) is reserved and mostly unused; external, gaps between requests too small to use. Spoken evidence (1:21:58-1:22:24): prefix sharing saves compute as well as memory: a shared system prompt's cache need not be computed 'for every request'. Spoken evidence (1:23:02-1:23:22): copy-on-write narrated on the two-sample example: identical next tokens keep sharing the block, different ones split it. The example uses blocks of 4 tokens (1:21:11), an illustration rather than vLLM's block size. The 'other optimizations like kernels' are skipped (1:23:28)."
+      },
+      "prerequisites": [
+        {
+          "kp": "kv-cache-size",
+          "basis": "teaching-order",
+          "note": "Paging manages the B·S·4KHL bytes that the napkin math showed to be the binding constraint."
+        },
+        {
+          "kp": "continuous-batching",
+          "basis": "teaching-order",
+          "note": "Requests entering and leaving every iteration is what makes a static per-request allocation fragment."
+        }
+      ],
+      "external_prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "PagedAttention makes attention itself faster.",
+          "why_wrong": "It is a memory-management scheme: it removes fragmentation so more sequences fit and prefixes can be shared (L583-L599). The attention kernel must in fact gather from non-contiguous blocks, which vLLM fuses to avoid extra launches (L603)."
+        },
+        {
+          "belief": "Reserving the maximum response length per request is harmless because unused memory is freed when the request ends.",
+          "why_wrong": "While the request runs, the unused tail (internal fragmentation) and the gaps between slabs (external fragmentation) are unavailable to other requests, which caps the batch size (L584-L585)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A server reserves a 2048-token KV slab per request. A request has a 37-token prompt and generates 60 tokens, so the slab wastes 2048 − 97 = 1951 token slots. With PagedAttention at 16-token blocks instead, how many token slots are wasted on this request?",
+          "format": "number",
+          "answer": "15",
+          "tolerance": 0.0,
+          "why": "Paged: 7 blocks cover 97 tokens (112 slots), so 15 are wasted. The slab pays internal fragmentation for the whole unused tail (L584); paging allocates blocks as tokens arrive, so waste is under one block (L588).",
+          "targets_misconception": "Reserving the maximum response length per request is harmless because unused memory is freed when the request ends."
+        },
+        "transfer": {
+          "q": "A program-synthesis service samples 8 completions for each 500-token prompt, 16-token blocks, Llama 2 13B cache (819,200 bytes per token). How many bytes of prompt KV cache does the request hold with and without prefix sharing, and what happens to a shared block when one sample's generation first writes into it?",
+          "format": "short",
+          "answer": "419 MB with sharing (32 blocks = 512 slots × 819,200 B) vs 3.36 GB without (8 × 419 MB); on the first write the block is duplicated (copy-on-write) for the writing sample and the others keep the original.",
+          "why": "Prompt blocks are shared across the 8 samples (L597, L599); 500 tokens need ceil(500 / 16) = 32 blocks; 512 × 819,200 = 419 MB (L297). Copy-on-write at the block level (L599) keeps the shared prefix intact."
+        },
+        "check": {
+          "q": "With PagedAttention and 16-token blocks, a server holds 4 samples of one 300-token prompt, before any sample has generated a token. With prefix sharing, how many physical blocks hold the prompt's KV cache?",
+          "format": "number",
+          "answer": "19 blocks",
+          "tolerance": 0.05,
+          "why": "ceil(300 / 16) = 19 blocks, shared by all 4 samples (L597, L599); without sharing it would be 76. The partially filled 19th block is copied on write when a sample first appends to it.",
+          "varies": "prompt length, sample count, and blocks are counted instead of bytes",
+          "invariant": "the cache is stored in fixed-size blocks; samples of one prompt map to the same physical prompt blocks",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the two kinds of fragmentation the status quo suffers and what each wastes.",
+            "answer": "Internal: the unused tail of a request's max-length reservation. External: unused space between reserved sections."
+          },
+          {
+            "q": "What is the unit of KV-cache allocation in PagedAttention, and from which field is the idea borrowed?",
+            "answer": "Non-contiguous blocks (pages), borrowed from operating systems."
+          },
+          {
+            "q": "Give the two prefix-sharing scenarios the lecture lists and the mechanism that keeps sharing safe.",
+            "answer": "Shared system prompt; multiple samples per prompt. Copy-on-write at the block level."
+          }
+        ],
+        "self_explain": "Why does paging bound internal fragmentation to less than one block per sequence, and what does that cost the attention kernel?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/paged-attention-fragmentation.png"
+        },
+        {
+          "type": "figure",
+          "action": "trace",
+          "ref": "official/lectures/images/paged-attention-logical.png"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_10.py:L579-L599"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:1:23:02-1:23:22",
+          "notice": "listen for: copy-on-write: samples share a block until they pick different tokens"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_10--paged-blocks",
+          "notice": "The slab's grey tail is the whole unused reservation; with blocks the waste is only the unfilled part of each sample's last block (always under one block), and with sharing on every sample's row points to the same blue prompt blocks."
+        }
+      ]
+    }
+  ],
+  "spoken_filtering": [
+    {
+      "at": "0:31",
+      "kind": "aside",
+      "quote": "So inference turns out to be only one lecture, but it's actually of growing importance.",
+      "what_was_filtered": "Inference gets a single lecture in the course.",
+      "kp": null
+    },
+    {
+      "at": "9:03",
+      "kind": "aside",
+      "quote": "Much of this lecture is based on the scaling book from Google on transformers and inference. So I do recommend that people go check it out.",
+      "what_was_filtered": "Most derivations and figures come from the scaling book, recommended as reading.",
+      "kp": null
+    },
+    {
+      "at": "13:05",
+      "kind": "skip",
+      "quote": "I have implemented this. So I don't want to belabor it, but just to swap in the notation.",
+      "what_was_filtered": "The Transformer block review is kept to notation (students implemented it in Assignment 1).",
+      "kp": "prefill-vs-decode"
+    },
+    {
+      "at": "20:23",
+      "kind": "aside",
+      "quote": "I'll fix that later.",
+      "what_was_filtered": "The scaling-book diagram's swapped K and G labels (N = K G), conceded in Q&A.",
+      "kp": "prefill-vs-decode"
+    },
+    {
+      "at": "26:12",
+      "kind": "skip",
+      "quote": "I'm not going to maybe belabored step through every single detail here",
+      "what_was_filtered": "Step-by-step gated-MLP FLOP and byte accounting (L187-L202).",
+      "kp": "mlp-intensity-batch"
+    },
+    {
+      "at": "28:59",
+      "kind": "defer-later",
+      "quote": "So that's something we're going to address when we talk about continuous batching.",
+      "what_was_filtered": "How to get a large decode batch when requests are unpredictable.",
+      "kp": "continuous-batching"
+    },
+    {
+      "at": "30:58",
+      "kind": "defer-later",
+      "quote": "I'll explain a bit why later.",
+      "what_was_filtered": "Why attention's intensity has no B (answered at 31:46).",
+      "kp": "attention-decode-intensity"
+    },
+    {
+      "at": "44:30",
+      "kind": "skip",
+      "quote": "I'm not going to really talk about parallelism too much. ... You can look at the scaling book chapter on inference if you want to know more.",
+      "what_was_filtered": "Sharding a model across devices for inference.",
+      "kp": "batch-latency-throughput-tradeoff"
+    },
+    {
+      "at": "47:41",
+      "kind": "aside",
+      "quote": "There's something called multi query attention, which no one uses because it's really bad.",
+      "what_was_filtered": "MQA dismissed as unused.",
+      "kp": "gqa-kv-reduction"
+    },
+    {
+      "at": "51:24",
+      "kind": "aside",
+      "quote": "So I guess, take everything that's not just math with a grain of salt here.",
+      "what_was_filtered": "Paper accuracy results (GQA vs DeepSeek-V2) are model-specific.",
+      "kp": "gqa-kv-reduction"
+    },
+    {
+      "at": "55:03",
+      "kind": "aside",
+      "quote": "These ablations don't show that.",
+      "what_was_filtered": "MLA versus simply shrinking the model dimension; answered with a guess.",
+      "kp": "mla-latent-kv"
+    },
+    {
+      "at": "59:24",
+      "kind": "skip",
+      "quote": "So I'm not going to talk about linear attention.",
+      "what_was_filtered": "Linear attention, Mamba, DeltaNet (a short Q&A answer follows).",
+      "kp": "sliding-window-kv"
+    },
+    {
+      "at": "1:02:43",
+      "kind": "aside",
+      "quote": "I never remember all these acronyms and what they mean, but let's look at this diagram.",
+      "what_was_filtered": "DeepSeek-V4's CSA/DSA/HCA names; only the figure is walked through.",
+      "kp": "sliding-window-kv"
+    },
+    {
+      "at": "1:03:40",
+      "kind": "skip",
+      "quote": "So in the interest of time, I'll move on.",
+      "what_was_filtered": "The rest of DeepSeek-V4's attention design.",
+      "kp": "sliding-window-kv"
+    },
+    {
+      "at": "1:04:20",
+      "kind": "aside",
+      "quote": "And there's also diffusion models, which is a non-autoregressive way to generate which can be much faster.",
+      "what_was_filtered": "Diffusion LMs named as a non-autoregressive alternative.",
+      "kp": null
+    },
+    {
+      "at": "1:11:24",
+      "kind": "aside",
+      "quote": "If it's high mean and low variance, maybe there's another a way to just incorporate the bias essentially.",
+      "what_was_filtered": "Handling a constant high-activation unit during pruning (hedged).",
+      "kp": "prune-then-distill"
+    },
+    {
+      "at": "1:15:20",
+      "kind": "skip",
+      "quote": "I'm going to skip this simple proof.",
+      "what_was_filtered": "The two-token exactness proof at L524-L532.",
+      "kp": "speculative-sampling-exactness"
+    },
+    {
+      "at": "1:16:43",
+      "kind": "skip",
+      "quote": "There's a bunch of whole literature on speculative decoding right now that improve over the original, which I'll skip for now.",
+      "what_was_filtered": "Medusa, EAGLE and later speculative methods (L542-L544).",
+      "kp": "speculative-sampling-mechanism"
+    },
+    {
+      "at": "1:23:28",
+      "kind": "skip",
+      "quote": "There's a bunch of other optimizations like kernels that I'm not going to have time to go over.",
+      "what_was_filtered": "vLLM's other optimizations (fused block-read kernels, FlashDecoding, CUDA graphs; L602-L607).",
+      "kp": "paged-attention"
+    },
+    {
+      "at": "1:24:40",
+      "kind": "skip",
+      "quote": "One thing we didn't really get a chance to talk about, which was discussed briefly, is that I think that new architectures have actually a huge potential for improvement",
+      "what_was_filtered": "Inference-friendly architectures (SSMs, linear attention, diffusion).",
+      "kp": null
+    }
+  ],
+  "spoken_map": [
+    {
+      "from": "0:05",
+      "to": "1:32",
+      "kp": null,
+      "what": "why inference matters: where it shows up (chat, code, agents, evaluation, RL)"
+    },
+    {
+      "from": "1:32",
+      "to": "2:37",
+      "kp": "inference-metrics"
+    },
+    {
+      "from": "2:37",
+      "to": "4:50",
+      "kp": null,
+      "what": "agentic workloads; inference providers and open-source stacks"
+    },
+    {
+      "from": "4:50",
+      "to": "7:04",
+      "kp": "inference-metrics"
+    },
+    {
+      "from": "7:04",
+      "to": "8:19",
+      "kp": "inference-metrics"
+    },
+    {
+      "from": "8:19",
+      "to": "8:55",
+      "kp": null,
+      "what": "outline of the lecture"
+    },
+    {
+      "from": "8:55",
+      "to": "11:00",
+      "kp": null,
+      "what": "scaling-book notation: contracting and batching dimensions (folded into prefill-vs-decode's note)"
+    },
+    {
+      "from": "11:00",
+      "to": "14:22",
+      "kp": null,
+      "what": "transformer block in that notation; F = 4D, D = NH, S vs T (folded into prefill-vs-decode's note)"
+    },
+    {
+      "from": "14:22",
+      "to": "18:46",
+      "kp": "mlp-intensity-batch"
+    },
+    {
+      "from": "18:46",
+      "to": "20:27",
+      "kp": null,
+      "what": "Q&A: K and G swapped in the diagram (N = K G)"
+    },
+    {
+      "from": "20:27",
+      "to": "22:09",
+      "kp": "prefill-vs-decode"
+    },
+    {
+      "from": "22:09",
+      "to": "22:41",
+      "kp": "kv-cache-needs-causality"
+    },
+    {
+      "from": "22:41",
+      "to": "25:22",
+      "kp": "prefill-vs-decode"
+    },
+    {
+      "from": "25:22",
+      "to": "29:18",
+      "kp": "mlp-intensity-batch"
+    },
+    {
+      "from": "29:18",
+      "to": "31:39",
+      "kp": "attention-decode-intensity"
+    },
+    {
+      "from": "31:39",
+      "to": "35:07",
+      "kp": "attention-decode-intensity"
+    },
+    {
+      "from": "35:07",
+      "to": "36:00",
+      "kp": "decode-bandwidth-bound"
+    },
+    {
+      "from": "36:00",
+      "to": "38:32",
+      "kp": "kv-cache-size"
+    },
+    {
+      "from": "38:32",
+      "to": "39:27",
+      "kp": "decode-bandwidth-bound"
+    },
+    {
+      "from": "39:27",
+      "to": "40:15",
+      "kp": "kv-cache-size"
+    },
+    {
+      "from": "40:15",
+      "to": "41:35",
+      "kp": "batch-latency-throughput-tradeoff"
+    },
+    {
+      "from": "41:35",
+      "to": "42:13",
+      "kp": "decode-bandwidth-bound"
+    },
+    {
+      "from": "42:13",
+      "to": "44:29",
+      "kp": "batch-latency-throughput-tradeoff"
+    },
+    {
+      "from": "44:29",
+      "to": "45:47",
+      "kp": "batch-latency-throughput-tradeoff"
+    },
+    {
+      "from": "45:47",
+      "to": "46:56",
+      "kp": "kv-cache-size"
+    },
+    {
+      "from": "46:56",
+      "to": "51:32",
+      "kp": "gqa-kv-reduction"
+    },
+    {
+      "from": "51:32",
+      "to": "55:30",
+      "kp": "mla-latent-kv"
+    },
+    {
+      "from": "55:30",
+      "to": "56:53",
+      "kp": "gqa-kv-reduction"
+    },
+    {
+      "from": "56:53",
+      "to": "59:12",
+      "kp": "sliding-window-kv"
+    },
+    {
+      "from": "59:12",
+      "to": "1:02:17",
+      "kp": null,
+      "what": "Q&A: linear attention, Mamba and DeltaNet versus sliding windows (lecture_04 thread)"
+    },
+    {
+      "from": "1:02:17",
+      "to": "1:04:28",
+      "kp": "sliding-window-kv"
+    },
+    {
+      "from": "1:04:28",
+      "to": "1:07:39",
+      "kp": "quantization-inference"
+    },
+    {
+      "from": "1:07:39",
+      "to": "1:11:43",
+      "kp": "prune-then-distill"
+    },
+    {
+      "from": "1:11:43",
+      "to": "1:14:27",
+      "kp": "speculative-sampling-mechanism"
+    },
+    {
+      "from": "1:14:27",
+      "to": "1:15:40",
+      "kp": "speculative-sampling-exactness"
+    },
+    {
+      "from": "1:15:40",
+      "to": "1:16:04",
+      "kp": "spec-draft-length-tradeoff"
+    },
+    {
+      "from": "1:16:04",
+      "to": "1:16:55",
+      "kp": "speculative-sampling-mechanism"
+    },
+    {
+      "from": "1:16:55",
+      "to": "1:19:34",
+      "kp": "continuous-batching"
+    },
+    {
+      "from": "1:19:34",
+      "to": "1:23:36",
+      "kp": "paged-attention"
+    },
+    {
+      "from": "1:23:36",
+      "to": "1:25:24",
+      "kp": null,
+      "what": "summary and outlook: inference-friendly architectures"
+    }
+  ]
+}

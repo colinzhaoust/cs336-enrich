@@ -1,0 +1,783 @@
+{
+  "lecture": "lecture_11",
+  "source_path": "official/lectures/lecture_11.pdf",
+  "anchor_convention": "lecture_11.pdf:p<page>",
+  "txt_sha256": "802b0b5376d448a4728f0849467773ef28747530768eb8fb9f38bc4c4f912175",
+  "page_count": 59,
+  "empty_pages": [
+    59
+  ],
+  "summary": {
+    "pages_with_content": 58,
+    "claims": 179,
+    "figures_mentioned": 3,
+    "cites": 1,
+    "dropped": 50
+  },
+  "pages": [
+    {
+      "page": 1,
+      "title": "Lecture 11",
+      "claims": [
+        "S C A L I N G – C A S E S T U D Y A N D D E TA I L S",
+        "CS336"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 2,
+      "title": "Motivation today",
+      "claims": [
+        "What is the best practices for scaling and hparam tuning LMs?",
+        "Does chinchilla’s approach to scaling actually work?",
+        "Can we save compute when training and fitting these things?",
+        "Should we be picking particular architectures / parametrizations to scale nicely?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 3,
+      "title": "Scaling in practice",
+      "claims": [
+        "The newest model we talked about with scaling details - 2022",
+        "What about more recently?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "2024",
+        "2024",
+        "2024",
+        "2024",
+        "2025",
+        "2026"
+      ]
+    },
+    {
+      "page": 4,
+      "title": "Initialization and optimizers",
+      "claims": [
+        "Initialization, optimizers, and various hyperparams (LR/batch) can be scale sensitive"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 5,
+      "title": "Working through some detailed, public scaling recipes",
+      "claims": [
+        "1. MiniCPM",
+        "2. DeepSeek"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 6,
+      "title": "MiniCPM",
+      "claims": [
+        "MiniCPM (2024) – small, high-perf LM from Tsinghua group.",
+        "Careful, extensive scaling computations + muP to stabilize and simplify scaling",
+        "Not really ‘sota’ model (even in 2024) but many interesting lessons on scaling"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 7,
+      "title": "MiniCPM",
+      "claims": [
+        "High performance 1-2.5 B parameter models. These models beat most out 2Bs and",
+        "match many modern 7B models."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 8,
+      "title": "Techique 1: muP to stabilize scaling",
+      "claims": [
+        "Scale_emb = 12, scale_depth = 1.4, init_std = 0.1, lr =0.01"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 9,
+      "title": "Scaling recipe / strategy",
+      "claims": [
+        "Use muP for initialization, fix the aspect ratio, scale up the overall model size.",
+        "Note that the gap between the largest model here and the actual model they train is ~5x",
+        "Optimal batch, LR, token-to-size ratios are directly fitted via scaling analysis"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 10,
+      "title": "Optimal LR",
+      "claims": [
+        "According to muP – optimal learning rate should be (roughly) stable. Is it?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 11,
+      "title": "Optimal batch",
+      "claims": [
+        "Three model sizes (9m, 30m, 170m) as a function of data size (y), batch (x) and loss (col)",
+        "Vertical columns of points represent a single training curve (fixed batch, more points).",
+        "Red line attempts to identify minimum loss points for each y-value",
+        "– this is the ‘optimal batch size’ for a model size / dataset size combination."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 12,
+      "title": "Optimal batch size",
+      "claims": [
+        "We can then follow the Kaplan 2020 analysis and plot optimal batch size vs final loss.",
+        "Fairly clean trend – polynomially increase the batch size as loss decreases."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 13,
+      "title": "What remains – model size vs data tradeoffs.",
+      "claims": [
+        "From chinchilla – to fit a scaling law, we need to train from scratch, not just early stop",
+        "This turns the cost of fitting a scaling law from n to n^2.. Can we avoid this?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 14,
+      "title": "(partial) solution in miniCPM – WSD learning rate",
+      "claims": [
+        "Instead of cosine, split learning rate into warmup, stable, and decay phases.",
+        "For chinchilla-style analysis, can restart the run at the end of the stable phase."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 15,
+      "title": "WSD learning rates work well in miniCPM",
+      "claims": [
+        "Slower during the stable phase, rapid loss decay during decay phase. Decay ~ 10%."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 16,
+      "title": "Chinchilla-type analysis",
+      "claims": [
+        "Equipped with the WSD learning rate,",
+        "we can now try to find the optimal data-to-model size ratio",
+        "MiniCPM authors choose method 1 (lower envelope) and method 3 (joint fit)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 17,
+      "title": "Chinchlla method 1",
+      "claims": [
+        "Fairly clear (though maybe not linear?) trends",
+        "Different colors indicate different models. Their runs suggest relatively low diminishing",
+        "returns due to data."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 18,
+      "title": "Chinchilla method 3",
+      "claims": [
+        "Their primary scaling approach is the joint fit – they find very high data-model ratios."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 19,
+      "title": "DeepSeek",
+      "claims": [
+        "DeepSeek (2024) – another LM with careful scaling analysis",
+        "7 and 67B param models – generally high performance compared to other open LM"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 20,
+      "title": "Scaling strategy – batch + LR",
+      "claims": [
+        "Scaling strategy: don’t use any muP, directly estimate optimal batch / LR"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 21,
+      "title": "Scaling analysis of learning rates",
+      "claims": [
+        "Small scale runs + collect ‘near optimal’ (within 0.25% of min) models.",
+        "Learning rate fit looks a bit questionable.."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 22,
+      "title": "For chinchilla analysis: WSD-style learning rate",
+      "claims": [
+        "Deepseek uses WSD-style learning rate – fast warmup + two decay steps of 10% each.",
+        "Generally seems to match performance of cosine learning rates."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 23,
+      "title": "Data-size tradeoff analysis: Chinchilla method 2",
+      "claims": [
+        "Straightforward isoflop-style analysis for selecting the model size tradeoffs."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 24,
+      "title": "Scaling predicts final model loss",
+      "claims": [
+        "The fitted scaling models (generally) accurately predict the final model losses."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 25,
+      "title": "Other models: Qwen scaling",
+      "claims": [
+        "Qwen 2.5 – batch and hyper scaling fits",
+        "Qwen 3 – similar scaling for LR/batch"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 26,
+      "title": "Kimi K2",
+      "claims": [
+        "Many recent papers – sparsity scaling law to find the right sparsity levels"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 27,
+      "title": "Hunyuan (2024) large scaling laws",
+      "claims": [
+        "Yet more isoflops-style scaling (but this time for MoE parameter sizes)",
+        "Optimal ratio – 96-1 (data to active param)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 28,
+      "title": "LLaMA 3 (2024) Scaling laws",
+      "claims": [
+        "Isoflops-style scaling (39-1 ratio)",
+        "Compute-to-downstream scaling"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 29,
+      "title": "MiniMax-01 (2025)",
+      "claims": [
+        "Architecture scaling laws + Chinchilla method 1"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 30,
+      "title": "Recent scaling law recipes",
+      "claims": [
+        "DeepSeek recipe",
+        "Assume most transformer hypers are invariant to scale",
+        "Use a piecewise-linear schedule to make chinchilla scaling cheap.",
+        "miniCPM recipe",
+        "Use muP to make transformer + LR invariant to scale",
+        "Use a piecewise linear schedule to get sample for Chinchilla method 3 (curve fitting)",
+        "Recent (late 2024+) but less detailed",
+        "Qwen – Lr/batch (very few details..)",
+        "Kimi K2 – MoE scaling",
+        "LLaMA 3 / Hunyuan",
+        "Just isoflops (no other scaling details)",
+        "Minimax",
+        "Architecture choice / decision scaling"
+      ],
+      "figures_mentioned": [
+        "Do a scaling analysis on batch / LR to figure out optimal scaling",
+        "IsoFLOP analysis to figure out model sizing"
+      ],
+      "cites": [],
+      "dropped": [
+        "›"
+      ]
+    },
+    {
+      "page": 31,
+      "title": "Optimizer scaling",
+      "claims": [
+        "Optimizers choices / tuning can be tricky and scale sensitive",
+        "How should we pick different optimizers?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 32,
+      "title": "StepFun scaling law study",
+      "claims": [
+        "Large scale scaling law study from StepFun",
+        "Core question: how do we set LR / batch params as we scale? (Deepseek / qwen approach)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 33,
+      "title": "Core question – scaling rates on LR and batch",
+      "claims": [
+        "What are the right variables / functional form?",
+        "Different views:",
+        "Critical batch: batch as a function of loss (OpenAI)",
+        "Compute power law: poly function of compute (DeepSeek)",
+        ".. Or something else?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 34,
+      "title": "The approach: purely empirical – grid search the space",
+      "claims": [
+        "Much like the DeepSeek paper – train models to try to map out the hparam space"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 35,
+      "title": "Observation 1: loss over batch/LR are convex",
+      "claims": [
+        "For pre-training losses, minimizers for LR/batch can be cleanly identified"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 36,
+      "title": "Observation 2: scaling trends",
+      "claims": [
+        "For chinchilla style joint scaling: batch is primarily dependent on dataset size.",
+        "They also find higher optimal LR with D (for fixed M), but this is likely more fragile if",
+        "swapping to WSD – see e.g. InternLM scaling law paper (Zhou+ 2026)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 37,
+      "title": "Observation 3 (?) robustness",
+      "claims": [
+        "Generalization to MoEs",
+        "Generalization to other datasets"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 38,
+      "title": "Optimizers and scale",
+      "claims": [
+        "Optimization is a core part of LLMs (but also tricky, due to scale dependence!)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 39,
+      "title": "Problem 1 – hyper tuning is often off..",
+      "claims": [
+        "Different optimizers can require different hyperparameters!",
+        "(and likely have different optimal hyperparameter scaling)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 40,
+      "title": "Problem 2 – fairly significant scale dependence",
+      "claims": [
+        "General algorithm development note – always check scaling with respect to compute",
+        "and chinchilla ratios. These are often major confounders to performance!"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 41,
+      "title": "Problem 2.5 – establishing scaling is nontrivial!",
+      "claims": [
+        "Sometimes, a good looking scaling can blow up",
+        "[From",
+        "Cautious AdamC + Sqrt batch-size scaling of learning rates",
+        "(Fixed with some more careful parametrization / scaling / optimizer changes)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://oa.williamheld.com/blog/delphi/"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 42,
+      "title": "A few slides on muon..",
+      "claims": [
+        "Muon:",
+        "Optimizer for ‘matrix valued’ parameters.",
+        "NewtonSchultz (approximately) orthogonalizes the matrix 𝐵𝑡 = 𝑈𝑆𝑉 ⊤ → 𝑈𝑉 ⊤"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 43,
+      "title": "Muon and scaling",
+      "claims": [
+        "NanoGPT speedrun (very small!)",
+        "Scaling study",
+        "Kimi K2",
+        "Scaling gains are tricky to measure, but clearly muon ‘works’ at scale"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 44,
+      "title": "Maximum update parametrization – in depth",
+      "claims": [
+        "Recall – the maximum update parametrization makes appealing claims",
+        "Scale-invariant hyperparameter tuning would be very nice.",
+        "How does it work, and does it work in practice?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 45,
+      "title": "CerebrasGPT",
+      "claims": [
+        "CerebrasGPT – 0.1 to 13B models trained with the Chinchilla recipe.",
+        "Core finding – using muP parametrization makes scaling more stable"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 46,
+      "title": "What is muP, anyway?",
+      "claims": [
+        "(this is a very accessible ‘muP for babies’ paper)",
+        "muP is based off the following assertion. As a function of the width of the network 𝑛𝑙 ..",
+        "A1: The activations at initialization should remain Θ(1)",
+        "A2: After one gradient step, the change in activation should be Θ(1)",
+        "Note: if individual activations are Θ(1), then the norm should be Θ",
+        "nl"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 47,
+      "title": "Deriving muP (condition A1)",
+      "claims": [
+        "Suppose that we have a simple, deep linear network (ℎ𝑙 = 𝑊𝑙 ℎ𝑙−1 ) and we init",
+        "𝑊𝑙 ∼ 𝑁 0, 𝜎 2 𝐼𝑛𝑙 ×𝑛𝑙−1 then by basic matrix concentration 𝑊𝑙 ∗ → 𝜎( 𝑛𝑙−1 + 𝑛𝑙 )",
+        "and,",
+        "Now let’s pick 𝜎 =",
+        "𝑛𝑙 + 𝑛𝑙−1",
+        "min 1,",
+        ". What happens?",
+        "Inductive assumption- ℎ𝑙−1 2 = Θ",
+        "Inductive case - 𝑊𝑙 ∗ → 𝜎",
+        "𝑛𝑙−1 + 𝑛𝑙 =",
+        "ℎ𝑙 2 = 𝑛𝑙 + 𝑜( 𝑛𝑙 )"
+      ],
+      "figures_mentioned": [
+        "[Comments – this is a kind of ‘worst case’ derivation – the ≈ is an upper bound ]"
+      ],
+      "cites": [],
+      "dropped": [
+        "ℎ𝑙 2 ≈ 𝑊𝑙 ∗ ℎ𝑙−1 2",
+        "𝑛𝑙",
+        "−1",
+        "1",
+        "𝑛𝑙",
+        "=Θ",
+        "𝑛𝑙−1",
+        "𝑛𝑙−1",
+        "𝑛𝑙−1",
+        "𝑛𝑙−1",
+        "𝑛𝑙",
+        "𝑛𝑙−1"
+      ]
+    },
+    {
+      "page": 48,
+      "title": "Deriving muP (condition A2)",
+      "claims": [
+        "Now we need to deal with updates. Suppose we have the update Δ𝑊𝑙 on the weights.",
+        "For SGD, on a linear layer, this looks like a rank-one loss-activation outer product.",
+        "Δ𝑊𝑙 = −𝜂𝑙 ∇ℎ𝑙 ℓ ℎ𝑙−1",
+        "Thus, Δ𝑊𝑙 ℎ𝑙−1 2 = Δ𝑊𝑙 ∗ ℎ𝑙−1 2 . Now note that we have the update",
+        "Δhl = Wl Δℎ𝑙−1 + Δ𝑊𝑙 (ℎ𝑙−1 + Δℎ𝑙−1 )",
+        "Assuming that the leading order terms don’t cancel, we see that",
+        "Wl Δℎ𝑙−1 = Θ( 𝑛𝑙 ) from induction assumption + condition A1 argument",
+        "Δ𝑊𝑙 ℎ𝑙−1 = 𝛥𝑊𝑙 ∗ 𝑛𝑙−1 from above, thus 𝜟𝑾𝒍 ∗ = 𝚯",
+        "Δ𝑊𝑙 Δℎ𝑙−1 = 𝑂( Δ𝑊𝑙 ∗ 𝑛𝑙−1 )"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "⊤",
+        "𝒏𝒍",
+        "𝒏𝒍−𝟏"
+      ]
+    },
+    {
+      "page": 49,
+      "title": "Deriving muP (condition A2) part 2",
+      "claims": [
+        "Recall –the key is to pick LR such that Δ𝑊𝑙 ∗ 𝑛𝑙−1 = Θ",
+        "𝑛𝑙 . How can we do that?",
+        "Suppose that the loss update also scales O(1). Then we can write down..",
+        "Where we use the fact that Δ𝑊𝑙 = −𝜂∇𝑊𝑙 ℓ in standard SGD updates.",
+        "Now plug in Δℓ = O 1 , Δ𝑊𝑙 ∗ = Θ",
+        "to get that ∇𝑊𝑙 ℓ",
+        "Finally, from the previous slide, recall that Δ𝑊𝑙 = −𝜂𝑙 ∇ℎ𝑙 ℓ ℎ𝑙−1",
+        "and thus",
+        "[with Adam, Δ𝑊𝑙 ∗ 𝑛𝑙−1 = Θ"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "Δℓ ≈ Θ Δ𝑊𝑙 , ∇𝑊𝑙 ℓ",
+        "=Θ",
+        "Δ𝑊𝑙 𝐹 ∇𝑊𝑙 ℓ",
+        "=Θ",
+        "Δ𝑊𝑙 ∗ ∇𝑊𝑙 ℓ",
+        "𝐹",
+        "∗",
+        "𝑛𝑙",
+        "𝑛𝑙−1",
+        "=Θ",
+        "𝑛𝑙−1",
+        "∗",
+        "𝑛𝑙",
+        "⊤",
+        "𝑛𝑙",
+        "𝜂𝑙 = Θ",
+        "𝑛𝑙−1",
+        "𝜂𝑙 ]"
+      ]
+    },
+    {
+      "page": 50,
+      "title": "muP mini recap..",
+      "claims": [
+        "So, what is (baby) muP about? Controlling activations (and changes) via 𝑊 and Δ𝑊",
+        "Initialization (stdev): Set to Θ",
+        "min 1,",
+        "Learning rates: Set to",
+        "(for Adam",
+        "nl−1",
+        "Compared to ‘standard’ parametrizations – these set",
+        "Initialization: Set to",
+        "Learning rates: Set to Θ(1)",
+        "Differences – LR changes for Adam, also init diffs when fanout 𝑛𝑙 < fanin"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "1",
+        "𝑛𝑙",
+        "𝑛𝑙−1",
+        "𝑛𝑙−1",
+        "𝑛𝑙",
+        "1",
+        ")",
+        "𝑛𝑙−1",
+        "1",
+        "𝑛𝑙−1"
+      ]
+    },
+    {
+      "page": 51,
+      "title": "Deeper dive into muP",
+      "claims": [
+        "Recall – muP is a scaling procedure for hyperparams (as a function of width)",
+        "Embedding",
+        "Attention params",
+        "Input/output MLP MM",
+        "Softmax linear"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 52,
+      "title": "Replicating muP",
+      "claims": [
+        "Q1: Does muP work as claimed? When we scale widths, is optimal LR constant?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 53,
+      "title": "What is muP robust to?",
+      "claims": [
+        "Modern LMs have many components that deviate from muP’s theory",
+        "Activations – SwiGLU and squared relu",
+        "Batch sizes – Large / small",
+        "Initialization variations – zero attention, etc.",
+        "RMS norm gains",
+        "Exotic optimizers (Lion)",
+        "Regularizers",
+        "Which of these (if any) break muP?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 54,
+      "title": "What is muP not robust to? RMSnorm gain",
+      "claims": [
+        "In our arch – RMSNorm has learnable gains. This turns out to break muP",
+        "But these gains can be removed with little loss of perf.."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 55,
+      "title": "What is muP not robust to? Exotic optimizers",
+      "claims": [
+        "There are other, exotic optimizers based on just gradient signs. Do they transfer?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 56,
+      "title": "What is muP not robust to? – (strong) weight decay",
+      "claims": [
+        "What about strong (0.1) weight decay? – this is maybe the only significant muP failure"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 57,
+      "title": "Is muP useful? At least to some extent..",
+      "claims": [
+        "Overall, muP generally seems useful – insofar that SP is quite a bit more unstable.",
+        "Current evidence suggests that muP parametrization / initialization may be easier to tune."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 58,
+      "title": "Recap: scaling in the wild",
+      "claims": [
+        "What are challenges in scaling ‘in practice’",
+        "1. Setting model arch hyperparameters ( width, etc)",
+        "2. Setting optimizer hyperparameters (LR, batch)",
+        "3. Compute needed to fit the big chinchilla sweep",
+        "Some solutions?",
+        "1. Assume stability (or use muP)",
+        "2. Search for optimal LR / batch in small scale, either keep fixed or predict scaling",
+        "3. Use alternative learning schedules (WSD-like)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    }
+  ]
+}

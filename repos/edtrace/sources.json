@@ -1,0 +1,36 @@
+{
+  "edtrace_backend": {
+    "title": "edtrace backend: Python tracer package (local copy)",
+    "kind": "repo",
+    "path": "tools/edtrace/backend/src/edtrace",
+    "sha": null,
+    "sha_source": "no .git directory under tools/edtrace; discover_repo.py records a sha256 per module in discovered.json instead",
+    "anchor_convention": "execute.py:L232-L245  (path relative to tools/edtrace/backend/src/edtrace, 1-based inclusive line range)",
+    "note": "Seven modules, 792 lines: execute.py (tracer, CLI), execute_util.py (text/image/video/link/plot/note renderings), reference.py (Reference + label), arxiv_util.py (arXiv page scrape), file_util.py (download cache, relativize), examples.py (demo program), __init__.py (public API)."
+  },
+  "edtrace_frontend": {
+    "title": "edtrace frontend: React/Vite trace viewer (local copy)",
+    "kind": "repo",
+    "path": "tools/edtrace/frontend/src",
+    "anchor_convention": "TraceViewer.jsx:L244-L260  (path relative to tools/edtrace/frontend/src)",
+    "note": "TraceViewer.jsx (946 lines) is the whole viewer: URL-param state, keyboard stepping, env merging, value and rendering display. App.jsx/main.jsx are router + mount; utils.js has getLast. Indexed by regex only (discovered.json frontend_modules); no JS parser was used."
+  },
+  "edtrace_readme": {
+    "title": "edtrace README.md",
+    "kind": "doc",
+    "path": "tools/edtrace/README.md",
+    "note": "Hello-world program, the `python -m edtrace.execute -m hello` command, var/traces/<module>.json output location, dev/production viewer setup. Anchors are README.md:L<n>."
+  },
+  "cs336_lectures": {
+    "title": "CS336 official executable lectures (official/lectures)",
+    "kind": "lecture",
+    "path": "official/lectures",
+    "note": "Used only to show how the directives are used in practice (lecture_02.py). Anchors are lecture_02.py:L<n>."
+  },
+  "python_docs_settrace": {
+    "title": "Python Library Reference: sys.settrace",
+    "kind": "doc",
+    "url": "https://docs.python.org/3/library/sys.html#sys.settrace",
+    "note": "Cited for the supplement KP only; not read into this repo. Anchors of the form python-docs:sys.settrace are not checked by check_anchors."
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "fixture": "pipeline-bubbles",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "720p",
+  "knowledge_points": [
+    "lecture_07:pipeline-parallelism",
+    "lecture_08:pipeline-bubble"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "7.800000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "m = 1: one batch walks through 4 stages; 3 of 4 stages idle at every moment",
+      "frame": "frames/s0.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s1",
+      "time": 2.9,
+      "caption": "m = 4: micro-batches overlap across stages",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 5.8,
+      "caption": "m = 8: the bubble shrinks toward (p\u22121)/m",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s0",
+      "claim": "With one batch only one stage works at a time; the other stages are the bubble.",
+      "evidence": [
+        "lane.stage1",
+        "lane.stage4"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s2",
+      "claim": "Adding micro-batches fills the middle of the timeline; only the ramp-up and ramp-down remain idle.",
+      "evidence": [
+        "lane.stage1",
+        "lane.stage4",
+        "readout"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

@@ -1,0 +1,220 @@
+{
+  "lecture_14": {
+    "title": "CS336 Spring 2026, Lecture 14: Data II (transformation, filtering, deduplication, mixing, post-training data)",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_14.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_14.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_14.json",
+    "note": "Line anchors refer to the local shallow clone (sha256 8e0e17f8..., recorded in discovered.json). Nothing in this file runs on a GPU. Of the 16 @inspect values, those that are plain arithmetic (jaccard L230, prob_collision L298, the three probs dicts L303/L306/L309, threshold L316, prob_match L319, prob_collision L321, low/high_num_epochs L363-L364, ratio L397, downsampled_source_token_counts L398) are re-evaluated by this thread and stated as 'evaluating the professor's formula gives'. Three @inspect values depend on the mmh3 library, which is not installed here: h = mmh3.hash('hello') (L188) is NOT restated; deduped_items (L204) is stated only as 'five strings, one of the two identical hello removed, in hash order'; estimated_jaccard (L262) is stated only as 'within 0.01 of 0.6', which is what the assert at L263 guarantees. The keep_document rule (L109-L110) is code without @inspect; this thread derives its keep probability from numpy's Pareto definition and marks that derivation as inference. Every number the professor reads off a cited paper (OpenMathText thresholds and 14.7B tokens, phi-1 HumanEval 12.19%/17.68%, C4 61,036 repeats, Lee et al. n = 9000 / b = 20 / r = 450, OpenThoughts 1.2M / 27 sources / 16 responses, SWE-smith 128 repos / 50K tasks, SWE-Zero 300K / 150K / 13K, SWE-rebench 21K / 3.4K / 450K, SWE-ZERO-12M 12M / 32K / 120K / 50.4 pass@100) is quoted with that attribution and never asserted as this thread's own. Numbers that live only inside embedded figures (dclm-wet.png, data-filtering-scale.png, regmix.png, data-mixing-methods.png, the two LSH S-curve images, the OpenThoughts/SWE result images) are recorded as shown and not restated."
+  },
+  "lecture_13": {
+    "title": "CS336 Spring 2026, Lecture 13: Data I (sources, copyright, Common Crawl, Wikipedia, GitHub, arXiv, CCNet, C4, ...)",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_13.py",
+    "note": "lecture_14.py imports `the_pile` from lecture_13 (L7) and opens with a recap of it (L13-L15). Referenced only through external_prerequisites (lecture_13:<kp-id>). At the time this thread was written atlas/lectures/lecture_13/ held only discovered.json (no knowledge_points.json), so the lecture_13 ids used here are placeholders named after that file's sections (ccnet, t5_c4, common_crawl, github, the_pile) and must be reconciled when the lecture_13 thread lands."
+  },
+  "dclm_2024": {
+    "title": "DataComp-LM: In search of the next generation of training sets for language models (Li et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2406.11794",
+    "note": "Linked at lecture_14.py:L48 via references.dclm_2024 ('Accuracy matters'); the embedded images/dclm-wet.png compares HTML-to-text extractors and its numbers are not restated. Also named at L87 as a dataset that uses model-based filtering."
+  },
+  "finepdfs_blog": {
+    "title": "FinePDFs blog post (HuggingFaceFW)",
+    "kind": "article",
+    "url": "https://huggingface.co/spaces/HuggingFaceFW/FinePDFsBlog",
+    "note": "Linked at lecture_14.py:L51 (post_link); the pipeline figure at L52 is this post's. Source of the PDF pipeline bullets at L53-L57."
+  },
+  "data_selection_survey_2024": {
+    "title": "A Survey on Data Selection for Language Models (Albalak et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2402.16827",
+    "note": "Linked at lecture_14.py:L74 as 'Survey paper on data selection'."
+  },
+  "fasttext_langid": {
+    "title": "fastText: Language identification (model documentation)",
+    "kind": "software",
+    "url": "https://fasttext.cc/docs/en/language-identification.html",
+    "note": "Linked at lecture_14.py:L91 (article_link). The '176 languages' and 'Wikipedia, Tatoeba and SETimes' training-data facts at L93-L94 are read from this page."
+  },
+  "dolma_2024": {
+    "title": "Dolma: an Open Corpus of Three Trillion Tokens for Language Model Pretraining Research (Soldaini et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2402.00159",
+    "note": "Linked at lecture_14.py:L95 (p(English) >= 0.5 keep rule) and L129 (toxicity filtering with Jigsaw) via references.dolma_2024. Also named at L86 as a dataset that deliberately does not use model-based quality filtering."
+  },
+  "openmathtext_2023": {
+    "title": "OpenWebMath: An Open Dataset of High-Quality Mathematical Web Text (Paster et al., 2023) [the professor labels it 'OpenMathText']",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2310.06786",
+    "note": "Linked at lecture_14.py:L97. The KenLM perplexity < 15000 rule, the 0.17 / 0.8 fastText thresholds, '14.7B tokens' and '1.4B models that do better than models trained on 20x data' (L100-L102) are this paper's numbers as read by the professor."
+  },
+  "gpt3_2020": {
+    "title": "Language Models are Few-Shot Learners (Brown et al., 2020), Appendix A",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2005.14165",
+    "note": "Linked at lecture_14.py:L104 (source comment: Appendix A). Positive set {Wikipedia, WebText2, Books1, Books2}, CommonCrawl negatives, and the Pareto keep rule (L105-L110) are this paper's recipe."
+  },
+  "spark_tokenizer": {
+    "title": "Apache Spark MLlib feature docs: Tokenizer / word features",
+    "kind": "software",
+    "url": "https://spark.apache.org/docs/latest/ml-features#tokenizer",
+    "note": "Linked at lecture_14.py:L107 (article_link) for the word features of GPT-3's linear classifier."
+  },
+  "llama_2023": {
+    "title": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2302.13971",
+    "note": "Linked at lecture_14.py:L112 ('LLaMA/RedPajama'): positives are pages referenced by Wikipedia, negatives CommonCrawl, keep classified-positive documents (L113-L115)."
+  },
+  "phi1_2023": {
+    "title": "Textbooks Are All You Need (Gunasekar et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2306.11644",
+    "note": "Linked at lecture_14.py:L117. The GPT-4 educational-value prompt, the 100K labelled subset, the random-forest classifier on codegen embeddings and the HumanEval figures 12.19% (96K steps) vs 17.68% (36K steps) at L120-L127 are this paper's as read by the professor."
+  },
+  "humaneval": {
+    "title": "OpenAI HumanEval (dataset)",
+    "kind": "dataset",
+    "url": "https://huggingface.co/datasets/openai_humaneval",
+    "note": "Markdown-linked inside the text() at lecture_14.py:L125."
+  },
+  "jigsaw_dataset": {
+    "title": "Jigsaw Toxic Comment Classification Challenge (Kaggle dataset, 2018)",
+    "kind": "dataset",
+    "url": "https://www.kaggle.com/datasets/julian3833/jigsaw-toxic-comment-classification-challenge",
+    "note": "Linked at lecture_14.py:L130 as 'dataset'; Wikipedia talk-page comments with six labels (L132)."
+  },
+  "jigsaw_discussion": {
+    "title": "Jigsaw Toxic Comment Classification Challenge: competition discussion (project goal)",
+    "kind": "article",
+    "url": "https://www.kaggle.com/competitions/jigsaw-toxic-comment-classification-challenge/discussion/46064",
+    "note": "Linked at lecture_14.py:L131 (article_link) for 'help people have better discussions online'."
+  },
+  "gutenberg_mirrors": {
+    "title": "Project Gutenberg: list of mirrors",
+    "kind": "reference",
+    "url": "https://www.gutenberg.org/MIRRORS.ALL",
+    "note": "Linked at lecture_14.py:L147 as an example of exact duplicates (mirror sites)."
+  },
+  "mit_license": {
+    "title": "The MIT License (opensource.org)",
+    "kind": "reference",
+    "url": "https://opensource.org/license/mit",
+    "note": "Linked at lecture_14.py:L151 as an example of near duplicates (licenses, terms of service)."
+  },
+  "formulaic_writing_table": {
+    "title": "Table 1 figure embedded at L152 (semanticscholar CDN; paper id 4566c0d2..., formulaic/templated near-duplicate examples)",
+    "kind": "figure",
+    "url": "https://d3i71xaburhd42.cloudfront.net/4566c0d22ebf3c31180066ab23b6c445aeec78d5/5-Table1-1.png",
+    "note": "Embedded at lecture_14.py:L152 next to 'Formulaic writing (copy/pasted or generated from a template)'. The originating paper is not named in the lecture; the table's contents are not restated."
+  },
+  "c4_product_example": {
+    "title": "Amazon UK product page (example of the C4 repeated product description)",
+    "kind": "reference",
+    "url": "https://www.amazon.co.uk/suryagede-100-Graffiti-Gas-Mask/dp/B07CRHT3RG",
+    "note": "Linked at lecture_14.py:L157 as 'example page' after the '61,036 times in C4' claim (L155-L156)."
+  },
+  "dedup_lee_2021": {
+    "title": "Deduplicating Training Data Makes Language Models Better (Lee et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2107.06499",
+    "note": "Linked at lecture_14.py:L159 (benefits of deduplication: efficiency, less memorization) and L312 ('Example setting: n = 9000, b = 20, r = 450', this paper's MinHash-LSH configuration as read by the professor). The '61,036 times in C4' product description (L155) is also this paper's finding."
+  },
+  "hashing_tradeoff_se": {
+    "title": "Software Engineering StackExchange: Which hashing algorithm is best for uniqueness and speed?",
+    "kind": "article",
+    "url": "https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed",
+    "note": "Linked at lecture_14.py:L183 (article_link) for the efficiency vs collision-resistance tradeoff (SHA-256 vs DJB2/MurmurHash/CityHash)."
+  },
+  "c4_2019": {
+    "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (Raffel et al., 2019; C4)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1910.10683v4",
+    "note": "Linked at lecture_14.py:L210. C4's exact-match dedup of 3-sentence spans and the coherence warning (L211-L214)."
+  },
+  "mmds_ch3": {
+    "title": "Mining of Massive Datasets, Chapter 3: Finding Similar Items (Leskovec, Rajaraman, Ullman)",
+    "kind": "reading",
+    "url": "http://infolab.stanford.edu/~ullman/mmds/ch3n.pdf",
+    "note": "Linked at lecture_14.py:L269 as 'book chapter'; the standard reference for MinHash, banding and the (1/b)^(1/r) threshold."
+  },
+  "lsh_curve_figures": {
+    "title": "Two LSH S-curve images (cdn.sanity.io, origin not named in the lecture)",
+    "kind": "figure",
+    "url": "https://cdn.sanity.io/images/vr8gru94/production/b470799575b8e77911bacb8500977afef06d6c85-1280x720.png",
+    "note": "Embedded at lecture_14.py:L299 and L310 (second image: .../aace49fa240778e8ecf6e85ad08a2de7f5385566-1280x720.png). They illustrate the band/row collision curve; no number is read from them."
+  },
+  "marin_token_viewer": {
+    "title": "Marin community: token count viewer (Hugging Face Space)",
+    "kind": "software",
+    "url": "https://huggingface.co/spaces/marin-community/token-count-viewer",
+    "note": "Linked at lecture_14.py:L334; the screenshot images/marin-token-viewer.png (L335) is from it and its counts are not restated."
+  },
+  "the_pile_2020": {
+    "title": "The Pile: An 800GB Dataset of Diverse Text for Language Modeling (Gao et al., EleutherAI, 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2101.00027.pdf",
+    "note": "Linked at lecture_14.py:L337 via references.the_pile_2020 (also imported from lecture_13 at L7); the composition figure at L338 is the CS324 rendering and its proportions are not restated."
+  },
+  "unimax_2023": {
+    "title": "UniMax: Fairer and More Effective Language Sampling for Large-Scale Multilingual Pretraining (Chung et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2304.09151",
+    "note": "Linked at lecture_14.py:L367. The temperature family p(s) ∝ num_tokens(s)^α and the epoch cap p(s) · num_training_tokens ≤ C (L369-L371)."
+  },
+  "regmix_2024": {
+    "title": "RegMix: Data Mixture as Regression for Language Model Pre-training (Liu et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.01492",
+    "note": "Linked at lecture_14.py:L373 ('Regression-based mixing'); images/regmix.png (L374) is this paper's figure."
+  },
+  "mixing_regression_2026": {
+    "title": "arXiv 2602.12237 (2026): second regression-based data-mixing reference linked by the professor (title not stated in the lecture)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2602.12237",
+    "note": "Linked at lecture_14.py:L373 alongside RegMix; images/data-mixing-methods.png (L379) compares mixing methods and its numbers are not restated."
+  },
+  "simulated_epoching_2025": {
+    "title": "arXiv 2501.11747 (2025): the 'Simulated epoching' reference (title not stated in the lecture)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2501.11747",
+    "note": "Linked at lecture_14.py:L392. Downsample all sources proportionally so that the small-scale run epochs like the large-scale run (L393-L400)."
+  },
+  "openthoughts_2025": {
+    "title": "OpenThoughts: Data Recipes for Reasoning Models (2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2506.04178",
+    "note": "Linked at lecture_14.py:L415. '1.2M examples using QwQ-32B as a teacher', '27 human and synthetic sources', '16 responses per prompt', 'QwQ-32B is a better teacher than DeepSeek-R1', 'answer filtering wasn't helpful' (L416-L422) are this paper's findings as read by the professor; the two figures (L418, L423) are not restated."
+  },
+  "swe_smith_2025": {
+    "title": "SWE-smith: Scaling Data for Software Engineering Agents (2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2504.21798",
+    "note": "Linked at lecture_14.py:L425. 'Introduce bugs with LM', '128 GitHub repositories yields 50K tasks' (L427-L428); figure at L426 not restated."
+  },
+  "swe_zero_2026": {
+    "title": "SWE-Zero (arXiv 2604.01496, 2026): agent trajectories without repository-specific execution",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2604.01496",
+    "note": "Linked at lecture_14.py:L430. 300K non-executing trajectories, 150K GitHub PRs, OpenHands scaffold with future commits removed, distilled from Qwen3-Coder-480B, SWE-Hero 13K executing trajectories (L431-L441); figures at L434, L439, L442 not restated."
+  },
+  "swe_rebench_2025": {
+    "title": "SWE-rebench: An Automated Pipeline for Task Collection and Decontaminated Evaluation of Software Engineering Agents (2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2505.20411",
+    "note": "Linked at lecture_14.py:L444. 21K interactive Python tasks from 3.4K repositories, 450K PRs, Qwen 2.5-72B-Instruct to install dependencies and assess PR quality (L445-L447); figure at L448 not restated."
+  },
+  "swe_zero_12m_dataset": {
+    "title": "SWE-ZERO-12M-trajectories (Hugging Face dataset, AlienKevin)",
+    "kind": "dataset",
+    "url": "https://huggingface.co/datasets/AlienKevin/SWE-ZERO-12M-trajectories",
+    "note": "Linked at lecture_14.py:L450 ('data') and the example row at L454. 12M trajectories, SWE-rebench-v2 tasks (32K executable + 120K nonexecutable), mini-coder-1.7b with mini-swe-agent (L451-L453)."
+  },
+  "lecture_14_video": {
+    "title": "CS336 Spring 2026, Lecture 14: Data II (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=5sxHosTLPF8",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

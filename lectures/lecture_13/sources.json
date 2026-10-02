@@ -1,0 +1,424 @@
+{
+  "lecture_13": {
+    "title": "CS336 Spring 2026, Lecture 13: Data I (sources and datasets)",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_13.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_13.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_13.json",
+    "note": "Line anchors refer to the local shallow clone (sha256 321fbab6..., recorded in discovered.json). Unlike lectures 2, 6 and 10 this file has no @inspect values and no model code: it is 390 text() claims, 54 link()/article_link() citations and 18 image() calls, so every KP is 'said', 'cited' or 'shown' and nothing is 'computed'. Numbers the professor types into text() about a dataset's own construction (C4: 1.4 trillion tokens in, 156 billion out; Gopher: 10.5 TB but trained on 300B, 12%; The Stack: 51B files, 5B unique; DCLM: 240T pool to 3.8T; RefinedWeb: 600B of 5T; Nemotron-CC: 6.3T, HQ 1.1T) are quoted as the professor's readings of the cited papers. Numbers that live only on a linked external page (April 2026 crawl 2.19 billion pages / 372.2 TB, Google index 100 PB, Wikipedia 67 million articles, GitHub 420M+ repositories, arXiv ~3M submissions, Software Heritage 28.8M files, LibGen ~4M books, Sci-Hub ~88M papers, Smashwords 150K authors, Steven Pruitt 5M edits) are recorded with role 'citation' and are never prompt answers. Numbers that exist only inside embedded images (llama3-data.png, olmo2-pretraining/dolmino/tulu.png, decline-consent.png, anthropic-crawling.png, dclm-wet.png, c4-domains.png, the-pile.png, the Dolma medium figure, dclm-filter/quality.png, nemotron-results.png, stackv2-pr1/2.png, commonpile.png, comma-results.png) are recorded only as 'shown'. Two likely typos in the source are left as-is: L288 'Steven Pruit' and L309, where the 'GitHub Archive' link points at the arXiv S3 bulk-data page (the same URL the professor uses correctly at L327)."
+  },
+  "lecture_13_video": {
+    "title": "CS336 Spring 2026, Lecture 13: Data I (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=-qm0ln33G24",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_01": {
+    "title": "CS336 Spring 2026, Lecture 1: Overview and tokenization",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_01.py",
+    "note": "Referenced only through external_prerequisites (lecture_01:compression-ratio); see atlas/lectures/lecture_01/knowledge_points.json. Every dataset size in lecture 13 is reported either in bytes (GB/TB) or in tokens; converting between them needs the bytes-per-token compression ratio defined there."
+  },
+  "lecture_09": {
+    "title": "CS336 Spring 2026, Lecture 9: Scaling laws",
+    "kind": "slides",
+    "path": "official/lectures/lecture_09.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_09:data-repetition-effective-data, lecture_09:data-composition-offset-not-slope); see atlas/lectures/lecture_09/knowledge_points.json. The 'filter too aggressively, need more tokens' tension at L561-L562 and the mixture decisions in The Pile/Dolma/LLaMA are instances of those two scaling-law results."
+  },
+  "llama_3_2024": {
+    "title": "The Llama 3 Herd of Models (Meta, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.21783",
+    "note": "Linked at lecture_13.py:L52 via references.llama_3_2024 ('full transparency into architecture ... but basically no information on data'). The data-description screenshot images/llama3-data.png (L55) is from this paper and is only 'shown'. Also named at L574 as having trained on 15T tokens."
+  },
+  "olmo_2_2025": {
+    "title": "2 OLMo 2 Furious (AI2, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.00656",
+    "note": "Linked at lecture_13.py:L79 via references.olmo_2_2025 as the worked example of the three training stages; the pre-training and mid-training (Dolmino) mixture tables (L81, L83) are this paper's and are not restated."
+  },
+  "tulu_3_2024": {
+    "title": "Tulu 3: Pushing Frontiers in Open Language Model Post-Training (AI2, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2411.15124",
+    "note": "Linked at lecture_13.py:L84 for the post-training stage; images/tulu.png (L85) is from this paper. This is the lecture's only touch on post-training data."
+  },
+  "consent_in_crisis_2024": {
+    "title": "Consent in Crisis: The Rapid Decline of the AI Data Commons (Longpre et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.14933",
+    "note": "Linked at lecture_13.py:L125 ('Decline of consent'); examined robots.txt and ToS restrictions for URLs in C4, RefinedWeb and Dolma. The trend figure images/decline-consent.png (L128) is this paper's."
+  },
+  "shadow_library_wiki": {
+    "title": "Wikipedia: Shadow library",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Shadow_library",
+    "note": "Linked at lecture_13.py:L135. The LibGen ~4M books (2019) and Sci-Hub ~88M papers (2022) figures at L143 are read from this and related pages."
+  },
+  "nyt_robots_txt": {
+    "title": "nytimes.com robots.txt",
+    "kind": "web",
+    "url": "https://www.nytimes.com/robots.txt",
+    "note": "Linked at lecture_13.py:L116 as the example of a robots.txt that disallows crawlers (described by the professor as 'voluntary')."
+  },
+  "statute_of_anne": {
+    "title": "Wikipedia: Statute of Anne (1709)",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Statute_of_Anne",
+    "note": "Linked at lecture_13.py:L158."
+  },
+  "copyright_act_1976": {
+    "title": "Wikipedia: Copyright Act of 1976",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Copyright_Act_of_1976",
+    "note": "Linked at lecture_13.py:L159; the 'original works of authorship fixed in any tangible medium of expression' language at L160 is the statute's."
+  },
+  "copyright_fees": {
+    "title": "U.S. Copyright Office: Fees",
+    "kind": "web",
+    "url": "https://www.copyright.gov/about/fees.html",
+    "note": "Linked at lecture_13.py:L170 for the $65 registration fee."
+  },
+  "reddit_google_deal": {
+    "title": "Reuters: Reddit in AI content licensing deal with Google (2024-02-22)",
+    "kind": "article",
+    "url": "https://www.reuters.com/technology/reddit-ai-content-licensing-deal-with-google-sources-say-2024-02-22/",
+    "note": "Linked at lecture_13.py:L188 as an example of licensing data for training."
+  },
+  "shutterstock_openai": {
+    "title": "Shutterstock press release: expands partnership with OpenAI, signs new six-year agreement",
+    "kind": "article",
+    "url": "https://investor.shutterstock.com/news-releases/news-release-details/shutterstock-expands-partnership-openai-signs-new-six-year",
+    "note": "Linked at lecture_13.py:L189."
+  },
+  "stackoverflow_openai": {
+    "title": "Stack Overflow press: OpenAI partnership",
+    "kind": "article",
+    "url": "https://stackoverflow.co/company/press/archive/openai-partnership",
+    "note": "Linked at lecture_13.py:L190."
+  },
+  "techcrunch_meta_ruling": {
+    "title": "TechCrunch: Federal judge sides with Meta in lawsuit over training AI models on copyrighted books (2025-06-25)",
+    "kind": "article",
+    "url": "https://techcrunch.com/2025/06/25/federal-judge-sides-with-meta-in-lawsuit-over-training-ai-models-on-copyrighted-books/",
+    "note": "Linked at lecture_13.py:L232 for the Kadrey v. Meta summary judgement."
+  },
+  "common_crawl": {
+    "title": "Common Crawl",
+    "kind": "web",
+    "url": "https://commoncrawl.org/",
+    "note": "Linked at lecture_13.py:L242. The monthly-crawl, 3-5 billion pages and 300 billion pages statistics (L245-L247) are the professor's summary of the organization's own figures."
+  },
+  "cc_april_2026_crawl": {
+    "title": "Common Crawl blog: April 2026 crawl archive now available",
+    "kind": "article",
+    "url": "https://commoncrawl.org/blog/april-2026-crawl-archive-now-available",
+    "note": "Linked at lecture_13.py:L251; source of the 2.19 billion pages / 372.2 TB figure, which is recorded as cited and not restated as a fact to memorize."
+  },
+  "google_how_search_works": {
+    "title": "Google: How Search organizes information",
+    "kind": "web",
+    "url": "https://www.google.com/search/howsearchworks/how-search-works/organizing-information/",
+    "note": "Linked at lecture_13.py:L250 for 'Google search index is at least 100 PB'."
+  },
+  "cc_nutch_blog": {
+    "title": "Common Crawl blog: Common Crawl's move to Nutch",
+    "kind": "article",
+    "url": "https://blog.commoncrawl.org/blog/common-crawl-move-to-nutch",
+    "note": "Linked at lecture_13.py:L253 ('Crawling uses Apache Nutch')."
+  },
+  "cc_march_2018_crawl": {
+    "title": "Common Crawl blog: March 2018 crawl archive now available",
+    "kind": "article",
+    "url": "https://commoncrawl.org/blog/march-2018-crawl-archive-now-available",
+    "note": "Linked at lecture_13.py:L255 for the seed-URL count ('at least hundreds of millions')."
+  },
+  "web_crawler_wiki": {
+    "title": "Wikipedia: Web crawler",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Web_crawler",
+    "note": "Linked at lecture_13.py:L258; the selection / politeness / re-visit policy taxonomy (L259-L261) follows this article. The crawler architecture diagram embedded at L254 is the Wikimedia Commons WebCrawlerArchitecture.svg."
+  },
+  "trafilatura": {
+    "title": "trafilatura documentation",
+    "kind": "software",
+    "url": "https://trafilatura.readthedocs.io/en/latest/",
+    "note": "Linked at lecture_13.py:L269 as an HTML-to-text tool; named again at L508 (RefinedWeb used it) and L563 (Nemotron-CC did not)."
+  },
+  "resiliparse": {
+    "title": "Resiliparse documentation (ChatNoir)",
+    "kind": "software",
+    "url": "https://resiliparse.chatnoir.eu/en/stable/",
+    "note": "Linked at lecture_13.py:L269 as an HTML-to-text tool."
+  },
+  "dclm_2024": {
+    "title": "DataComp-LM: In search of the next generation of training sets for language models (Li et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2406.11794",
+    "note": "Linked at lecture_13.py:L270 (extraction matters for downstream accuracy; images/dclm-wet.png) and L540-L556 (DCLM-pool, DCLM-baseline, fastText quality classifier; images/dclm-filter.png and dclm-quality.png). The accuracy numbers in those figures are this paper's and are not restated; the 240T / 3.8T / 200K counts are the professor's text()."
+  },
+  "wikipedia": {
+    "title": "Wikipedia",
+    "kind": "web",
+    "url": "https://www.wikipedia.org/",
+    "note": "Linked at lecture_13.py:L277 with Special:Random (L278) and the enwiki dumps page https://dumps.wikimedia.org/enwiki/ (L289)."
+  },
+  "wikipedia_meta_stats": {
+    "title": "Meta-Wiki: Wikipedia (statistics)",
+    "kind": "web",
+    "url": "https://meta.wikimedia.org/wiki/Wikipedia",
+    "note": "Linked at lecture_13.py:L280 for '67 million articles across 361 language editions' as of May 2026."
+  },
+  "wikipedia_what_not": {
+    "title": "Wikipedia: What Wikipedia is not",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Wikipedia:What_Wikipedia_is_not",
+    "note": "Linked at lecture_13.py:L283 ('does not contain original thought')."
+  },
+  "wikipedia_notability": {
+    "title": "Wikipedia: Notability",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Wikipedia:Notability",
+    "note": "Linked at lecture_13.py:L284."
+  },
+  "steven_pruitt_wiki": {
+    "title": "Wikipedia: Steven Pruitt",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/Steven_Pruitt",
+    "note": "Linked at lecture_13.py:L288 (spelled 'Steven Pruit' in the text) for the 5M-edits example of concentrated authorship."
+  },
+  "poisoning_web_scale_2023": {
+    "title": "Poisoning Web-Scale Training Datasets is Practical (Carlini et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2302.10149",
+    "note": "Linked at lecture_13.py:L291; the 'inject malicious edits right before periodic dumps' vulnerability (L292)."
+  },
+  "concealed_poisoning_2020": {
+    "title": "Concealed Data Poisoning Attacks on NLP Models (Wallace et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2010.12563",
+    "note": "Linked at lecture_13.py:L293; the trigger-phrase sentiment exploit example."
+  },
+  "github": {
+    "title": "GitHub",
+    "kind": "web",
+    "url": "https://github.com/",
+    "note": "Linked at lecture_13.py:L300. The '420M+ repositories (28M public)' figure at L302 is read from https://en.wikipedia.org/wiki/GitHub (linked there) and is recorded as cited."
+  },
+  "github_wiki": {
+    "title": "Wikipedia: GitHub",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/GitHub",
+    "note": "Linked at lecture_13.py:L302."
+  },
+  "software_heritage": {
+    "title": "Software Heritage",
+    "kind": "web",
+    "url": "https://www.softwareheritage.org/",
+    "note": "Linked at lecture_13.py:L311; non-profit archive of repositories (not metadata) aggregating GitHub, GitLab, Bitbucket, PyPI; the source of repositories for The Stack v2 (L588)."
+  },
+  "arxiv": {
+    "title": "arXiv",
+    "kind": "web",
+    "url": "https://arxiv.org/",
+    "note": "Linked at lecture_13.py:L319 with monthly submission stats (https://arxiv.org/stats/monthly_submissions, L322) and the S3 bulk-data page https://info.arxiv.org/help/bulk_data_s3.html (L327; the same URL is mislabelled 'GitHub Archive' at L309)."
+  },
+  "bert_2018": {
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding (Devlin et al., 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1810.04805",
+    "note": "Linked at lecture_13.py:L331; training data Wikipedia + BooksCorpus, sequences are documents not sentences (L338)."
+  },
+  "smashwords": {
+    "title": "Smashwords",
+    "kind": "web",
+    "url": "https://www.smashwords.com/",
+    "note": "Linked at lecture_13.py:L343; the self-publishing platform BooksCorpus was scraped from. '150K authors, 500K books' (L345) is cited, not restated."
+  },
+  "bookscorpus_2015": {
+    "title": "Aligning Books and Movies: Towards Story-like Visual Explanations by Watching Movies and Reading Books (Zhu et al., 2015)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1506.06724",
+    "note": "Linked at lecture_13.py:L347 as the BooksCorpus paper (7K books, 985M words, L349)."
+  },
+  "bookcorpus_wiki": {
+    "title": "Wikipedia: BookCorpus",
+    "kind": "article",
+    "url": "https://en.wikipedia.org/wiki/BookCorpus",
+    "note": "Linked at lecture_13.py:L350 ('taken down because violated Smashwords terms-of-service')."
+  },
+  "gpt2_2019": {
+    "title": "Language Models are Unsupervised Multitask Learners (Radford et al., OpenAI, 2019)",
+    "kind": "paper",
+    "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf",
+    "note": "Linked at lecture_13.py:L354 via references.gpt2_2019; the WebText dataset (Reddit outbound links with >= 3 karma; 8 million pages, 40GB)."
+  },
+  "openwebtext_2019": {
+    "title": "OpenWebText Corpus (Gokaslan & Cohen, 2019)",
+    "kind": "dataset",
+    "url": "https://skylion007.github.io/OpenWebTextCorpus/",
+    "note": "Linked at lecture_13.py:L358 via references.openwebtext_2019; open replication of WebText."
+  },
+  "ccnet_2019": {
+    "title": "CCNet: Extracting High Quality Monolingual Datasets from Web Crawl Data (Wenzek et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1911.00359",
+    "note": "Linked at lecture_13.py:L365; paragraph dedup, fastText language ID, KenLM 5-gram Wikipedia-likeness filter; reused by LLaMA at L491."
+  },
+  "t5_c4_2019": {
+    "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (Raffel et al., 2019; v4)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1910.10683v4",
+    "note": "Linked at lecture_13.py:L380; the C4 heuristics (L389-L394), 1.4 trillion tokens in / 156 billion tokens out (L387, L396), and the WebText-like 17 GB experiment (L401-L404)."
+  },
+  "ldnoobw_bad_words": {
+    "title": "List of Dirty, Naughty, Obscene, and Otherwise Bad Words (English)",
+    "kind": "software",
+    "url": "https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/blob/master/en",
+    "note": "Linked at lecture_13.py:L392; the word list C4 used to remove pages."
+  },
+  "c4_analysis_2021": {
+    "title": "Documenting Large Webtext Corpora: A Case Study on the Colossal Clean Crawled Corpus (Dodge et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2104.08758",
+    "note": "Linked at lecture_13.py:L398; the top-domains figure embedded at L399 (hosted on the CS324 site) is this paper's and is not restated."
+  },
+  "gpt3_2020": {
+    "title": "Language Models are Few-Shot Learners (Brown et al., 2020), section 2.2",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2005.14165",
+    "note": "Linked at lecture_13.py:L408; Common Crawl + WebText2 + Books1/Books2 + Wikipedia, 570 GB / 400 billion tokens, quality classifier with the curated sets as positives, fuzzy deduplication."
+  },
+  "the_pile_2021": {
+    "title": "The Pile: An 800GB Dataset of Diverse Text for Language Modeling (Gao et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2101.00027",
+    "note": "Linked at lecture_13.py:L422; 22 domains, 825 GB (~275B tokens), Pile-CC via WARC + jusText. The component-size treemap at L427 (hosted on the CS324 site) is this paper's."
+  },
+  "enron_corpus": {
+    "title": "Enron Email Dataset (CMU)",
+    "kind": "dataset",
+    "url": "https://www.cs.cmu.edu/~enron/",
+    "note": "Linked at lecture_13.py:L433."
+  },
+  "project_gutenberg": {
+    "title": "Project Gutenberg",
+    "kind": "web",
+    "url": "https://www.gutenberg.org/",
+    "note": "Linked at lecture_13.py:L441; copyright-cleared books, mostly public domain."
+  },
+  "pg19": {
+    "title": "PG-19 (DeepMind)",
+    "kind": "dataset",
+    "url": "https://github.com/google-deepmind/pg19",
+    "note": "Linked at lecture_13.py:L446; Project Gutenberg books before 2019."
+  },
+  "books3_pwc": {
+    "title": "Papers with Code: Books3",
+    "kind": "dataset",
+    "url": "https://paperswithcode.com/dataset/books3",
+    "note": "Linked at lecture_13.py:L450."
+  },
+  "wired_books3": {
+    "title": "WIRED: The Battle Over Books3 Could Change AI Forever",
+    "kind": "article",
+    "url": "https://www.wired.com/story/battle-over-books3/",
+    "note": "Linked at lecture_13.py:L452."
+  },
+  "hf_books3": {
+    "title": "Hugging Face: the_pile_books3 (taken down)",
+    "kind": "dataset",
+    "url": "https://huggingface.co/datasets/the_pile_books3",
+    "note": "Linked at lecture_13.py:L453 as evidence that Books3 'has been taken down due to copyright infringement / lawsuits'."
+  },
+  "stackexchange_sites": {
+    "title": "Stack Exchange: all sites",
+    "kind": "web",
+    "url": "https://stackexchange.com/sites",
+    "note": "Linked at lecture_13.py:L459; the worked example question is https://ell.stackexchange.com/questions/351826/ (L461)."
+  },
+  "stackexchange_dump": {
+    "title": "Internet Archive: Stack Exchange data dump",
+    "kind": "dataset",
+    "url": "https://archive.org/details/stackexchange",
+    "note": "Linked at lecture_13.py:L465; XML dumps, anonymized, with metadata."
+  },
+  "gopher_2021": {
+    "title": "Scaling Language Models: Methods, Analysis & Insights from Training Gopher (Rae et al., DeepMind, 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2112.11446.pdf",
+    "note": "Linked at lecture_13.py:L470 via references.gopher_2021; MassiveText components and the MassiveWeb rule-based filter (L481-L486). The 'Gopher rules' are reused by RefinedWeb (L509), FineWeb (L517) and Dolma (L533)."
+  },
+  "llama_2023": {
+    "title": "LLaMA: Open and Efficient Foundation Language Models (Touvron et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2302.13971",
+    "note": "Linked at lecture_13.py:L490; the seven-source mixture and 1.2T tokens (L491-L498)."
+  },
+  "redpajama_v1": {
+    "title": "RedPajama-Data-1T (Together)",
+    "kind": "dataset",
+    "url": "https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T",
+    "note": "Linked at lecture_13.py:L500 as the open reproduction of the LLaMA dataset."
+  },
+  "slimpajama": {
+    "title": "Cerebras blog: SlimPajama, a 627B token cleaned and deduplicated version of RedPajama",
+    "kind": "article",
+    "url": "https://www.cerebras.ai/blog/slimpajama-a-627b-token-cleaned-and-deduplicated-version-of-redpajama",
+    "note": "Linked at lecture_13.py:L501; MinHashLSH deduplication of RedPajama v1."
+  },
+  "refinedweb_2023": {
+    "title": "The RefinedWeb Dataset for Falcon LLM: Outperforming Curated Corpora with Web Data, and Web Data Only (Penedo et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2306.01116",
+    "note": "Linked at lecture_13.py:L505 with the dataset viewer https://huggingface.co/datasets/tiiuae/falcon-refinedweb/viewer/default/train (L507, L551). trafilatura on WARC, Gopher rules, MinHash over 5-grams, 600B released of 5T."
+  },
+  "fineweb": {
+    "title": "FineWeb (Hugging Face)",
+    "kind": "dataset",
+    "url": "https://huggingface.co/datasets/HuggingFaceFW/fineweb",
+    "note": "Linked at lecture_13.py:L513; 95 Common Crawl dumps, language ID threshold p(en) > 0.65, Gopher + C4 + manual rules, MinHash, PII anonymization, 15T tokens."
+  },
+  "dolma_2024": {
+    "title": "Dolma: an Open Corpus of Three Trillion Tokens for Language Model Pretraining Research (Soldaini et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2402.00159",
+    "note": "Linked at lecture_13.py:L524; the sources overview figure at L525 is hosted on medium.com and is only 'shown'. Reddit via Pushshift, PeS2o, C4, Gutenberg, Wikipedia; Common Crawl processing with fastText language ID, Gopher/C4 rules, Jigsaw toxicity, Bloom-filter dedup; 3T tokens. ODC-By collection license mentioned at L614."
+  },
+  "openhermes_2_5": {
+    "title": "OpenHermes-2.5 (teknium, Hugging Face)",
+    "kind": "dataset",
+    "url": "https://huggingface.co/datasets/teknium/OpenHermes-2.5",
+    "note": "Linked at lecture_13.py:L548 as DCLM's positive set ('mostly GPT-4 generated instruction data')."
+  },
+  "eli5": {
+    "title": "r/explainlikeimfive (and the sentence-transformers/eli5 pairs dataset)",
+    "kind": "dataset",
+    "url": "https://www.reddit.com/r/explainlikeimfive/",
+    "note": "Linked at lecture_13.py:L549 as DCLM's second positive set; examples at https://huggingface.co/datasets/sentence-transformers/eli5/viewer/pair/train."
+  },
+  "nemotron_cc_2024": {
+    "title": "Nemotron-CC: Transforming Common Crawl into a Refined Long-Horizon Pretraining Dataset (Su et al., NVIDIA, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.02595",
+    "note": "Linked at lecture_13.py:L560 via references.nemotron_cc_2024; jusText extraction, classifier ensembling with a distilled Nemotron-340B educational scorer, synthetic rephrasing, 6.3T tokens (HQ 1.1T). The results table images/nemotron-results.png (L575) is not restated."
+  },
+  "the_stack_2022": {
+    "title": "The Stack: 3 TB of permissively licensed source code (Kocetkov et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2211.15533",
+    "note": "Linked at lecture_13.py:L579; GitHub Archive repository names 2015-2022, 137M repositories, 51B files (5B unique), go-license-detector, minhash + Jaccard near-dedup, 3.1 TB."
+  },
+  "the_stack_v2_2024": {
+    "title": "StarCoder 2 and The Stack v2: The Next Generation (Lozhkov et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2402.19173",
+    "note": "Linked at lecture_13.py:L586; Software Heritage repositories, GitHub Archive issues/PRs, documentation crawls, LLVM pairing, linearized pull requests (images/stackv2-pr1.png, pr2.png at L597 are this paper's)."
+  },
+  "common_pile_2025": {
+    "title": "The Common Pile v0.1: An 8TB Dataset of Public Domain and Openly Licensed Text (Kandpal et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2506.05209",
+    "note": "Linked at lecture_13.py:L608; 8TB permissively licensed; the source breakdown (images/commonpile.png, L609) and Comma model results (images/comma-results.png, L617) are this paper's figures and are not restated beyond the professor's 'can do decently, but tough to compete without more tokens'."
+  }
+}

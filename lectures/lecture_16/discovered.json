@@ -1,0 +1,808 @@
+{
+  "lecture": "lecture_16",
+  "source_path": "official/lectures/lecture_16.pdf",
+  "anchor_convention": "lecture_16.pdf:p<page>",
+  "txt_sha256": "b56e3c63d30c35872c96fc8d7641b84a0b41e2ac20ed869a9262fcd8aebd9ce3",
+  "page_count": 62,
+  "empty_pages": [
+    62
+  ],
+  "summary": {
+    "pages_with_content": 61,
+    "claims": 232,
+    "figures_mentioned": 1,
+    "cites": 5,
+    "dropped": 0
+  },
+  "pages": [
+    {
+      "page": 1,
+      "title": "Lecture 16",
+      "claims": [
+        "P OST- TRAININ G 2",
+        "R E INF O R C E M E NT L E A R NIN G F R O M V ER I F IA B L E R E WA R D S",
+        "CS336"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 2,
+      "title": "The class thus far",
+      "claims": [
+        "Pre-training + RLHF gets you to ~ GPT3.5… Today we’ll get all the way to o1/r1"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 3,
+      "title": "The goal – expand the scope and power of RL",
+      "claims": [
+        "With RLHF: we can’t cleanly scale out due to overoptimization",
+        "Can we work in domains where RL excels? Where we optimize exactly what we want"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 4,
+      "title": "The lecture today",
+      "claims": [
+        "1. Core algorithms..",
+        "PPO → GRPO",
+        "GRPO variants",
+        "2. Case studies"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 5,
+      "title": "Recap: PPO in theory",
+      "claims": [
+        "A brief (and high level) intro to the various ideas in PPO..",
+        "Attempt 1: Policy gradients (variances are too high)",
+        "∇𝜃 𝐸𝑝𝜃 𝑅 𝑧 = 𝐸𝑝𝜃 [R(z)∇𝜃 log 𝑝𝜃 𝑧 ]",
+        "Attempt 2: TRPO (Linearize the problem around the current policy)",
+        "Attempt 3: PPO (Clip the ratios at some eps)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 6,
+      "title": "PPO",
+      "claims": [
+        "Policy gradient method for optimizing rewards in actual RL tasks..",
+        "OpenAI Five (2019)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "From the PPO announcement blog (2017)"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 7,
+      "title": "PPO – at a conceptual level",
+      "claims": [
+        "The objective is basically all there is to it at a conceptual level",
+        "[From -"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://spinningup.openai.com/en/latest/algorithms/ppo.html"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 8,
+      "title": "PPO in practice",
+      "claims": [
+        "We",
+        "You",
+        "need",
+        "know",
+        "to look",
+        "you’reatina for",
+        "livea bad time",
+        "implementation",
+        "if there’s",
+        "when",
+        "a blog",
+        "talking",
+        "post like",
+        "aboutthis..",
+        "PPO"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 9,
+      "title": "PPO – idealization (?) for language models",
+      "claims": [
+        "In the language model setting..",
+        "Pretty similar to the RL formulation. Actions operate over tokens, big dense reward at the very end operating on full sequenc e"
+      ],
+      "figures_mentioned": [
+        "[From Zheng et al 2023]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 10,
+      "title": "PPO – let’s look at an implementation",
+      "claims": [
+        "Implementation – AlpacaFarm’s PPO",
+        "Used by several others to reasonable success"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 11,
+      "title": "PPO in practice",
+      "claims": [
+        "PPO outer loop. Invoke an inner loop to optimize the loss over some rollouts."
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://github.com/tatsu-lab/alpaca_farm/blob/30717ddae735365de756ee2085191b491a71788d/src/alpaca_farm/rl/ppo_trainer.py"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 12,
+      "title": "PPO in practice – loss computation",
+      "claims": [
+        "AlpacaFarm code – loss computation. Pretty standard stuff.",
+        "Cliprange=0.2"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 13,
+      "title": "PPO in practice – rollouts.",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 14,
+      "title": "PPO in practice – reward shaping",
+      "claims": [
+        "High level – add per-token KL penalty, last-token full reward",
+        "In practice? Clip KL for sequences where new policy logp < reference logp",
+        "Helps with stability? If we blow up our model, this prevents kl from diverging"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 15,
+      "title": "PPO in practice – generalized advantage estimate",
+      "claims": [
+        "Instead of reward, we use advantages",
+        "where",
+        "Funny detail – this is a bandit problem and gamma=lambda=1 works – this is the reward-to-go vs the value"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 16,
+      "title": "What do you expect to see in PPO?",
+      "claims": [
+        "Increasing overall rewards",
+        "Incl. reward model",
+        "Negative KL rewards",
+        "This is a bandit setting, you expect reasonable training curves"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 17,
+      "title": "Why do we need yet another RL algorithm..?",
+      "claims": [
+        "Why not PPO?",
+        "In practice, complicated implementation",
+        "Value model (memory hungry, involves additional tuning for training)",
+        "Why not DPO?",
+        "Data not inherently pairwise (or in the form of Bradley-terry comparisons)",
+        "Offline (though could be made online by iterating)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 18,
+      "title": "New kid on the block: GRPO",
+      "claims": [
+        "What’s GRPO?",
+        "Start with PPO (many parts are similar)",
+        "Remove the value function / advantage computation",
+        "Calculate the advantage as “z-score within group”",
+        "(PPO for reference)",
+        "In the online case (rollout+immediate update), this is just policy gradient with group normalized rewards"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 19,
+      "title": "GRPO is very simple (thanks to lack of value function..)",
+      "claims": [
+        "You can (and people do) write tiny GRPO",
+        "implementations",
+        "Compute reward for each rollout",
+        "Mean/Var normalization per group",
+        "Compute KL term",
+        "Gradient updates on the loss",
+        "We can walk through this example from"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://github.com/McGill-NLP/nano-aha-moment"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 20,
+      "title": "Advantage computation is also very simple..",
+      "claims": [
+        "Basically just the ‘vanilla’ GRPO setup.",
+        "Main difference here is just the 1e-4",
+        "stability factor in the std calculation"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 21,
+      "title": "How well does it work?",
+      "claims": [
+        "GRPO from the original paper",
+        "Outperforms RFT (reinforcing correct answers),",
+        "with some gains from process supervision",
+        "We will get back to this later.."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 22,
+      "title": "Thinking carefully about the GRPO objective..",
+      "claims": [
+        "The key difference in GRPO vs PPO: the advantage",
+        "Is this good? A minor RL detour..",
+        "Baselining: We can",
+        "subtract any state-",
+        "dependent term from our",
+        "rewards",
+        "Sutton and Barto"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 23,
+      "title": "GRPO doesn’t use a “valid” baseline",
+      "claims": [
+        "The division by the stdev term is not a valid baseline that preserves unbiasedness.",
+        "What is an unbiased-gradient version of GRPO?",
+        "Also note the modification on the length-normalizer term on the left.."
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "Liu et al 2025. (this gets pretty close to reinforce w/ leave-one-out)"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 24,
+      "title": "Length biases of GRPO",
+      "claims": [
+        "What do these terms do? Stdev – upweights too easy or hard questions.",
+        "Length normalization:",
+        "What does the fix do?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 25,
+      "title": "Case studies",
+      "claims": [
+        "Let’s look at a few representative open models with RLVR.",
+        "Deepseek R1",
+        "Central to many recent RLVR efforts",
+        "Lots of interesting details",
+        "Kimi K1.5",
+        "Contemporaneous to R1, RLVR",
+        "Complementary details to R1",
+        "Qwen 3",
+        "Most recent open reasoning model attempt",
+        "Low-data RLVR"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 26,
+      "title": "Deepseek R1",
+      "claims": [
+        "The paper that launched a bit of a social phenomenon..",
+        "What’s remarkable about R1?",
+        "Performance exceeding OpenAI O1",
+        "Open RL recipe (that is also pretty simple)",
+        "Ended speculations on the necessity of MCTS/PRMs",
+        "SFT insights (both R1-zero and distil-r1)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 27,
+      "title": "Algorithm - GRPO",
+      "claims": [
+        "They build on the results of GRPO from DeepSeekMath..",
+        "But they do not use process supervision in R1 (more on this later..)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 28,
+      "title": "Controlled setting – R1 zero.",
+      "claims": [
+        "Setup:",
+        "Rewards",
+        "Accuracy rewards (is it correct?)",
+        "Format rewards (use thinking tags)",
+        "Data (not public)",
+        "Base model: Deepseek-V3",
+        "Results: a bit worse than Openai O1"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 29,
+      "title": "Interesting phenomena (?)",
+      "claims": [
+        "Longer CoTs during training",
+        "‘aha’ moment?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 30,
+      "title": "But maybe a bit overstated",
+      "claims": [
+        "From some follow-up analyses in Dr. GRPO..",
+        "Length due to",
+        "biased objective?",
+        "Base model",
+        "already has ‘aha’"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 31,
+      "title": "Pushing performance further – R1",
+      "claims": [
+        "R1 vs R1-zero",
+        "Key differences:",
+        "SFT initialization",
+        "Language consistency reward for CoT",
+        "Non-verifiable rewards (in stage 2)",
+        "Deepseek-V3",
+        "Reasoning SFT",
+        "RL (GRPO)",
+        "SFT/RLHF"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 32,
+      "title": "SFT initialization..",
+      "claims": [
+        "Start with plain ol (long) CoT, then maybe additional verification (vague)",
+        "Claimed Benefit: interpretability",
+        "Note: Origins on the data not quite clear.."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 33,
+      "title": "SFT for reasoning / math..",
+      "claims": [
+        "Even a small number of samples is effective for bootstrapping reasoning from LMs",
+        "1k Math and science questions + Long CoTs from Gemini / r1"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 34,
+      "title": "RL step",
+      "claims": [
+        "The RL part is basically the same..",
+        "Minor difference: additional language consistency loss",
+        "The note on language switching is interesting.. RL naturally leads to mixed languages?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 35,
+      "title": "SFT/RLHF",
+      "claims": [
+        "The usual post-training process happens after RLVR / reasoning RL.",
+        "SFT step, 2 epochs.",
+        "Reasoning data – non-verifiable tasks (‘write a proof of X’), use V3 as a judge (600k)",
+        "Non-reasoning data – V3 SFT dataset (200k)",
+        "RLHF step",
+        "Re-use R1-zero style reasoning RLHF in here",
+        "Non-verifiable tasks - V3 RLHF pipeline. Still uses GRPO (for RLHF)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 36,
+      "title": "How well does R1 work?",
+      "claims": [
+        "It’s pretty good (but you knew that)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 37,
+      "title": "Distillation – can we get non-reasoning models to reason?",
+      "claims": [
+        "Pipeline",
+        "Have R1 generate CoT traces (800k!)",
+        "Teach Qwen 2.5 via distillation"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 38,
+      "title": "Other, relevant observations",
+      "claims": [
+        "There is a whole unsuccessful attempts section",
+        "PRMs",
+        "(PRM800k, DeepseekMath)",
+        "MCTS"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 39,
+      "title": "Kimi K1.5",
+      "claims": [
+        "Why do we study this one?",
+        "Released at the same time as R1",
+        "Also beats o1 using RL"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 40,
+      "title": "Long COT reasoning strategy",
+      "claims": [
+        "Key steps",
+        "Dataset construction (difficulty filtering)",
+        "SFT (for long COT)",
+        "RL (with their own policy gradient loss)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 41,
+      "title": "Data curation + SFT",
+      "claims": [
+        "Data curation",
+        "Standard curation across math-style settings, balancing topics",
+        "Exclude multiple choice / true false (false positives)",
+        "Select only examples that models fail on best-of-8",
+        "SFT – little description, just described as ‘prompt engineering’ (distillation?)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 42,
+      "title": "Kimi RL",
+      "claims": [
+        "In kimi – reference based reward model, so the optimization problem is",
+        "RL algorithm inspired by DPO-type derivation.",
+        "(Nonparametric assumption + solve for r)",
+        "Use squared loss as a surrogate",
+        "Baselined policy gradient w/ regularization"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 43,
+      "title": "Length control in Kimi",
+      "claims": [
+        "The kimi objective doesn’t have the same GRPO length bias problem.",
+        ".. But they want to further compress the CoTs.",
+        "For each batch, they have a length reward",
+        "How should I interpret this?",
+        "The lambda is in [0.5, -0.5], with longer sequences in a group being negative",
+        "Correct answers are incentivized to be short",
+        "Incorrect answers are incentivized to be shorter than the center of the range of rollouts",
+        "(They also only enable this later on in traning, due to its effects on perf)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 44,
+      "title": "Additional details",
+      "claims": [
+        "Curriculum",
+        "Assign difficulty labels to dataset, go from easy to hard",
+        "Sample problems proportional to (1-success_rate) to avoid repeating solved ones",
+        "Rewards",
+        "For code – take problems with ground truth solutions, generate new test cases",
+        "For math – 800k samples to train a CoT reward model for answer equivalence checks"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 45,
+      "title": "RL Infra",
+      "claims": [
+        "Systems and utilization aspects of RL are very important.",
+        "Why is RL hard to make efficient?",
+        "On policy = rollouts, which means (slow) inference",
+        "Switching from training to rollouts often means different frameworks",
+        "Long CoTs can make batches very uneven."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 46,
+      "title": "Kimi’s RL setup in detail",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 47,
+      "title": "Scaling results",
+      "claims": [
+        "We already know this roughly matches / beats o1. Other interesting results..",
+        "For a small model on just the math data"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 48,
+      "title": "Ablation / comparison to expert iteration",
+      "claims": [
+        "Could we avoid RL-style negative gradients and just learn from positives?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 49,
+      "title": "Final case study – Qwen 3",
+      "claims": [
+        "Better than o1 and R1 (though comes later)",
+        ".. But interesting scaling and data results"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 50,
+      "title": "Overall picture",
+      "claims": [
+        "RLHF comes after reasoning RL (like r1), distillation after that."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 51,
+      "title": "SFT + Reasoning RL",
+      "claims": [
+        "We know the playbook by now, and Qwen uses a lot of this..",
+        "Filtering for difficulty (by best-of-n, like kimi)",
+        "Remove things that the model gets right w/o CoT",
+        "Remove things too similar to validation data",
+        "Manual filtering for the quality of CoTs (guessing vs getting it right)",
+        "RL with GRPO on only 3995 examples"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 52,
+      "title": "Qwen 3 specific new stuff.",
+      "claims": [
+        "Thinking mode fusion – controlling the length of the CoT.",
+        "1. Mix non-thinking and thinking data with tags",
+        "2. Early stopping termination via a special string"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 53,
+      "title": "Test time scaling",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 54,
+      "title": "Composition of the different stages",
+      "claims": [
+        "Note that math/stem abilities go down (a bit) with general purpose RLHF"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 55,
+      "title": "Agentic RL",
+      "claims": [
+        "Qwen 3 Coder Next – Built on Qwen 3 Next, posttrained for agentic abilities"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 56,
+      "title": "Midtraining",
+      "claims": [
+        "Coding and other mid-training data sources",
+        "Github",
+        "Long-context “repository level” data (concat files) – 600 Billion tokens",
+        "Pull request (w/ RAG retrieved context of the repository state)",
+        "Common crawl",
+        "Joint text+code documents + LLM based parsing of HTML",
+        "Synthetic data",
+        "LM prompted QA for web documents about coding",
+        "Trajectories generated by running coding agents on various environments",
+        "Instruction following / Fill-in-the-middle data"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 57,
+      "title": "Expert models",
+      "claims": [
+        "Web dev expert",
+        "UX expert",
+        "Qwen 3 Next",
+        "Qwen 3 Next Coder",
+        "Single-turn QA expert",
+        "SWE expert",
+        "Distillation"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 58,
+      "title": "Web dev / UX / QA expert",
+      "claims": [
+        "Web dev expert",
+        "SFT on “valid web code” based on checks (VLM + agent actions)",
+        "UX expert (train on many tool formats)",
+        "QA (standard single turn code synthesis – just more data)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 59,
+      "title": "Agent environment construction",
+      "claims": [
+        "Automated SWE-bench style environment construction (800k tasks)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 60,
+      "title": "Agent RL",
+      "claims": [],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 61,
+      "title": "Recap for today",
+      "claims": [
+        "Overoptimization is a problem.. RL in narrow domains is one solution",
+        "GRPO is simple (but with some flaws), and enables RLVR",
+        "Lots of successful recipes in the wild (R1, Kimi 1.5, Qwen3)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    }
+  ]
+}

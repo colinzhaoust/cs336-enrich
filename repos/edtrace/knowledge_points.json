@@ -1,0 +1,1585 @@
+{
+  "repo": "edtrace",
+  "title": "edtrace: the tracer behind the executable lectures, from sys.settrace to the step viewer",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are file:line ranges relative to tools/edtrace/backend/src/edtrace (source edtrace_backend) and tools/edtrace/frontend/src (source edtrace_frontend); see sources.json. Statuses: 'implemented' = the code does this (evidence); 'documented' = README/docstring prose; 'supplement' = prerequisite the code assumes and never states. Prerequisite basis 'call-order' follows the runtime order in execute.execute(): import_module -> settrace(trace_func) -> main() -> [trace_func opens a step -> line runs, renderings accumulate -> local_trace_func closes it] -> settrace(None) -> compute_hidden_line_numbers -> Trace -> json.dump; the static entry trace in discovered.json (hops 1-6) only sees the non-closure part of that order, so the closure hops are cited by line. The frontend was read, not run. Everything about runtime behaviour (what a real lecture trace contains, timings) is unverified here: this thread was authored by static reading only. The one claim marked basis 'inference' (the @stepover toggle in loops) follows from the code but was not executed.",
+  "path": {
+    "basis": "call-order",
+    "note": "Stops follow the order in which a line of a lecture passes through edtrace: the module is imported and traced (execute-settrace-loop), each executed line becomes an open/close step pair (step-open-close), the line's text()/link()/image() calls accumulate renderings (renderings-emit), its # @inspect comment is parsed (directive-grammar) and the named values serialized (inspect-serialization), @stepover/@hide prune what is recorded or shown (stepover-hide), link() resolves references (references-arxiv), the whole thing is dumped as JSON (trace-json-schema), and the viewer walks it (viewer-stepping-model, viewer-value-rendering). limits-what-trace-cannot-capture closes; supp-sys-settrace is the assumed prerequisite.",
+    "stops": [
+      "execute-settrace-loop",
+      "step-open-close",
+      "renderings-emit",
+      "directive-grammar",
+      "inspect-serialization",
+      "stepover-hide",
+      "references-arxiv",
+      "trace-json-schema",
+      "viewer-stepping-model",
+      "viewer-value-rendering",
+      "limits-what-trace-cannot-capture"
+    ],
+    "supplements": [
+      "supp-sys-settrace"
+    ]
+  },
+  "knowledge_points": [
+    {
+      "id": "execute-settrace-loop",
+      "label": "How a lecture module is executed and traced",
+      "kind": "mechanism",
+      "statement": "execute() imports the module, puts only that module's own file into visible_paths, installs trace_func with sys.settrace, calls module.main(), and records a step for every 'call' or 'line' event whose frame lives in that file, dropping 'return' events and comprehension/lambda frames.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L343-L348",
+            "role": "computation",
+            "quote": "module = importlib.import_module(module_name)\n    visible_paths.append(inspect.getfile(module))\n    sys.settrace(trace_func)\n    module.main()\n    sys.settrace(None)"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L247-L251",
+            "role": "computation",
+            "quote": "current_path = frame.f_code.co_filename\n        if current_path not in visible_paths:\n            return trace_func"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L255-L263",
+            "role": "computation",
+            "quote": "if event == \"return\":\n            return trace_func ... if item.function_name in (\"<listcomp>\", \"<lambda>\"):\n            return trace_func"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L215-L230",
+            "role": "computation",
+            "quote": "if item.name in (\"_run_module_as_main\", \"_run_code\", \"<module>\", \"execute\", \"local_trace_func\", \"trace_func\", \"get_stack\"):\n                continue"
+          },
+          {
+            "source": "edtrace_readme",
+            "ref": "README.md:L24-L30",
+            "role": "claim",
+            "quote": "python -m edtrace.execute -m hello ... The results are saved in `var/traces/hello.json`."
+          }
+        ],
+        "filtering_note": "visible_paths holds exactly one entry (L345), so helpers imported from lecture_util.py or references.py are never stepped into; their effects reach the trace only through renderings and @inspect on the calling line. The -I flag (L374) switches to inspecting every local, which the lectures do not use."
+      },
+      "prerequisites": [
+        {
+          "kp": "supp-sys-settrace",
+          "basis": "author-inference",
+          "note": "The whole mechanism is the settrace protocol: a global function that returns the per-frame local function."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The trace follows execution into every function the lecture calls, including library code.",
+          "why_wrong": "trace_func returns immediately for any frame whose co_filename is not the lecture file (L249-L251); only lecture_XX.py itself is stepped."
+        },
+        {
+          "belief": "The tracer parses the lecture source statically, like an outline tool.",
+          "why_wrong": "It runs main() for real under sys.settrace (L346-L347); if a line raises, tracing ends with the exception and nothing is written."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "lecture_02.py calls article_link(...) which is defined in lecture_util.py (a different file). How many steps does the body of article_link contribute to the trace, and where does the link it produces appear?",
+          "format": "short",
+          "answer": "Zero steps for article_link's body (its frame is not in visible_paths); the Rendering it appends shows up on the lecture line that called it, when that line's step closes.",
+          "why": "trace_func filters frames by co_filename (L249-L251), but renderings go to a module-global list popped at the end of the calling line (execute_util L142-L148, execute L335)."
+        },
+        "transfer": {
+          "q": "Suppose the professor moves a helper function get_memory_usage from lecture_02.py into lecture_util.py without changing anything else. What changes in the trace for a line `m = get_memory_usage(x)  # @inspect m`?",
+          "format": "short",
+          "answer": "The steps inside get_memory_usage disappear (no 'call'/'line' events are recorded for the other file); the step for the calling line still exists and still shows m, and the line now produces one step instead of an open/close pair.",
+          "why": "Only frames from the single visible path are recorded (L249-L251); @inspect is evaluated in the caller's frame after the line (L306-L325), which is unaffected.",
+          "varies": "the file the callee is defined in (functional dimension: same code, different location)",
+          "invariant": "visible_paths contains only the lecture module's file; env is captured from the caller's locals",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A professor wants the viewer to step through the body of a plotting helper that lives in lecture_util.py and is called from lecture_04.py. Using edtrace as written, what change would make that helper's lines appear as steps in the trace of lecture_04?",
+          "format": "choice",
+          "choices": [
+            "None: trace_func already records every frame that the lecture's calls enter",
+            "Append lecture_util.py's path to visible_paths before sys.settrace is called",
+            "Add lecture_util.py's source text to Trace.files so its lines get parsed",
+            "Put @stepover on the calling line so the helper's frame is entered instead"
+          ],
+          "answer": "Append lecture_util.py's path to visible_paths before sys.settrace is called",
+          "why": "trace_func returns early for any frame whose co_filename is not in visible_paths (execute.py L249-L251), and execute() puts only the lecture module's own file there (L344-L345). Adding the helper file to that list is the only switch that lets its frames reach the step-recording code. Trace.files is built after the run from visible_paths (L350) and is never used to decide what is recorded; @stepover suppresses recording of frames below a line (L276-L278), the opposite effect.",
+          "distractor_from": {"None: trace_func already records every frame that the lecture's calls enter": "Misconception: the trace follows execution into every function the lecture calls, including library code.", "Add lecture_util.py's source text to Trace.files so its lines get parsed": "Misconception: the tracer works statically from source text like an outline tool, rather than recording a live run filtered by visible_paths.", "Put @stepover on the calling line so the helper's frame is entered instead": "Confuses the stepover directive (which prunes frames called from a line) with a 'step into' switch."},
+          "targets_misconception": "The trace follows execution into every function the lecture calls, including library code.",
+          "varies": "The question moves from 'what disappears when code moves out' to 'what must change to bring another file's frames in' (functional: inverse direction, a design change instead of a prediction).",
+          "invariant": "Recording is gated solely by the frame's co_filename being in visible_paths, which holds only the lecture file.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which single call decides which files edtrace will step into, and what does it add?",
+            "answer": "visible_paths.append(inspect.getfile(module)) at execute.py L345: only the traced module's own file."
+          },
+          {
+            "q": "Which two kinds of frames are deliberately skipped even inside the lecture file?",
+            "answer": "Comprehension and lambda frames (<listcomp>, <lambda>), plus all 'return' events.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does edtrace filter on frame.f_code.co_filename rather than tracing everything and filtering the steps afterwards?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L343-L353"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L247-L263"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "Tick “line 6 calls g from helpers.py”: every g row in the event log ends at “not in visible_paths”, no step has a second stack entry, and the “f got” text moves onto line 6's own step."
+        }
+      ]
+    },
+    {
+      "id": "step-open-close",
+      "label": "A step is opened before a line runs and closed after it",
+      "kind": "mechanism",
+      "statement": "trace_func creates an 'open' Step (stack, empty env) before a line executes and only appends it if its stack differs from the previous step; the returned local_trace_func runs after the line, fills env and renderings into that same step if it is still the last one, or appends a second 'close' step for the line if traced-into calls added steps in between.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L233-L245",
+            "role": "claim",
+            "quote": "trace_func is called *before* a line of code is executed.\n        - local_trace_func is called *after* a line of code has been executed\n          and will have the values of the variables."
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L282-L288",
+            "role": "computation",
+            "quote": "if len(steps) == 0 or open_step.stack != steps[-1].stack:  # Only add a step if it's not redundant\n            steps.append(open_step)\n        open_step_index = len(steps) - 1"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L294-L303",
+            "role": "computation",
+            "quote": "if open_step_index == len(steps) - 1:\n                close_step = steps[-1]\n            else: ... steps.append(close_step)"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L334-L341",
+            "role": "computation",
+            "quote": "close_step.renderings = pop_renderings() ... return trace_func(frame, event, arg) ... return local_trace_func"
+          }
+        ],
+        "filtering_note": "The stack comparison (L286) is on StackElement tuples that include line_number, so a loop body line hit on the next iteration is a new step; only immediately repeated identical stacks are merged (e.g. the 'call' event at a def line followed by nothing). The docstring (L243-L244) describes a rule ('remove all trace_func(return)') that the code implements as the early return at L255."
+      },
+      "prerequisites": [
+        {
+          "kp": "execute-settrace-loop",
+          "basis": "call-order",
+          "note": "trace_func is installed at L346; its body (L232-L341) is the step logic."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Every executed line is exactly one step.",
+          "why_wrong": "A line that calls a function in the same file yields two steps, one before the call (open) and one after it returns (close, L297-L303); a loop produces one step per line per iteration."
+        },
+        {
+          "belief": "@inspect values are read when the line is reached.",
+          "why_wrong": "They are read in local_trace_func, which the interpreter calls on the next event in that frame, i.e. after the line has run (L290-L306)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In main(), line 40 is `y = helper(3)  # @inspect y` and helper() is defined in the same file with two body lines. In order, which lines do the recorded steps point at, and which of them carries y in its env?",
+          "format": "short",
+          "answer": "40 (open, empty env), helper's def line, helper body line 1, helper body line 2, then 40 again (close) carrying y.",
+          "why": "The open step is appended when line 40 is reached (L286-L287); helper's 'call' and 'line' events add steps; when control returns, open_step_index is no longer the last index so a close step for line 40 is appended (L297-L303) and env is filled there (L325)."
+        },
+        "transfer": {
+          "q": "Same line 40, but helper is now imported from another module. How many steps point at line 40 now, and does y still appear?",
+          "format": "short",
+          "answer": "One step; y still appears in it, because no intervening steps were recorded so local_trace_func reuses the open step.",
+          "why": "Frames outside visible_paths add no steps, so open_step_index == len(steps)-1 at close time (L294-L295) and the same Step object is filled.",
+          "varies": "whether the callee is in the traced file (functional dimension)",
+          "invariant": "open-then-close protocol; env filled at close",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In main(), line 8 is `z = f(i)  # @inspect z` inside `for i in range(3):` on line 7, and f is defined in the same lecture file. Running f records 4 steps per call (its def line plus three body lines). Counting only steps whose innermost stack element is line 8 of main (not steps inside f), how many such steps does the whole loop record? Type only the number.",
+          "format": "number",
+          "answer": "6",
+          "tolerance": 0.01,
+          "value": 6,
+          "why": "Each iteration, trace_func appends an open step for line 8 (its stack differs from the previous step on line 7; execute.py L282-L288). The call into f appends f's steps, so when main's local_trace_func fires after the line, open_step_index != len(steps)-1 and a second close step for line 8 is appended (L294-L303); that close step carries z. 2 steps x 3 iterations = 6. Verified by running edtrace on such a file: line 8 appears at step indices 2,7,9,14,16,21.",
+          "targets_misconception": "Every executed line is exactly one step.",
+          "varies": "The line runs repeatedly in a loop and calls a same-file function, and the learner counts steps rather than describing one call (functional: aggregate count under repetition).",
+          "invariant": "A line gets an open step before it runs, and a separate close step only if steps were recorded in between (a traced call); one per-line pair per execution.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What condition decides whether local_trace_func reuses the open step or appends a new close step?",
+            "answer": "open_step_index == len(steps) - 1: reuse if no step was added since the line opened, else append.",
+            "layer": "detail"
+          },
+          {
+            "q": "What does trace_func return, and when is that returned function called?",
+            "answer": "local_trace_func, a closure over the open step; Python calls it on the frame's next event, after the line executes."
+          }
+        ],
+        "self_explain": "Why does the viewer need both the before and after step for a line with a traced call, rather than just the after?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L280-L303"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L334-L341"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "With the callee in lec.py, line 6 gets two steps per call: an open step with an empty env before the callee's steps, and a close step after them that carries z. With g in helpers.py the two are one step."
+        }
+      ]
+    },
+    {
+      "id": "renderings-emit",
+      "label": "What text(), link(), image() put into the trace",
+      "kind": "mechanism",
+      "statement": "text/image/video/link/plot/note each append a Rendering(type, data, style, external_link, internal_link) to a module-global list that pop_renderings() empties into the current step when the line closes; text() emits type 'markdown' (one Rendering per line when verbatim), image() emits type 'image' with a local path (downloaded to var/files if given a URL), and link() emits type 'link' whose data is the reference label.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L22-L36",
+            "role": "computation",
+            "quote": "class Rendering: ... type: str\n    data: str | None = None\n    style: dict | None = None\n    external_link: Reference | None = None\n    internal_link: CodeLocation | None = None"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L40-L54",
+            "role": "computation",
+            "quote": "if verbatim:\n        messages = message.split(\"\\n\") ... _current_renderings.append(Rendering(type=\"markdown\", data=message, style=style))"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L63-L70",
+            "role": "computation",
+            "quote": "if is_url(url):\n        path = cached(url, \"image\")\n    else:\n        path = url\n        if not os.path.exists(path):\n            raise ValueError(f\"Image not found: {path}\")"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L102-L109",
+            "role": "claim",
+            "quote": "1. link(title=\"...\", url=\"...\") [Creates a new reference]\n    2. link(arg: Reference) [Shows an existing reference]\n    3. link(arg: type) [Shows a link to the code]\n    4. link(arg: str) [Creates a new reference with the given URL]"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L141-L148",
+            "role": "computation",
+            "quote": "_current_renderings: list[Rendering] = []\n\ndef pop_renderings() -> list[Rendering]:\n    \"\"\"Return the renderings and clear the list.\"\"\"\n    renderings = _current_renderings.copy()\n    _current_renderings.clear()"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L117-L121",
+            "role": "computation",
+            "quote": "elif isinstance(arg, type) or callable(arg):\n        path = inspect.getfile(arg)\n        _, line_number = inspect.getsourcelines(arg)\n        anchor = CodeLocation(relativize(path), line_number)"
+          }
+        ],
+        "filtering_note": "text() has no heading type: `text(\"# Heading\")` is just markdown that the viewer's marked() turns into an h1 (TraceViewer L784). plot() takes a Vega spec and note() is a side annotation shown only with showNotes (TraceViewer L605-L606, L638). system_text() runs a subprocess and emits its stdout verbatim (L151-L154)."
+      },
+      "prerequisites": [
+        {
+          "kp": "step-open-close",
+          "basis": "call-order",
+          "note": "pop_renderings() is called from local_trace_func at execute.py L335."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Each text() call is attached to the step at the moment it is called.",
+          "why_wrong": "It goes to a global list; whatever has accumulated is attached when the enclosing line closes (execute_util L142-L148, execute L335). Several calls on one line, or calls made inside an untraced helper, all land on that line's step."
+        },
+        {
+          "belief": "image(url) stores the URL in the trace.",
+          "why_wrong": "A URL is downloaded by cached() and the trace stores the local var/files path (L63-L64, file_util L33-L41); the viewer must be served next to var/."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A lecture line is `text(\"One\"), text(\"two\"), link(ref)` where ref is a Reference. How many Rendering records does the step for this line carry, and what are their types in order?",
+          "format": "short",
+          "answer": "Three: markdown, markdown, link.",
+          "why": "Each call appends one Rendering (text L54, link L116); all three are popped together when the line closes (L144-L148)."
+        },
+        "transfer": {
+          "q": "Change the first call to text(\"a\\nb\\nc\", verbatim=True). How many Rendering records now, and what style do the extra ones carry?",
+          "format": "short",
+          "answer": "Five: three markdown renderings for a, b, c (each with fontFamily monospace and whiteSpace pre), then markdown 'two', then the link.",
+          "why": "verbatim splits on newlines and emits one Rendering per piece with the monospace/pre style merged in (L43-L54).",
+          "varies": "the verbatim flag on one text() call (functional dimension: same content, different emission rule)",
+          "invariant": "one Rendering per emitted message; all renderings of a line are popped into that line's step",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "lecture_06.py has a line `summary_block()` in main(). summary_block is defined in helpers.py (not the lecture file) and its body is: text(\"Setup\"); text(\"a=1\\nb=2\\nc=3\\nd=4\", verbatim=True); link(\"https://example.com/page\"). How many Rendering records does the step for the `summary_block()` line in lecture_06 carry? Type only the number.",
+          "format": "number",
+          "answer": "6",
+          "tolerance": 0.01,
+          "value": 6,
+          "why": "Every rendering call appends to the module-global _current_renderings (execute_util.py L141-L148), regardless of which file calls it. helpers.py frames record no steps, so the list is popped into the lecture line's step when that line closes (execute.py L335). Count: text('Setup') = 1; the verbatim text splits on the 3 newlines into 4 markdown renderings (execute_util.py L43-L54); link with a non-arXiv string builds Reference(url=...) and appends 1 link rendering (L122-L124, L94-L99). 1 + 4 + 1 = 6. Verified by running edtrace: the step's renderings were markdown x5 then link.",
+          "targets_misconception": "Each text() call is attached to the step at the moment it is called (so calls inside an untraced helper would be lost or attached elsewhere).",
+          "varies": "The rendering calls happen inside an untraced helper in another file rather than on the lecture line itself (domain: where the call site lives).",
+          "invariant": "Renderings accumulate in one global list that is emptied into whichever recorded step closes next; verbatim text emits one rendering per line.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "What field of a link Rendering is shown as the anchor text, and where is it computed?",
+            "answer": "data, set to reference.label (Reference.label in reference.py) or to the function name for an internal code link.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which of the four link() forms produces an internal_link instead of an external_link?",
+            "answer": "link(arg) where arg is a class or callable: it records CodeLocation(path, def line) via inspect.getsourcelines.",
+            "layer": "detail"
+          },
+          {
+            "q": "When a lecture line calls text() or link(), how does the output end up attached to that line's step?",
+            "answer": "Each call appends a Rendering to a module-global list; when the line closes, pop_renderings() empties that list into the current step."
+          }
+        ],
+        "self_explain": "Why is the renderings list global rather than passed into text() as an argument?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute_util.py:L40-L54"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "execute_util.py:L102-L126"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "A text() call's Rendering waits in one global list and lands on whichever recorded step closes next: f's text line when f is in lec.py, but line 6's step when the call happens in helpers.py or under @stepover."
+        }
+      ]
+    },
+    {
+      "id": "directive-grammar",
+      "label": "How # @inspect, @clear are parsed from a line",
+      "kind": "procedure",
+      "statement": "parse_directives splits the text after the first '#' on whitespace: a token starting with '@' opens a directive and following tokens become its args, so `# @inspect x y` and `# @inspect x @inspect y` both inspect x and y; @inspect args may be dotted (w.grad) and are followed through getattr after the line runs; a name not in locals prints a warning; @clear sets the variable's env entry to None.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L88-L109",
+            "role": "computation",
+            "quote": "\"... # @inspect x y @hide\" -> [Directive(name=\"@inspect\", args=[\"x\", \"y\"]), Directive(name=\"@hide\", args=[])] ... tokens = line.split(\"#\")[1].split()"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L112-L123",
+            "role": "computation",
+            "quote": "x, y = str.split(\"a,b\")  # @inspect x @inspect y\n    We would return [\"x\", \"y\"]"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L311-L327",
+            "role": "computation",
+            "quote": "if \".\" in expr:  # e.g., node.name\n                    var, attr = expr.split(\".\", 1) ... value = getattr(value, attr)\n                    close_step.env[expr] = to_serializable_value(value)\n                else:\n                    print(f\"WARNING: variable {var} not found in locals\")"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L330-L332",
+            "role": "computation",
+            "quote": "clear_exprs = get_clear_expressions(directives)\n            for expr in clear_exprs:\n                close_step.env[expr] = None"
+          },
+          {
+            "source": "cs336_lectures",
+            "ref": "lecture_02.py:L499",
+            "role": "claim",
+            "quote": "# @inspect w.grad"
+          },
+          {
+            "source": "cs336_lectures",
+            "ref": "lecture_02.py:L234",
+            "role": "claim",
+            "quote": "# @clear x y z"
+          }
+        ],
+        "filtering_note": "Directives are parsed from item.code, the single source line traceback reports for the frame (L228, L266); a directive written on the continuation line of a multi-line statement is invisible to the tracer. The split is on the first '#' even if it is inside a string literal, so `text(\"# Heading\")  # @inspect x` yields no directives. An unknown @token only prints a warning (L101-L102)."
+      },
+      "prerequisites": [
+        {
+          "kp": "step-open-close",
+          "basis": "call-order",
+          "note": "get_inspect_expressions(directives) runs inside local_trace_func (L310)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Only one variable can be inspected per line.",
+          "why_wrong": "All args after an @inspect token, and all @inspect tokens on the line, are collected (L97-L108, L119-L123)."
+        },
+        {
+          "belief": "@inspect x.y looks up a variable literally named 'x.y'.",
+          "why_wrong": "It splits at the first dot, finds x in locals, then walks getattr for each remaining part (L312-L324); the env key stays 'x.y'."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A line reads `a, b = 1, 2  # @inspect a @inspect b`. What keys appear in that step's env, and in which step (open or close) of the line?",
+          "format": "short",
+          "answer": "Both 'a' and 'b', in the close step (the one filled by local_trace_func).",
+          "why": "Two @inspect directives each contribute their args (L119-L123); env is populated after the line runs (L306-L325)."
+        },
+        "transfer": {
+          "q": "Now the line is `a, b = 1, 2  # set both @inspect a b @clear c`. What ends up in env for a, b and c?",
+          "format": "short",
+          "answer": "a and b are serialized values (the words 'set both' are dropped because no directive is open yet); c is set to None, which the viewer treats as removing it.",
+          "why": "Tokens before the first @ are ignored (L106-L108); @inspect collects 'a','b'; @clear writes None (L330-L332), and renderEnv deletes null entries (TraceViewer L380-L385).",
+          "varies": "token layout: prose before the directive and two directives sharing one comment (modality: same semantics, different surface)",
+          "invariant": "tokenization after the first '#' with '@' tokens opening directives",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In main(), the variables loss, w, lr, old and tmp all exist as locals, and w is a float. The line is `loss = loss + 1  # note: watch @inspect loss w.real @clear old tmp @inspect lr`. After this line closes, how many entries in that step's env hold a serialized value (count entries set to None as not holding a value)? Type only the number.",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.01,
+          "value": 3,
+          "why": "parse_directives splits the text after '#' on whitespace; 'note:' and 'watch' come before any '@' token and are dropped (execute.py L97-L108). The first @inspect collects loss and w.real; @clear collects old and tmp; the second @inspect collects lr; get_inspect_expressions gathers args of every @inspect directive (L119-L123). local_trace_func serializes loss, w.real (via getattr on w, L312-L325) and lr, then writes None for old and tmp (L330-L332). Values: 3. Verified by running edtrace: env = {loss: 2, w.real: 2.0, lr: 3, old: None, tmp: None}.",
+          "targets_misconception": "Only one variable can be inspected per line.",
+          "varies": "Two @inspect groups are interleaved with a @clear group and leading prose, and a dotted attribute is included (functional: parse a mixed directive comment rather than a simple one).",
+          "invariant": "A token starting with '@' opens a directive and following tokens are its args; all @inspect args on the line are collected; @clear writes None.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does edtrace do when an @inspect name is not in the frame's locals after the line runs?",
+            "answer": "Prints 'WARNING: variable ... not found in locals' and records nothing for it.",
+            "layer": "detail"
+          },
+          {
+            "q": "What value does @clear write into env, and who removes it from the display?",
+            "answer": "None (null in JSON); the viewer's renderEnv deletes null keys after merging.",
+            "layer": "detail"
+          },
+          {
+            "q": "How does parse_directives read `# @inspect x y` versus `# @inspect x @inspect y`?",
+            "answer": "It splits the comment text on whitespace; a token starting with '@' opens a directive and the following tokens are its args, so both forms inspect x and y."
+          }
+        ],
+        "self_explain": "Why does edtrace evaluate @inspect expressions against f_locals rather than re-evaluating the expression text with eval()?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L88-L109"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L305-L332"
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:edtrace--directive-parse",
+          "notice": "Only the text between the first and second '#' is read. Words before the first @ are dropped, every token after an @ belongs to that directive, and @clear writes None after the @inspect values are filled."
+        }
+      ]
+    },
+    {
+      "id": "inspect-serialization",
+      "label": "How @inspect values are serialized (and never truncated)",
+      "kind": "procedure",
+      "statement": "to_serializable_value wraps each value as Value(type, contents, dtype, shape): bool/int/float/str pass through (nan/inf become strings), np.int64/np.float64 become Python numbers, ndarray and torch.Tensor record dtype, shape and the full tolist(), sympy numbers and expressions become numbers or str, lists/tuples/dicts/dataclasses recurse, objects with asdict() recurse on it, and anything else becomes str(value); there is no size limit anywhere.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L32-L46",
+            "role": "computation",
+            "quote": "class Value: ... type: str ... contents: any ... dtype: str | None = None ... shape: list[int] | None = None"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L152-L166",
+            "role": "computation",
+            "quote": "if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):\n            return Value(type=value_type, contents=str(value)) ... if isinstance(value, torch.Tensor):\n            return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L176-L192",
+            "role": "computation",
+            "quote": "if isinstance(value, (tuple, list)):\n        return Value(type=value_type, contents=[to_serializable_value(item) for item in value]) ... if hasattr(value, \"asdict\"):\n        return to_serializable_value(value.asdict()) ... return Value(type=value_type, contents=str(value))"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L195-L200",
+            "role": "computation",
+            "quote": "if value_type.__module__ == \"builtins\":  # e.g., int, float, str, bool\n        return value_type.__name__\n    return value_type.__module__ + \".\" + value_type.__name__"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "examples.py:L94-L100",
+            "role": "claim",
+            "quote": "x = MyDataclass(a=1, b=[2, 3])  # @inspect x x.a x.b ... def asdict(self):\n            return {\"a\": 5}"
+          }
+        ],
+        "filtering_note": "Only np.int64 and np.float64 scalars are special-cased (L159-L162); an np.int32 or np.float32 scalar falls through to str(). Dict keys are coerced with to_primitive (L180), so non-string keys become their str(). torch.nn.Parameter passes the Tensor isinstance check, so its type string is 'torch.nn.parameter.Parameter', which the viewer lists explicitly (TraceViewer L447)."
+      },
+      "prerequisites": [
+        {
+          "kp": "directive-grammar",
+          "basis": "call-order",
+          "note": "to_serializable_value is called at L325 on each inspected value."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Large tensors are summarized (shape only) in the trace.",
+          "why_wrong": "contents=value.tolist() dumps every element (L164-L166); only the viewer decides how to show it. A 12288x12288 weight would be fully serialized."
+        },
+        {
+          "belief": "A Python float nan is stored as JSON null.",
+          "why_wrong": "nan and inf are stored as the strings 'nan'/'inf' (L154-L155), and renderNumber passes strings through (TraceViewer L467-L468)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "`x = torch.zeros((2, 3))  # @inspect x`. Write the Value record for x: type, dtype, shape, and the form of contents.",
+          "format": "short",
+          "answer": "type 'torch.Tensor', dtype 'torch.float32', shape [2, 3], contents a nested list [[0.0,0.0,0.0],[0.0,0.0,0.0]].",
+          "why": "The Tensor branch records str(value.dtype), list(value.shape) and value.tolist() (L165-L166); get_type_str joins module and class name (L200)."
+        },
+        "transfer": {
+          "q": "`x = {1: datetime.now()}  # @inspect x`. What are the key and the value's type/contents in the serialized record?",
+          "format": "short",
+          "answer": "Key becomes the string '1'; the value has type 'datetime.datetime' and contents str(datetime), e.g. '2026-10-01 09:12:33.123456'.",
+          "why": "Dict keys go through to_primitive (int stays int here, but JSON object keys become strings on dump); datetime matches no branch so it falls to str(value) (L192) with type from module.class (L200).",
+          "varies": "container with a non-serializable leaf (domain: time object instead of tensor)",
+          "invariant": "recursive descent with str() as the terminal fallback and type recorded as module.classname",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A lecture line is `h = torch.zeros(3, 50000)  # @inspect h`. What does the Value record for h store in its contents field?",
+          "format": "choice",
+          "choices": [
+            "The string str(h), torch's abbreviated printout with '...' in it",
+            "Nothing (null): tensors this large keep only their dtype and shape",
+            "A nested list of 3 lists with 50000 numbers each, from h.tolist()",
+            "The first and last three numbers of each row, with the rest elided"
+          ],
+          "answer": "A nested list of 3 lists with 50000 numbers each, from h.tolist()",
+          "why": "to_serializable_value's torch.Tensor branch always sets contents=value.tolist() alongside dtype and shape (execute.py L165-L166); no size check exists anywhere in the function (L147-L192). The str(value) fallback (L192) is only reached by objects matching no earlier branch, which a Tensor never is.",
+          "distractor_from": {"Nothing (null): tensors this large keep only their dtype and shape": "Misconception: large tensors are summarized (shape only) in the trace.", "The string str(h), torch's abbreviated printout with '...' in it": "Assumes tensors fall to the generic str(value) fallback, which only unmatched types reach.", "The first and last three numbers of each row, with the rest elided": "Misconception variant: the serializer truncates large arrays the way torch's print does."},
+          "targets_misconception": "Large tensors are summarized (shape only) in the trace.",
+          "varies": "A large torch tensor instead of a dict holding an unrecognised object (domain: a different branch of the type dispatch).",
+          "invariant": "Serialization dispatches on type with no size limit; tensors store dtype, shape and the full tolist().",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which two numpy scalar types get converted to Python numbers, and what happens to other numpy scalars?",
+            "answer": "np.int64 and np.float64; others (np.int32, np.float32, ...) fall through to str(value).",
+            "layer": "detail"
+          },
+          {
+            "q": "What four fields does a serialized Value have?",
+            "answer": "type, contents, dtype, shape."
+          }
+        ],
+        "self_explain": "Why does edtrace carry dtype and shape separately from contents when tolist() already encodes the shape?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L147-L192"
+        },
+        {
+          "type": "example",
+          "action": "predict-number",
+          "ref": "example:value-record-tensor",
+          "example": {
+            "type": "torch.Tensor",
+            "contents": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "dtype": "torch.float32",
+            "shape": [2, 3]
+          },
+          "steps": [
+            {
+              "do": "x = torch.zeros((2, 3)). L149 calls get_type_str (L195-L200): type(x) is torch.Tensor, whose module is 'torch', not builtins, so type = 'torch.Tensor'.",
+              "why": "Only builtins drop the module prefix, so the viewer can tell a tensor from a plain list."
+            },
+            {
+              "do": "L152: not a bool, int, float or str. L159-L164: not an np.int64, np.float64 or np.ndarray.",
+              "why": "The branches are tested in order and the first match returns, so primitives and numpy types are ruled out first."
+            },
+            {
+              "do": "L165-L166: the torch.Tensor branch matches. dtype = str(x.dtype) = 'torch.float32', shape = list(x.shape) = [2, 3], contents = x.tolist() = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]].",
+              "why": "tolist() turns the tensor into nested Python floats that JSON can store; dtype and shape are kept beside it so the viewer can label the value."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:edtrace--value-render",
+          "notice": "contents always holds all prod(shape) numbers: a bigger shape never switches the record to a summary, and dtype and shape are stored beside the full list."
+        }
+      ]
+    },
+    {
+      "id": "stepover-hide",
+      "label": "@stepover prunes recorded steps; @hide only prunes display",
+      "kind": "mechanism",
+      "statement": "When trace_func reaches a line carrying @stepover it pushes (path, line) onto a stepovers stack and skips every event whose caller chain contains that location, so calls made from that line are executed but not recorded; reaching the same line again pops it. @hide is computed afterwards by scanning the saved file text, producing hidden_line_numbers that the viewer skips while the line's steps still exist.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L265-L278",
+            "role": "computation",
+            "quote": "if len(stepovers) > 0 and stepovers[-1] == (item.path, item.line_number):\n                # Stop skipping since we're back to this line\n                stepovers.pop()\n            else:\n                # Just starting to skip starting here\n                stepovers.append((item.path, item.line_number)) ... for stepover in stepovers for item in stack[:-1]"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L356-L366",
+            "role": "computation",
+            "quote": "def compute_hidden_line_numbers(files: dict[str, str]) -> dict[str, list[int]]: ... if any(directive.name == DIRECTIVE_HIDE for directive in directives):\n                line_number = index + 1\n                hidden_line_numbers[path].append(line_number)"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L597-L600",
+            "role": "computation",
+            "quote": "if (trace.hidden_line_numbers[currentPath] && trace.hidden_line_numbers[currentPath].includes(lineNumber)) {\n      return null;"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "examples.py:L29-L30",
+            "role": "claim",
+            "quote": "text(\"Multiline text: \"\n         \"wrapped around\")  # @hide"
+          },
+          {
+            "source": "cs336_lectures",
+            "ref": "lecture_02.py:L598",
+            "role": "claim",
+            "quote": "x = layer(x)  # @stepover"
+          }
+        ],
+        "filtering_note": "Basis inference, from reading L267-L274 only: because the pop happens on the next visit of the same line (not on return), a @stepover line inside a loop alternates between skipping and recording the calls beneath it on successive iterations (lecture_02 L598 is such a line, though layer() is a torch module so little lecture code sits beneath it). Confirmed by execution (2026-10-02, the student-line pass): running the local edtrace on a 4-iteration loop records the callee only on iterations 2 and 4, and the edtrace--trace-run widget reproduces the real step stream for all 720 variants it offers. The examples.py pattern (L29-L30) uses @hide on the continuation line of a multi-line statement because the tracer reports the statement's first line, so only the continuation is hidden."
+      },
+      "prerequisites": [
+        {
+          "kp": "step-open-close",
+          "basis": "call-order",
+          "note": "The stepover check sits between get_stack and the open-step creation (L265-L278)."
+        },
+        {
+          "kp": "directive-grammar",
+          "basis": "call-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "@stepover skips executing the line.",
+          "why_wrong": "The line runs normally and still gets its own step with @inspect values; only frames called from it are not recorded (L276-L278, lecture_02 L568 combines @inspect with @stepover)."
+        },
+        {
+          "belief": "@hide removes the line's steps from the trace.",
+          "why_wrong": "hidden_line_numbers is computed from the file text after execution (L350-L351) and consulted only by the viewer (TraceViewer L598); steps still advance through hidden lines."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "`total = summarize(xs)  # @inspect total @stepover` where summarize is defined in the same lecture file. Which steps does the trace record for this line and for summarize's body, and is total shown?",
+          "format": "short",
+          "answer": "One step for the line (open and close coincide because nothing was recorded in between), with total in env; no steps for summarize's body.",
+          "why": "The stepover location is pushed (L274); every event inside summarize has it in stack[:-1] and returns early (L277-L278); the line's own local_trace_func still fills env (L306-L325)."
+        },
+        "transfer": {
+          "q": "Remove @stepover but add @hide to the same line. What now exists in the trace for that line and what does the viewer show?",
+          "format": "short",
+          "answer": "Steps for the line (open and close) and for every line of summarize's body exist, with total in the close step; the viewer never draws the line itself (it is in hidden_line_numbers) but stepping still passes through its steps and summarize's lines are drawn.",
+          "why": "@hide is display-only (L356-L366, viewer L598); recording is governed solely by the stepovers stack and visible_paths.",
+          "varies": "which directive is attached (functional: record-time vs display-time pruning)",
+          "invariant": "steps are recorded by trace_func at run time; hiding is computed from text afterwards",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A lecture file defines run(x) with a def line and two body lines, and main() contains `for i in range(4):` followed by `out = run(i)  # @inspect out @stepover`. Count every recorded step whose stack includes a frame of run (the 'call' event at run's def line counts as one such step, each body line as one). How many such steps are in the trace? Type only the number.",
+          "format": "number",
+          "answer": "6",
+          "tolerance": 0.01,
+          "value": 6,
+          "why": "trace_func pushes (path, line) onto stepovers the first time it reaches a @stepover line and pops it when it reaches that same line again (execute.py L267-L274); events under a location on the stepovers stack are skipped (L277-L278). Nothing else pops the entry, so in a loop the line toggles: iteration 1 pushes (run skipped), iteration 2 pops (run recorded: def + 2 lines = 3 steps), iteration 3 pushes (skipped), iteration 4 pops (3 steps). Total 6. Verified by running edtrace on this file: run's frames appear at step indices 5-7 and 13-15 only.",
+          "targets_misconception": "@stepover is a per-line static switch that hides the called function's steps every time the line runs.",
+          "varies": "The @stepover line is executed repeatedly in a loop, so the push/pop rule is exercised rather than a single call (functional: stateful behaviour across repetitions).",
+          "invariant": "@stepover recording is controlled by a runtime stack of locations that is pushed on first reaching the line and popped on reaching it again; only recording, not execution, is affected.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "What test decides that an event is 'under' a stepover line?",
+            "answer": "Some (path, line) in stepovers equals a StackElement in stack[:-1], i.e. appears among the callers of the current frame."
+          },
+          {
+            "q": "Which function computes hidden lines, and from what input?",
+            "answer": "compute_hidden_line_numbers, scanning each saved file's text for a @hide directive on every line.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would the author hide the continuation line of a multi-line text() call rather than the first line?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L265-L278"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "execute.py:L356-L366"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "Turn on @stepover with n ≥ 2: the callee's steps come back on every second iteration, because the first visit pushes line 6 and the next visit pops it. Turn on @hide instead: no step changes, and only the listing strikes the line out."
+        }
+      ]
+    },
+    {
+      "id": "references-arxiv",
+      "label": "How references and arXiv metadata are resolved",
+      "kind": "procedure",
+      "statement": "A Reference is a frozen dataclass (title, authors, organization, date, url, description, notes) whose label property renders '[LastName+ YYYY]' (or the first author verbatim when it contains 'Team', else title, else url); link(str) routes through url_reference, which for https://arxiv.org/ URLs downloads and caches the abs page and scrapes citation_title, author links, citation_date and og:description with BeautifulSoup, and otherwise builds Reference(url=...).",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "reference.py:L5-L13",
+            "role": "computation",
+            "quote": "class Reference:\n    title: str | None = None\n    authors: list[str] | None = None\n    organization: str | None = None\n    date: str | None = None\n    url: str | None = None\n    description: str | None = None\n    notes: str | None = None"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "reference.py:L15-L33",
+            "role": "computation",
+            "quote": "year = self.date[:4] if self.date else \"?\" ... if re.search(r'\\bTeam\\b', first):\n                name = first ... name = first.split()[-1]\n                if len(self.authors) > 1:\n                    name += \"+\"\n            return f\"[{name} {year}]\""
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L94-L99",
+            "role": "computation",
+            "quote": "if is_arxiv_link(url):\n        return arxiv_reference(url, **kwargs)\n    else:\n        return Reference(url=url, **kwargs)"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "arxiv_util.py:L15-L31",
+            "role": "computation",
+            "quote": "return url.startswith(\"https://arxiv.org/\") ... m = re.search(r'arxiv.org\\/...\\/(\\d+\\.\\d+)(v\\d)?(\\.pdf)?$', url) ... abs_url = f\"https://arxiv.org/abs/{paper_id}\"\n    html_path = cached(abs_url, \"arxiv\")"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "arxiv_util.py:L37-L44",
+            "role": "computation",
+            "quote": "title = canonicalize(meta(\"citation_title\")) ... authors = [canonicalize(a.get_text()) for a in authors_div.find_all(\"a\") if \"searchtype=author\" in a.get(\"href\", \"\")] ... date = meta(\"citation_date\").replace(\"/\", \"-\")"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "file_util.py:L33-L41",
+            "role": "computation",
+            "quote": "name = re.sub(r\"[^\\w_-]+\", \"_\", url)\n    url_hash = hashlib.md5(url.encode('utf-8')).hexdigest() ... path = os.path.join(\"var/files\", prefix + \"-\" + url_hash + \"-\" + name)"
+          }
+        ],
+        "filtering_note": "The label is a @property, so it is not a dataclass field and is not written by asdict(); the trace carries it only as Rendering.data (execute_util L114, L116, L124), and the viewer recomputes an equivalent string in getReferenceAnchorText (TraceViewer L835-L846). Network access happens at trace time, with a 429 back-off loop of up to 50 attempts (file_util L17-L23); the viewer never contacts arXiv."
+      },
+      "prerequisites": [
+        {
+          "kp": "renderings-emit",
+          "basis": "call-order",
+          "note": "link() calls url_reference at execute_util L123."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Any paper URL gets its metadata scraped.",
+          "why_wrong": "Only URLs starting with https://arxiv.org/ (arxiv_util L16); everything else is Reference(url=url) whose label is the raw URL unless title/kwargs are supplied."
+        },
+        {
+          "belief": "The arXiv API is queried.",
+          "why_wrong": "The HTML abs page is downloaded via cached() and parsed with BeautifulSoup for meta tags and the authors div (L28-L44)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "link(\"https://arxiv.org/pdf/2005.14165v4.pdf\") is called. Which URL is actually downloaded, and what regex capture makes that possible?",
+          "format": "short",
+          "answer": "https://arxiv.org/abs/2005.14165; the regex captures the id 2005.14165 and tolerates an optional vN and .pdf suffix.",
+          "why": "arxiv_reference matches r'arxiv.org\\/...\\/(\\d+\\.\\d+)(v\\d)?(\\.pdf)?$' (L23) and rebuilds abs_url from group 1 (L28)."
+        },
+        "transfer": {
+          "q": "A Reference has authors ['Kimi Team', 'A. Person'] and date '2025-07-11'. What is its label, and what would it be if the first author were 'Jane Smith' instead?",
+          "format": "short",
+          "answer": "'[Kimi Team 2025]' (no '+', first author kept whole because it contains the word Team); with 'Jane Smith' it is '[Smith+ 2025]'.",
+          "why": "The Team branch keeps the whole string and skips the '+' (L21-L22); otherwise last token of the first author plus '+' when more than one author (L24-L26); year = date[:4] (L18).",
+          "varies": "the first author string (modality: organization name vs person name)",
+          "invariant": "label = [name year] with name derived from authors[0]",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A lecture calls link(\"http://arxiv.org/abs/2104.09864\") with no other arguments. What label (the Rendering's data) does the resulting link show?",
+          "format": "choice",
+          "choices": [
+            "The raw string 'http://arxiv.org/abs/2104.09864'",
+            "'[Su+ 2021]', built from the scraped abs page",
+            "'RoFormer: Enhanced Transformer with Rotary...'",
+            "'[2104.09864 ?]', built from the captured id"
+          ],
+          "answer": "The raw string 'http://arxiv.org/abs/2104.09864'",
+          "why": "link(str) calls url_reference (execute_util.py L122-L124), which uses arxiv_reference only if is_arxiv_link(url), i.e. url.startswith('https://arxiv.org/') (arxiv_util.py L15-L16). An http URL fails that test, so Reference(url=url) is built (execute_util.py L98-L99). With no authors and no title, Reference.label returns self.url (reference.py L28-L31).",
+          "distractor_from": {"'[Su+ 2021]', built from the scraped abs page": "Misconception: any arXiv-looking (or any paper) URL gets its metadata scraped.", "'RoFormer: Enhanced Transformer with Rotary...'": "Misconception: the arXiv API is queried for the title, and the title is used as the label.", "'[2104.09864 ?]', built from the captured id": "Confuses the regex id capture (used only inside arxiv_reference) with the label rule."},
+          "targets_misconception": "Any paper URL gets its metadata scraped.",
+          "varies": "A URL that looks like arXiv but fails the exact prefix test, instead of a label computed from given authors (domain: the routing branch rather than the label branch).",
+          "invariant": "Scraping happens only for URLs starting with https://arxiv.org/; otherwise Reference(url) and the label falls back authors -> title -> url.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In what order does Reference.label fall back when fields are missing?",
+            "answer": "authors-derived '[Name+ YYYY]' first, then title, then url, then '?'.",
+            "layer": "detail"
+          },
+          {
+            "q": "Where is the downloaded arXiv page stored, and how is the filename built?",
+            "answer": "var/files/arxiv-<md5(url)>-<url with non-word chars replaced by _>.",
+            "layer": "detail"
+          },
+          {
+            "q": "What does link() do with an arXiv URL, and what with any other URL?",
+            "answer": "For https://arxiv.org/ it downloads and caches the abs page and scrapes title, authors, date and description into a Reference; any other URL becomes a bare Reference(url=...)."
+          }
+        ],
+        "self_explain": "Why cache by md5 of the URL plus a sanitized copy of the URL, rather than by the hash alone?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "arxiv_util.py:L18-L53"
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "reference.py:L15-L33"
+        }
+      ]
+    },
+    {
+      "id": "trace-json-schema",
+      "label": "The trace JSON: what a viewer needs",
+      "kind": "definition",
+      "statement": "A trace file is asdict(Trace): files {relative path: full source text}, hidden_line_numbers {path: [ints]}, and steps, each with stack (list of {path, line_number, function_name, code}, innermost last), env {expr: Value|null} and renderings (list of Rendering with nested external_link / internal_link objects); it is written with indent=2 to var/traces/<module>.json.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L17-L29",
+            "role": "computation",
+            "quote": "class StackElement:\n    path: str ... line_number: int ... function_name: str ... code: str"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L48-L58",
+            "role": "computation",
+            "quote": "class Step: ... stack: list[StackElement] ... env: dict[str, Value] ... renderings: list[Rendering] = field(default_factory=list)"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L61-L70",
+            "role": "computation",
+            "quote": "class Trace:\n    files: dict[str, str] ... hidden_line_numbers: dict[str, list[int]] ... steps: list[Step]"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L350-L352",
+            "role": "computation",
+            "quote": "files = {relativize(path): open(path).read() for path in visible_paths}\n    hidden_line_numbers = compute_hidden_line_numbers(files)\n    trace = Trace(steps=steps, files=files, hidden_line_numbers=hidden_line_numbers)"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L384-L387",
+            "role": "computation",
+            "quote": "output_path = os.path.join(args.output_path, f\"{module}.json\") ... json.dump(asdict(trace), f, indent=2)"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L39-L40",
+            "role": "computation",
+            "quote": "tracePath could be a bare 'welcome', expand to 'var/traces/welcome.json'"
+          }
+        ],
+        "filtering_note": "Paths are relativized to the cwd at trace time (file_util L44-L48), so a trace made from a different directory has different keys in files and stack. The viewer reads the file's lines from trace.files, never from disk (TraceViewer L301, L585), which is what makes a trace self-contained apart from images in var/files."
+      },
+      "prerequisites": [
+        {
+          "kp": "step-open-close",
+          "basis": "call-order",
+          "note": "steps are accumulated by trace_func before Trace is built at L352 (hop 6 in discovered.json)."
+        },
+        {
+          "kp": "inspect-serialization",
+          "basis": "call-order"
+        },
+        {
+          "kp": "renderings-emit",
+          "basis": "call-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The trace references the lecture source file by path and the viewer loads it separately.",
+          "why_wrong": "The full source text is embedded under files (L350) and split into lines by the viewer (TraceViewer L301, L585-L589)."
+        },
+        {
+          "belief": "The current line of a step is a top-level field.",
+          "why_wrong": "It is the last element of stack (getLast(step.stack).line_number, TraceViewer L162-L164); the stack is also what encodes nesting depth."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "For README's hello.py, the line `x = 3  # @inspect x` inside main() runs. Write the step record it produces (stack, env, renderings), assuming the trace was taken from the directory containing hello.py.",
+          "format": "short",
+          "answer": "{\"stack\": [{\"path\": \"hello.py\", \"line_number\": 4, \"function_name\": \"main\", \"code\": \"x = 3  # @inspect x\"}], \"env\": {\"x\": {\"type\": \"int\", \"contents\": 3, \"dtype\": null, \"shape\": null}}, \"renderings\": []}",
+          "why": "get_stack strips the runner frames so only main's frame remains (L222); env is filled from f_locals after the line (L325); no text() ran on this line so pop_renderings returns [] (L335)."
+        },
+        "transfer": {
+          "q": "The next line is `text(\"Welcome!\")`. Which field of its step is non-empty, and what does its single element contain?",
+          "format": "short",
+          "answer": "renderings: one object {\"type\": \"markdown\", \"data\": \"Welcome!\", \"style\": {}, \"external_link\": null, \"internal_link\": null}; env is {} since no @inspect.",
+          "why": "text() appends a markdown Rendering with an empty style dict (execute_util L42, L54); asdict serializes the None link fields as null.",
+          "varies": "the kind of line (rendering call instead of assignment with directive)",
+          "invariant": "one Step per line with the same three fields; what is empty flips",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In one lecture file, main() line 8 calls outer(), outer's line 5 calls inner(), and inner's line 2 runs. How many elements does the stack list of the step recorded for inner's line 2 contain? Type only the number.",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.01,
+          "value": 3,
+          "why": "get_stack walks traceback.extract_stack() and skips the frames named _run_module_as_main, _run_code, <module>, execute, local_trace_func, trace_func and get_stack (execute.py L215-L230), leaving main@8, outer@5, inner@2, innermost last. The current line is the last element (TraceViewer.jsx getLast(step.stack)), and nesting depth is the stack length. Verified by running edtrace: the step's stack was [main:8, outer:5, inner:2].",
+          "targets_misconception": "The current line of a step is a top-level field (rather than the last element of a stack that encodes nesting).",
+          "varies": "A two-level nested call instead of a flat line in main, and the learner counts stack entries rather than writing a record (functional: structure of the stack field).",
+          "invariant": "Each step stores the full filtered call stack, innermost last; the current line and depth are read from it.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the three top-level keys of a trace file.",
+            "answer": "files, hidden_line_numbers, steps."
+          },
+          {
+            "q": "What four fields does each StackElement carry?",
+            "answer": "path, line_number, function_name, code.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why embed the entire source file in every trace instead of storing a path and a hash?"
+      },
+      "presentations": [
+        {
+          "type": "example",
+          "action": "restate",
+          "ref": "example:hello-step-record",
+          "example": {
+            "stack": [
+              {
+                "path": "hello.py",
+                "line_number": 4,
+                "function_name": "main",
+                "code": "x = 3  # @inspect x"
+              }
+            ],
+            "env": {
+              "x": {
+                "type": "int",
+                "contents": 3,
+                "dtype": null,
+                "shape": null
+              }
+            },
+            "renderings": []
+          },
+          "steps": [
+            {
+              "do": "trace_func fires before hello.py line 4 runs. get_stack (L215-L230) walks the Python stack and drops the runner frames by name (L222), leaving one element: {path 'hello.py', line_number 4, function_name 'main', code 'x = 3  # @inspect x'}.",
+              "why": "Only the traced program's frames belong in the step; the tracer's own frames would otherwise appear in every step."
+            },
+            {
+              "do": "L282-L287: a Step with that stack and an empty env is appended, since its stack differs from the previous step's.",
+              "why": "The step is opened before the line runs so the viewer can highlight the line; the values do not exist yet."
+            },
+            {
+              "do": "After the line runs, local_trace_func reads x from f_locals and stores env['x'] = to_serializable_value(3) = {type 'int', contents 3, dtype None, shape None} (L325).",
+              "why": "Only now does x hold 3. An int is a builtin primitive, so its type has no module prefix and dtype and shape stay unset."
+            },
+            {
+              "do": "L335: renderings = pop_renderings() = [], since the line produced no rendering. asdict then writes the step with the None fields as null.",
+              "why": "Renderings are collected per line, so a line that renders nothing gets an empty list rather than a missing field."
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L17-L70"
+        },
+        {
+          "type": "interactive",
+          "action": "restate",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "A step record holds only stack, env and renderings. The current line is the last element of stack, and a step inside the callee has two stack entries, the caller's line first."
+        }
+      ]
+    },
+    {
+      "id": "viewer-stepping-model",
+      "label": "The viewer's stepping model: step index, same-function, ancestor",
+      "kind": "mechanism",
+      "statement": "The viewer's state is the URL param step (an index into trace.steps); step forward/back move by one index, step-over moves to the next step whose stack agrees with the current one on every element but the last (inSameFunction) or whose stack is shorter (escaped to an ancestor), and step-up moves to the first shorter-stack step outside the current function; the env panel merges env dicts backwards through same-function steps until an ancestor step, and renderings are looked up by line number from a map built over all steps (last write wins).",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L209-L214",
+            "role": "computation",
+            "quote": "function stepForward({trace, currentStepIndex, navigate}) {\n  const newStepIndex = currentStepIndex + 1;"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L244-L260",
+            "role": "computation",
+            "quote": "if (inSameFunction(trace.steps[stepIndex].stack, currentStep.stack) &&\n        (!stayOnSameLine || getLast(trace.steps[stepIndex].stack).line_number !== getLast(currentStep.stack).line_number)) {\n      return stepIndex;\n    }\n    if (isStrictAncestorOf(trace.steps[stepIndex].stack, currentStep.stack)) {\n      // Escaped"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L404-L428",
+            "role": "computation",
+            "quote": "Return whether stack1 and stack2 refer to being in the same function (all but\n * the last element must agree). ... function isStrictAncestorOf(stack1, stack2) {\n  return stack1.length < stack2.length;"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L355-L385",
+            "role": "computation",
+            "quote": "for (let stepIndex = currentStepIndex; stepIndex >= 0; stepIndex--) { ... if (inSameFunction(step.stack, currentStep.stack)) { ... envs.push(step.env); ... } else if (isStrictAncestorOf(step.stack, currentStep.stack)) { ... break; ... Object.assign(env, stepEnv); ... if (env[key] === null) {\n      delete env[key];"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L578-L582",
+            "role": "computation",
+            "quote": "const lineNumberToRenderings = [];\n  for (const step of trace.steps) {\n    lineNumberToRenderings[getLast(step.stack).line_number] = step.renderings;"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L70-L81",
+            "role": "claim",
+            "quote": "event.key === 'ArrowRight' || event.key === 'l' ... stepOverForward ... stepUp"
+          }
+        ],
+        "filtering_note": "Because lineNumberToRenderings is keyed by line number only, a line executed many times shows the renderings of its last execution regardless of the current step, and renderings are not step-dependent; only env and the current-line highlight are. Animate mode (L281-L316, L654-L656) cloaks lines not yet reached by any step up to the current one, walking back to the nearest unindented line. isStrictAncestorOf is a pure length test, not a prefix test."
+      },
+      "prerequisites": [
+        {
+          "kp": "trace-json-schema",
+          "basis": "call-order",
+          "note": "The viewer consumes steps[].stack after the trace is written."
+        },
+        {
+          "kp": "step-open-close",
+          "basis": "author-inference",
+          "note": "The stack-length nesting that step-over relies on is produced by the open/close protocol."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The viewer shows the renderings that had been emitted up to the current step.",
+          "why_wrong": "It shows, for each line, the renderings of the last step on that line over the whole trace (L580-L582); progress is conveyed by animate-mode cloaking, not by withholding renderings."
+        },
+        {
+          "belief": "Step-over compares function names.",
+          "why_wrong": "inSameFunction compares path and line_number of every caller frame (all but the last stack element) (L408-L421); the same function called from two different lines counts as different."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The current step is the open step of a line that calls a same-file function with three body lines. The user presses j (step over). Which step does the viewer land on, and how does getStepOverIndex know to skip the three body steps?",
+          "format": "short",
+          "answer": "The close step of the same line; the body steps have longer stacks whose caller element is this line, so inSameFunction is false and isStrictAncestorOf (shorter) is false, and the loop continues until the close step, which has the identical caller chain.",
+          "why": "inSameFunction requires equal length and equal callers (L408-L421); the close step repeats the open step's stack (execute.py L299-L302)."
+        },
+        "transfer": {
+          "q": "Instead, the user is on the last body line inside that function and presses u (step up). Where do they land, and what single property of the stack is tested?",
+          "format": "short",
+          "answer": "On the caller's close step for the calling line: the first later step whose stack is shorter than the current one (isStrictAncestorOf) and not in the same function.",
+          "why": "getStepUpIndex scans forward for !inSameFunction && isStrictAncestorOf (L262-L275), and isStrictAncestorOf is just stack1.length < stack2.length (L426-L428).",
+          "varies": "direction of the stack move (down-to-sibling vs up-to-caller)",
+          "invariant": "nesting is read from stack length and caller elements, never from function names",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "All frames are in lecture.py. The trace's steps are, as (function@line) stacks with env: 0 [main@10] {}; 1 [main@11] {}; 2 [main@11, g@3] {s}; 3 [main@11, g@4] {t}; 4 [main@11] {}; 5 [main@12] {}; 6 [main@12, g@3] {s}; 7 [main@12, g@4] {r}. The user is on step 7. How many variables does the env panel show? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "tolerance": 0.01,
+          "value": 2,
+          "why": "renderEnv scans backwards from the current step, collecting env from steps inSameFunction with it and stopping at the first strict ancestor (TraceViewer.jsx L355-L385). Step 6 agrees on the caller frame main@12, so its {s} is merged; step 5 [main@12] is shorter, so the scan stops. Steps 2-3 (g called from main@11) are never reached, and inSameFunction compares caller path and line, not function names (L408-L421). Merged env {s, r}: 2 variables. Checked by simulating renderEnv on this trace.",
+          "targets_misconception": "Step-over (and same-function grouping) compares function names.",
+          "varies": "The same-function rule is applied to env merging instead of step-over or step-up navigation, with the same function called from two lines (functional: a different consumer of inSameFunction).",
+          "invariant": "Two steps are in the same function only if every caller frame agrees on path and line; a shorter stack marks an ancestor.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "What is the viewer's single piece of navigation state, and where does it live?",
+            "answer": "The step index, in the URL query parameter 'step' (with source/line as an alternative pair)."
+          },
+          {
+            "q": "When renderEnv walks backwards merging env dicts, what stops the walk?",
+            "answer": "Reaching a step whose stack is strictly shorter (an ancestor); steps of called functions are skipped, not stopped at."
+          }
+        ],
+        "self_explain": "Why does merging env backwards through same-function steps give the right picture of the variables, given each step only stores the variables inspected on its own line?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "TraceViewer.jsx:L244-L275"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "TraceViewer.jsx:L355-L402"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "Stand on line 6's open step and press j: the viewer skips the callee's longer-stack steps and lands on the close step. Inside the callee, the env panel merges only steps whose caller entries match and stops at the first shorter stack."
+        }
+      ]
+    },
+    {
+      "id": "viewer-value-rendering",
+      "label": "How the viewer shows a Value: numbers, tensors, lists, dicts",
+      "kind": "procedure",
+      "statement": "renderValue dispatches on Value.type: int/float go through renderNumber (strings pass through; |x|>1e12 exponential with 3 digits; |x|>1e6 locale commas; otherwise plain if x*1000 is an integer, else 4 decimals), tensors/ndarrays through renderTensor (scalar, 1-D row, 2-D table, 3-D stacked slices, else JSON), sympy as its string, arrays as a one-row table of rendered items, objects as a key:value table, anything else JSON.stringify; the tooltip title shows type, dtype and shape.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L434-L464",
+            "role": "computation",
+            "quote": "if ([\"int\", \"float\"].includes(value.type)) {\n    return renderNumber(value.contents);\n  }\n  if ([\"torch.Tensor\", \"torch.nn.parameter.Parameter\", \"numpy.ndarray\"].includes(value.type)) {\n    return renderTensor(value.shape, value.contents);"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L466-L481",
+            "role": "computation",
+            "quote": "if (Math.abs(x) > 1e12) {\n    // Use scientific notation\n    return x.toExponential(3);\n  } if (Math.abs(x) > 1e6) {\n    return x.toLocaleString(); ... if (isInteger(x * 1000)) {\n    return x.toString();\n  }\n  // Round to 4 decimal places\n  return x.toFixed(4);"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L483-L520",
+            "role": "computation",
+            "quote": "if (shape.length === 0) {\n    return renderNumber(contents); ... if (shape.length === 3) {\n    // Stack the slices vertically ... return JSON.stringify(contents, null, 2);"
+          },
+          {
+            "source": "edtrace_frontend",
+            "ref": "TraceViewer.jsx:L544-L553",
+            "role": "computation",
+            "quote": "let title = value.type;\n  if (value.dtype) {\n    title += ` ${value.dtype}`;\n  }\n  if (value.shape) {\n    title += ` [${value.shape.join(\" x \")}]`;"
+          }
+        ],
+        "filtering_note": "A Python str value has type 'str', matches no branch, and reaches JSON.stringify, so it is displayed with quotation marks. NoneType shows 'None' and bool is stringified (L438-L443). Rank-4+ tensors are dumped as JSON text. Nothing here reads dtype except the tooltip."
+      },
+      "prerequisites": [
+        {
+          "kp": "inspect-serialization",
+          "basis": "call-order",
+          "note": "The viewer's dispatch mirrors the type strings produced by get_type_str."
+        },
+        {
+          "kp": "viewer-stepping-model",
+          "basis": "call-order",
+          "note": "renderEnv (L392-L401) calls renderValue per merged variable."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The viewer rounds every float to 4 decimal places.",
+          "why_wrong": "Values with at most three decimals print exactly (isInteger(x*1000), L476-L477); only longer fractions are rounded, and large magnitudes switch to commas or exponent form."
+        },
+        {
+          "belief": "dtype determines how a tensor is drawn.",
+          "why_wrong": "Only shape rank selects the layout (L484-L519); dtype appears solely in the hover title (L546-L548)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Three floats are inspected: 0.125, 2.718281828, and 3.5e13. Write what renderNumber prints for each.",
+          "format": "short",
+          "answer": "0.125 (x*1000 is an integer), 2.7183 (toFixed(4)), 3.500e+13 (toExponential(3)).",
+          "why": "Checks run in order: >1e12 exponential, >1e6 locale, exact-if-three-decimals, else 4 decimals (L470-L480)."
+        },
+        "transfer": {
+          "q": "An inspected value is a Python list of two numpy 1-D arrays, each with 3 elements. Describe the rendered structure (what table contains what).",
+          "format": "short",
+          "answer": "An outer one-row 'matrix' table with two cells; each cell is itself a one-row table of three rendered numbers.",
+          "why": "renderValue sees type 'list' with array contents, so renderList maps renderValue over items (L455-L456, L522-L529); each item has type 'numpy.ndarray' with shape length 1, giving the 1-D row table (L488-L492).",
+          "varies": "container nesting (a list of tensors instead of a tensor)",
+          "invariant": "recursive dispatch on Value.type with tensors laid out by shape rank",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "An inspected value has type 'torch.Tensor', dtype 'torch.float16' and shape [3, 2, 4]. How many table rows (<tr> elements, including separator rows) does renderTensor produce for it? Type only the number.",
+          "format": "number",
+          "answer": "8",
+          "tolerance": 0.01,
+          "value": 8,
+          "why": "renderValue routes torch.Tensor to renderTensor(shape, contents) (TraceViewer.jsx L447-L449). Only shape length selects the layout; for length 3 it stacks the slices vertically, pushing one row per row of each slice and a separator row before every slice after the first (L499-L512). 3 slices x 2 rows = 6 data rows + 2 separators = 8. dtype is used only in the hover title (L544-L548).",
+          "targets_misconception": "dtype determines how a tensor is drawn.",
+          "varies": "A rank-3 tensor and a structural count, instead of scalars or a list of 1-D arrays (modality: table layout rather than number formatting).",
+          "invariant": "renderValue dispatches on type, and renderTensor picks a layout purely from shape rank (scalar, row, table, stacked slices, JSON).",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Above what magnitude does renderNumber switch to exponential notation, and above what does it insert thousands separators?",
+            "answer": "Exponential above 1e12; locale separators above 1e6.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which three type strings are routed to renderTensor?",
+            "answer": "torch.Tensor, torch.nn.parameter.Parameter, numpy.ndarray.",
+            "layer": "detail"
+          },
+          {
+            "q": "How does the viewer decide how to draw an inspected value?",
+            "answer": "renderValue dispatches on the Value's type: numbers through renderNumber, tensors and ndarrays as rows, tables or stacked slices, lists as a one-row table, objects as a key:value table, anything else as JSON."
+          }
+        ],
+        "self_explain": "Why does the viewer test isInteger(x * 1000) before falling back to toFixed(4)?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "TraceViewer.jsx:L466-L481"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "TraceViewer.jsx:L434-L464"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:edtrace--value-render",
+          "notice": "renderNumber takes the first test that passes, in a fixed order. A tensor's table comes from the length of its shape alone, dtype changes only the hover title, and a rank-3 shape adds a separator row between slices."
+        }
+      ]
+    },
+    {
+      "id": "limits-what-trace-cannot-capture",
+      "label": "Limits: what an official trace cannot capture",
+      "kind": "comparison",
+      "statement": "A trace records one run on one machine: lines that need a GPU or a network must succeed there or the whole trace is lost; nondeterministic values (clock, random, hardware names) are frozen as they happened; nothing outside the lecture file is stepped; comprehension bodies, lambda bodies and 'return' events are dropped; and there is no size control, since tensors are dumped in full, loops add a step per line per iteration and the source is embedded.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L344-L348",
+            "role": "computation",
+            "quote": "module = importlib.import_module(module_name)\n    visible_paths.append(inspect.getfile(module))\n    sys.settrace(trace_func)\n    module.main()"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L261-L263",
+            "role": "computation",
+            "quote": "Don't step into comprehensions since they're redundant and just stay on the line"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L163-L166",
+            "role": "computation",
+            "quote": "return Value(type=value_type, dtype=str(value.dtype), shape=list(value.shape), contents=value.tolist())"
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute_util.py:L151-L154",
+            "role": "computation",
+            "quote": "def system_text(command: list[str]):\n    output = subprocess.check_output(command).decode('utf-8')"
+          },
+          {
+            "source": "cs336_lectures",
+            "ref": "lecture_02.py:L800",
+            "role": "claim",
+            "quote": "properties = torch.cuda.get_device_properties(cuda_if_available())  # @inspect properties.name"
+          },
+          {
+            "source": "edtrace_readme",
+            "ref": "README.md:L8-L11",
+            "role": "claim",
+            "quote": "executable lectures**, where a\nPython program replaces lecture notes or slides"
+          }
+        ],
+        "filtering_note": "There is no try/except around module.main() (L347) and no per-line error capture, so an exception on a GPU-only cell aborts the run before json.dump (L386-L387). The official course publishes traces produced on its machines (official/lectures/modal_execute.py exists for that), which is why values like properties.name are whatever hardware ran there. Size claims are from reading the serializer and the step logic; no trace was measured in this thread."
+      },
+      "prerequisites": [
+        {
+          "kp": "execute-settrace-loop",
+          "basis": "call-order"
+        },
+        {
+          "kp": "inspect-serialization",
+          "basis": "call-order"
+        },
+        {
+          "kp": "step-open-close",
+          "basis": "call-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A trace is a description of the program and would be the same on any machine.",
+          "why_wrong": "It is a recording of one execution: system_text(['date']) or torch.cuda.get_device_properties bake in that run's values (execute_util L151-L154, lecture_02 L800)."
+        },
+        {
+          "belief": "A line that fails is recorded as failed and tracing continues.",
+          "why_wrong": "Exceptions propagate out of module.main() (L347) and the trace file is never written."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A lecture has `w = torch.randn(4096, 4096)  # @inspect w` inside a loop of 10 iterations. Roughly how many numbers does the trace file hold for w, and how many steps does that line add?",
+          "format": "short",
+          "answer": "About 10 x 16.8 million = 168 million numbers; 10 steps for the line (one per iteration).",
+          "why": "tolist() serializes every element (L166) each time the line closes; each iteration reaches the line with a stack different from the previous step, so a new step is appended (L286-L287)."
+        },
+        "transfer": {
+          "q": "The professor wants to show the same w without bloating the trace and without losing the step. Using only edtrace directives and ordinary Python, name two changes that achieve it, and say what each costs in what the trace can show.",
+          "format": "short",
+          "answer": "Inspect a derived scalar or shape instead (e.g. `shape = w.shape  # @inspect shape` or a norm), losing the elements; or move the loop body into a helper and mark the call line @stepover, losing the per-iteration steps while keeping one step with any inspected summary.",
+          "why": "Serialization has no truncation (L163-L166) so only the inspected object can be made smaller; @stepover drops recorded frames below a line (L265-L278) but keeps that line's own env.",
+          "varies": "the fix applied (data reduction vs step pruning), moving along the functional dimension",
+          "invariant": "the trace contains exactly what tolist()/str() produce for the inspected expression at each recorded step",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A professor runs `python -m edtrace.execute -m lecture_09` on a CPU-only laptop where no trace existed before. Line 300 of main() calls torch.cuda.get_device_properties and raises. What is in var/traces afterwards?",
+          "format": "choice",
+          "choices": [
+            "A lecture_09.json holding the steps recorded before line 300 was reached",
+            "No lecture_09.json at all, because the error escapes main() before writing",
+            "A lecture_09.json whose step for line 300 is marked as failed, then the rest",
+            "A lecture_09.json built from the source alone, with no values in any env"
+          ],
+          "answer": "No lecture_09.json at all, because the error escapes main() before writing",
+          "why": "execute() calls module.main() directly with no try/except (execute.py L346-L347); the exception propagates out of execute() and the __main__ loop, so json.dump (L384-L387) is never reached. There is no partial save and no per-line error capture, and the trace is a recording of a live run, not a static parse.",
+          "distractor_from": {"A lecture_09.json holding the steps recorded before line 300 was reached": "Assumes the steps recorded so far are flushed to disk incrementally.", "A lecture_09.json whose step for line 300 is marked as failed, then the rest": "Misconception: a line that fails is recorded as failed and tracing continues.", "A lecture_09.json built from the source alone, with no values in any env": "Misconception: a trace is a description of the program, independent of running it on a machine."},
+          "targets_misconception": "A line that fails is recorded as failed and tracing continues.",
+          "varies": "A hardware-dependent failure on a different machine instead of a size problem (domain: the 'one run on one machine' limit rather than the size limit).",
+          "invariant": "A trace exists only as the output of one complete successful execution of main() on the machine that ran it.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name three sources of run-to-run variation that a published trace freezes.",
+            "answer": "Any three of: clock/system_text output, random tensors, hardware properties (device name), downloaded page content, timings."
+          },
+          {
+            "q": "Which code paths of the lecture produce no steps even though they execute inside the lecture file?",
+            "answer": "List comprehensions and lambdas (frames named <listcomp>/<lambda>), plus 'return' events; also anything beneath a @stepover line."
+          }
+        ],
+        "self_explain": "Given these limits, which kind of lecture claim is better verified by re-running the lecture than by reading its official trace, and why?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "execute.py:L343-L353"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "execute.py:L255-L263"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:edtrace--value-render",
+          "notice": "Set the shape to 4096, 4096 and the steps that record it to 10: the stored numbers grow with both, because every recorded step keeps the full tolist()."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "With line 6 calling g from helpers.py, line 6 gets exactly one step per loop iteration: the step count grows with n even though nothing inside g is recorded."
+        }
+      ]
+    },
+    {
+      "id": "supp-sys-settrace",
+      "label": "Supplement: the sys.settrace protocol",
+      "kind": "definition",
+      "statement": "sys.settrace(f) installs a global trace function that the interpreter calls as f(frame, event, arg) when a new frame is entered (event 'call'); whatever f returns becomes that frame's local trace function and is called for the frame's later 'line', 'return' and 'exception' events, with frame.f_locals giving the variables at that moment; returning None stops tracing that frame, and settrace(None) uninstalls tracing.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L232-L241",
+            "role": "claim",
+            "quote": "trace_func is called *before* a line of code is executed.\n        - local_trace_func is called *after* a line of code has been executed\n          and will have the values of the variables.\n        We generally keep the local_trace_func version."
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L290-L291",
+            "role": "claim",
+            "quote": "def local_trace_func(frame, event, arg):\n            \"\"\"This is called *after* a line of code has been executed.\"\"\""
+          },
+          {
+            "source": "edtrace_backend",
+            "ref": "execute.py:L337-L341",
+            "role": "computation",
+            "quote": "# Pass control back to the global trace function\n            return trace_func(frame, event, arg)\n\n        # Pass control to local_trace_func to update the environment\n        return local_trace_func"
+          },
+          {
+            "source": "python_docs_settrace",
+            "ref": "python-docs:sys.settrace",
+            "role": "citation"
+          }
+        ],
+        "filtering_note": "edtrace never states the protocol; it relies on three facts of it: the local function is called on the next event of the same frame (so f_locals reflect the finished line), each frame has its own local function (so nested calls get their own closures), and events outside visible files can be ignored by returning the global function unchanged (L251). Python docs are cited by URL only (not fetched here)."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "The trace function is called once per line with the line's results.",
+          "why_wrong": "'line' events fire before a line runs; the values after it are visible only at the frame's next event, which is why edtrace reads env in the returned local function."
+        },
+        {
+          "belief": "Returning the global trace function from a 'call' event means that frame is not traced.",
+          "why_wrong": "Any non-None return value is installed as the frame's local trace; edtrace's early `return trace_func` (L251) keeps tracing the frame but makes every later event re-run the path filter. Returning None would stop local events for that frame."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A local trace function L is installed on frame F at F's 'call' event. F then executes lines 10, 11, 12 and returns. List the (event, f_lineno) pairs at which L is invoked.",
+          "format": "short",
+          "answer": "('line', 10), ('line', 11), ('line', 12), ('return', 12).",
+          "why": "After 'call', the frame's local trace receives each line event before that line runs and a final return event; no event is delivered after the return."
+        },
+        "transfer": {
+          "q": "In edtrace, L for frame F is local_trace_func for line 10. When it runs at ('line', 11), whose locals does frame.f_locals hold and what has already happened to the step for line 10?",
+          "format": "short",
+          "answer": "F's locals after line 10 has fully executed (including any assignments it made); the step for line 10 is the one being closed in this call, and local_trace_func then forwards ('line', 11) to trace_func, which opens the step for line 11.",
+          "why": "The local function runs at the next event of the same frame (protocol); edtrace fills env/renderings into the open step and chains to trace_func (L305-L338).",
+          "varies": "from the generic protocol to edtrace's use of it (functional dimension)",
+          "invariant": "a local trace function sees the frame state at the next event, not at its own installation",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "edtrace's global trace_func returns trace_func itself (not None) for frames from files outside visible_paths. A helper h in another file runs once: its body is five lines with no loops, calls or exceptions, the last being `return e`. Counting h's 'call' event too, how many times is trace_func invoked for h's frame? Type only the number.",
+          "format": "number",
+          "answer": "7",
+          "tolerance": 0.01,
+          "value": 7,
+          "why": "The interpreter calls the global function at the 'call' event (1). Because the return value is not None, it becomes h's local trace function and is invoked for each later event in that frame: 5 'line' events and 1 'return' event. 1 + 5 + 1 = 7. edtrace's early `return trace_func` (execute.py L249-L251) therefore keeps h's frame traced but makes each event re-run the path filter. Verified with a sys.settrace experiment on a five-line function: events call, line x5, return.",
+          "targets_misconception": "Returning the global trace function from a 'call' event means that frame is not traced.",
+          "varies": "Counts invocations for a frame edtrace filters out, instead of describing what a local function sees for a recorded frame (functional: the return-value rule of the protocol).",
+          "invariant": "Whatever non-None value the trace function returns at 'call' becomes that frame's local tracer and receives every later line/return event.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "What does the value returned by a settrace trace function on a 'call' event become?",
+            "answer": "The local trace function for that frame, invoked on its later line/return/exception events."
+          },
+          {
+            "q": "At which event does a settrace line hook see the effect of line N?",
+            "answer": "At the frame's next event after line N (the next 'line' or the 'return'), via frame.f_locals."
+          }
+        ],
+        "self_explain": "Why does Python deliver 'line' events before executing the line, and what would a tracer lose if they came after?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "execute.py:L232-L245"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:edtrace--trace-run",
+          "notice": "Follow one callee frame through the event log: it gets one 'call' event, one 'line' event per body line and one 'return' event. edtrace's code runs at each of them, k + 2 times, even for a helpers.py frame that records nothing."
+        }
+      ]
+    }
+  ]
+}

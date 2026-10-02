@@ -1,0 +1,520 @@
+{
+ "lecture_06.py:L157-L158": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 157,
+  "end": 158,
+  "text": "    text(\"Benchmarking measures the wall-clock time of performing some operation.\")\n    text(\"It only gives you end-to-end time, not where time is spent (profiling).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L181-L185": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 181,
+  "end": 185,
+  "text": "    # Warmup: first times might be slower due to compilation, etc.\n    # Since we will run the kernel multiple times, the timing that matters is steady state.\n    for _ in range(num_warmups):\n        run()\n    torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L189-L200": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 189,
+  "end": 200,
+  "text": "    for trial in range(num_trials):  # Do it multiple times to capture variance\n        # Use CUDA events for accurate GPU timing (avoid capturing CPU overhead)\n        start_event = torch.cuda.Event(enable_timing=True)\n        end_event = torch.cuda.Event(enable_timing=True)\n\n        start_event.record()  # Start timing\n        run()  # Actually perform computation\n        end_event.record()  # End timing\n\n        torch.cuda.synchronize()  # Wait for CUDA threads to finish\n\n        times.append((start_event.elapsed_time(end_event)))  # @inspect times",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L202": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 202,
+  "end": 202,
+  "text": "    mean_time = mean(times)   # @inspect mean_time @stepover",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L179-L203": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 179,
+  "end": 203,
+  "text": "def benchmark(run: Callable, num_warmups: int = 1, num_trials: int = 3) -> float:\n    \"\"\"Benchmark `func` by running it `num_trials`.  Return the average time.\"\"\"\n    # Warmup: first times might be slower due to compilation, etc.\n    # Since we will run the kernel multiple times, the timing that matters is steady state.\n    for _ in range(num_warmups):\n        run()\n    torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)\n\n    # Time it for real now!\n    times: list[float] = [] # @inspect times\n    for trial in range(num_trials):  # Do it multiple times to capture variance\n        # Use CUDA events for accurate GPU timing (avoid capturing CPU overhead)\n        start_event = torch.cuda.Event(enable_timing=True)\n        end_event = torch.cuda.Event(enable_timing=True)\n\n        start_event.record()  # Start timing\n        run()  # Actually perform computation\n        end_event.record()  # End timing\n\n        torch.cuda.synchronize()  # Wait for CUDA threads to finish\n\n        times.append((start_event.elapsed_time(end_event)))  # @inspect times\n\n    mean_time = mean(times)   # @inspect mean_time @stepover\n    return mean_time",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L172-L174": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 172,
+  "end": 174,
+  "text": "    results = {}\n    for dim in [256, 512, 1024, 2048, 4096, 8192]:\n         results[dim] = benchmark(run_operation2(dim=dim, operation=lambda a, b: a @ b))  # @inspect results @stepover",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L176": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 176,
+  "end": 176,
+  "text": "    text(\"Note: time is roughly constant when dimension is small, then cubic scaling.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L172-L176": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 172,
+  "end": 176,
+  "text": "    results = {}\n    for dim in [256, 512, 1024, 2048, 4096, 8192]:\n         results[dim] = benchmark(run_operation2(dim=dim, operation=lambda a, b: a @ b))  # @inspect results @stepover\n\n    text(\"Note: time is roughly constant when dimension is small, then cubic scaling.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L207-L208": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 207,
+  "end": 208,
+  "text": "    text(\"While benchmarking looks at end-to-end time, profiling looks at where time is spent.\")\n    text(\"Independent of time, profiling also helps you understand what's going under the hood.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L225-L227": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 225,
+  "end": 227,
+  "text": "    text(\"Observations:\")\n    text(\"- You can see which CUDA kernels are actually being called (the long names).\")\n    text(\"- Different CUDA kernels are invoked depending on the tensor dimensions.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L229-L234": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 229,
+  "end": 234,
+  "text": "    text(\"Name of CUDA kernel tells us something about the implementation.\")\n    text(\"Example: cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x64x16_1x1x1_3_nnn_align1_bi...\")\n    text(\"- cutlass: NVIDIA's CUDA library for linear algebra\")\n    text(\"- sm100: corresponds to the NVIDIA Blackwell architecture (B200)\")\n    text(\"- f32: float32\")\n    text(\"- 64x64x16: tile shape (more on this later)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L244-L252": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 244,
+  "end": 252,
+  "text": "    with torch.profiler.profile(activities=[ProfilerActivity.CUDA],\n            experimental_config=torch._C._profiler._ExperimentalConfig(verbose=True)) as prof:\n        run()\n        torch.cuda.synchronize()\n\n    # Print out table\n    table = prof.key_averages().table(sort_by=\"cuda_time_total\",\n                                      max_name_column_width=100,\n                                      row_limit=10)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L267-L277": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 267,
+  "end": 277,
+  "text": "    # 1. Implementation naively from scratch in PyTorch (non-fused)\n    y1 = naive_gelu(x)  # @inspect y1\n\n    # 2. Built-in PyTorch implementation (fused)\n    y2 = builtin_gelu(x)  # @inspect y2\n    check_equal_1d(naive_gelu, builtin_gelu)  # Check it works\n\n    # 3. Use PyTorch compiler on the naive implementation\n    compiled_gelu = torch.compile(naive_gelu)  # @stepover\n    y3 = compiled_gelu(x)  # @inspect y3 @stepover\n    check_equal_1d(naive_gelu, compiled_gelu)  # Check it works (compilation shouldn't change semantics) @stepover",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L280-L283": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 280,
+  "end": 283,
+  "text": "    naive_time = benchmark(run_operation1(dim=16384, operation=naive_gelu)) # @inspect naive_time @stepover\n    builtin_time = benchmark(run_operation1(dim=16384, operation=builtin_gelu)) # @inspect builtin_time @stepover\n    compiled_time = benchmark(run_operation1(dim=16384, operation=compiled_gelu)) # @inspect compiled_time @stepover\n    text(\"The builtin and compiled versions are significantly faster!\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L300-L302": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 300,
+  "end": 302,
+  "text": "    text(\"- Naive implementation: multiple kernels, requires many reads/writes from/to HBM (**no fusion**).\")\n    text(\"- Builtin and compiled versions: one kernel (**kernel fusion**), one read from HBM, one write to HBM.\")\n    text(\"- The compiled kernel is a Triton kernel.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L694-L702": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 694,
+  "end": 702,
+  "text": "def naive_gelu(x: torch.Tensor):\n    # tanh approximation to the gelu activation function\n    # https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html\n    return 0.5 * x * (1 + torch.tanh(0.79788456 * (x + 0.044715 * x * x * x)))\n\n\ndef builtin_gelu(x: torch.Tensor):\n    # PyTorch's built-in GeLU with the tanh approximation\n    return torch.nn.functional.gelu(x, approximate=\"tanh\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L308-L310": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 308,
+  "end": 310,
+  "text": "    text(\"In CUDA (developed by NVIDIA), specify what each thread does.\")\n    text(\"- Pros: fine-grained control\")\n    text(\"- Cons: need to manage more things (e.g., shared memory)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L312-L314": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 312,
+  "end": 314,
+  "text": "    text(\"In Triton (developed by OpenAI), specify what each thread block does.\")\n    text(\"- Generally powerful enough (especially when getting started)\")\n    text(\"- Conceptual framework: load data into shared memory, operate on it, write back to global memory\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L69-L73": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 69,
+  "end": 73,
+  "text": "    text(\"However, for non-elementwise operations like softmax or matrix multiplication, threads need to communicate.\")\n    text(\"Reading/writing from HBM is slow, so use shared memory (local to SM).\")\n    text(\"Thread block: a collection of threads that access the same shared memory.\")\n    text(\"Consequently, a thread block is scheduled on one SM.\")\n    text(\"In Triton, think natively in terms of thread blocks (later).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L140": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 140,
+  "end": 140,
+  "text": "    text(\"- Programming model: grid (HBM) -> thread block (shared memory) -> thread (registers)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L308-L314": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 308,
+  "end": 314,
+  "text": "    text(\"In CUDA (developed by NVIDIA), specify what each thread does.\")\n    text(\"- Pros: fine-grained control\")\n    text(\"- Cons: need to manage more things (e.g., shared memory)\")\n\n    text(\"In Triton (developed by OpenAI), specify what each thread block does.\")\n    text(\"- Generally powerful enough (especially when getting started)\")\n    text(\"- Conceptual framework: load data into shared memory, operate on it, write back to global memory\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L345-L350": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 345,
+  "end": 350,
+  "text": "    # Determine grid (elements divided into blocks)\n    # | T T T T T T T T | T T T T T T T T | T T T T T T T T | T T T T T T T T |\n    # |    Block 0      |    Block 1      |     Block 2      |    Block 3     |\n    num_elements = x.numel()  # @inspect num_elements\n    BLOCK_SIZE = 1024  # Number of threads\n    num_blocks = triton.cdiv(num_elements, BLOCK_SIZE)  # @inspect num_blocks",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L353": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 353,
+  "end": 353,
+  "text": "    kernel = triton_gelu_kernel[(num_blocks,)](x, y, num_elements, BLOCK_SIZE=BLOCK_SIZE)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L369-L376": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 369,
+  "end": 376,
+  "text": "    pid = tl.program_id(axis=0)      # Identifies the block\n    start = pid * BLOCK_SIZE         # Starting index of this block\n\n    # Indices where this thread block should operate\n    offsets = start + tl.arange(0, BLOCK_SIZE)\n\n    # Don't read/write past the end of the tensor\n    mask = offsets < num_elements",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L60-L62": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 60,
+  "end": 62,
+  "text": "    text(\"- *Thread*: executes code on a small part of the data\")\n    text(\"- *Thread block* or concurrent thread array (CTA): a group of threads\")\n    text(\"- *Grid*: collection of thread blocks\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L343-L353": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 343,
+  "end": 353,
+  "text": "    y = torch.empty_like(x)\n\n    # Determine grid (elements divided into blocks)\n    # | T T T T T T T T | T T T T T T T T | T T T T T T T T | T T T T T T T T |\n    # |    Block 0      |    Block 1      |     Block 2      |    Block 3     |\n    num_elements = x.numel()  # @inspect num_elements\n    BLOCK_SIZE = 1024  # Number of threads\n    num_blocks = triton.cdiv(num_elements, BLOCK_SIZE)  # @inspect num_blocks\n\n    # Launch the kernel\n    kernel = triton_gelu_kernel[(num_blocks,)](x, y, num_elements, BLOCK_SIZE=BLOCK_SIZE)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L379": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 379,
+  "end": 379,
+  "text": "    x = tl.load(x_ptr + offsets, mask=mask)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L381-L386": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 381,
+  "end": 386,
+  "text": "    # Approx gelu is 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))\n    # Compute (tl.tanh doesn't exist, use tanh(a) = (exp(2a) - 1) / (exp(2a) + 1)\n    a = 0.79788456 * (x + 0.044715 * x * x * x)\n    exp = tl.exp(2 * a)\n    tanh = (exp - 1) / (exp + 1)\n    y = 0.5 * x * (1 + tanh)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L389": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 389,
+  "end": 389,
+  "text": "    tl.store(y_ptr + offsets, y, mask=mask)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L323": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 323,
+  "end": 323,
+  "text": "    check_equal_1d(triton_gelu, naive_gelu)  # Check for correctness @stepover",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L361-L389": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 361,
+  "end": 389,
+  "text": "@triton.jit\ndef triton_gelu_kernel(x_ptr, y_ptr, num_elements, BLOCK_SIZE: tl.constexpr):\n    # Input starts at `x_ptr`\n    # Output starts at `y_ptr`\n\n    # | T T T T T T T T | T T T T T T T T | T T T T T T T T | T T T T T T T T |\n    # |    Block 0      |    Block 1      |     Block 2      |    Block 3     |\n\n    pid = tl.program_id(axis=0)      # Identifies the block\n    start = pid * BLOCK_SIZE         # Starting index of this block\n\n    # Indices where this thread block should operate\n    offsets = start + tl.arange(0, BLOCK_SIZE)\n\n    # Don't read/write past the end of the tensor\n    mask = offsets < num_elements\n\n    # Read\n    x = tl.load(x_ptr + offsets, mask=mask)\n\n    # Approx gelu is 0.5 * x * (1 + tanh(sqrt(2/pi) * (x + 0.044715 * x^3)))\n    # Compute (tl.tanh doesn't exist, use tanh(a) = (exp(2a) - 1) / (exp(2a) + 1)\n    a = 0.79788456 * (x + 0.044715 * x * x * x)\n    exp = tl.exp(2 * a)\n    tanh = (exp - 1) / (exp + 1)\n    y = 0.5 * x * (1 + tanh)\n\n    # Store\n    tl.store(y_ptr + offsets, y, mask=mask)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L694-L697": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 694,
+  "end": 697,
+  "text": "def naive_gelu(x: torch.Tensor):\n    # tanh approximation to the gelu activation function\n    # https://docs.pytorch.org/docs/stable/generated/torch.nn.GELU.html\n    return 0.5 * x * (1 + torch.tanh(0.79788456 * (x + 0.044715 * x * x * x)))",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L325-L328": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 325,
+  "end": 328,
+  "text": "    text(\"Triton compiles down to PTX (parallel thread execution), an assembly language for GPUs.\")\n\n    text(\"We can see the PTX code generated by Triton.\")\n    link(get_local_url(\"var/triton_gelu-ptx.txt\"))",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L330-L334": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 330,
+  "end": 334,
+  "text": "    text(\"Observations:\")\n    text(\"- ld.global.* and st.global.* reads and writes from global memory\")\n    text(\"- %ctaid.x is block index, %tid.x is thread index\")\n    text(\"- %f* are floating point registers, %r* are integer registers\")\n    text(\"- One thread processes 8 elements at the same time (thread coarsening)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L735-L740": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 735,
+  "end": 740,
+  "text": "def output_ptx(name: str, kernel):\n    \"\"\"Print out the PTX code generated by Triton for the given `kernel`.\"\"\"\n    ptx_path = f\"var/{name}-ptx.txt\"\n    with open(ptx_path, \"w\") as f:\n        ptx = kernel.asm[\"ptx\"]\n        f.write(ptx)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L96": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 96,
+  "end": 96,
+  "text": "    text(\"- Example: thread coarsening (each thread processes multiple elements).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L423-L439": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 423,
+  "end": 439,
+  "text": "    # Compute the max of each row (MN reads, M writes)\n    x_max = x.max(dim=1)[0]\n\n    # Subtract off the max (MN + M reads, MN writes)\n    x = x - x_max[:, None]\n\n    # Exponentiate (MN reads, MN writes)\n    numerator = torch.exp(x)\n\n    # Compute normalization constant (MN reads, M writes)\n    denominator = numerator.sum(dim=1)\n\n    # Normalize (MN reads, MN writes)\n    y = numerator / denominator[:, None]\n\n    # Total: 5MN + M reads, 3MN + 2M writes\n    # In principle, should have MN reads, MN writes (speedup of 4x!)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L398-L401": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 398,
+  "end": 401,
+  "text": "    text(\"Recall the softmax operation is used in attention and generating probabilities.\")\n    text(\"Exponentiate and normalize each row of a matrix:\")\n    text(\"[0 0 0]      =>   [1/3 1/3 1/3]\", verbatim=True)\n    text(\"[1 1 -inf]        [1/2 1/2 0  ]\", verbatim=True)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L404-L408": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 404,
+  "end": 408,
+  "text": "    x = torch.tensor([\n        [5., 5, 5],\n        [0, 0, 100],\n    ], device=cuda_if_available())\n    y1 = naive_softmax(x) # @inspect y1",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L419-L440": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 419,
+  "end": 440,
+  "text": "def naive_softmax(x: torch.Tensor):\n    # M: number of rows, N: number of columns\n    M, N = x.shape\n\n    # Compute the max of each row (MN reads, M writes)\n    x_max = x.max(dim=1)[0]\n\n    # Subtract off the max (MN + M reads, MN writes)\n    x = x - x_max[:, None]\n\n    # Exponentiate (MN reads, MN writes)\n    numerator = torch.exp(x)\n\n    # Compute normalization constant (MN reads, M writes)\n    denominator = numerator.sum(dim=1)\n\n    # Normalize (MN reads, MN writes)\n    y = numerator / denominator[:, None]\n\n    # Total: 5MN + M reads, 3MN + 2M writes\n    # In principle, should have MN reads, MN writes (speedup of 4x!)\n    return y",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L438-L439": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 438,
+  "end": 439,
+  "text": "    # Total: 5MN + M reads, 3MN + 2M writes\n    # In principle, should have MN reads, MN writes (speedup of 4x!)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L448-L450": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 448,
+  "end": 450,
+  "text": "    M, N = x.shape                          # Number of rows x number of columns\n    block_size = triton.next_power_of_2(N)  # Each block contains all the columns\n    num_blocks = M                          # Each block is a row",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L453-L457": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 453,
+  "end": 457,
+  "text": "    triton_softmax_kernel[(M,)](\n        x_ptr=x, y_ptr=y,\n        x_row_stride=x.stride(0), y_row_stride=y.stride(0),\n        num_cols=N, BLOCK_SIZE=block_size\n    )",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L467-L473": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 467,
+  "end": 473,
+  "text": "    row_idx = tl.program_id(0)\n    col_offsets = tl.arange(0, BLOCK_SIZE)\n\n    # Read from global memory\n    x_start_ptr = x_ptr + row_idx * x_row_stride\n    x_ptrs = x_start_ptr + col_offsets\n    x_row = tl.load(x_ptrs, mask=col_offsets < num_cols, other=float(\"-inf\"))",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L476-L479": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 476,
+  "end": 479,
+  "text": "    x_row = x_row - tl.max(x_row, axis=0)\n    numerator = tl.exp(x_row)\n    denominator = tl.sum(numerator, axis=0)\n    y_row = numerator / denominator",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L482-L484": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 482,
+  "end": 484,
+  "text": "    y_start_ptr = y_ptr + row_idx * y_row_stride\n    y_ptrs = y_start_ptr + col_offsets\n    tl.store(y_ptrs, y_row, mask=col_offsets < num_cols)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L411": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 411,
+  "end": 411,
+  "text": "    image(\"images/triton-softmax.png\", width=600)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L462-L484": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 462,
+  "end": 484,
+  "text": "@triton.jit\ndef triton_softmax_kernel(x_ptr, y_ptr, x_row_stride, y_row_stride, num_cols, BLOCK_SIZE: tl.constexpr):\n    assert num_cols <= BLOCK_SIZE\n\n    # Process each row independently\n    row_idx = tl.program_id(0)\n    col_offsets = tl.arange(0, BLOCK_SIZE)\n\n    # Read from global memory\n    x_start_ptr = x_ptr + row_idx * x_row_stride\n    x_ptrs = x_start_ptr + col_offsets\n    x_row = tl.load(x_ptrs, mask=col_offsets < num_cols, other=float(\"-inf\"))\n\n    # Compute\n    x_row = x_row - tl.max(x_row, axis=0)\n    numerator = tl.exp(x_row)\n    denominator = tl.sum(numerator, axis=0)\n    y_row = numerator / denominator\n\n    # Write back to global memory\n    y_start_ptr = y_ptr + row_idx * y_row_stride\n    y_ptrs = y_start_ptr + col_offsets\n    tl.store(y_ptrs, y_row, mask=col_offsets < num_cols)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L488-L495": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 488,
+  "end": 495,
+  "text": "    text(\"In the softmax example, an entire row fits in a block, so the reduction happens within a block (handled by Triton).\")\n    text(\"What if the row doesn't fit in a block?\")\n    text(\"Example: 4096 columns, but block size is 1024...\")\n\n    text(\"Strategy:\")\n    text(\"- Break up row into tiles (4 in the example above)\")\n    text(\"- Each thread iterates over tiles and accumulates a sum\")\n    text(\"- Do final reduction (sum) over accumulators of each thread (shared memory or warp shuffles)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L521-L530": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 521,
+  "end": 530,
+  "text": "    # Accumulator for each thread\n    # One row: T1 T2 T3 T4 | T1 T2 T3 T4 | T1 T2 T3 T4 (N = 12, BLOCK_SIZE = 4)\n    acc = tl.zeros([BLOCK_SIZE], dtype=tl.float32)\n\n    # Loop over tiles\n    for start in range(0, N, BLOCK_SIZE):\n        cols = start + tl.arange(0, BLOCK_SIZE)\n        mask = cols < N\n        x = tl.load(x_ptr + row * N + cols, mask=mask, other=0.0)\n        acc += x",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L532-L535": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 532,
+  "end": 535,
+  "text": "    # Final reduction from BLOCK_SIZE (all threads) to a scalar\n    result = tl.sum(acc, axis=0)\n\n    tl.store(out_ptr + row, result)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L498-L503": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 498,
+  "end": 503,
+  "text": "    x = torch.tensor([[1., 2, 3, 4], [5, 6, 7, 8]], device=cuda_if_available())  # @inspect x\n    y1 = builtin_row_sum(x)  # @inspect y1\n\n    image(\"images/triton-row-sum.png\", width=600)\n\n    y2 = triton_row_sum(x)  # @inspect y2",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L34": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 34,
+  "end": 34,
+  "text": "    text(\"- Examples: GeLU (elementwise), softmax (row-wise), row sum (baby tiling), matmul (tiling)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L517-L535": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 517,
+  "end": 535,
+  "text": "@triton.jit\ndef row_sum_kernel(x_ptr, out_ptr, N, BLOCK_SIZE: tl.constexpr):\n    row = tl.program_id(0)  # Which row are we processing?\n\n    # Accumulator for each thread\n    # One row: T1 T2 T3 T4 | T1 T2 T3 T4 | T1 T2 T3 T4 (N = 12, BLOCK_SIZE = 4)\n    acc = tl.zeros([BLOCK_SIZE], dtype=tl.float32)\n\n    # Loop over tiles\n    for start in range(0, N, BLOCK_SIZE):\n        cols = start + tl.arange(0, BLOCK_SIZE)\n        mask = cols < N\n        x = tl.load(x_ptr + row * N + cols, mask=mask, other=0.0)\n        acc += x\n\n    # Final reduction from BLOCK_SIZE (all threads) to a scalar\n    result = tl.sum(acc, axis=0)\n\n    tl.store(out_ptr + row, result)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L591-L596": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 591,
+  "end": 596,
+  "text": "    text(\"Review: each matrix is linearized in memory\")\n    x = torch.tensor([[0., 1, 2, 3], [4, 5, 6, 7]])  # @inspect x\n    stride_row, stride_col = x.stride()  # @inspect stride_row stride_col\n    row = 1\n    col = 2\n    index = row * stride_row + col * stride_col  # @inspect index",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L623-L630": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 623,
+  "end": 630,
+  "text": "    matmul_relu_kernel[grid](\n        a, b, c,\n        M, N, K,\n        a.stride(0), a.stride(1),\n        b.stride(0), b.stride(1),\n        c.stride(0), c.stride(1),\n        BLOCK_M, BLOCK_N, BLOCK_K,\n    )",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L455": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 455,
+  "end": 455,
+  "text": "        x_row_stride=x.stride(0), y_row_stride=y.stride(0),",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L551-L559": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 551,
+  "end": 559,
+  "text": "    text(\"**Naive approach:**\")\n    text(\"Fix any (m, n).\")\n    text(\"For each k:\")\n    text(\"- Read A[m, k] and B[k, n] from HBM.\")\n    text(\"- Multiply and accumulate.\")\n    text(\"Write result to C[m, n] in HBM.\")\n\n    text(\"Bottleneck: M K N reads, M N writes\")\n    text(\"Arithmetic intensity: O(1)\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L561-L569": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 561,
+  "end": 569,
+  "text": "    text(\"Computing C4 and C5 both need A4, A5, A6.\")\n    text(\"Can we read A4, A5, A6 from HBM once to compute both?\")\n    text(\"Answer: yes, using shared memory!\")\n\n    text(\"**Idealized approach:**\")\n    text(\"- Load all of A and B into shared memory, then compute C.\")\n    text(\"- Now we get M K + K N reads and M N writes.\")\n    text(\"- This yields the idealized O(N) arithmetic intensity from before.\")\n    text(\"- However, A and B are usually too large to fit in shared memory.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L574-L582": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 574,
+  "end": 582,
+  "text": "    text(\"Key idea: divide the matrix C into output tiles (thread blocks).\")\n    text(\"Fix an output tile in C.\")\n    text(\"For each pair of (row tile of A, column tile of B):\")\n    text(\"- Load the corresponding A tile and B tile from HBM into shared memory.\")\n    text(\"- Perform matrix multiplication on the tiles.\")\n    text(\"- Accumulate into the partial sum (in shared memory).\")\n    text(\"Write output tile to HBM.\")\n\n    text(\"Arithmetic intensity: O(tile_size).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L573": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 573,
+  "end": 573,
+  "text": "    image(\"images/gemm_tiled.png\", width=600)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L620-L621": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 620,
+  "end": 621,
+  "text": "    BLOCK_M, BLOCK_N, BLOCK_K = 64, 64, 32\n    grid = (triton.cdiv(M, BLOCK_M), triton.cdiv(N, BLOCK_N))",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L647-L657": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 647,
+  "end": 657,
+  "text": "    pid_m = tl.program_id(0)\n    pid_n = tl.program_id(1)\n\n    # Indices\n    indices_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)  # Row indices of a [BLOCK_M]\n    indices_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)  # Column indices of b [BLOCK_N]\n    indices_k = tl.arange(0, BLOCK_K)                    # Row indices of a = column indices of b [BLOCK_K]\n\n    # Initial matrix of pointers of a and b\n    a_ptrs = a_ptr + indices_m[:, None] * stride_am + indices_k[None, :] * stride_ak  # [BLOCK_M, BLOCK_K]\n    b_ptrs = b_ptr + indices_k[:, None] * stride_bk + indices_n[None, :] * stride_bn  # [BLOCK_K, BLOCK_N]",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L659-L667": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 659,
+  "end": 667,
+  "text": "    acc = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float32)\n\n    # Move along row tiles of a, column tiles of b\n    for k in range(0, K, BLOCK_K):\n        a = tl.load(a_ptrs, mask=(indices_m[:, None] < M) & (indices_k[None, :] + k < K), other=0.0)\n        b = tl.load(b_ptrs, mask=(indices_k[:, None] + k < K) & (indices_n[None, :] < N), other=0.0)\n        acc += tl.dot(a, b)\n        a_ptrs += BLOCK_K * stride_ak  # Advance to the next row tile of a\n        b_ptrs += BLOCK_K * stride_bk  # Advance to the next column tile of b",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L669-L674": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 669,
+  "end": 674,
+  "text": "    # Apply activation function (e.g., ReLU)\n    acc = tl.maximum(acc, 0.0)\n\n    # Write output tile\n    c_ptrs = c_ptr + indices_m[:, None] * stride_cm + indices_n[None, :] * stride_cn\n    tl.store(c_ptrs, acc, mask=(indices_m[:, None] < M) & (indices_n[None, :] < N))",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L584-L587": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 584,
+  "end": 587,
+  "text": "    text(\"Bonus:\")\n    text(\"- Often, you want to apply an elementwise activation function.\")\n    text(\"- Example: GeLU(A @ B)\")\n    text(\"- Solution: kernel fusion!\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L635-L674": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 635,
+  "end": 674,
+  "text": "@triton.jit\ndef matmul_relu_kernel(\n    a_ptr, b_ptr, c_ptr,    # Compute c = a @ b\n    M, N, K,                # a is M x K, b is K x N, c is M x N\n    stride_am, stride_ak,   # How to navigate a\n    stride_bk, stride_bn,   # How to navigate b\n    stride_cm, stride_cn,   # How to navigate c\n    BLOCK_M: tl.constexpr,\n    BLOCK_N: tl.constexpr,\n    BLOCK_K: tl.constexpr,\n):\n    # We are working on the (m, n)-th tile\n    pid_m = tl.program_id(0)\n    pid_n = tl.program_id(1)\n\n    # Indices\n    indices_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)  # Row indices of a [BLOCK_M]\n    indices_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)  # Column indices of b [BLOCK_N]\n    indices_k = tl.arange(0, BLOCK_K)                    # Row indices of a = column indices of b [BLOCK_K]\n\n    # Initial matrix of pointers of a and b\n    a_ptrs = a_ptr + indices_m[:, None] * stride_am + indices_k[None, :] * stride_ak  # [BLOCK_M, BLOCK_K]\n    b_ptrs = b_ptr + indices_k[:, None] * stride_bk + indices_n[None, :] * stride_bn  # [BLOCK_K, BLOCK_N]\n\n    acc = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float32)\n\n    # Move along row tiles of a, column tiles of b\n    for k in range(0, K, BLOCK_K):\n        a = tl.load(a_ptrs, mask=(indices_m[:, None] < M) & (indices_k[None, :] + k < K), other=0.0)\n        b = tl.load(b_ptrs, mask=(indices_k[:, None] + k < K) & (indices_n[None, :] < N), other=0.0)\n        acc += tl.dot(a, b)\n        a_ptrs += BLOCK_K * stride_ak  # Advance to the next row tile of a\n        b_ptrs += BLOCK_K * stride_bk  # Advance to the next column tile of b\n\n    # Apply activation function (e.g., ReLU)\n    acc = tl.maximum(acc, 0.0)\n\n    # Write output tile\n    c_ptrs = c_ptr + indices_m[:, None] * stride_cm + indices_n[None, :] * stride_cn\n    tl.store(c_ptrs, acc, mask=(indices_m[:, None] < M) & (indices_n[None, :] < N))",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L607-L632": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 607,
+  "end": 632,
+  "text": "def triton_matmul_relu(a: torch.Tensor, b: torch.Tensor):\n    assert a.is_cuda and b.is_cuda\n    assert a.is_contiguous() and b.is_contiguous()\n    assert a.shape[1] == b.shape[0]\n\n    # A is M x K, B is K x N\n    M, K = a.shape\n    K, N = b.shape\n\n    # Allocate output tensor\n    c = torch.empty((M, N), device=a.device)\n\n    # Determine grid\n    BLOCK_M, BLOCK_N, BLOCK_K = 64, 64, 32\n    grid = (triton.cdiv(M, BLOCK_M), triton.cdiv(N, BLOCK_N))\n\n    matmul_relu_kernel[grid](\n        a, b, c,\n        M, N, K,\n        a.stride(0), a.stride(1),\n        b.stride(0), b.stride(1),\n        c.stride(0), c.stride(1),\n        BLOCK_M, BLOCK_N, BLOCK_K,\n    )\n\n    return c",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L185": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 185,
+  "end": 185,
+  "text": "    torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L300": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 300,
+  "end": 300,
+  "text": "    text(\"- Naive implementation: multiple kernels, requires many reads/writes from/to HBM (**no fusion**).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L183-L200": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 183,
+  "end": 200,
+  "text": "    for _ in range(num_warmups):\n        run()\n    torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)\n\n    # Time it for real now!\n    times: list[float] = [] # @inspect times\n    for trial in range(num_trials):  # Do it multiple times to capture variance\n        # Use CUDA events for accurate GPU timing (avoid capturing CPU overhead)\n        start_event = torch.cuda.Event(enable_timing=True)\n        end_event = torch.cuda.Event(enable_timing=True)\n\n        start_event.record()  # Start timing\n        run()  # Actually perform computation\n        end_event.record()  # End timing\n\n        torch.cuda.synchronize()  # Wait for CUDA threads to finish\n\n        times.append((start_event.elapsed_time(end_event)))  # @inspect times",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L67-L70": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 67,
+  "end": 70,
+  "text": "    text(\"For elementwise operations (e.g., GeLU), threads are most natural: each thread processes one element.\")\n    text(\"- f(i) for i = 0, ..., N-1\")\n    text(\"However, for non-elementwise operations like softmax or matrix multiplication, threads need to communicate.\")\n    text(\"Reading/writing from HBM is slow, so use shared memory (local to SM).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L300-L301": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 300,
+  "end": 301,
+  "text": "    text(\"- Naive implementation: multiple kernels, requires many reads/writes from/to HBM (**no fusion**).\")\n    text(\"- Builtin and compiled versions: one kernel (**kernel fusion**), one read from HBM, one write to HBM.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L33": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 33,
+  "end": 33,
+  "text": "    text(\"- Triton: think in terms of thread blocks (read to shared memory, do stuff (fusion), write back HBM)\")",
+  "sha256": "d21a54725f5b"
+ }
+}

@@ -1,0 +1,3863 @@
+{
+  "repo": "/Users/colin/Desktop/4blue2brown/external/TheoremExplainAgent-main",
+  "git": {
+    "head": null,
+    "ref": null,
+    "sha": null,
+    "source": null
+  },
+  "entry": "generate_video.py",
+  "args": {
+    "max_depth": 8,
+    "skip": []
+  },
+  "summary": {
+    "n_modules": 31,
+    "n_lines": 7478,
+    "n_import_edges": 86,
+    "n_trace_hops": 109,
+    "n_unresolved_calls": 0,
+    "n_prompt_templates": 38,
+    "prompt_templates_unused_by_code": [
+      "_code_background",
+      "_code_color_cheatsheet",
+      "_prompt_best_practices",
+      "_prompt_rag_query_generation_storyboard",
+      "_prompt_scene_implementation",
+      "_prompt_teaching_framework",
+      "_prompt_visual_self_reflection"
+    ]
+  },
+  "modules": [
+    {
+      "name": "eval_suite",
+      "path": "eval_suite/__init__.py",
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "eval_suite.image_utils",
+      "path": "eval_suite/image_utils.py",
+      "lines": 104,
+      "sha256": "dc702196245c5b4ef6f71b32717cec74d496911cdd91538013113185039da0bb",
+      "defs": [
+        {
+          "name": "extract_key_frames",
+          "kind": "function",
+          "line": 13,
+          "end_line": 60,
+          "doc": "Extract key frames from a video by dividing it into chunks and selecting representative frames.",
+          "parent": null
+        },
+        {
+          "name": "evaluate_sampled_images",
+          "kind": "function",
+          "line": 63,
+          "end_line": 104,
+          "doc": "Evaluate sampled frames from a video using an image evaluation model.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "eval_suite.parse_prompt",
+      "path": "eval_suite/parse_prompt.py",
+      "lines": 54,
+      "sha256": "e33671c004c7b1345f6b2a8999b7351c47558cd1d94b09b522a938872746fd5d",
+      "defs": [
+        {
+          "name": "call_parse_prompt",
+          "kind": "function",
+          "line": 5,
+          "end_line": 27,
+          "doc": "Locates the prompts_raw directory and generates an __init__.py file containing prompt texts.",
+          "parent": null
+        },
+        {
+          "name": "create_python_file_with_texts",
+          "kind": "function",
+          "line": 30,
+          "end_line": 50,
+          "doc": "Creates a Python file containing prompt texts from .txt files.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "eval_suite.prompts_raw",
+      "path": "eval_suite/prompts_raw/__init__.py",
+      "lines": 145,
+      "sha256": "0f2127c873505bebba8fa0f78382d00a5514ea89fa43ff55c2ca6120e84f8e83",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "eval_suite.text_utils",
+      "path": "eval_suite/text_utils.py",
+      "lines": 80,
+      "sha256": "651c94146cff4f568dd7ce4b04323936cacb5ac192b569e08d277875701f81c8",
+      "defs": [
+        {
+          "name": "parse_srt_to_text",
+          "kind": "function",
+          "line": 12,
+          "end_line": 31,
+          "doc": "Parse an SRT subtitle file into plain text.",
+          "parent": null
+        },
+        {
+          "name": "fix_transcript",
+          "kind": "function",
+          "line": 34,
+          "end_line": 51,
+          "doc": "Fix and clean up a transcript using an LLM model.",
+          "parent": null
+        },
+        {
+          "name": "evaluate_text",
+          "kind": "function",
+          "line": 54,
+          "end_line": 80,
+          "doc": "Evaluate transcript text using an LLM model with retry logic.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "eval_suite.utils",
+      "path": "eval_suite/utils.py",
+      "lines": 81,
+      "sha256": "854667556195eb043b2c3a14f45cf51771f20d74300f2d75e46ba6ade3ae32b3",
+      "defs": [
+        {
+          "name": "extract_json",
+          "kind": "function",
+          "line": 6,
+          "end_line": 33,
+          "doc": "Extract JSON content from a string response.",
+          "parent": null
+        },
+        {
+          "name": "convert_score_fields",
+          "kind": "function",
+          "line": 36,
+          "end_line": 63,
+          "doc": "Convert score fields in a dictionary to integers recursively.",
+          "parent": null
+        },
+        {
+          "name": "calculate_geometric_mean",
+          "kind": "function",
+          "line": 66,
+          "end_line": 81,
+          "doc": "Calculate the geometric mean of a list of scores.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "eval_suite.video_utils",
+      "path": "eval_suite/video_utils.py",
+      "lines": 167,
+      "sha256": "0bf7d5564417e0ab32e417125536e124dd1e5c8a527ddae40c31582c7da0ae8b",
+      "defs": [
+        {
+          "name": "reduce_video_framerate",
+          "kind": "function",
+          "line": 14,
+          "end_line": 114,
+          "doc": "Reduces the frame rate of a video by only keeping frames at the target interval.",
+          "parent": null
+        },
+        {
+          "name": "evaluate_video_chunk_new",
+          "kind": "function",
+          "line": 117,
+          "end_line": 167,
+          "doc": "Evaluate a single video chunk using a multimodal model.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "evaluate",
+      "path": "evaluate.py",
+      "lines": 474,
+      "sha256": "c80e9b363fce83cca082f07f3acbc3b55c37e52552a1f81b5ea12423cdfa3a54",
+      "defs": [
+        {
+          "name": "combine_results",
+          "kind": "function",
+          "line": 24,
+          "end_line": 38,
+          "doc": "Combine all evaluation results into a single file.",
+          "parent": null
+        },
+        {
+          "name": "save_individual_result",
+          "kind": "function",
+          "line": 41,
+          "end_line": 58,
+          "doc": "Save individual evaluation result to a file.",
+          "parent": null
+        },
+        {
+          "name": "evaluate_text_file",
+          "kind": "function",
+          "line": 61,
+          "end_line": 91,
+          "doc": "Evaluate a text file using the provided model.",
+          "parent": null
+        },
+        {
+          "name": "evaluate_video_file",
+          "kind": "function",
+          "line": 94,
+          "end_line": 168,
+          "doc": "Evaluate a video file using the provided model.",
+          "parent": null
+        },
+        {
+          "name": "extract_scores",
+          "kind": "function",
+          "line": 171,
+          "end_line": 193,
+          "doc": "Extract all score values from a nested dictionary or list structure.",
+          "parent": null
+        },
+        {
+          "name": "calculate_overall_score",
+          "kind": "function",
+          "line": 196,
+          "end_line": 208,
+          "doc": "Calculate the overall score from evaluation results.",
+          "parent": null
+        },
+        {
+          "name": "process_topic_name",
+          "kind": "function",
+          "line": 211,
+          "end_line": 222,
+          "doc": "Process a topic name by capitalizing words and handling special characters.",
+          "parent": null
+        },
+        {
+          "name": "merge_dicts",
+          "kind": "function",
+          "line": 225,
+          "end_line": 242,
+          "doc": "Recursively merge two dictionaries.",
+          "parent": null
+        },
+        {
+          "name": "process_theorem",
+          "kind": "function",
+          "line": 245,
+          "end_line": 346,
+          "doc": "Process a theorem file or directory for evaluation.",
+          "parent": null
+        },
+        {
+          "name": "main",
+          "kind": "function",
+          "line": 349,
+          "end_line": 470,
+          "doc": "Main function to run the evaluation script.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "generate_video",
+      "path": "generate_video.py",
+      "lines": 954,
+      "sha256": "d2017f7daaecf5d86d1862c047e8ad9928b2cd530ec3c6fc200ed32a901a6aca",
+      "defs": [
+        {
+          "name": "VideoGenerator",
+          "kind": "class",
+          "line": 39,
+          "end_line": 665,
+          "doc": "A class for generating manim videos using AI models.",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 76,
+          "end_line": 133,
+          "doc": "",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "_load_or_create_session_id",
+          "kind": "method",
+          "line": 135,
+          "end_line": 156,
+          "doc": "Load existing session ID from file or create a new one.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "_save_topic_session_id",
+          "kind": "method",
+          "line": 158,
+          "end_line": 173,
+          "doc": "Save session ID for a specific topic.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "_load_topic_session_id",
+          "kind": "method",
+          "line": 175,
+          "end_line": 192,
+          "doc": "Load session ID for a specific topic if it exists.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "generate_scene_outline",
+          "kind": "method",
+          "line": 194,
+          "end_line": 209,
+          "doc": "Generate scene outline using VideoPlanner.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "generate_scene_implementation",
+          "kind": "method",
+          "line": 211,
+          "end_line": 228,
+          "doc": "Generate scene implementations using VideoPlanner.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "generate_scene_implementation_concurrently",
+          "kind": "method",
+          "line": 230,
+          "end_line": 247,
+          "doc": "Generate scene implementations concurrently using VideoPlanner.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "load_implementation_plans",
+          "kind": "method",
+          "line": 249,
+          "end_line": 289,
+          "doc": "Load implementation plans for each scene.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "render_video_fix_code",
+          "kind": "method",
+          "line": 291,
+          "end_line": 333,
+          "doc": "Render the video for all scenes with code fixing capability.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "process_scene",
+          "kind": "method",
+          "line": 335,
+          "end_line": 424,
+          "doc": "Process a single scene using CodeGenerator and VideoRenderer.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "run_manim_process",
+          "kind": "method",
+          "line": 426,
+          "end_line": 434,
+          "doc": "Run manim on all generated manim code for a specific topic using VideoRenderer.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "create_snapshot_scene",
+          "kind": "method",
+          "line": 436,
+          "end_line": 449,
+          "doc": "Create a snapshot of the video for a specific topic and scene using VideoRenderer.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "combine_videos",
+          "kind": "method",
+          "line": 451,
+          "end_line": 458,
+          "doc": "Combine all videos and subtitle files for a specific topic using VideoRenderer.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "_generate_scene_implementation_single",
+          "kind": "method",
+          "line": 460,
+          "end_line": 476,
+          "doc": "Generate detailed implementation plan for a single scene using VideoPlanner.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "generate_video_pipeline",
+          "kind": "method",
+          "line": 478,
+          "end_line": 585,
+          "doc": "Modified pipeline to handle partial scene completions and option to only generate plans for specific scenes.",
+          "parent": "VideoGenerator"
+        },
+        {
+          "name": "check_theorem_status",
+          "kind": "method",
+          "line": 587,
+          "end_line": 665,
+          "doc": "Check if a theorem has its plan, code files, and rendered videos with detailed scene status.",
+          "parent": "VideoGenerator"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "mllm_tools",
+      "path": "mllm_tools/__init__.py",
+      "lines": 1,
+      "sha256": "aef01bbed897e84235028400d4e541a7bfd07c1630a36bad9843ec9a771593f9",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "mllm_tools.gemini",
+      "path": "mllm_tools/gemini.py",
+      "lines": 176,
+      "sha256": "045de918d66ba9e210bd83944fde1376238443b297b22ca2d4a187d51e6820f5",
+      "defs": [
+        {
+          "name": "GeminiWrapper",
+          "kind": "class",
+          "line": 14,
+          "end_line": 173,
+          "doc": "Wrapper for Gemini to support multiple models and logging",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 17,
+          "end_line": 61,
+          "doc": "Initialize the Gemini wrapper",
+          "parent": "GeminiWrapper"
+        },
+        {
+          "name": "_get_mime_type",
+          "kind": "method",
+          "line": 63,
+          "end_line": 76,
+          "doc": "Get the MIME type of a file based on its extension",
+          "parent": "GeminiWrapper"
+        },
+        {
+          "name": "_download_file",
+          "kind": "method",
+          "line": 78,
+          "end_line": 95,
+          "doc": "Download a file from a URL and save it as a temporary file",
+          "parent": "GeminiWrapper"
+        },
+        {
+          "name": "_save_image_to_temp",
+          "kind": "method",
+          "line": 97,
+          "end_line": 110,
+          "doc": "Save a PIL Image to a temporary file",
+          "parent": "GeminiWrapper"
+        },
+        {
+          "name": "_upload_to_gemini",
+          "kind": "method",
+          "line": 112,
+          "end_line": 123,
+          "doc": "Uploads the given file to Gemini.",
+          "parent": "GeminiWrapper"
+        },
+        {
+          "name": "__call__",
+          "kind": "method",
+          "line": 125,
+          "end_line": 173,
+          "doc": "Process messages and return completion",
+          "parent": "GeminiWrapper"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "mllm_tools.litellm",
+      "path": "mllm_tools/litellm.py",
+      "lines": 196,
+      "sha256": "428ed024399903d4d230d5572f55ea8a4f0d41008e1adeef1afd4687e61ec428",
+      "defs": [
+        {
+          "name": "LiteLLMWrapper",
+          "kind": "class",
+          "line": 15,
+          "end_line": 193,
+          "doc": "Wrapper for LiteLLM to support multiple models and logging",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 18,
+          "end_line": 48,
+          "doc": "Initialize the LiteLLM wrapper",
+          "parent": "LiteLLMWrapper"
+        },
+        {
+          "name": "_encode_file",
+          "kind": "method",
+          "line": 50,
+          "end_line": 66,
+          "doc": "Encode local file or PIL Image to base64 string",
+          "parent": "LiteLLMWrapper"
+        },
+        {
+          "name": "_get_mime_type",
+          "kind": "method",
+          "line": 68,
+          "end_line": 81,
+          "doc": "Get the MIME type of a file based on its extension",
+          "parent": "LiteLLMWrapper"
+        },
+        {
+          "name": "__call__",
+          "kind": "method",
+          "line": 83,
+          "end_line": 193,
+          "doc": "Process messages and return completion",
+          "parent": "LiteLLMWrapper"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "mllm_tools.utils",
+      "path": "mllm_tools/utils.py",
+      "lines": 174,
+      "sha256": "a5c694a202ccd5e3b9d7e7c3e79f11311451df4a12f2c2744bf4df89b05fcb32",
+      "defs": [
+        {
+          "name": "_prepare_text_inputs",
+          "kind": "function",
+          "line": 10,
+          "end_line": 29,
+          "doc": "Converts a list of text strings into the input format for the Agent model.",
+          "parent": null
+        },
+        {
+          "name": "_prepare_text_image_inputs",
+          "kind": "function",
+          "line": 31,
+          "end_line": 57,
+          "doc": "Converts text strings and images into the input format for the Agent model.",
+          "parent": null
+        },
+        {
+          "name": "_prepare_text_video_inputs",
+          "kind": "function",
+          "line": 59,
+          "end_line": 86,
+          "doc": "Converts text strings and video file paths into the input format for the Agent model.",
+          "parent": null
+        },
+        {
+          "name": "_prepare_text_audio_inputs",
+          "kind": "function",
+          "line": 88,
+          "end_line": 115,
+          "doc": "Converts text strings and audio file paths into the input format for the Agent model.",
+          "parent": null
+        },
+        {
+          "name": "_extract_code",
+          "kind": "function",
+          "line": 117,
+          "end_line": 125,
+          "doc": "Helper to extract code block from model response, support Gemini style and OpenAI style",
+          "parent": null
+        },
+        {
+          "name": "_upload_to_gemini",
+          "kind": "function",
+          "line": 127,
+          "end_line": 146,
+          "doc": "Uploads the given file or PIL image to Gemini.",
+          "parent": null
+        },
+        {
+          "name": "get_media_wrapper",
+          "kind": "function",
+          "line": 148,
+          "end_line": 154,
+          "doc": "Get appropriate wrapper for media handling based on model name",
+          "parent": null
+        },
+        {
+          "name": "prepare_media_messages",
+          "kind": "function",
+          "line": 156,
+          "end_line": 174,
+          "doc": "Prepare messages for media input based on model type",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "mllm_tools.vertex_ai",
+      "path": "mllm_tools/vertex_ai.py",
+      "lines": 86,
+      "sha256": "88727e2b425c8bea88c02da4e3566058514a56ee843660239c3dde05b32f6cc8",
+      "defs": [
+        {
+          "name": "VertexAIWrapper",
+          "kind": "class",
+          "line": 11,
+          "end_line": 86,
+          "doc": "Wrapper for Vertex AI to support Gemini models.",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 14,
+          "end_line": 43,
+          "doc": "Initialize the Vertex AI wrapper.",
+          "parent": "VertexAIWrapper"
+        },
+        {
+          "name": "__call__",
+          "kind": "method",
+          "line": 45,
+          "end_line": 86,
+          "doc": "Process messages and return completion.",
+          "parent": "VertexAIWrapper"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src",
+      "path": "src/__init__.py",
+      "lines": 1,
+      "sha256": "6c1f87b792894cf803526cfa42e9fd21b30a3732dbc89dd7b4eb1ae5ed45a305",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "src.config",
+      "path": "src/config/__init__.py",
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "src.config.config",
+      "path": "src/config/config.py",
+      "lines": 20,
+      "sha256": "7aca34f254b4fe8ac518f7ca168206c386bfc5caa75c9492567b8b92fb2f23cd",
+      "defs": [
+        {
+          "name": "Config",
+          "kind": "class",
+          "line": 7,
+          "end_line": 20,
+          "doc": "",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.core",
+      "path": "src/core/__init__.py",
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "src.core.code_generator",
+      "path": "src/core/code_generator.py",
+      "lines": 454,
+      "sha256": "468b92168c4502756194536c174a7bb3dd2baaf98a6854c8d1ccfe2cd3f4543c",
+      "defs": [
+        {
+          "name": "CodeGenerator",
+          "kind": "class",
+          "line": 29,
+          "end_line": 454,
+          "doc": "A class for generating and managing Manim code.",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 32,
+          "end_line": 73,
+          "doc": "Initialize the CodeGenerator.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "_load_context_examples",
+          "kind": "method",
+          "line": 75,
+          "end_line": 92,
+          "doc": "Load all context learning examples from the specified directory.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "_generate_rag_queries_code",
+          "kind": "method",
+          "line": 94,
+          "end_line": 149,
+          "doc": "Generate RAG queries from the implementation plan.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "_generate_rag_queries_error_fix",
+          "kind": "method",
+          "line": 151,
+          "end_line": 206,
+          "doc": "Generate RAG queries for fixing code errors.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "_extract_code_with_retries",
+          "kind": "method",
+          "line": 208,
+          "end_line": 250,
+          "doc": "Extract code from response text with retry logic.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "generate_manim_code",
+          "kind": "method",
+          "line": 252,
+          "end_line": 335,
+          "doc": "Generate Manim code from video plan.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "fix_code_errors",
+          "kind": "method",
+          "line": 337,
+          "end_line": 390,
+          "doc": "Fix errors in generated Manim code.",
+          "parent": "CodeGenerator"
+        },
+        {
+          "name": "visual_self_reflection",
+          "kind": "method",
+          "line": 392,
+          "end_line": 454,
+          "doc": "Use snapshot image or mp4 video to fix code.",
+          "parent": "CodeGenerator"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.core.parse_video",
+      "path": "src/core/parse_video.py",
+      "lines": 227,
+      "sha256": "c4cf353a4ee337891f46513aade2305210d8584c4d1c442718e03f16c952afc1",
+      "defs": [
+        {
+          "name": "get_images_from_video",
+          "kind": "function",
+          "line": 9,
+          "end_line": 21,
+          "doc": "Extract frames from a video file at specified FPS.",
+          "parent": null
+        },
+        {
+          "name": "image_with_most_non_black_space",
+          "kind": "function",
+          "line": 23,
+          "end_line": 74,
+          "doc": "Find and save the image with the most non-black space from a list of images.",
+          "parent": null
+        },
+        {
+          "name": "parse_srt_to_text",
+          "kind": "function",
+          "line": 76,
+          "end_line": 93,
+          "doc": "Convert SRT subtitle file to plain text.",
+          "parent": null
+        },
+        {
+          "name": "parse_srt_and_extract_frames",
+          "kind": "function",
+          "line": 95,
+          "end_line": 163,
+          "doc": "Extract frames from video at subtitle timestamps and save with corresponding text.",
+          "parent": null
+        },
+        {
+          "name": "extract_trasnscript",
+          "kind": "function",
+          "line": 165,
+          "end_line": 195,
+          "doc": "Extract transcript from video audio using Google Speech Recognition.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.core.video_planner",
+      "path": "src/core/video_planner.py",
+      "lines": 417,
+      "sha256": "c214753b287826dc2d7a7cee61b8f8e971284507aea8fbd4f07790c379c9d170",
+      "defs": [
+        {
+          "name": "VideoPlanner",
+          "kind": "class",
+          "line": 24,
+          "end_line": 417,
+          "doc": "A class for planning and generating video content.",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 45,
+          "end_line": 70,
+          "doc": "",
+          "parent": "VideoPlanner"
+        },
+        {
+          "name": "_load_context_examples",
+          "kind": "method",
+          "line": 72,
+          "end_line": 110,
+          "doc": "Load context learning examples of a specific type from files.",
+          "parent": "VideoPlanner"
+        },
+        {
+          "name": "_format_examples",
+          "kind": "method",
+          "line": 112,
+          "end_line": 133,
+          "doc": "Format examples using the appropriate template based on their type.",
+          "parent": "VideoPlanner"
+        },
+        {
+          "name": "generate_scene_outline",
+          "kind": "method",
+          "line": 135,
+          "end_line": 178,
+          "doc": "Generate a scene outline based on the topic and description.",
+          "parent": "VideoPlanner"
+        },
+        {
+          "name": "_generate_scene_implementation_single",
+          "kind": "method",
+          "line": 180,
+          "end_line": 346,
+          "doc": "Generate implementation plan for a single scene.",
+          "parent": "VideoPlanner"
+        },
+        {
+          "name": "generate_scene_implementation",
+          "kind": "method",
+          "line": 348,
+          "end_line": 383,
+          "doc": "Generate detailed implementation plans for all scenes.",
+          "parent": "VideoPlanner"
+        },
+        {
+          "name": "generate_scene_implementation_concurrently",
+          "kind": "method",
+          "line": 385,
+          "end_line": 417,
+          "doc": "Generate detailed implementation plans for all scenes concurrently with controlled concurrency.",
+          "parent": "VideoPlanner"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.core.video_renderer",
+      "path": "src/core/video_renderer.py",
+      "lines": 448,
+      "sha256": "cfe7a778d2b512866f67c68600cc23fa7975566a1ab7531344f64743c85ac46e",
+      "defs": [
+        {
+          "name": "VideoRenderer",
+          "kind": "class",
+          "line": 17,
+          "end_line": 448,
+          "doc": "Class for rendering and combining Manim animation videos.",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 20,
+          "end_line": 30,
+          "doc": "Initialize the VideoRenderer.",
+          "parent": "VideoRenderer"
+        },
+        {
+          "name": "render_scene",
+          "kind": "method",
+          "line": 32,
+          "end_line": 126,
+          "doc": "Render a single scene and handle error retries and visual fixes.",
+          "parent": "VideoRenderer"
+        },
+        {
+          "name": "run_manim_process",
+          "kind": "method",
+          "line": 128,
+          "end_line": 172,
+          "doc": "Run manim on all generated manim code for a specific topic.",
+          "parent": "VideoRenderer"
+        },
+        {
+          "name": "create_snapshot_scene",
+          "kind": "method",
+          "line": 174,
+          "end_line": 201,
+          "doc": "Create a snapshot of the video for a specific topic and scene.",
+          "parent": "VideoRenderer"
+        },
+        {
+          "name": "combine_videos",
+          "kind": "method",
+          "line": 203,
+          "end_line": 448,
+          "doc": "Combine all videos and subtitle files for a specific topic using ffmpeg.",
+          "parent": "VideoRenderer"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.rag",
+      "path": "src/rag/__init__.py",
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "src.rag.rag_integration",
+      "path": "src/rag/rag_integration.py",
+      "lines": 390,
+      "sha256": "69409f39dcf260ec2e364c69618e8332b3cb05e248d667b13815a36ea1686f00",
+      "defs": [
+        {
+          "name": "RAGIntegration",
+          "kind": "class",
+          "line": 17,
+          "end_line": 390,
+          "doc": "Class for integrating RAG (Retrieval Augmented Generation) functionality.",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 33,
+          "end_line": 47,
+          "doc": "",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "set_relevant_plugins",
+          "kind": "method",
+          "line": 49,
+          "end_line": 55,
+          "doc": "Set the relevant plugins for the current video.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "detect_relevant_plugins",
+          "kind": "method",
+          "line": 57,
+          "end_line": 97,
+          "doc": "Detect which plugins might be relevant based on topic and description.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "_load_plugin_descriptions",
+          "kind": "method",
+          "line": 99,
+          "end_line": 119,
+          "doc": "Load plugin descriptions from JSON file.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "_generate_rag_queries_storyboard",
+          "kind": "method",
+          "line": 121,
+          "end_line": 172,
+          "doc": "Generate RAG queries from the scene plan to help create storyboard.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "_generate_rag_queries_technical",
+          "kind": "method",
+          "line": 174,
+          "end_line": 219,
+          "doc": "Generate RAG queries from the storyboard to help create technical implementation.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "_generate_rag_queries_narration",
+          "kind": "method",
+          "line": 221,
+          "end_line": 266,
+          "doc": "Generate RAG queries from the storyboard to help create narration plan.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "get_relevant_docs",
+          "kind": "method",
+          "line": 268,
+          "end_line": 286,
+          "doc": "Get relevant documentation using the vector store.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "_generate_rag_queries_code",
+          "kind": "method",
+          "line": 288,
+          "end_line": 332,
+          "doc": "Generate RAG queries from implementation plan.",
+          "parent": "RAGIntegration"
+        },
+        {
+          "name": "_generate_rag_queries_error_fix",
+          "kind": "method",
+          "line": 334,
+          "end_line": 390,
+          "doc": "Generate RAG queries for fixing code errors.",
+          "parent": "RAGIntegration"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.rag.vector_store",
+      "path": "src/rag/vector_store.py",
+      "lines": 356,
+      "sha256": "f3494b430b7dea3aca7a70ed883a40dfb622a3a5fb373bef4f10d053c000f889",
+      "defs": [
+        {
+          "name": "RAGVectorStore",
+          "kind": "class",
+          "line": 21,
+          "end_line": 356,
+          "doc": "A class for managing vector stores for RAG (Retrieval Augmented Generation).",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 37,
+          "end_line": 54,
+          "doc": "",
+          "parent": "RAGVectorStore"
+        },
+        {
+          "name": "_load_or_create_vector_store",
+          "kind": "method",
+          "line": 56,
+          "end_line": 107,
+          "doc": "Loads existing or creates new ChromaDB vector stores.",
+          "parent": "RAGVectorStore"
+        },
+        {
+          "name": "_get_embedding_function",
+          "kind": "method",
+          "line": 109,
+          "end_line": 143,
+          "doc": "Creates an embedding function using litellm.",
+          "parent": "RAGVectorStore"
+        },
+        {
+          "name": "_create_core_store",
+          "kind": "method",
+          "line": 145,
+          "end_line": 162,
+          "doc": "Creates the main ChromaDB vector store for Manim core documentation.",
+          "parent": "RAGVectorStore"
+        },
+        {
+          "name": "_process_documentation_folder",
+          "kind": "method",
+          "line": 164,
+          "end_line": 213,
+          "doc": "Processes documentation files from a folder into LangChain documents.",
+          "parent": "RAGVectorStore"
+        },
+        {
+          "name": "_add_documents_to_store",
+          "kind": "method",
+          "line": 215,
+          "end_line": 245,
+          "doc": "Adds documents to a vector store in batches with rate limiting.",
+          "parent": "RAGVectorStore"
+        },
+        {
+          "name": "find_relevant_docs",
+          "kind": "method",
+          "line": 247,
+          "end_line": 356,
+          "doc": "Finds relevant documentation based on the provided queries.",
+          "parent": "RAGVectorStore"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.utils",
+      "path": "src/utils/__init__.py",
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "defs": [],
+      "parse_error": null
+    },
+    {
+      "name": "src.utils.kokoro_voiceover",
+      "path": "src/utils/kokoro_voiceover.py",
+      "lines": 117,
+      "sha256": "80279819b9750934d64eb3d6e2c5e28662f32c70223d8e8ddd0c06093950b2fb",
+      "defs": [
+        {
+          "name": "KokoroService",
+          "kind": "class",
+          "line": 18,
+          "end_line": 117,
+          "doc": "Speech service class for kokoro_self (using text_to_speech via Kokoro ONNX).",
+          "parent": null
+        },
+        {
+          "name": "__init__",
+          "kind": "method",
+          "line": 21,
+          "end_line": 37,
+          "doc": "",
+          "parent": "KokoroService"
+        },
+        {
+          "name": "get_data_hash",
+          "kind": "method",
+          "line": 39,
+          "end_line": 53,
+          "doc": "Generates a hash based on the input data dictionary.",
+          "parent": "KokoroService"
+        },
+        {
+          "name": "text_to_speech",
+          "kind": "method",
+          "line": 55,
+          "end_line": 77,
+          "doc": "Generates speech from text using Kokoro ONNX and saves the audio file.",
+          "parent": "KokoroService"
+        },
+        {
+          "name": "generate_from_text",
+          "kind": "method",
+          "line": 80,
+          "end_line": 117,
+          "doc": "",
+          "parent": "KokoroService"
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "src.utils.utils",
+      "path": "src/utils/utils.py",
+      "lines": 128,
+      "sha256": "2570bb04a0b0d5400483c9c9aef93f8c0b064cc7997904397248140c12fdb85f",
+      "defs": [
+        {
+          "name": "_print_response",
+          "kind": "function",
+          "line": 8,
+          "end_line": 26,
+          "doc": "Print formatted responses from the video generation process.",
+          "parent": null
+        },
+        {
+          "name": "_extract_code",
+          "kind": "function",
+          "line": 28,
+          "end_line": 46,
+          "doc": "Extract code blocks from a text response.",
+          "parent": null
+        },
+        {
+          "name": "extract_json",
+          "kind": "function",
+          "line": 48,
+          "end_line": 79,
+          "doc": "Extract and parse JSON content from a text response.",
+          "parent": null
+        },
+        {
+          "name": "_fix_unicode_to_latex",
+          "kind": "function",
+          "line": 81,
+          "end_line": 112,
+          "doc": "Convert Unicode symbols to LaTeX source code.",
+          "parent": null
+        },
+        {
+          "name": "extract_xml",
+          "kind": "function",
+          "line": 114,
+          "end_line": 128,
+          "doc": "Extract XML content from a text response.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "task_generator",
+      "path": "task_generator/__init__.py",
+      "lines": 297,
+      "sha256": "1a95b790c596c0ea1dcb4ad876c020154ec641164c4de069bcbb65342a81e509",
+      "defs": [
+        {
+          "name": "get_prompt_scene_plan",
+          "kind": "function",
+          "line": 28,
+          "end_line": 40,
+          "doc": "Generate a prompt for scene planning based on the given parameters.",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_scene_vision_storyboard",
+          "kind": "function",
+          "line": 42,
+          "end_line": 50,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_scene_technical_implementation",
+          "kind": "function",
+          "line": 52,
+          "end_line": 68,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_scene_animation_narration",
+          "kind": "function",
+          "line": 70,
+          "end_line": 80,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_code_generation",
+          "kind": "function",
+          "line": 82,
+          "end_line": 115,
+          "doc": "Generate a prompt for code generation based on the given video plan and implementation details.",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_fix_error",
+          "kind": "function",
+          "line": 117,
+          "end_line": 141,
+          "doc": "Generate a prompt to fix errors in the given manim code.",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_visual_fix_error",
+          "kind": "function",
+          "line": 143,
+          "end_line": 148,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_banned_reasonings",
+          "kind": "function",
+          "line": 150,
+          "end_line": 151,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_rag_query_generation_vision_storyboard",
+          "kind": "function",
+          "line": 153,
+          "end_line": 158,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_rag_query_generation_technical",
+          "kind": "function",
+          "line": 160,
+          "end_line": 166,
+          "doc": "For generating RAG queries during storyboard to technical implementation stage",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_rag_query_generation_narration",
+          "kind": "function",
+          "line": 168,
+          "end_line": 174,
+          "doc": "For generating RAG queries during storyboard to narration stage",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_rag_query_generation_code",
+          "kind": "function",
+          "line": 176,
+          "end_line": 182,
+          "doc": "For generating RAG queries during technical implementation to code generation stage",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_rag_query_generation_fix_error",
+          "kind": "function",
+          "line": 184,
+          "end_line": 190,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_context_learning_scene_plan",
+          "kind": "function",
+          "line": 192,
+          "end_line": 196,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_context_learning_vision_storyboard",
+          "kind": "function",
+          "line": 198,
+          "end_line": 202,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_context_learning_technical_implementation",
+          "kind": "function",
+          "line": 204,
+          "end_line": 208,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_context_learning_animation_narration",
+          "kind": "function",
+          "line": 210,
+          "end_line": 214,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_context_learning_code",
+          "kind": "function",
+          "line": 216,
+          "end_line": 220,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_detect_plugins",
+          "kind": "function",
+          "line": 222,
+          "end_line": 239,
+          "doc": "Generate a prompt for detecting relevant plugins based on topic and description.",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_animation",
+          "kind": "function",
+          "line": 241,
+          "end_line": 253,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_animation_fix_error",
+          "kind": "function",
+          "line": 255,
+          "end_line": 279,
+          "doc": "Generate a prompt to fix errors in the given manim code.",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_animation_rag_query_generation",
+          "kind": "function",
+          "line": 281,
+          "end_line": 289,
+          "doc": "",
+          "parent": null
+        },
+        {
+          "name": "get_prompt_animation_rag_query_generation_fix_error",
+          "kind": "function",
+          "line": 291,
+          "end_line": 297,
+          "doc": "",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "task_generator.parse_prompt",
+      "path": "task_generator/parse_prompt.py",
+      "lines": 54,
+      "sha256": "54343f845a29a12617d405030a06cae9249fc21bfaa58a12ba2dbbc1d1a9f447",
+      "defs": [
+        {
+          "name": "call_parse_prompt",
+          "kind": "function",
+          "line": 5,
+          "end_line": 27,
+          "doc": "Find the prompts_raw directory and generate an __init__.py file containing prompt texts.",
+          "parent": null
+        },
+        {
+          "name": "create_python_file_with_texts",
+          "kind": "function",
+          "line": 30,
+          "end_line": 50,
+          "doc": "Generate a Python file containing prompt texts from .txt files.",
+          "parent": null
+        }
+      ],
+      "parse_error": null
+    },
+    {
+      "name": "task_generator.prompts_raw",
+      "path": "task_generator/prompts_raw/__init__.py",
+      "lines": 1877,
+      "sha256": "0f76bb3408cad365ad61f4f675dfc2f399828d7245c7ffc7976db4ccd4f9c39c",
+      "defs": [],
+      "parse_error": null
+    }
+  ],
+  "import_graph": [
+    {
+      "from": "eval_suite.image_utils",
+      "to": "eval_suite.prompts_raw",
+      "name": "_image_eval",
+      "line": 8,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.image_utils",
+      "to": "eval_suite.utils",
+      "name": "extract_json",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.image_utils",
+      "to": "eval_suite.utils",
+      "name": "convert_score_fields",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.image_utils",
+      "to": "eval_suite.utils",
+      "name": "calculate_geometric_mean",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.image_utils",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_image_inputs",
+      "line": 10,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.image_utils",
+      "to": "src.core.parse_video",
+      "name": "image_with_most_non_black_space",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "mllm_tools.litellm",
+      "name": "LiteLLMWrapper",
+      "line": 5,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "mllm_tools.gemini",
+      "name": "GeminiWrapper",
+      "line": 6,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_inputs",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "eval_suite.prompts_raw",
+      "name": "_fix_transcript",
+      "line": 8,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "eval_suite.prompts_raw",
+      "name": "_text_eval_new",
+      "line": 8,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "eval_suite.utils",
+      "name": "extract_json",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.text_utils",
+      "to": "eval_suite.utils",
+      "name": "convert_score_fields",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.video_utils",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_video_inputs",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.video_utils",
+      "to": "eval_suite.prompts_raw",
+      "name": "_video_eval_new",
+      "line": 8,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.video_utils",
+      "to": "eval_suite.utils",
+      "name": "extract_json",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "eval_suite.video_utils",
+      "to": "eval_suite.utils",
+      "name": "convert_score_fields",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "mllm_tools.litellm",
+      "name": "LiteLLMWrapper",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "mllm_tools.gemini",
+      "name": "GeminiWrapper",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "eval_suite.utils",
+      "name": "calculate_geometric_mean",
+      "line": 13,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "eval_suite.text_utils",
+      "name": "parse_srt_to_text",
+      "line": 14,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "eval_suite.text_utils",
+      "name": "fix_transcript",
+      "line": 14,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "eval_suite.text_utils",
+      "name": "evaluate_text",
+      "line": 14,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "eval_suite.video_utils",
+      "name": "evaluate_video_chunk_new",
+      "line": 15,
+      "nested": false
+    },
+    {
+      "from": "evaluate",
+      "to": "eval_suite.image_utils",
+      "name": "evaluate_sampled_images",
+      "line": 16,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "mllm_tools.litellm",
+      "name": "LiteLLMWrapper",
+      "line": 14,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_inputs",
+      "line": 15,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.core.video_planner",
+      "name": "VideoPlanner",
+      "line": 18,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.core.code_generator",
+      "name": "CodeGenerator",
+      "line": 19,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.core.video_renderer",
+      "name": "VideoRenderer",
+      "line": 20,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.utils.utils",
+      "name": "_print_response",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.utils.utils",
+      "name": "_extract_code",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.utils.utils",
+      "name": "extract_xml",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.config.config",
+      "name": "Config",
+      "line": 22,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.core.parse_video",
+      "name": "get_images_from_video",
+      "line": 25,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "src.core.parse_video",
+      "name": "image_with_most_non_black_space",
+      "line": 25,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "task_generator",
+      "name": "get_banned_reasonings",
+      "line": 29,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "task_generator.prompts_raw",
+      "name": "_code_font_size",
+      "line": 30,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "task_generator.prompts_raw",
+      "name": "_code_disable",
+      "line": 30,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "task_generator.prompts_raw",
+      "name": "_code_limit",
+      "line": 30,
+      "nested": false
+    },
+    {
+      "from": "generate_video",
+      "to": "task_generator.prompts_raw",
+      "name": "_prompt_manim_cheatsheet",
+      "line": 30,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "src.utils.utils",
+      "name": "extract_json",
+      "line": 8,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_inputs",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "mllm_tools.utils",
+      "name": "_extract_code",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_image_inputs",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "mllm_tools.gemini",
+      "name": "GeminiWrapper",
+      "line": 10,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "mllm_tools.vertex_ai",
+      "name": "VertexAIWrapper",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_prompt_code_generation",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_prompt_fix_error",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_prompt_visual_fix_error",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_banned_reasonings",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_fix_error",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_prompt_context_learning_code",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_code",
+      "line": 12,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator.prompts_raw",
+      "name": "_code_font_size",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator.prompts_raw",
+      "name": "_code_disable",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator.prompts_raw",
+      "name": "_code_limit",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "task_generator.prompts_raw",
+      "name": "_prompt_manim_cheatsheet",
+      "line": 21,
+      "nested": false
+    },
+    {
+      "from": "src.core.code_generator",
+      "to": "src.rag.vector_store",
+      "name": "RAGVectorStore",
+      "line": 27,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_inputs",
+      "line": 9,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "src.utils.utils",
+      "name": "extract_xml",
+      "line": 10,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_scene_plan",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_scene_vision_storyboard",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_scene_technical_implementation",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_scene_animation_narration",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_context_learning_scene_plan",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_context_learning_vision_storyboard",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_context_learning_technical_implementation",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_context_learning_animation_narration",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "task_generator",
+      "name": "get_prompt_context_learning_code",
+      "line": 11,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_planner",
+      "to": "src.rag.rag_integration",
+      "name": "RAGIntegration",
+      "line": 22,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_renderer",
+      "to": "src.core.parse_video",
+      "name": "get_images_from_video",
+      "line": 10,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_renderer",
+      "to": "src.core.parse_video",
+      "name": "image_with_most_non_black_space",
+      "line": 10,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_renderer",
+      "to": "mllm_tools.vertex_ai",
+      "name": "VertexAIWrapper",
+      "line": 14,
+      "nested": false
+    },
+    {
+      "from": "src.core.video_renderer",
+      "to": "mllm_tools.gemini",
+      "name": "GeminiWrapper",
+      "line": 15,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_inputs",
+      "line": 6,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_fix_error",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "task_generator",
+      "name": "get_prompt_detect_plugins",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_technical",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_vision_storyboard",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_narration",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "task_generator",
+      "name": "get_prompt_rag_query_generation_code",
+      "line": 7,
+      "nested": false
+    },
+    {
+      "from": "src.rag.rag_integration",
+      "to": "src.rag.vector_store",
+      "name": "RAGVectorStore",
+      "line": 15,
+      "nested": false
+    },
+    {
+      "from": "src.rag.vector_store",
+      "to": "mllm_tools.utils",
+      "name": "_prepare_text_inputs",
+      "line": 18,
+      "nested": false
+    },
+    {
+      "from": "src.rag.vector_store",
+      "to": "task_generator",
+      "name": "get_prompt_detect_plugins",
+      "line": 19,
+      "nested": false
+    },
+    {
+      "from": "src.utils.kokoro_voiceover",
+      "to": "src.config.config",
+      "name": "Config",
+      "line": 15,
+      "nested": false
+    }
+  ],
+  "entry_trace": {
+    "root": "generate_video:__main__",
+    "root_kind": "__main__ guard",
+    "max_depth": 8,
+    "hops": [
+      {
+        "order": 1,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "mllm_tools.litellm:LiteLLMWrapper",
+        "call_line": 714,
+        "def_line": 15,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 2,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "mllm_tools.litellm:LiteLLMWrapper",
+        "call_line": 721,
+        "def_line": 15,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 3,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "mllm_tools.litellm:LiteLLMWrapper",
+        "call_line": 728,
+        "def_line": 15,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 4,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator",
+        "call_line": 771,
+        "def_line": 39,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 5,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.__init__",
+        "callee": "generate_video:VideoGenerator._load_or_create_session_id",
+        "call_line": 95,
+        "def_line": 135,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 6,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.__init__",
+        "callee": "task_generator:get_banned_reasonings",
+        "call_line": 97,
+        "def_line": 150,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 7,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.__init__",
+        "callee": "src.core.video_planner:VideoPlanner",
+        "call_line": 100,
+        "def_line": 24,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 8,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.__init__",
+        "callee": "src.core.video_planner:VideoPlanner._load_context_examples",
+        "call_line": 53,
+        "def_line": 72,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 9,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._load_context_examples",
+        "callee": "src.core.video_planner:VideoPlanner._format_examples",
+        "call_line": 108,
+        "def_line": 112,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 10,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.__init__",
+        "callee": "src.core.video_planner:VideoPlanner._load_context_examples",
+        "call_line": 54,
+        "def_line": 72,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 11,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.__init__",
+        "callee": "src.core.video_planner:VideoPlanner._load_context_examples",
+        "call_line": 55,
+        "def_line": 72,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 12,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.__init__",
+        "callee": "src.core.video_planner:VideoPlanner._load_context_examples",
+        "call_line": 56,
+        "def_line": 72,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 13,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.__init__",
+        "callee": "src.core.video_planner:VideoPlanner._load_context_examples",
+        "call_line": 57,
+        "def_line": 72,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 14,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.__init__",
+        "callee": "src.rag.rag_integration:RAGIntegration",
+        "call_line": 61,
+        "def_line": 17,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 15,
+        "depth": 3,
+        "caller": "src.rag.rag_integration:RAGIntegration.__init__",
+        "callee": "src.rag.vector_store:RAGVectorStore",
+        "call_line": 40,
+        "def_line": 21,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 16,
+        "depth": 4,
+        "caller": "src.rag.vector_store:RAGVectorStore.__init__",
+        "callee": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "call_line": 54,
+        "def_line": 56,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 17,
+        "depth": 5,
+        "caller": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._get_embedding_function",
+        "call_line": 74,
+        "def_line": 109,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 18,
+        "depth": 5,
+        "caller": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._create_core_store",
+        "call_line": 78,
+        "def_line": 145,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 19,
+        "depth": 6,
+        "caller": "src.rag.vector_store:RAGVectorStore._create_core_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._get_embedding_function",
+        "call_line": 153,
+        "def_line": 109,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 20,
+        "depth": 6,
+        "caller": "src.rag.vector_store:RAGVectorStore._create_core_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._process_documentation_folder",
+        "call_line": 158,
+        "def_line": 164,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 21,
+        "depth": 6,
+        "caller": "src.rag.vector_store:RAGVectorStore._create_core_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._add_documents_to_store",
+        "call_line": 160,
+        "def_line": 215,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 22,
+        "depth": 5,
+        "caller": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._get_embedding_function",
+        "call_line": 91,
+        "def_line": 109,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 23,
+        "depth": 5,
+        "caller": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._get_embedding_function",
+        "call_line": 99,
+        "def_line": 109,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 24,
+        "depth": 5,
+        "caller": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._process_documentation_folder",
+        "call_line": 102,
+        "def_line": 164,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 25,
+        "depth": 5,
+        "caller": "src.rag.vector_store:RAGVectorStore._load_or_create_vector_store",
+        "callee": "src.rag.vector_store:RAGVectorStore._add_documents_to_store",
+        "call_line": 104,
+        "def_line": 215,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 26,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.__init__",
+        "callee": "src.core.code_generator:CodeGenerator",
+        "call_line": 114,
+        "def_line": 29,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 27,
+        "depth": 2,
+        "caller": "src.core.code_generator:CodeGenerator.__init__",
+        "callee": "src.core.code_generator:CodeGenerator._load_context_examples",
+        "call_line": 57,
+        "def_line": 75,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 28,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator._load_context_examples",
+        "callee": "task_generator:get_prompt_context_learning_code",
+        "call_line": 88,
+        "def_line": 216,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 29,
+        "depth": 2,
+        "caller": "src.core.code_generator:CodeGenerator.__init__",
+        "callee": "task_generator:get_banned_reasonings",
+        "call_line": 61,
+        "def_line": 150,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 30,
+        "depth": 2,
+        "caller": "src.core.code_generator:CodeGenerator.__init__",
+        "callee": "src.rag.vector_store:RAGVectorStore",
+        "call_line": 65,
+        "def_line": 21,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 31,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.__init__",
+        "callee": "src.core.video_renderer:VideoRenderer",
+        "call_line": 129,
+        "def_line": 17,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 32,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator.combine_videos",
+        "call_line": 789,
+        "def_line": 451,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 33,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.combine_videos",
+        "callee": "src.core.video_renderer:VideoRenderer.combine_videos",
+        "call_line": 458,
+        "def_line": 203,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 34,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:__main__.process_theorem",
+        "call_line": 796,
+        "def_line": 796,
+        "resolution": "nested-def",
+        "candidates": [],
+        "note": "nested def in entry guard, walked in-line"
+      },
+      {
+        "order": 35,
+        "depth": 0,
+        "caller": "generate_video:__main__.process_theorem",
+        "callee": "generate_video:VideoGenerator.render_video_fix_code",
+        "call_line": 800,
+        "def_line": 291,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 36,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.render_video_fix_code",
+        "callee": "generate_video:VideoGenerator.process_scene",
+        "call_line": 329,
+        "def_line": 335,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 37,
+        "depth": 2,
+        "caller": "generate_video:VideoGenerator.process_scene",
+        "callee": "src.core.code_generator:CodeGenerator.generate_manim_code",
+        "call_line": 362,
+        "def_line": 252,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 38,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.generate_manim_code",
+        "callee": "src.core.code_generator:CodeGenerator._generate_rag_queries_code",
+        "call_line": 291,
+        "def_line": 94,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 39,
+        "depth": 4,
+        "caller": "src.core.code_generator:CodeGenerator._generate_rag_queries_code",
+        "callee": "task_generator:get_prompt_rag_query_generation_code",
+        "call_line": 125,
+        "def_line": 176,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 40,
+        "depth": 4,
+        "caller": "src.core.code_generator:CodeGenerator._generate_rag_queries_code",
+        "callee": "task_generator:get_prompt_rag_query_generation_code",
+        "call_line": 127,
+        "def_line": 176,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 41,
+        "depth": 4,
+        "caller": "src.core.code_generator:CodeGenerator._generate_rag_queries_code",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 130,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 42,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.generate_manim_code",
+        "callee": "src.rag.vector_store:RAGVectorStore.find_relevant_docs",
+        "call_line": 299,
+        "def_line": 247,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 43,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.generate_manim_code",
+        "callee": "task_generator:get_prompt_code_generation",
+        "call_line": 312,
+        "def_line": 82,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 44,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.generate_manim_code",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 323,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 45,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.generate_manim_code",
+        "callee": "src.core.code_generator:CodeGenerator._extract_code_with_retries",
+        "call_line": 328,
+        "def_line": 208,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 46,
+        "depth": 4,
+        "caller": "src.core.code_generator:CodeGenerator._extract_code_with_retries",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 242,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 47,
+        "depth": 2,
+        "caller": "generate_video:VideoGenerator.process_scene",
+        "callee": "src.core.video_renderer:VideoRenderer.render_scene",
+        "call_line": 384,
+        "def_line": 32,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 48,
+        "depth": 3,
+        "caller": "src.core.video_renderer:VideoRenderer.render_scene",
+        "callee": "src.core.video_renderer:VideoRenderer.create_snapshot_scene",
+        "call_line": 83,
+        "def_line": 174,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 49,
+        "depth": 4,
+        "caller": "src.core.video_renderer:VideoRenderer.create_snapshot_scene",
+        "callee": "src.core.parse_video:image_with_most_non_black_space",
+        "call_line": 200,
+        "def_line": 23,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 50,
+        "depth": 4,
+        "caller": "src.core.video_renderer:VideoRenderer.create_snapshot_scene",
+        "callee": "src.core.parse_video:get_images_from_video",
+        "call_line": 200,
+        "def_line": 9,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 51,
+        "depth": 2,
+        "caller": "generate_video:VideoGenerator.process_scene",
+        "callee": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "call_line": 408,
+        "def_line": 337,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 52,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "callee": "task_generator:get_prompt_fix_error",
+        "call_line": 354,
+        "def_line": 117,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 53,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "callee": "src.core.code_generator:CodeGenerator._generate_rag_queries_error_fix",
+        "call_line": 358,
+        "def_line": 151,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 54,
+        "depth": 4,
+        "caller": "src.core.code_generator:CodeGenerator._generate_rag_queries_error_fix",
+        "callee": "task_generator:get_prompt_rag_query_generation_fix_error",
+        "call_line": 182,
+        "def_line": 184,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 55,
+        "depth": 4,
+        "caller": "src.core.code_generator:CodeGenerator._generate_rag_queries_error_fix",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 189,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 56,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "callee": "src.rag.vector_store:RAGVectorStore.find_relevant_docs",
+        "call_line": 366,
+        "def_line": 247,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 57,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "callee": "task_generator:get_prompt_fix_error",
+        "call_line": 374,
+        "def_line": 117,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 58,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 378,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 59,
+        "depth": 3,
+        "caller": "src.core.code_generator:CodeGenerator.fix_code_errors",
+        "callee": "src.core.code_generator:CodeGenerator._extract_code_with_retries",
+        "call_line": 383,
+        "def_line": 208,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 60,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:__main__.main",
+        "call_line": 802,
+        "def_line": 802,
+        "resolution": "nested-def",
+        "candidates": [],
+        "note": "nested def in entry guard, walked in-line"
+      },
+      {
+        "order": 61,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator",
+        "call_line": 812,
+        "def_line": 39,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 62,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator.check_theorem_status",
+        "call_line": 829,
+        "def_line": 587,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 63,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.check_theorem_status",
+        "callee": "src.utils.utils:extract_xml",
+        "call_line": 610,
+        "def_line": 114,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 64,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:__main__.process_theorem",
+        "call_line": 891,
+        "def_line": 891,
+        "resolution": "nested-def",
+        "candidates": [],
+        "note": "nested def in entry guard, walked in-line"
+      },
+      {
+        "order": 65,
+        "depth": 0,
+        "caller": "generate_video:__main__.process_theorem",
+        "callee": "generate_video:VideoGenerator.combine_videos",
+        "call_line": 897,
+        "def_line": 451,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 66,
+        "depth": 0,
+        "caller": "generate_video:__main__.process_theorem",
+        "callee": "generate_video:VideoGenerator.generate_video_pipeline",
+        "call_line": 899,
+        "def_line": 478,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 67,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "generate_video:VideoGenerator._load_or_create_session_id",
+        "call_line": 489,
+        "def_line": 135,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 68,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "generate_video:VideoGenerator._save_topic_session_id",
+        "call_line": 490,
+        "def_line": 158,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 69,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "src.core.video_planner:VideoPlanner.generate_scene_outline",
+        "call_line": 507,
+        "def_line": 135,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 70,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.generate_scene_outline",
+        "callee": "src.rag.rag_integration:RAGIntegration.detect_relevant_plugins",
+        "call_line": 151,
+        "def_line": 57,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 71,
+        "depth": 3,
+        "caller": "src.rag.rag_integration:RAGIntegration.detect_relevant_plugins",
+        "callee": "src.rag.rag_integration:RAGIntegration._load_plugin_descriptions",
+        "call_line": 68,
+        "def_line": 99,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 72,
+        "depth": 3,
+        "caller": "src.rag.rag_integration:RAGIntegration.detect_relevant_plugins",
+        "callee": "task_generator:get_prompt_detect_plugins",
+        "call_line": 73,
+        "def_line": 222,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 73,
+        "depth": 3,
+        "caller": "src.rag.rag_integration:RAGIntegration.detect_relevant_plugins",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 81,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 74,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.generate_scene_outline",
+        "callee": "src.rag.rag_integration:RAGIntegration.set_relevant_plugins",
+        "call_line": 152,
+        "def_line": 49,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 75,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.generate_scene_outline",
+        "callee": "task_generator:get_prompt_scene_plan",
+        "call_line": 155,
+        "def_line": 28,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 76,
+        "depth": 2,
+        "caller": "src.core.video_planner:VideoPlanner.generate_scene_outline",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 162,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 77,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "generate_video:VideoGenerator.load_implementation_plans",
+        "call_line": 513,
+        "def_line": 249,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 78,
+        "depth": 2,
+        "caller": "generate_video:VideoGenerator.load_implementation_plans",
+        "callee": "src.utils.utils:extract_xml",
+        "call_line": 272,
+        "def_line": 114,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 79,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "src.utils.utils:extract_xml",
+        "call_line": 515,
+        "def_line": 114,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 80,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "src.utils.utils:extract_xml",
+        "call_line": 528,
+        "def_line": 114,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 81,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "generate_video:VideoGenerator._generate_scene_implementation_single",
+        "call_line": 533,
+        "def_line": 460,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 82,
+        "depth": 2,
+        "caller": "generate_video:VideoGenerator._generate_scene_implementation_single",
+        "callee": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "call_line": 476,
+        "def_line": 180,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 83,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "task_generator:get_prompt_scene_vision_storyboard",
+        "call_line": 210,
+        "def_line": 42,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 84,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_storyboard",
+        "call_line": 222,
+        "def_line": 121,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 85,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_storyboard",
+        "callee": "task_generator:get_prompt_rag_query_generation_vision_storyboard",
+        "call_line": 148,
+        "def_line": 153,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 86,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_storyboard",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 154,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 87,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "src.rag.rag_integration:RAGIntegration.get_relevant_docs",
+        "call_line": 231,
+        "def_line": 268,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 88,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration.get_relevant_docs",
+        "callee": "src.rag.vector_store:RAGVectorStore.find_relevant_docs",
+        "call_line": 280,
+        "def_line": 247,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 89,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 242,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 90,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "task_generator:get_prompt_scene_technical_implementation",
+        "call_line": 256,
+        "def_line": 52,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 91,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_technical",
+        "call_line": 268,
+        "def_line": 174,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 92,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_technical",
+        "callee": "task_generator:get_prompt_rag_query_generation_technical",
+        "call_line": 197,
+        "def_line": 160,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 93,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_technical",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 203,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 94,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "src.rag.rag_integration:RAGIntegration.get_relevant_docs",
+        "call_line": 277,
+        "def_line": 268,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 95,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 288,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 96,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "task_generator:get_prompt_scene_animation_narration",
+        "call_line": 302,
+        "def_line": 70,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 97,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_narration",
+        "call_line": 309,
+        "def_line": 221,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 98,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_narration",
+        "callee": "task_generator:get_prompt_rag_query_generation_narration",
+        "call_line": 244,
+        "def_line": 168,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 99,
+        "depth": 4,
+        "caller": "src.rag.rag_integration:RAGIntegration._generate_rag_queries_narration",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 250,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 100,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "src.rag.rag_integration:RAGIntegration.get_relevant_docs",
+        "call_line": 317,
+        "def_line": 268,
+        "resolution": "self-attr",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 101,
+        "depth": 3,
+        "caller": "src.core.video_planner:VideoPlanner._generate_scene_implementation_single",
+        "callee": "mllm_tools.utils:_prepare_text_inputs",
+        "call_line": 326,
+        "def_line": 10,
+        "resolution": "import",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 102,
+        "depth": 1,
+        "caller": "generate_video:VideoGenerator.generate_video_pipeline",
+        "callee": "generate_video:VideoGenerator.render_video_fix_code",
+        "call_line": 581,
+        "def_line": 291,
+        "resolution": "self",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 103,
+        "depth": 0,
+        "caller": "generate_video:__main__.process_theorem",
+        "callee": "generate_video:VideoGenerator.combine_videos",
+        "call_line": 907,
+        "def_line": 451,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 104,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:__main__.main",
+        "call_line": 909,
+        "def_line": 909,
+        "resolution": "nested-def",
+        "candidates": [],
+        "note": "nested def in entry guard, walked in-line"
+      },
+      {
+        "order": 105,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator",
+        "call_line": 918,
+        "def_line": 39,
+        "resolution": "local",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 106,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator.render_video_fix_code",
+        "call_line": 938,
+        "def_line": 291,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 107,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator.combine_videos",
+        "call_line": 942,
+        "def_line": 451,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 108,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator.generate_video_pipeline",
+        "call_line": 944,
+        "def_line": 478,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      },
+      {
+        "order": 109,
+        "depth": 0,
+        "caller": "generate_video:__main__",
+        "callee": "generate_video:VideoGenerator.combine_videos",
+        "call_line": 951,
+        "def_line": 451,
+        "resolution": "ctor-var",
+        "candidates": [],
+        "note": ""
+      }
+    ],
+    "unresolved_calls": []
+  },
+  "prompt_templates": [
+    {
+      "name": "_prompt_context_learning_scene_plan",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L3-L7",
+      "lines": 5,
+      "chars": 180,
+      "placeholders": [
+        "examples"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_scene_vision_storyboard",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L9-L79",
+      "lines": 71,
+      "chars": 7631,
+      "placeholders": [
+        "description",
+        "relevant_plugins",
+        "scene_number",
+        "scene_outline",
+        "topic"
+      ],
+      "output_tags": [
+        "SCENE_VISION_STORYBOARD_PLAN"
+      ],
+      "fenced_blocks": [
+        "xml"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_rag_query_generation_storyboard",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L81-L108",
+      "lines": 28,
+      "chars": 2193,
+      "placeholders": [
+        "relevant_plugins",
+        "storyboard"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_code_background",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L110-L112",
+      "lines": 3,
+      "chars": 140,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_context_learning_vision_storyboard",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L114-L118",
+      "lines": 5,
+      "chars": 190,
+      "placeholders": [
+        "examples"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_context_learning_code",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L120-L124",
+      "lines": 5,
+      "chars": 185,
+      "placeholders": [
+        "examples"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_code_limit",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L126-L129",
+      "lines": 4,
+      "chars": 418,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_animation_rag_query_generation",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L131-L159",
+      "lines": 29,
+      "chars": 2185,
+      "placeholders": [
+        "context",
+        "relevant_plugins",
+        "topic"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_code_font_size",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L161-L165",
+      "lines": 5,
+      "chars": 314,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_best_practices",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L167-L183",
+      "lines": 17,
+      "chars": 1159,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_scene_plan",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L185-L233",
+      "lines": 49,
+      "chars": 2742,
+      "placeholders": [
+        "description",
+        "topic"
+      ],
+      "output_tags": [
+        "SCENE_1",
+        "SCENE_2",
+        "SCENE_OUTLINE"
+      ],
+      "fenced_blocks": [
+        "xml"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_rag_query_generation_technical",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L235-L259",
+      "lines": 25,
+      "chars": 1323,
+      "placeholders": [
+        "relevant_plugins",
+        "storyboard"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_rag_query_generation_fix_error",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L261-L287",
+      "lines": 27,
+      "chars": 1811,
+      "placeholders": [
+        "code",
+        "error",
+        "relevant_plugins"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_code_disable",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L289-L289",
+      "lines": 1,
+      "chars": 0,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_manim_cheatsheet",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L291-L784",
+      "lines": 494,
+      "chars": 12708,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_rag_query_generation_vision_storyboard",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L786-L812",
+      "lines": 27,
+      "chars": 1658,
+      "placeholders": [
+        "relevant_plugins",
+        "scene_plan"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_context_learning_technical_implementation",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L814-L818",
+      "lines": 5,
+      "chars": 199,
+      "placeholders": [
+        "examples"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_detect_plugins",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L820-L852",
+      "lines": 33,
+      "chars": 1342,
+      "placeholders": [
+        "description",
+        "plugin_descriptions",
+        "topic"
+      ],
+      "output_tags": [
+        "PLUGINS",
+        "THINKING"
+      ],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_scene_animation_narration",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L854-L948",
+      "lines": 95,
+      "chars": 7830,
+      "placeholders": [
+        "description",
+        "relevant_plugins",
+        "scene_number",
+        "scene_outline",
+        "scene_vision_storyboard",
+        "technical_implementation_plan",
+        "topic"
+      ],
+      "output_tags": [
+        "SCENE_ANIMATION_NARRATION_PLAN"
+      ],
+      "fenced_blocks": [
+        "xml"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_code_color_cheatsheet",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L950-L972",
+      "lines": 23,
+      "chars": 484,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_visual_self_reflection",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L974-L1020",
+      "lines": 47,
+      "chars": 5125,
+      "placeholders": [
+        "generated_code",
+        "implementation"
+      ],
+      "output_tags": [
+        "LGTM"
+      ],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_teaching_framework",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1022-L1201",
+      "lines": 180,
+      "chars": 22961,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_fix_error",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1203-L1245",
+      "lines": 43,
+      "chars": 1639,
+      "placeholders": [
+        "error_message",
+        "implementation_plan",
+        "manim_code"
+      ],
+      "output_tags": [
+        "FULL_CORRECTED_CODE",
+        "THINKING"
+      ],
+      "fenced_blocks": [
+        "python"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_animation_simple",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1247-L1276",
+      "lines": 30,
+      "chars": 1305,
+      "placeholders": [
+        "description",
+        "topic"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_animation_rag_query_generation_fix_error",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1278-L1310",
+      "lines": 33,
+      "chars": 2563,
+      "placeholders": [
+        "code",
+        "error",
+        "text_explanation"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_animation_fix_error",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1312-L1361",
+      "lines": 50,
+      "chars": 1816,
+      "placeholders": [
+        "error_message",
+        "manim_code",
+        "text_explanation"
+      ],
+      "output_tags": [
+        "CONTEXT",
+        "ERROR_ANALYSIS",
+        "SOLUTION"
+      ],
+      "fenced_blocks": [
+        "python"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_scene_technical_implementation",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1363-L1460",
+      "lines": 98,
+      "chars": 7557,
+      "placeholders": [
+        "description",
+        "relevant_plugins",
+        "scene_number",
+        "scene_outline",
+        "scene_vision_storyboard",
+        "topic"
+      ],
+      "output_tags": [
+        "SCENE_TECHNICAL_IMPLEMENTATION_PLAN"
+      ],
+      "fenced_blocks": [
+        "xml"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_rag_query_generation_narration",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1462-L1486",
+      "lines": 25,
+      "chars": 1329,
+      "placeholders": [
+        "relevant_plugins",
+        "storyboard"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_context_learning_animation_narration",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1488-L1492",
+      "lines": 5,
+      "chars": 192,
+      "placeholders": [
+        "examples"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_scene_implementation",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1494-L1633",
+      "lines": 140,
+      "chars": 11310,
+      "placeholders": [
+        "description",
+        "scene_number",
+        "scene_outline",
+        "topic"
+      ],
+      "output_tags": [
+        "BASE_INFORMATION",
+        "IMPLEMENTATION_PLAN",
+        "SCENE_CONTEXT"
+      ],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_visual_fix_error",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1635-L1655",
+      "lines": 21,
+      "chars": 1169,
+      "placeholders": [
+        "generated_code",
+        "implementation"
+      ],
+      "output_tags": [
+        "LGTM"
+      ],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_banned_reasonings",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1657-L1674",
+      "lines": 18,
+      "chars": 356,
+      "placeholders": [],
+      "output_tags": [],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_code_generation",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1676-L1850",
+      "lines": 175,
+      "chars": 13877,
+      "placeholders": [
+        "description",
+        "scene_implementation",
+        "scene_number",
+        "scene_outline",
+        "topic"
+      ],
+      "output_tags": [
+        "CODE"
+      ],
+      "fenced_blocks": [
+        "python"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_prompt_rag_query_generation_code",
+      "module": "task_generator/prompts_raw/__init__.py",
+      "ref": "task_generator/prompts_raw/__init__.py:L1852-L1876",
+      "lines": 25,
+      "chars": 1964,
+      "placeholders": [
+        "implementation_plan",
+        "relevant_plugins"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_video_eval_new",
+      "module": "eval_suite/prompts_raw/__init__.py",
+      "ref": "eval_suite/prompts_raw/__init__.py:L3-L39",
+      "lines": 37,
+      "chars": 1289,
+      "placeholders": [
+        "description"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": true
+    },
+    {
+      "name": "_text_eval_new",
+      "module": "eval_suite/prompts_raw/__init__.py",
+      "ref": "eval_suite/prompts_raw/__init__.py:L41-L88",
+      "lines": 48,
+      "chars": 2293,
+      "placeholders": [
+        "transcript"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": true
+    },
+    {
+      "name": "_fix_transcript",
+      "module": "eval_suite/prompts_raw/__init__.py",
+      "ref": "eval_suite/prompts_raw/__init__.py:L90-L98",
+      "lines": 9,
+      "chars": 500,
+      "placeholders": [
+        "transcript"
+      ],
+      "output_tags": [
+        "SCRIPT"
+      ],
+      "fenced_blocks": [],
+      "scores_1_to_5": false
+    },
+    {
+      "name": "_image_eval",
+      "module": "eval_suite/prompts_raw/__init__.py",
+      "ref": "eval_suite/prompts_raw/__init__.py:L100-L144",
+      "lines": 45,
+      "chars": 1719,
+      "placeholders": [
+        "description"
+      ],
+      "output_tags": [],
+      "fenced_blocks": [
+        "json"
+      ],
+      "scores_1_to_5": true
+    }
+  ]
+}

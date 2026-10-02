@@ -1,0 +1,116 @@
+{
+  "fixture": "feynrl--overlap-rounds",
+  "family": "async-rounds",
+  "scene": "AsyncRoundsScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "feynrl:weight-sync-nccl-async",
+    "feynrl:staleness-budget-max-lag"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "34.400000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 2.8,
+      "caption": "round 1: wait for one pass of v0 shards, then train; rollout keeps generating",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 5.933,
+      "caption": "trainer v1 \u00b7 inline sync drains the queued v0 shards \u00b7 rollout \u2192 v1",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 10.933,
+      "caption": "round 2: four fresh v1 shards; training sees v0 and v1",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s3",
+      "time": 14.067,
+      "caption": "sync fails: trainer v2, rollout stays v1",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 19.067,
+      "caption": "round 3: new shards still stamped v1",
+      "frame": "frames/s4.png",
+      "notices": []
+    },
+    {
+      "id": "s5",
+      "time": 25.0,
+      "caption": "next sync succeeds: rollout v3 \u00b7 round 4 trains on v1 and v3",
+      "frame": "frames/s5.png",
+      "notices": []
+    },
+    {
+      "id": "s6",
+      "time": 29.067,
+      "caption": "round 5: v3 and v4 shards arrive; FIFO pushes the oldest v1 shards out",
+      "frame": "frames/s6.png",
+      "notices": []
+    },
+    {
+      "id": "s7",
+      "time": 32.2,
+      "caption": "evict_stale drops what is left below v4 \u2212 2 = v2",
+      "frame": "frames/s7.png",
+      "notices": [
+        "n3"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s2",
+      "claim": "From round 2 on, the buffer holds shards older than the trainer: the v0 shards were generated while round 1 trained, and FIFO keeps them until the deque overflows.",
+      "evidence": [
+        "buffer"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "After the failed sync the trainer tag reads v2 but the rollout tag stays at v1, so the next shards are stamped v1.",
+      "evidence": [
+        "trainer",
+        "rollout"
+      ]
+    },
+    {
+      "id": "n3",
+      "at_step": "s7",
+      "claim": "evict_stale removes exactly the shards stamped below T \u2212 max_lag (the last four v1 shards, which FIFO had kept); the v3 and v4 shards stay.",
+      "evidence": [
+        "buffer"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

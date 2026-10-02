@@ -1,0 +1,2191 @@
+{
+  "repo": "tea",
+  "title": "TheoremExplainAgent: one video run traced end to end; where quality is and is not checked",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are repo-relative file:line ranges in external/TheoremExplainAgent-main (unversioned local copy; see sources.json). Statuses: 'implemented' = the code does this (evidence from static reading); 'documented' = README or prompt-template prose; 'tested' = never used (the repo ships no tests); 'supplement' = not stated anywhere in the repo. Prerequisite basis 'call-order' comes from the entry trace in discovered.json (generate_video.py __main__ guard, produced by discover_repo.py --inline-nested) and, for the evaluator, from discovered_eval.json (evaluate.py main). Everything here is static reading: no model was called, no video rendered, and claims about what happens at runtime (e.g. an AttributeError when --use_visual_fix_code is set) are what the code must do, not what was observed. Prompt templates are anchored into the generated __init__.py constants because that is what the code imports.",
+  "path": {
+    "basis": "call-order",
+    "note": "Stops follow the first hop at which each KP's code is reached in discovered.json: the __main__ guard parses the CLI and builds three LiteLLMWrappers (hops 1-3) -> VideoGenerator.__init__ builds planner/code generator/renderer and, if --use_rag, the Chroma stores (hops 4-31) -> generate_video_pipeline loads or creates the session and scene outline (67-69, 75) -> per-scene three-stage plans (81-101, with RAG query/retrieve hops 84-100 interleaved) -> render_video_fix_code/process_scene (102, 36) -> generate_manim_code (37-46) -> render_scene (47-50) -> fix_code_errors (51-59) -> combine_videos (103). The evaluator stops come from discovered_eval.json (evaluate.py main: process_theorem hop 4 -> evaluate_text_file 5 -> evaluate_video_file 15 -> evaluate_sampled_images 23 -> calculate_overall_score 38). 'task-generation-prompts' is placed after the evaluator because parse_prompt.py is a build step, not on either trace; 'silent-degradation-points' is last because it cuts across all stops.",
+    "stops": [
+      "cli-run-modes",
+      "resume-by-artifact",
+      "scene-outline-plan",
+      "per-scene-three-stage-plan",
+      "rag-plugin-detection-and-stores",
+      "rag-query-retrieve-k2",
+      "code-generation-prompt-contract",
+      "error-driven-fix-loop",
+      "visual-fix-path-broken",
+      "render-and-concat",
+      "evaluator-metrics-judges",
+      "evaluator-blind-spots",
+      "task-generation-prompts",
+      "silent-degradation-points"
+    ],
+    "supplements": []
+  },
+  "knowledge_points": [
+    {
+      "id": "cli-run-modes",
+      "label": "generate_video.py: two input modes, three model wrappers, one retry budget",
+      "kind": "procedure",
+      "statement": "generate_video.py takes either --theorems_path (a JSON list of {theorem, description}) or --topic plus --context; it builds three LiteLLMWrapper instances at temperature 0.7 (planner and scene model from --model, helper from --helper_model or --model), defaults --max_retries to 5 and --max_scene_concurrency to 1, and RAG, visual fixing, context learning and Langfuse are all off unless flagged.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L669-L672",
+            "role": "claim",
+            "quote": "parser.add_argument('--model', type=str, choices=allowed_models, default='gemini/gemini-1.5-pro-002' ... parser.add_argument('--topic', type=str, default=None ... parser.add_argument('--context', type=str, default=None"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L682-L684",
+            "role": "claim",
+            "quote": "parser.add_argument('--max_retries', type=int, default=5 ... parser.add_argument('--use_rag', '--rag', action='store_true' ... parser.add_argument('--use_visual_fix_code','--visual_fix_code', action='store_true'"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L698",
+            "role": "claim",
+            "quote": "parser.add_argument('--max_scene_concurrency', type=int, default=1"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L714-L735",
+            "role": "computation",
+            "quote": "planner_model = LiteLLMWrapper(\n        model_name=args.model,\n        temperature=0.7 ... helper_model = LiteLLMWrapper(\n        model_name=args.helper_model if args.helper_model else args.model ... scene_model = LiteLLMWrapper( # Initialize scene_model separately\n        model_name=args.model,\n        temperature=0.7"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L738-L744",
+            "role": "computation",
+            "quote": "if args.theorems_path:\n        # Load the sample theorems\n        with open(args.theorems_path, \"r\") as f:\n            theorems = json.load(f)\n\n        if args.sample_size:\n            theorems = theorems[:args.sample_size]"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L917-L918",
+            "role": "computation",
+            "quote": "elif args.topic and args.context:\n        video_generator = VideoGenerator("
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L952-L954",
+            "role": "claim",
+            "quote": "print(\"Please provide either (--theorems_path) or (--topic and --context)\")"
+          },
+          {
+            "source": "tea_readme",
+            "ref": "external/TheoremExplainAgent-main/README.md:L136-L145",
+            "role": "citation",
+            "quote": "Generation (in batch) ... --theorems_path data/thb_easy/math.json \\\n      --max_scene_concurrency 7 \\\n      --max_topic_concurrency 20"
+          }
+        ],
+        "filtering_note": "--sample_size takes the first N theorems (list slice), not a random sample, despite the flag name. allowed_models.json whitelists the --model choices; the README's --model openai/o3-mini example is on that list. The README help text (L165-L223) is the argparse output and matches the code."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "--max_retries bounds how many times manim is re-run on the same code.",
+          "why_wrong": "It bounds how many times the LLM is asked to rewrite failing code (process_scene's curr_version); each version is rendered once (see error-driven-fix-loop)."
+        },
+        {
+          "belief": "--sample_size draws a random subset of the theorem file.",
+          "why_wrong": "theorems[:args.sample_size] keeps the first N entries in file order (L743-L744)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You run generate_video.py with --theorems_path data/thb_easy/math.json --sample_size 3 --model openai/o3-mini and no --helper_model. Which model name does the helper wrapper get, and which three theorems are processed?",
+          "format": "short",
+          "answer": "openai/o3-mini (helper falls back to --model); the first three entries of math.json in file order.",
+          "why": "helper_model uses args.helper_model if set else args.model (L722); theorems = theorems[:args.sample_size] slices the head of the list (L743-L744).",
+          "targets_misconception": "--sample_size draws a random subset of the theorem file."
+        },
+        "transfer": {
+          "q": "A colleague passes --topic \"Bayes theorem\" but forgets --context, and also passes --theorems_path data/thb_easy/math.json. Which branch runs, and what role does --topic play?",
+          "format": "short",
+          "answer": "The --theorems_path branch runs over the whole JSON file; --topic is ignored because the elif args.topic and args.context branch is never reached.",
+          "why": "The if/elif chain checks args.theorems_path first (L738) and only falls to args.topic and args.context (L917) when no theorems file is given; the single-topic branch also requires both flags.",
+          "varies": "which combination of input flags is present (functional dimension: control flow, not data)",
+          "invariant": "the if/elif/else ordering at L738/L917/L952 decides the mode; flags not consumed by the chosen branch are ignored",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "You run generate_video.py --topic 'Fourier series' --context 'Decomposing periodic signals' --check_status, with no --theorems_path. What does the script do?",
+          "format": "choice",
+          "choices": [
+            "Runs the full plan-render-combine pipeline; the flag is never read here",
+            "Prints the P/C/R status table for this one topic, then exits",
+            "Prints the 'provide either' usage message, since status needs a file",
+            "Plans only and skips rendering, treating --check_status as a dry run"
+          ],
+          "answer": "Runs the full plan-render-combine pipeline; the flag is never read here",
+          "why": "The if/elif chain tests args.theorems_path first (generate_video.py L738); --check_status is only consulted inside that branch (L810). With no theorems file, the elif args.topic and args.context branch (L917) runs: it checks only args.only_gen_vid (L937) and args.only_combine (L941), otherwise calls generate_video_pipeline with only_plan=args.only_plan (False) and then combine_videos (L944-L951). So --check_status is silently ignored and the full pipeline runs.",
+          "distractor_from": "B assumes every CLI flag is honoured regardless of input mode (the status table is built only from a theorems list, L829). C assumes --check_status changes which branch is selected; the 'Please provide either' message fires only when neither a file nor both topic and context are given (L952-L954). D confuses --check_status with --only_plan.",
+          "targets_misconception": "Flags are interpreted globally rather than inside the input-mode branch that reads them",
+          "varies": "Different flag (--check_status instead of a mis-specified --topic) and the opposite input mode (single-topic branch); functional",
+          "invariant": "generate_video.py dispatches on an if/elif chain over input mode, and each mode-specific flag is only read inside the branch that tests it",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What is the default value of --max_retries on the generate_video.py CLI, and what does one 'retry' spend?",
+            "answer": "5; one LLM fix_code_errors rewrite followed by one manim render of the new version.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which temperature do all three LiteLLMWrapper instances built in the __main__ guard use?",
+            "answer": "0.7 (L716, L723, L730).",
+            "layer": "detail"
+          },
+          {
+            "q": "What are the two ways to tell generate_video.py what to explain, and which optional features run if you pass no flags?",
+            "answer": "Either --theorems_path (a JSON list of {theorem, description}) or --topic plus --context; RAG, visual fixing, context learning and Langfuse are all off unless flagged."
+          }
+        ],
+        "self_explain": "Why would the authors build a separate scene_model wrapper from the same --model name instead of reusing planner_model?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "generate_video.py:L667-L735"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "generate_video.py:L738-L744"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:tea--cli-dispatch",
+          "notice": "Turn on --topic next to --theorems_path: the first test (L738) is already true, so the elif that reads --topic is never evaluated, and the flag lands in \"never reads\" with no warning printed."
+        }
+      ]
+    },
+    {
+      "id": "resume-by-artifact",
+      "label": "Resume is file-existence driven: outline, plan, code, succ_rendered.txt",
+      "kind": "mechanism",
+      "statement": "A run is idempotent per topic because every stage checks for its own output file under output_dir/<file_prefix>/: an existing _scene_outline.txt skips planning, an existing scene<i>_implementation_plan.txt skips that scene's plan, and a scene is re-rendered only if scene<i>/succ_rendered.txt is absent; --check_status prints P/C/R per scene from the same files.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L492-L500",
+            "role": "computation",
+            "quote": "file_prefix = topic.lower()\n        file_prefix = re.sub(r'[^a-z0-9_]+', '_', file_prefix) ... scene_outline_path = os.path.join(self.output_dir, file_prefix, f\"{file_prefix}_scene_outline.txt\")\n        if os.path.exists(scene_outline_path): ... print(f\"Loaded existing scene outline for topic: {topic}\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L279-L287",
+            "role": "computation",
+            "quote": "plan_path = os.path.join(self.output_dir, file_prefix, f\"scene{i}\", f\"{file_prefix}_scene{i}_implementation_plan.txt\")\n            if os.path.exists(plan_path): ... print(f\"Found existing implementation plan for scene {i}\")\n            else:\n                implementation_plans[i] = None"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L567-L569",
+            "role": "computation",
+            "quote": "# For normal mode, process scenes that haven't been successfully rendered\n            elif not os.path.exists(os.path.join(scene_dir, \"succ_rendered.txt\")):\n                scenes_to_process.append((i+1, implementation_plan))"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L122-L124",
+            "role": "computation",
+            "quote": "print(f\"Successfully rendered {file_path}\")\n        with open(os.path.join(self.output_dir, file_prefix, f\"scene{curr_scene}\", \"succ_rendered.txt\"), \"w\") as f:\n            f.write(\"\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L840-L844",
+            "role": "computation",
+            "quote": "(\"P\" if scene['has_plan'] else \"-\") +\n                        (\"C\" if scene['has_code'] else \"-\") +\n                        (\"R\" if scene['has_render'] else \"-\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L142-L148",
+            "role": "computation",
+            "quote": "session_file = os.path.join(self.output_dir, \"session_id.txt\")\n\n        if os.path.exists(session_file):\n            with open(session_file, 'r') as f:\n                session_id = f.read().strip()"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L314-L329",
+            "role": "computation",
+            "quote": "for i, implementation_plan in enumerate(implementation_plans): ... task = self.process_scene(i, scene_outline, implementation_plan, topic, description, max_retries, file_prefix, session_id, scene_trace_id)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L350-L356",
+            "role": "computation",
+            "quote": "curr_scene = i + 1 ... code_dir = os.path.join(self.output_dir, file_prefix, f\"scene{curr_scene}\", \"code\")"
+          }
+        ],
+        "filtering_note": "succ_rendered.txt is an empty marker file; nothing records which code version succeeded, so combine_videos has to infer that from the highest _v<n> media folder (see render-and-concat). The session_id.txt is per output_dir, not per topic, and is also copied into each topic folder (L158-L173)."
+      },
+      "prerequisites": [
+        {
+          "kp": "cli-run-modes",
+          "basis": "call-order",
+          "note": "generate_video_pipeline (hop 66) is entered from process_theorem with the parsed args; its first actions are _load_or_create_session_id and the outline-file check (hops 67-69)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Re-running the same topic regenerates the plan with the current model.",
+          "why_wrong": "If <file_prefix>_scene_outline.txt exists it is read from disk and the planner is never called (L497-L500); you must delete the file to re-plan."
+        },
+        {
+          "belief": "A scene with code files on disk counts as rendered.",
+          "why_wrong": "Normal mode keys on succ_rendered.txt, not on .py files (L568); only --only_render keys on the presence of code (L561-L566)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A previous run of topic 'Big O notation' planned 5 scenes, rendered scenes 1-3 successfully and failed on 4 and 5 after exhausting retries. You rerun the identical command. Which LLM calls happen before rendering starts, and which scenes are rendered?",
+          "format": "short",
+          "answer": "No planning calls (outline and all 5 implementation plans are loaded from disk); scenes 1-3 are skipped and scenes 4 and 5 get fresh generate_manim_code calls, but they are numbered by position in the filtered list: scene 4's plan is generated and rendered as scene 1 and scene 5's as scene 2, so their code and succ_rendered.txt land in the scene1/ and scene2/ folders, scene4/ and scene5/ still lack the marker, and the next rerun queues them again.",
+          "why": "Outline exists -> loaded (L497-L500); load_implementation_plans finds all five plan files (L279-L284); scenes_to_process keeps only scenes without succ_rendered.txt (L568); process_scene always starts at curr_version 0 with a new generate_manim_code (L351, L362). render_video_fix_code enumerates the filtered list [plan4, plan5] and passes the list index i (L580-L581, L314, L329); process_scene sets curr_scene = i + 1 (L350), which names the code folder, the scene_number sent to the model (L367) and the succ_rendered.txt path (video_renderer.py L123).",
+          "targets_misconception": "Re-running the same topic regenerates the plan with the current model."
+        },
+        "transfer": {
+          "q": "You keep the output_dir but rename the topic string from 'Big O notation' to 'Big-O Notation' and rerun. What happens to the resume behaviour?",
+          "format": "short",
+          "answer": "Nothing is reused that differs: both strings normalise to the same file_prefix 'big_o_notation', so the old outline, plans and succ_rendered markers are all found and reused.",
+          "why": "file_prefix = re.sub(r'[^a-z0-9_]+', '_', topic.lower()) maps '-' and ' ' to '_' and lower-cases (L492-L493), so the folder name is unchanged.",
+          "varies": "surface form of the topic string (modality: same semantics, different characters)",
+          "invariant": "file_prefix normalisation is the only key used to locate every resume artifact",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A topic's earlier run planned 6 scenes. Scenes 2 and 5 contain scene<i>/succ_rendered.txt; scenes 1, 3, 4 and 6 each have a code/ folder holding v0.py through v3.py but no succ_rendered.txt. The outline and all 6 implementation plans are on disk. You rerun the identical command (no --only_render). How many scenes get a fresh generate_manim_code call? Type only the number.",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.01,
+          "value": 4,
+          "why": "Outline and plans are loaded from disk (generate_video.py L497-L500, L279-L284), so no planning happens. In normal mode a scene is queued whenever scene<i>/succ_rendered.txt is absent (L567-L569); the .py files only matter under --only_render (L561-L566). Scenes 1, 3, 4, 6 lack the marker, so 4 scenes go to render_video_fix_code, and each process_scene starts with generate_manim_code (L362). Existing v0..v3 files are not reused; the new code overwrites v0.",
+          "targets_misconception": "A scene with code files on disk counts as rendered",
+          "varies": "Partial state with code present but no success marker, instead of a renamed topic string; functional",
+          "invariant": "Resume decisions are made per stage from the presence of that stage's own output file; for rendering the key file is succ_rendered.txt",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which file's existence makes generate_video_pipeline skip rendering a scene in normal mode?",
+            "answer": "output_dir/<file_prefix>/scene<i>/succ_rendered.txt (L568), written by render_scene on success (video_renderer.py L123)."
+          },
+          {
+            "q": "What do the three letters P, C, R stand for in --check_status output?",
+            "answer": "Plan file exists, at least one Code .py exists, succ_rendered.txt (Render) exists (L840-L844).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does keying resume on empty marker files (rather than on a manifest with versions and hashes) make partial reruns cheap but make it impossible to tell which code version produced the kept video?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "generate_video.py:L489-L569"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "generate_video.py:L620-L650"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:tea--fix-loop",
+          "notice": "The rerun line queues exactly the scenes without succ_rendered.txt, whatever code files they hold, and numbers them by position in that list: a queued scene 4 is generated into folder scene1/."
+        }
+      ]
+    },
+    {
+      "id": "scene-outline-plan",
+      "label": "Planner stage 1: one prompt produces 3-7 <SCENE_n> blocks",
+      "kind": "mechanism",
+      "statement": "generate_scene_outline sends _prompt_scene_plan (topic, description) to the planner model and asks for an <SCENE_OUTLINE> containing <SCENE_1>..<SCENE_n> blocks with Title/Purpose/Description/Layout, 3 to 7 scenes and under 15 minutes total; the response is kept as the whole text when the <SCENE_OUTLINE> regex fails, and the number of scenes is later counted with re.findall(r'<SCENE_(\\d+)>[^<]').",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L155-L167",
+            "role": "computation",
+            "quote": "prompt = get_prompt_scene_plan(topic, description) ... response_text = self.planner_model(\n            _prepare_text_inputs(prompt),\n            metadata={\"generation_name\": \"scene_outline\" ... scene_outline_match = re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', response_text, re.DOTALL)\n        scene_outline = scene_outline_match.group(1) if scene_outline_match else response_text"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L194-L199",
+            "role": "claim",
+            "quote": "Plan individual scenes. For each scene please provide the following:\n\n*   **Scene Title:** Short, descriptive title (2-5 words).\n*   **Scene Purpose:** Learning objective of this scene. How does it connect to previous scenes?\n*   **Scene Description:** Detailed description of scene content.\n*   **Scene Layout:**"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L203-L217",
+            "role": "claim",
+            "quote": "```xml\n<SCENE_OUTLINE>\n    <SCENE_1>\n    Scene Title: [Title] ... </SCENE_1>\n\n    <SCENE_2>\n    ...\n    </SCENE_2>\n...\n</SCENE_OUTLINE>"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L224-L227",
+            "role": "claim",
+            "quote": "1. Scenes must build progressively, starting from foundational concepts ... 2. The total number of scenes should be between 3 and 7. ... 4. The total video duration must be under 15 minutes."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L219-L221",
+            "role": "claim",
+            "quote": "**Spatial Constraints:**\n*   **Safe area margins:** 0.5 units on all sides from the scene edges. ... **Minimum spacing:** 0.3 units between any two Manim objects"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L515-L517",
+            "role": "computation",
+            "quote": "scene_outline_content = extract_xml(scene_outline)\n            scene_numbers = len(re.findall(r'<SCENE_(\\d+)>[^<]', scene_outline_content))\n            implementation_plans_dict = {i: None for i in range(1, scene_numbers + 1)}"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/utils/utils.py:L125-L128",
+            "role": "computation",
+            "quote": "try:\n        return re.search(r'```xml\\n(.*?)\\n```', response, re.DOTALL).group(1)\n    except:\n        return response"
+          }
+        ],
+        "filtering_note": "The 3-7 scene and 15-minute limits exist only as prompt prose; nothing counts scenes or durations after the fact. The scene-count regex requires a non-'<' character right after the opening tag, so an empty <SCENE_3></SCENE_3> would not be counted. The planner prompt also forbids external assets, promotion and quiz sessions (L230-L231); the quiz ban is the opposite of the atlas commit-before-reveal rule."
+      },
+      "prerequisites": [
+        {
+          "kp": "resume-by-artifact",
+          "basis": "call-order",
+          "note": "generate_scene_outline (hop 69) runs only in the else branch of the outline-file check."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "If the model returns no <SCENE_OUTLINE> tags, the run fails fast.",
+          "why_wrong": "The fallback keeps the full response as the outline (L167) and writes it to disk; the scene count then becomes 0 and no scenes are planned or rendered, with no error."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The planner returns a correct outline but wraps it in ```xml fences and adds a closing paragraph after ```. How many scenes does generate_video_pipeline count if the outline has <SCENE_1>..<SCENE_4>, each with text inside?",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.0,
+          "why": "extract_xml strips the fences and returns the inner XML (utils.py L126); re.findall(r'<SCENE_(\\d+)>[^<]') matches each opening tag followed by a non-'<' character (L516)."
+        },
+        "transfer": {
+          "q": "Instead of a Manim outline, you reuse this planner for a slide deck and the model emits <SLIDE_OUTLINE><SLIDE_1>...</SLIDE_1>...</SLIDE_OUTLINE>. With the code unchanged, how many scenes are counted and what gets written to disk?",
+          "format": "short",
+          "answer": "0 scenes; the entire response text is written as <file_prefix>_scene_outline.txt because the <SCENE_OUTLINE> regex fails and the fallback keeps response_text.",
+          "why": "scene_outline_match is None so scene_outline = response_text (L166-L167); the scene-count regex looks for <SCENE_(\\d+)> literally (L516), so it finds nothing and implementation_plans_dict is empty.",
+          "varies": "the tag vocabulary the model emits (domain dimension: slides instead of scenes)",
+          "invariant": "the regex contract: only <SCENE_OUTLINE> and <SCENE_n> tags are recognised, and a regex miss is not an error",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "The planner's reply is cut off by a token limit: it opens <SCENE_OUTLINE>, contains complete <SCENE_1> to <SCENE_4> blocks, then a line '<SCENE_5>' followed by half a title, and never reaches </SCENE_5> or </SCENE_OUTLINE>. The reply has no ``` code fences. How many scenes does generate_video_pipeline count from the saved outline? Type only the number.",
+          "format": "number",
+          "answer": "5",
+          "tolerance": 0.01,
+          "value": 5,
+          "why": "re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)') needs the closing tag, so it fails and the whole reply is saved (video_planner.py L166-L167, L174-L175). extract_xml finds no ```xml fence and returns the text unchanged (utils.py L125-L128). The count regex r'<SCENE_(\\d+)>[^<]' only needs an opening tag followed by a non-'<' character (generate_video.py L273, L516), so <SCENE_1>..<SCENE_5> give 5. Scene 5 is then silently skipped at planning because '<SCENE_5>(.*?)</SCENE_5>' has no match (L529-L530).",
+          "targets_misconception": "A malformed outline makes the run fail fast",
+          "varies": "Truncated reply with the right tag names instead of the wrong tag vocabulary; functional",
+          "invariant": "The outline is kept whole when the wrapper regex misses, and the scene count is a literal regex count of opening <SCENE_n> tags with no structural validation",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What range does _prompt_scene_plan give for the number of scenes, and where is it enforced in code?",
+            "answer": "Between 3 and 7 (L225); nowhere, it is prompt prose only."
+          },
+          {
+            "q": "Which four fields must each <SCENE_n> block contain according to the planner prompt?",
+            "answer": "Scene Title, Scene Purpose, Scene Description, Scene Layout (L196-L199).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does keeping the full response when the <SCENE_OUTLINE> regex fails make the pipeline more robust to formatting slips but worse at surfacing a planner failure?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/video_planner.py:L135-L178"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "task_generator/prompts_raw/__init__.py:L185-L233"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:tea--outline-parse",
+          "notice": "The count comes from opening <SCENE_n> tags alone: a reply cut off inside <SCENE_5> still counts 5, the whole reply is saved as the outline, and scene 5 is silently not planned."
+        }
+      ]
+    },
+    {
+      "id": "per-scene-three-stage-plan",
+      "label": "Planner stage 2: storyboard -> technical plan -> narration, concatenated per scene",
+      "kind": "procedure",
+      "statement": "_generate_scene_implementation_single makes three sequential planner calls per scene, each with its own XML tag and prompt template (vision storyboard, technical implementation, animation+narration), feeds each output into the next prompt, saves each to scene<i>/subplans/, and concatenates the three into scene<i>_implementation_plan.txt; every template states the same 0.5-unit safe margin and 0.3-unit minimum spacing as prose and the technical template bans absolute coordinates.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L208-L210",
+            "role": "computation",
+            "quote": "# ===== Step 1: Generate Scene Vision and Storyboard ===== ... prompt_vision_storyboard = get_prompt_scene_vision_storyboard(i, topic, description, scene_outline_i, self.relevant_plugins)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L246-L248",
+            "role": "computation",
+            "quote": "vision_match = re.search(r'(<SCENE_VISION_STORYBOARD_PLAN>.*?</SCENE_VISION_STORYBOARD_PLAN>)', vision_storyboard_plan, re.DOTALL)\n        vision_storyboard_plan = vision_match.group(1) if vision_match else vision_storyboard_plan\n        implementation_plan += vision_storyboard_plan + \"\\n\\n\""
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L254-L256",
+            "role": "computation",
+            "quote": "# ===== Step 2: Generate Technical Implementation Plan ===== ... prompt_technical_implementation = get_prompt_scene_technical_implementation(i, topic, description, scene_outline_i, vision_storyboard_plan, self.relevant_plugins)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L300-L302",
+            "role": "computation",
+            "quote": "# ===== Step 3: Generate Animation and Narration Plan ===== ... prompt_animation_narration = get_prompt_scene_animation_narration(i, topic, description, scene_outline_i, vision_storyboard_plan, technical_implementation_plan, self.relevant_plugins)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L338-L343",
+            "role": "computation",
+            "quote": "# ===== Step 4: Save Implementation Plan ===== ... with open(os.path.join(self.output_dir, file_prefix, f\"scene{i}\", f\"{file_prefix}_scene{i}_implementation_plan.txt\"), \"w\") as f:\n            f.write(f\"# Scene {i} Implementation Plan\\n\\n\")\n            f.write(implementation_plan)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L23-L30",
+            "role": "claim",
+            "quote": "**Spatial Constraints (Strictly Enforced):**\n*   **Safe area margins:** 0.5 units on all sides ... **Minimum spacing:** 0.3 units between any two Manim objects ... **No absolute coordinates are allowed.**"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1454-L1457",
+            "role": "claim",
+            "quote": "***Mandatory Safety Checks***:\n    - **Safe Area Enforcement**: All objects, including text bounding boxes, must remain within 0.5 unit margins.\n    - **Minimum Spacing Validation**: Confirm a minimum of 0.3 units spacing between every pair of objects."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L926-L935",
+            "role": "claim",
+            "quote": "[NARRATION]\n- **Pedagogical Narration Script:**\n    - Provide the full narration script for Scene {scene_number}. ... **Pose questions to encourage active thinking.**"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L527-L535",
+            "role": "computation",
+            "quote": "for scene_num in missing_scenes:\n                scene_outline_content = extract_xml(scene_outline)\n                scene_match = re.search(f'<SCENE_{scene_num}>(.*?)</SCENE_{scene_num}>', scene_outline_content, re.DOTALL)"
+          }
+        ],
+        "filtering_note": "In generate_video_pipeline the per-scene plans are generated sequentially in a for loop (L527-L535); the concurrent variants generate_scene_implementation(_concurrently) exist in VideoPlanner (L348-L417) but are not on the entry trace. Each stage prompt says the scene is 'entirely self-contained' from other scenes (L10, L1364, L855), so cross-scene visual consistency is left to the narration only. The 'Mandatory Safety Checks' are instructions to the model; no code measures margins."
+      },
+      "prerequisites": [
+        {
+          "kp": "scene-outline-plan",
+          "basis": "call-order",
+          "note": "The <SCENE_i> block extracted at hop 80 (L529) is the scene_outline_i input of all three stage prompts (hops 83, 90, 96)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The implementation plan is one LLM call per scene.",
+          "why_wrong": "It is three sequential calls (storyboard, technical, narration), each output appended to the plan (L248, L294, L332); with RAG on, three more helper-model query calls are added."
+        },
+        {
+          "belief": "The 0.5/0.3 spatial constraints are validated somewhere between planning and rendering.",
+          "why_wrong": "They appear only as prompt text in all three planning templates and the code-generation template; the only post-hoc check in generation is manim's exit code (video_renderer.py L67-L68)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A topic's outline has 5 scenes and RAG is off. How many planner-model calls does the planning phase make in total (outline plus per-scene plans)?",
+          "format": "number",
+          "answer": "16",
+          "tolerance": 0.0,
+          "why": "1 outline call (L161) + 5 scenes x 3 stage calls (L241, L287, L325) = 16; with RAG on, each stage also makes a helper-model query call (see rag-query-retrieve-k2)."
+        },
+        "transfer": {
+          "q": "You edit only the narration prompt so that stage 3 also returns a <SCENE_TECHNICAL_IMPLEMENTATION_PLAN> block. Which file(s) on disk change content, and what does the code generator receive?",
+          "format": "short",
+          "answer": "Only scene<i>_animation_narration_plan.txt and the concatenated scene<i>_implementation_plan.txt change (the technical subplan file is unchanged); the code generator receives the concatenation, so it now sees two technical blocks.",
+          "why": "Stage 3's output is filtered only by the <SCENE_ANIMATION_NARRATION_PLAN> regex with a full-text fallback (L330-L331) and appended wholesale (L332); scene_implementation passed to generate_manim_code is the concatenation (L408-L409, L362-L366).",
+          "varies": "which XML blocks one stage emits (functional dimension: output contract of one stage)",
+          "invariant": "each stage's output is regex-filtered independently and then appended; no stage validates what the others produced",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "Scene 2's storyboard stage places a title 0.2 units from the top frame edge, inside the 0.5-unit safe margin every planning template states. What happens to that placement before scene 2 is rendered?",
+          "format": "choice",
+          "choices": [
+            "The planner checks positions after stage 3 and regenerates the storyboard",
+            "The technical stage's tag regex rejects the plan and re-asks the planner model",
+            "It flows unchanged into the concatenated plan and the code prompt; no code measures it",
+            "The renderer measures bounding boxes and sends the overlap to the fix loop"
+          ],
+          "answer": "It flows unchanged into the concatenated plan and the code prompt; no code measures it",
+          "why": "Each stage's output is only regex-extracted by its XML tag with a full-text fallback and appended to implementation_plan (video_planner.py L246-L248, L292-L294, L330-L332), then written to scene<i>_implementation_plan.txt (L341-L343) and passed to generate_manim_code (generate_video.py L362-L366). The 0.5/0.3 numbers exist only as prompt text (prompts_raw/__init__.py L23-L30, L1454-L1457). The only post-hoc gate is manim's exit code (video_renderer.py L67-L68).",
+          "distractor_from": "B: the tag regexes only extract, never validate content, and fall back to the full text. C: there is no position check or replanning step after stage 3. D: no code measures geometry; the renderer only checks returncode.",
+          "targets_misconception": "The 0.5/0.3 spatial constraints are validated somewhere between planning and rendering",
+          "varies": "A content violation inside a stage's output instead of an extra XML block in stage 3; functional",
+          "invariant": "The three planning stages are chained text: each output is tag-extracted with fallback and concatenated, with no semantic or geometric validation",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the three per-scene planning stages in order and the XML tag each must emit.",
+            "answer": "Vision storyboard (<SCENE_VISION_STORYBOARD_PLAN>), technical implementation (<SCENE_TECHNICAL_IMPLEMENTATION_PLAN>), animation and narration (<SCENE_ANIMATION_NARRATION_PLAN>)."
+          },
+          {
+            "q": "Which two numeric spatial constraints appear in every TEA planning prompt, and which positioning style is banned?",
+            "answer": "0.5-unit safe area margin and 0.3-unit minimum spacing; absolute coordinates are banned (relative next_to/align_to/shift only)."
+          },
+          {
+            "q": "Into which folder are the three per-stage plans saved, and what is the name of the concatenated file?",
+            "answer": "scene<i>/subplans/ (vision_storyboard_plan, technical_implementation_plan, animation_narration_plan .txt); scene<i>/<prefix>_scene<i>_implementation_plan.txt.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why might splitting planning into storyboard, technical and narration stages reduce visual-logic drift compared with one prompt, and what new failure does the 'self-contained scene' instruction introduce?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/video_planner.py:L180-L346"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "task_generator/prompts_raw/__init__.py:L1407-L1459"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:tea--outline-parse",
+          "notice": "Each planned scene adds three planner calls to the one outline call; with --use_rag the helper model adds one plugin call plus one query call per stage."
+        }
+      ]
+    },
+    {
+      "id": "rag-plugin-detection-and-stores",
+      "label": "RAG setup: helper model picks plugins; one Chroma store per doc corpus",
+      "kind": "mechanism",
+      "statement": "With --use_rag, RAGVectorStore builds or loads a Chroma collection 'manim_core' from manim_docs_path/manim_core and one 'manim_plugin_<name>' collection per folder under manim_docs_path/plugin_docs, splitting .md and .py files with LangChain's recursive splitters and embedding via litellm; before planning, detect_relevant_plugins asks the helper model to choose from plugin_docs/plugins.json and the chosen names are threaded into every later prompt and query.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L66-L78",
+            "role": "computation",
+            "quote": "core_path = os.path.join(self.chroma_db_path, \"manim_core\") ... if os.path.exists(core_path):\n            print(\"Loading existing core ChromaDB...\") ... else:\n            print(\"Creating new core ChromaDB...\")\n            self.core_vector_store = self._create_core_store()"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L81-L85",
+            "role": "computation",
+            "quote": "plugin_docs_path = os.path.join(self.manim_docs_path, \"plugin_docs\") ... for plugin_name in os.listdir(plugin_docs_path):\n                plugin_store_path = os.path.join(self.chroma_db_path, f\"manim_plugin_{plugin_name}\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L175-L177",
+            "role": "computation",
+            "quote": "for root, _, files in os.walk(folder_path):\n            for file in files:\n                if file.endswith(('.md', '.py')):"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L194-L199",
+            "role": "computation",
+            "quote": "markdown_splitter = RecursiveCharacterTextSplitter.from_language(\n            language=Language.MARKDOWN\n        )\n        python_splitter = RecursiveCharacterTextSplitter.from_language(\n            language=Language.PYTHON\n        )"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/rag_integration.py:L106-L110",
+            "role": "computation",
+            "quote": "plugin_config_path = os.path.join(\n                self.manim_docs_path,\n                \"plugin_docs\",\n                \"plugins.json\"\n            )"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/rag_integration.py:L79-L87",
+            "role": "computation",
+            "quote": "response = self.helper_model(\n                _prepare_text_inputs(prompt),\n                metadata={\"generation_name\": \"detect-relevant-plugins\" ... response = re.search(r'```json(.*)```', response, re.DOTALL).group(1) ... relevant_plugins = json.loads(response)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L831-L838",
+            "role": "claim",
+            "quote": "3. Only select plugins that provide functionality directly needed for the core animations ... Would the animation be significantly more difficult to create without this plugin?"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L150-L153",
+            "role": "computation",
+            "quote": "if self.use_rag:\n            self.relevant_plugins = self.rag_integration.detect_relevant_plugins(topic, description) or []\n            self.rag_integration.set_relevant_plugins(self.relevant_plugins)"
+          },
+          {
+            "source": "tea_readme",
+            "ref": "external/TheoremExplainAgent-main/README.md:L147-L148",
+            "role": "citation",
+            "quote": "Generation with RAG\nBefore using RAG, download the RAG documentation from this [Google Drive link] ... The vector database will be created the first time you run with RAG."
+          }
+        ],
+        "filtering_note": "Two RAGVectorStore instances are created per run when RAG is on: one inside RAGIntegration for the planner (rag_integration.py L40) and one directly in CodeGenerator (code_generator.py L65), both pointing at the same Chroma path. The manim docs corpus itself is not in the repo (README says download from Google Drive); its contents are not described here. The acknowledged plugins are manim-physics, manim-Chemistry, ManimML, manim-dsa, manim-circuit (README L351-L355)."
+      },
+      "prerequisites": [
+        {
+          "kp": "cli-run-modes",
+          "basis": "call-order",
+          "note": "RAGIntegration/RAGVectorStore are built inside VideoGenerator.__init__ (hops 14-25, 30) only when use_rag is passed from the CLI."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Plugin relevance is decided by keyword matching against the topic.",
+          "why_wrong": "It is an LLM call (helper model) over plugins.json descriptions with a JSON-array answer (rag_integration.py L73-L87); on any exception it silently returns []."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "manim_docs_path/plugin_docs contains folders manim_physics and manim_dsa plus plugins.json; chroma_db_path is empty. How many Chroma collections exist after the first RAG run, and what are they named?",
+          "format": "short",
+          "answer": "3: manim_core, manim_plugin_manim_physics, manim_plugin_manim_dsa.",
+          "why": "One core collection is created (L151-L155) and one 'manim_plugin_<folder>' collection per directory under plugin_docs (L84-L105)."
+        },
+        "transfer": {
+          "q": "You point --manim_docs_path at a folder that holds the Manim docs as .rst and .html files instead of .md/.py. What does the core store contain after creation, and what does every later retrieval return?",
+          "format": "short",
+          "answer": "Nothing is indexed (no .md/.py files pass the filter, so core_docs is empty and the collection is created empty); every retrieval returns the two header sentences with no documents, and no error is raised.",
+          "why": "_process_documentation_folder only loads files ending in .md or .py (L177) and prints 'No markdown or python files found' (L189); _create_core_store adds documents only if core_docs is truthy (L159); find_relevant_docs formats whatever (empty) results it gets (L353-L356).",
+          "varies": "the file types in the documentation corpus (modality dimension: same docs, different format)",
+          "invariant": "the .md/.py extension filter and the create-even-if-empty behaviour of the store",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "manim_docs_path/manim_core holds, at its top level, 30 .rst files and 9 .md files; its subfolder reference/ holds 3 .md files, its subfolder examples/ holds 5 .py files and 6 .ipynb notebooks, and there are 2 .txt files at the top level. The core Chroma store does not exist yet. Assuming every file reads without error, how many files does _process_documentation_folder load before splitting? Type only the number.",
+          "format": "number",
+          "answer": "17",
+          "tolerance": 0.01,
+          "value": 17,
+          "why": "_create_core_store calls _process_documentation_folder on manim_docs_path/manim_core (vector_store.py L158). It walks the tree recursively with os.walk (L175) and loads only files ending in .md or .py (L177). Count: 9 top-level .md + 3 .md in reference/ + 5 .py in examples/ = 17. The .rst, .ipynb and .txt files are skipped silently.",
+          "targets_misconception": "Everything in the docs folder is indexed (or only the top level is)",
+          "varies": "Mixed corpus with nested subfolders and several file types, asking for a count, instead of an all-.rst/.html corpus; functional",
+          "invariant": "Store contents are decided by a recursive walk plus a .md/.py extension filter; other files are silently ignored",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which file lists the plugins the helper model may choose from, and where must it live?",
+            "answer": "plugins.json under <manim_docs_path>/plugin_docs/ (rag_integration.py L106-L110).",
+            "layer": "detail"
+          },
+          {
+            "q": "Which two file extensions are indexed into the RAG stores, and which LangChain splitter handles each?",
+            "answer": ".md via RecursiveCharacterTextSplitter.from_language(MARKDOWN) and .py via from_language(PYTHON) (vector_store.py L177, L194-L199).",
+            "layer": "detail"
+          },
+          {
+            "q": "With --use_rag, which vector stores does TEA build, and how are plugin stores chosen for a run?",
+            "answer": "One Chroma collection of core Manim docs plus one per plugin folder; before planning, the helper model picks the relevant plugins from a list, and those names are passed into every later prompt and query."
+          }
+        ],
+        "self_explain": "Why does TEA detect relevant plugins once per topic (before the outline) rather than per scene, and what does that cost when only one scene needs a plugin?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/rag/vector_store.py:L56-L107"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/rag/rag_integration.py:L57-L97"
+        }
+      ]
+    },
+    {
+      "id": "rag-query-retrieve-k2",
+      "label": "RAG at five points: LLM-written JSON queries, k=2 per query, score >= 0.5",
+      "kind": "quantity",
+      "statement": "When RAG is on, retrieval happens before each of the three planning stages, before code generation and before each error fix: the helper model turns the stage input into up to 10 JSON queries tagged 'manim-core' or a plugin name (cached per scene in scene<i>/rag_cache/), each query fetches k=2 chunks with relevance score >= 0.5 from the matching store, duplicates are dropped by content, and the chunks are appended to the prompt as fenced text with their scores.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L222-L239",
+            "role": "computation",
+            "quote": "rag_queries = self.rag_integration._generate_rag_queries_storyboard( ... retrieved_docs = self.rag_integration.get_relevant_docs( ... prompt_vision_storyboard += f\"\\n\\n{retrieved_docs}\""
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/rag_integration.py:L280-L286",
+            "role": "computation",
+            "quote": "return self.vector_store.find_relevant_docs(\n            queries=rag_queries,\n            k=2,"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L299-L301",
+            "role": "computation",
+            "quote": "retrieved_docs = self.vector_store.find_relevant_docs(\n                queries=rag_queries,\n                k=2, # number of documents to retrieve"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L366-L368",
+            "role": "computation",
+            "quote": "retrieved_docs = self.vector_store.find_relevant_docs(\n                queries=rag_queries,\n                k=2, # number of documents to retrieve for error fixing"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L277-L281",
+            "role": "computation",
+            "quote": "manim_core_queries = [query for query in queries if query[\"type\"] == \"manim-core\"]\n        manim_plugin_queries = [query for query in queries if query[\"type\"] != \"manim-core\" and query[\"type\"] in self.plugin_stores] ... print(\"Warning: Some plugin queries were skipped because their types weren't found in available plugin stores\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L287-L291",
+            "role": "computation",
+            "quote": "manim_core_results = self.core_vector_store.similarity_search_with_relevance_scores(\n                query=query_text,\n                k=k,\n                score_threshold=0.5\n            )"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L324-L329",
+            "role": "computation",
+            "quote": "seen = set()\n        for item in manim_core_formatted_results:\n            key = item['content']\n            if key not in seen:\n                manim_core_unique_results.append(item)\n                seen.add(key)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/vector_store.py:L353",
+            "role": "computation",
+            "quote": "manim_core_results = \"Please refer to the following Manim core documentation that may be helpful for the code generation:\\n\\n\" + \"\\n\\n\".join([f\"Content:\\n````text\\n{res['content']}\\n````\\nScore: {res['score']}\" for res in manim_core_unique_results])"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1858-L1859",
+            "role": "claim",
+            "quote": "Based on the complete implementation plan, generate multiple human-like queries (maximum 10) for retrieving relevant documentation."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L112-L121",
+            "role": "computation",
+            "quote": "cache_dir = os.path.join(self.output_dir, re.sub(r'[^a-z0-9_]+', '_', topic.lower()), f\"scene{scene_number}\", \"rag_cache\") ... cache_file = os.path.join(cache_dir, \"rag_queries_code.json\") ... if os.path.exists(cache_file): ... return cached_queries"
+          }
+        ],
+        "filtering_note": "The error-fix query cache is keyed per scene, not per error (rag_queries_error_fix.json, code_generator.py L172-L179), so the second and later fix attempts of a scene reuse the queries written for the first error. The retrieved text is appended to the planner prompts as a string but passed to the code-generation prompt via additional_context (code_generator.py L307-L309). The vision-storyboard query prompt asks for high-level 'what features exist' queries while the technical/code prompts ask for API-level queries (L798-L799 vs L1861)."
+      },
+      "prerequisites": [
+        {
+          "kp": "rag-plugin-detection-and-stores",
+          "basis": "call-order",
+          "note": "find_relevant_docs (hops 42, 56, 88) needs the stores built at hops 15-25; relevant_plugins from hop 70 is formatted into every query prompt."
+        },
+        {
+          "kp": "per-scene-three-stage-plan",
+          "basis": "call-order",
+          "note": "Each planning stage's RAG hop (84-88, 91-94, 97-100) precedes that stage's planner call."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "RAG retrieves the Manim docs relevant to the topic once and reuses them for the whole video.",
+          "why_wrong": "Queries are regenerated from each stage's input (scene plan, storyboard, implementation plan, error+code) and retrieved separately, five times per scene at minimum (video_planner.py L222-L323, code_generator.py L291-L305, L358-L372)."
+        },
+        {
+          "belief": "k=2 means two documents are added to the prompt.",
+          "why_wrong": "k is per query; with up to 10 queries the prompt may receive up to 20 chunks before content de-duplication (vector_store.py L284-L298)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The helper model returns 6 queries for code generation: 4 typed manim-core, 1 typed manim_physics (store exists), 1 typed manim_slides (no store). Every search returns 2 chunks and none repeat. How many chunks reach the code prompt?",
+          "format": "number",
+          "answer": "10",
+          "tolerance": 0.0,
+          "why": "4 core queries x 2 + 1 valid plugin query x 2 = 10; the manim_slides query is dropped with a warning because its type is not in plugin_stores (L278-L281).",
+          "targets_misconception": "k=2 means two documents are added to the prompt."
+        },
+        "transfer": {
+          "q": "Scene 3 fails to render twice with two different errors (a LaTeX error, then a missing-attribute error). For the second fix, which RAG queries are used, and why?",
+          "format": "short",
+          "answer": "The queries generated for the first (LaTeX) error, loaded from scene3/rag_cache/rag_queries_error_fix.json; the cache is per scene, not per error text.",
+          "why": "_generate_rag_queries_error_fix checks for cache_file first and returns its contents without looking at the new error (code_generator.py L172-L179).",
+          "varies": "the error message between fix attempts (functional dimension: input to query generation changes while the cache key does not)",
+          "invariant": "cache key = topic + scene number only",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "RAG is on and no rag_cache files exist at the start of the run. Scene 2 and scene 5 each fail to render twice, with a different error message each time, before their third version renders. Every helper-model reply is valid JSON. How many helper-model calls generate error-fix RAG queries across the whole run? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "tolerance": 0.01,
+          "value": 2,
+          "why": "Each failure triggers fix_code_errors, which calls _generate_rag_queries_error_fix (code_generator.py L356-L365): 4 fixes in total. That function first checks output_dir/<prefix>/scene<n>/rag_cache/rag_queries_error_fix.json and returns it without looking at the new error if it exists (L170-L179); otherwise it calls the helper model and writes the cache (L188-L204). The cache key is the scene folder, so the first fix of scene 2 and the first fix of scene 5 call the helper (2 calls); the second fix in each scene reuses the cache.",
+          "targets_misconception": "RAG queries are regenerated for each error (or retrieved once for the whole video)",
+          "varies": "Two scenes each failing twice, asking for a call count, instead of one scene's second fix; functional",
+          "invariant": "RAG query generation is cached per scene and per stage in scene<i>/rag_cache/, not per input text",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "At which five points in a run does TEA retrieve Manim documentation when --use_rag is set?",
+            "answer": "Before the vision storyboard, technical implementation and animation/narration planner calls, before code generation, and before each error fix."
+          },
+          {
+            "q": "What are k and the relevance score threshold used in similarity_search_with_relevance_scores, and how are duplicates removed?",
+            "answer": "k=2 per query, score_threshold=0.5; duplicates removed by exact chunk content (vector_store.py L287-L291, L324-L334).",
+            "layer": "detail"
+          },
+          {
+            "q": "Which query 'type' string routes a query to the core Manim store, and what happens to a type with no matching plugin store?",
+            "answer": "'manim-core'; other types are searched only if a manim_plugin_<type> store exists, otherwise skipped with a warning (L277-L281).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would caching RAG queries per scene (instead of per error) have been a reasonable choice for the planning stages but a poor one for the error-fix loop?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "src/rag/vector_store.py:L247-L356"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/code_generator.py:L289-L309"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:tea--fix-loop",
+          "notice": "With --use_rag on, the error-fix query calls equal the number of scenes that needed any fix, not the number of fixes: a scene's second fix reuses rag_queries_error_fix.json."
+        }
+      ]
+    },
+    {
+      "id": "code-generation-prompt-contract",
+      "label": "Code generation: one scene class per prompt, fixed imports, regex extraction with 10 format retries",
+      "kind": "procedure",
+      "statement": "generate_manim_code formats _prompt_code_generation with the outline and the concatenated implementation plan plus additional_context (Manim inheritance cheatsheet, font-size and frame-limit notes, optional RAG chunks and context examples), demands a class Scene{n}(VoiceoverScene, MovingCameraScene) using KokoroService and a fixed block of five plugin imports, and extracts the code with re.search(r'```python(.*)```'); if no fenced block is found it re-asks the scene model up to 10 times for the same code in the right format and raises ValueError after that.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L362-L368",
+            "role": "computation",
+            "quote": "code, log = self.code_generator.generate_manim_code( ... additional_context=[_prompt_manim_cheatsheet, _code_font_size, _code_limit, _code_disable],"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L312-L335",
+            "role": "computation",
+            "quote": "prompt = get_prompt_code_generation(\n            scene_outline=scene_outline,\n            scene_implementation=scene_implementation, ... response_text = self.scene_model( ... code = self._extract_code_with_retries(\n            response_text,\n            r\"```python(.*)```\","
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L208",
+            "role": "computation",
+            "quote": "def _extract_code_with_retries(self, response_text: str, pattern: str, generation_name: str = None, trace_id: str = None, session_id: str = None, max_retries: int = 10) -> str:"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L233-L250",
+            "role": "computation",
+            "quote": "for attempt in range(max_retries):\n            code_match = re.search(pattern, response_text, re.DOTALL)\n            if code_match:\n                return code_match.group(1) ... raise ValueError(f\"Failed to extract code pattern after {max_retries} attempts. Pattern: {pattern}\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1693-L1695",
+            "role": "claim",
+            "quote": "1.  **Scene Class:** Class name `Scene{scene_number}` ... The scene class should at least inherit from `VoiceoverScene`. ... 3.  **Speech Service:** Initialize `KokoroService()`. You MUST import like this: `from src.utils.kokoro_voiceover import KokoroService`"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1739-L1744",
+            "role": "claim",
+            "quote": "# plugins imports, don't change the import statements\nfrom manim_circuit import *\nfrom manim_physics import *\nfrom manim_chemistry import *\nfrom manim_dsa import *\nfrom manim_ml import *"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1789-L1793",
+            "role": "claim",
+            "quote": "class Scene{scene_number}(VoiceoverScene, MovingCameraScene): ... def construct(self):\n        # Initialize speech service\n        self.set_speech_service(KokoroService())"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1678",
+            "role": "claim",
+            "quote": "If any potential constraint violation is detected, generate a comment in the code highlighting the issue for manual review and correction."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L126-L129",
+            "role": "claim",
+            "quote": "Note that the frame width and height are 14.222222222222221 and 8.0 respectively. And the center of the frame is (0, 0, 0). ... limit x to be within -7.0 and 7.0 for objects, and limit y to be within -4.0 and 4.0 for objects."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L161-L165",
+            "role": "claim",
+            "quote": "If there is title text, font size is highly recommended to be 28.\nIf there are side labels, font size is highly recommended to be 24.\nIf there are formulas, font size is highly recommended to be 24."
+          }
+        ],
+        "filtering_note": "_code_limit says x within -7..7 and y within -4..4, i.e. the full frame, which contradicts the 0.5-unit safe margin stated in the same prompt (L1676). The example skeleton hard-codes imports of five plugins, so a machine without all five installed fails at import and enters the fix loop on every scene; the fix prompt then has to decide to remove them. The format retry prompt (L225-L231) asks for 'the exact same code' but is sent to the scene model with temperature 0.7. The 'generate a comment for manual review' instruction is the only constraint-violation signal, and nothing reads such comments."
+      },
+      "prerequisites": [
+        {
+          "kp": "per-scene-three-stage-plan",
+          "basis": "call-order",
+          "note": "process_scene (hop 36) passes the concatenated implementation plan into generate_manim_code (hop 37)."
+        },
+        {
+          "kp": "rag-query-retrieve-k2",
+          "basis": "call-order",
+          "note": "With RAG on, hops 38-42 run inside generate_manim_code before the prompt is formatted (hop 43)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The code generator checks the generated scene against the 0.5/0.3 spatial constraints before rendering.",
+          "why_wrong": "The prompt asks the model to 'rigorously validate' and to leave a comment if it detects a violation (L1678, L1699); no Python code inspects positions. The only check before the video exists is manim's exit code."
+        },
+        {
+          "belief": "A response without a ```python fence is treated as code.",
+          "why_wrong": "_extract_code_with_retries re-prompts up to 10 times and then raises ValueError (L233-L250); the whole process_scene task then errors out of asyncio.gather."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The scene model returns valid Manim code but inside a <CODE> block without the ```python fence, and keeps doing so on every re-ask. How many scene-model calls does generate_manim_code make for this scene before giving up, and how does it give up?",
+          "format": "short",
+          "answer": "1 generation call + 9 format-retry calls = 10 calls; then ValueError('Failed to extract code pattern after 10 attempts ...') is raised.",
+          "why": "The loop runs 10 attempts; a retry call happens only when attempt < max_retries - 1, i.e. 9 times (L233-L248); after the loop the ValueError is raised (L250)."
+        },
+        "transfer": {
+          "q": "You switch TEA to a machine where manim_ml is not installed but leave the prompts untouched. For a scene whose plan uses only core Manim, what is the first error the fix loop sees, and which prompt is responsible?",
+          "format": "short",
+          "answer": "A ModuleNotFoundError for manim_ml from manim's stderr; the code-generation template's fixed import block ('don't change the import statements', L1739-L1744) makes every generated scene import all five plugins regardless of need.",
+          "why": "render_scene raises Exception(result.stderr) on non-zero exit (video_renderer.py L67-L68) and that string becomes the error passed to fix_code_errors (generate_video.py L408-L411).",
+          "varies": "the deployment environment's installed packages (domain dimension: same code, different host)",
+          "invariant": "the generated file's import block is dictated by the template, not by the plan's needs",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "Core-only scenes keep failing on a machine that lacks several Manim plugins. Which single change removes the source of the plugin imports in generated scenes?",
+          "format": "choice",
+          "choices": [
+            "Pass a --helper_model, which writes the import header for the scene model",
+            "Turn off --use_rag so plugin detection returns no plugins for the topic",
+            "Keep RAG on; plugins the helper model rejects are dropped from the template",
+            "Edit the import block in prompt_code_generation.txt, then rerun parse_prompt.py"
+          ],
+          "answer": "Edit the import block in prompt_code_generation.txt, then rerun parse_prompt.py",
+          "why": "The code-generation template hard-codes five plugin imports with 'don't change the import statements' (prompts_raw/__init__.py L1739-L1744). get_prompt_code_generation formats that constant with topic, description, outline, plan and scene number only; it takes no plugin list (task_generator/__init__.py L82-L114). Detected plugins influence only RAG queries and planning prompts, not this block. The constant is regenerated from the .txt by parse_prompt.py (README L268-L279).",
+          "distractor_from": "B and C assume plugin detection controls the import block, but the code prompt never receives the plugin list. D assumes the helper model writes code; it only writes RAG queries and plugin picks.",
+          "targets_misconception": "The generated scene's imports adapt to the scene's plan or detected plugins",
+          "varies": "Asks for the intervention that fixes the failure rather than diagnosing the error; functional",
+          "invariant": "Generated scenes follow a fixed prompt contract (class, voiceover service, five plugin imports) that does not depend on the plan",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Besides font-size and frame-limit notes (and an empty _code_disable string), which context string does process_scene always append to the code-generation prompt?",
+            "answer": "_prompt_manim_cheatsheet, a cheatsheet of Manim class-inheritance digraphs (generate_video.py L368).",
+            "layer": "detail"
+          },
+          {
+            "q": "Which regex extracts code from model responses, and how many format retries does it get by default?",
+            "answer": "r\"```python(.*)```\" with re.DOTALL; max_retries=10 (code_generator.py L208, L330).",
+            "layer": "detail"
+          },
+          {
+            "q": "Which two base classes must every generated scene inherit from according to the template's skeleton, and which speech service must it set?",
+            "answer": "VoiceoverScene and MovingCameraScene; KokoroService (L1789, L1793).",
+            "layer": "detail"
+          },
+          {
+            "q": "What does generate_manim_code put into the code-generation prompt, and what happens if the reply has no fenced python block?",
+            "answer": "The scene outline and the concatenated implementation plan, plus additional context (layout notes, optional RAG chunks and examples); without a ```python block it re-asks the scene model for the same code in the right format a bounded number of times, then raises ValueError."
+          }
+        ],
+        "self_explain": "Why does asking the model to 'validate spatial constraints and leave a comment' produce no quality guarantee, and what minimal deterministic check would replace it?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/code_generator.py:L252-L335"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "task_generator/prompts_raw/__init__.py:L1691-L1720"
+        }
+      ]
+    },
+    {
+      "id": "error-driven-fix-loop",
+      "label": "The fix loop: render, read stderr, ask for a rewrite, bump version, until max_retries",
+      "kind": "mechanism",
+      "statement": "process_scene renders v0 with 'manim -qh'; on a non-zero exit code render_scene returns the stderr string, process_scene increments curr_version, calls fix_code_errors with the implementation plan, the failing code and the error, writes v<n>.py and a _fix_log.txt, and renders again; the loop ends on the first successful render or when curr_version >= max_retries (CLI default 5), in which case the scene is left unrendered and the run continues.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L383-L417",
+            "role": "computation",
+            "quote": "while True: # Retry loop controlled by break statements\n                code, error_message = await self.video_renderer.render_scene( ... if error_message is None: # Render success if error_message is None\n                    break\n\n                if curr_version >= max_retries: # Max retries reached\n                    print(f\"Max retries reached for scene {curr_scene}, error: {error_message}\")\n                    break # Exit retry loop\n\n                curr_version += 1\n                # if program runs this, it means that the code is not rendered successfully\n                code, log = self.code_generator.fix_code_errors(\n                    implementation_plan=scene_implementation,\n                    code=code,\n                    error=error_message,"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L53-L68",
+            "role": "computation",
+            "quote": "retries = 0\n        while retries < max_retries:\n            try: ... result = await asyncio.to_thread(\n                    subprocess.run,\n                    [\"manim\", \"-qh\", file_path, \"--media_dir\", media_dir, \"--progress_bar\", \"none\"], ... if result.returncode != 0:\n                    raise Exception(result.stderr)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L113-L120",
+            "role": "computation",
+            "quote": "except Exception as e:\n                print(f\"Error: {e}\")\n                print(f\"Retrying {retries+1} of {max_retries}...\") ... retries += 1\n                return code, str(e) # Indicate failure and return error message"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L354",
+            "role": "computation",
+            "quote": "prompt = get_prompt_fix_error(implementation_plan=implementation_plan, manim_code=code, error=error)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1216-L1223",
+            "role": "claim",
+            "quote": "Requirements:\n1. Provide complete error analysis with specific line numbers where possible. ... 4. If external assets (e.g., images, audio, video) are referenced, remove them.\n5. **If voiceover is present in the original code, ensure it remains preserved in the corrected code.**\n6. Preserve all original code that is not causing the reported error."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1227-L1245",
+            "role": "claim",
+            "quote": "<THINKING>\nError Type: [Syntax/Runtime/Logic/Other] ... </THINKING>\n<FULL_CORRECTED_CODE>\n```python\n# Complete corrected and fully implemented Python code"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L296",
+            "role": "claim",
+            "quote": "max_retries=3,"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L419-L422",
+            "role": "computation",
+            "quote": "with open(os.path.join(code_dir, f\"{file_prefix}_scene{curr_scene}_v{curr_version}_fix_log.txt\"), \"w\") as f:\n                    f.write(log)\n                with open(os.path.join(code_dir, f\"{file_prefix}_scene{curr_scene}_v{curr_version}.py\"), \"w\") as f:\n                    f.write(code)"
+          }
+        ],
+        "filtering_note": "render_scene has its own 'while retries < max_retries' loop, but its except branch returns on the first exception (L120), so that inner loop never iterates; retrying is done entirely by process_scene. The fix prompt sees the implementation plan, the code and the raw stderr, but not earlier failed versions or the retrieved docs from the original generation. The error signal is 'manim exited non-zero': a scene that renders a blank or overlapping frame is a success. The function default max_retries=3 (L296) is overridden by the CLI default 5 whenever called through the pipeline (L582, L682)."
+      },
+      "prerequisites": [
+        {
+          "kp": "code-generation-prompt-contract",
+          "basis": "call-order",
+          "note": "v0 code from generate_manim_code (hop 37) is the first input to render_scene (hop 47); fix_code_errors (hop 51) reuses _extract_code_with_retries (hop 59)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "max_retries=5 means up to 5 renders of a scene.",
+          "why_wrong": "v0 is rendered, then up to 5 fixes (v1..v5) are each rendered: 6 renders and 5 fix_code_errors calls worst case, because the exit test is curr_version >= max_retries after the render (L402)."
+        },
+        {
+          "belief": "The fix loop sees the history of previous attempts.",
+          "why_wrong": "fix_code_errors receives only the current code and the current error (L408-L411); each prompt is stateless apart from the per-scene RAG query cache."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "With --max_retries 2, scene 1's code fails on every render. How many manim subprocesses run and how many fix_code_errors calls are made for that scene, and what is on disk afterwards?",
+          "format": "short",
+          "answer": "3 renders (v0, v1, v2), 2 fix calls; code/ holds v0.py, v1.py, v2.py, one _init_log, two _fix_logs and error logs, and no succ_rendered.txt.",
+          "why": "After v0 fails curr_version(0) < 2 so fix -> v1, render; after v1 fails 1 < 2 so fix -> v2, render; after v2 fails 2 >= 2 so break (L399-L406).",
+          "targets_misconception": "max_retries=5 means up to 5 renders of a scene."
+        },
+        "transfer": {
+          "q": "You replace the manim CLI with a wrapper that always exits 0 but prints LaTeX errors to stderr. Trace what the loop does for a scene whose Tex is broken.",
+          "format": "short",
+          "answer": "The loop ends immediately with success: returncode is 0 so no exception is raised, succ_rendered.txt is written, and the stderr text is never read; the broken scene is treated as rendered and later combined.",
+          "why": "The only failure test is result.returncode != 0 (video_renderer.py L67); stderr is used solely as the exception message when that test fires.",
+          "varies": "the renderer's exit-code behaviour (functional dimension: the error channel the loop listens on)",
+          "invariant": "the loop's success criterion is the subprocess exit code alone",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "With --max_retries 3, scene 4's manim run always writes a complete .mp4 and then crashes during cleanup with exit code 1, for every code version. How many times is manim run for scene 4? Type only the number.",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.01,
+          "value": 4,
+          "why": "render_scene raises on result.returncode != 0 (video_renderer.py L67-L68) regardless of the .mp4 on disk, and returns (code, stderr) (L113-L120). process_scene breaks only on success or when curr_version >= max_retries, tested after the render (generate_video.py L399-L404). Renders: v0 (fail, 0<3, fix to v1), v1 (fail, fix to v2), v2 (fail, fix to v3), v3 (fail, 3>=3, stop) = 4 runs and 3 fix_code_errors calls; succ_rendered.txt is never written.",
+          "targets_misconception": "max_retries=N means up to N renders of a scene",
+          "varies": "Inverse case (good video, non-zero exit) instead of bad video with exit 0, and asks for a count; functional",
+          "invariant": "Success is defined only by manim's exit code, and the loop runs v0 plus up to max_retries fixes, each rendered once",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which exact condition ends the process_scene retry loop without success, and which value is compared?",
+            "answer": "curr_version >= max_retries, checked after a failed render and before incrementing (generate_video.py L402).",
+            "layer": "detail"
+          },
+          {
+            "q": "What exact command does render_scene run, and what text becomes the 'error' given to the fix prompt?",
+            "answer": "manim -qh <file>.py --media_dir <media_dir> --progress_bar none; the subprocess's stderr (video_renderer.py L60, L68).",
+            "layer": "detail"
+          },
+          {
+            "q": "What does the fix-error prompt ask the model to preserve even while fixing?",
+            "answer": "Any voiceover present in the original code, and all code not causing the reported error (L1220-L1221)."
+          }
+        ],
+        "self_explain": "Why does an error-driven loop that only reacts to a non-zero exit code tend to converge on 'code that runs' rather than 'a scene that teaches', and what second signal would the loop need?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "generate_video.py:L360-L424"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "src/core/video_renderer.py:L53-L126"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "generate_video.py:L399-L406",
+          "faded": false,
+          "steps": [
+            {
+              "do": "CLI default --max_retries 5, and the scene's code fails on every render. process_scene starts at curr_version = 0 and renders v0, which fails, so error_message is the stderr string.",
+              "why": "v0 comes from generate_manim_code, not from a fix, so it is rendered before any retry is counted."
+            },
+            {
+              "do": "L399-L406: not None, and 0 < 5, so curr_version becomes 1; fix_code_errors gets the plan, the code and the error, and v1.py plus its _fix_log.txt are written (L419-L422). The loop renders again.",
+              "why": "The tests run in this order after each render: success breaks first, then the cap, and only then the increment and fix."
+            },
+            {
+              "do": "v1, v2, v3 and v4 fail the same way. Each time curr_version < 5, so it is incremented and the next fix is written, up to v5.",
+              "why": "The cap is compared with the version just rendered, before it is incremented."
+            },
+            {
+              "do": "v5 fails: 5 >= 5, so the loop prints 'Max retries reached' and breaks (L402-L404). Totals: 6 renders (v0 to v5) and 5 fix_code_errors calls; the scene stays unrendered and the run moves on.",
+              "why": "Renders = max_retries + 1 because v0 is not a fix; the only other exit is a render with exit code 0."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:tea--fix-loop",
+          "notice": "A scene that never exits 0 is run max_retries + 1 times, because the stop test curr_version >= max_retries comes after that version's render."
+        }
+      ]
+    },
+    {
+      "id": "visual-fix-path-broken",
+      "label": "--use_visual_fix_code: the VLM self-reflection pass cannot run as shipped",
+      "kind": "mechanism",
+      "statement": "After a successful render with use_visual_fix_code on, render_scene is meant to show the video (Gemini/Vertex) or the frame with the most non-black pixels (other models) to the scene model with _prompt_visual_self_reflection and loop until it answers <LGTM> or a banned refusal phrase; but render_scene reads self.scene_model, which VideoRenderer never sets, and visual_self_reflection formats a template whose placeholders are {implementation} and {generated_code} with .format(code=...), so the branch raises before any VLM call and the AttributeError string is fed to the error-fix loop as if it were a render error.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L70-L85",
+            "role": "computation",
+            "quote": "if use_visual_fix_code and visual_self_reflection_func and banned_reasonings: ... if self.scene_model.model_name.startswith(('gemini/', 'vertex_ai/')):\n                        media_input = video_path\n                    else:\n                        # For other models, use image snapshot\n                        media_input = self.create_snapshot_scene("
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L20-L30",
+            "role": "computation",
+            "quote": "def __init__(self, output_dir=\"output\", print_response=False, use_visual_fix_code=False): ... self.output_dir = output_dir\n        self.print_response = print_response\n        self.use_visual_fix_code = use_visual_fix_code"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L99-L109",
+            "role": "computation",
+            "quote": "# Check for termination markers\n                    if \"<LGTM>\" in new_code or any(word in new_code for word in banned_reasonings):\n                        break\n\n                    code = new_code\n                    curr_version += 1 ... retries = 0\n                    continue"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L411-L415",
+            "role": "computation",
+            "quote": "with open('task_generator/prompts_raw/prompt_visual_self_reflection.txt', 'r') as f:\n            prompt_template = f.read()\n        \n        # Format prompt\n        prompt = prompt_template.format(code=code)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1003-L1007",
+            "role": "claim",
+            "quote": "Manim Implementation Plan:\n{implementation}\n\nGenerated Code:\n{generated_code}"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L980-L981",
+            "role": "claim",
+            "quote": "*   **Object Overlap:** Does the video exhibit any visual elements (text, shapes, equations, etc.) overlapping in a way that obscures information ... **Out-of-Bounds Objects:** Are any objects positioned partially or entirely outside of the visible frame of the video?"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1019-L1020",
+            "role": "claim",
+            "quote": "Output Format 2:\nIf no issues are found and the video and audio are deemed high quality, visually clear, narratively effective, and fully aligned with the implementation plan, please explicitly only return \"<LGTM>\" as output."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1657-L1660",
+            "role": "claim",
+            "quote": "_banned_reasonings = \"\"\"evaluation cannot\ncan't assist\ncannot assist\ncan't provide"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/parse_video.py:L56-L61",
+            "role": "computation",
+            "quote": "non_black_pixels = np.sum(gray_array > 10)  # Threshold 10 to account for slight variations in black\n\n            if non_black_pixels > max_non_black_area:\n                max_non_black_area = non_black_pixels\n                image_with_max_non_black_space = image"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L392-L394",
+            "role": "computation",
+            "quote": "use_visual_fix_code=self.use_visual_fix_code,\n                    visual_self_reflection_func=self.code_generator.visual_self_reflection, # Pass visual_self_reflection function\n                    banned_reasonings=self.banned_reasonings, # Pass banned reasonings"
+          }
+        ],
+        "filtering_note": "Both faults are static: the AttributeError at L79 fires first because the whole visual block sits inside the try/except that returns (code, str(e)) (L113-L120), so process_scene treats 'VideoRenderer object has no attribute scene_model' as a render error and spends a fix attempt on it; the KeyError at code_generator.py L415 would fire if L79 were fixed. The design intent is still informative: a VLM is asked about overlap and out-of-bounds objects (the layout faults the evaluator later also judges only by VLM), and refusal phrases from _banned_reasonings terminate the loop as if the code were approved. The snapshot heuristic picks the frame with the most non-black pixels, i.e. the busiest frame, not a representative one. The README lists the flag (L199-L200) without noting any of this."
+      },
+      "prerequisites": [
+        {
+          "kp": "error-driven-fix-loop",
+          "basis": "call-order",
+          "note": "The visual block is inside render_scene (hop 47) after the successful-exit test and before succ_rendered.txt is written; create_snapshot_scene is hop 48."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "--use_visual_fix_code adds a VLM layout check that catches overlaps before the video is accepted.",
+          "why_wrong": "As shipped the branch raises AttributeError on self.scene_model before any model call (L79, VideoRenderer has no such attribute L20-L30); the exception is caught and returned as a render error."
+        },
+        {
+          "belief": "A VLM refusal ('I cannot evaluate this video') makes the loop retry.",
+          "why_wrong": "Any phrase from _banned_reasonings in the reply breaks out of the loop exactly like <LGTM>, so refusals count as approval (L100-L101)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You run with --use_visual_fix_code --max_retries 5 and scene 2's v0 renders cleanly. What does the fix loop do next, and what error text does fix_code_errors receive?",
+          "format": "short",
+          "answer": "render_scene hits self.scene_model at L79, raises AttributeError inside the try, returns (code, \"'VideoRenderer' object has no attribute 'scene_model'\"); process_scene treats it as a failed render and calls fix_code_errors with that string as the error, producing v1.",
+          "why": "The visual block runs only after returncode == 0 (L67-L70); the except at L113 catches every Exception and returns the message; process_scene's loop sees error_message is not None (L399-L408).",
+          "targets_misconception": "--use_visual_fix_code adds a VLM layout check that catches overlaps before the video is accepted."
+        },
+        "transfer": {
+          "q": "Suppose someone patches L79 to read the model name from the passed-in function's owner so the attribute error disappears, and runs with a GPT model. Which call fails next, with which exception, and why?",
+          "format": "short",
+          "answer": "code_generator.visual_self_reflection fails at prompt_template.format(code=code) with KeyError: 'implementation', because the template's placeholders are {implementation} and {generated_code}, not {code}.",
+          "why": "The raw template file is read and formatted with a single keyword (L411-L415) while the text contains {implementation} and {generated_code} (prompts_raw/__init__.py L1004, L1007).",
+          "varies": "which of two independent defects is removed (functional dimension: fault ordering)",
+          "invariant": "both faults sit on the same path and each is sufficient to prevent any VLM call",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "You run with --use_visual_fix_code --max_retries 2 and an OpenAI scene model, and every code version of scene 1 renders without a manim error. How does scene 1 end up?",
+          "format": "choice",
+          "choices": [
+            "Unrendered after v2: each clean render comes back as an error and is rewritten",
+            "Rendered after v0: the VLM answers <LGTM> and the loop accepts the scene",
+            "Rendered after v0: the visual branch is skipped for a non-Gemini model",
+            "Run aborts: an AttributeError traceback escapes render_scene and kills it"
+          ],
+          "answer": "Unrendered after v2: each clean render comes back as an error and is rewritten",
+          "why": "After a clean render the visual branch reads self.scene_model.model_name (video_renderer.py L79) before choosing video vs snapshot, and VideoRenderer never sets scene_model (L20-L30). The AttributeError is caught by the except at L113 and returned as (code, str(e)), so process_scene treats it as a render failure and calls fix_code_errors (generate_video.py L399-L417). v0, v1, v2 all render cleanly and all come back as errors; at curr_version 2 >= max_retries 2 the loop stops (L402-L404) and succ_rendered.txt is never written.",
+          "distractor_from": "B assumes the VLM is reached; it never is. C assumes the model check guards the branch; the attribute access happens inside the check, for every model. D assumes the exception escapes; render_scene catches every exception in its try.",
+          "targets_misconception": "--use_visual_fix_code adds a working VLM layout check",
+          "varies": "Whole-loop outcome under a non-Gemini model and a small retry budget, instead of the next failure after a patch; functional",
+          "invariant": "The visual branch raises before any VLM call, and render_scene converts that exception into an ordinary render error that drives the fix loop",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which two strings terminate the visual self-reflection loop, and are they treated differently?",
+            "answer": "'<LGTM>' and any phrase from _banned_reasonings (refusal phrases such as 'cannot evaluate'); both just break, so a refusal is treated as approval (video_renderer.py L100-L101)."
+          },
+          {
+            "q": "How does create_snapshot_scene choose the frame to show a non-Gemini VLM?",
+            "answer": "Frames sampled at 0.2 fps; the one with the most pixels whose grayscale value exceeds 10 (most non-black area) is saved as snapshot.png (parse_video.py L9-L61).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does putting the only layout-aware check inside a try/except that converts every exception into a 'render error' guarantee that a broken check is invisible in the logs' success counts?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/video_renderer.py:L67-L120"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "src/core/code_generator.py:L392-L454"
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:tea--fix-loop",
+          "notice": "With --use_visual_fix_code on, a clean render (exit 0) turns yellow and is rewritten like a failure, so the scene never gets succ_rendered.txt however good its code is."
+        }
+      ]
+    },
+    {
+      "id": "render-and-concat",
+      "label": "Rendering and concatenation: 1080p60 per scene, latest version wins, all-or-nothing combine",
+      "kind": "procedure",
+      "statement": "Each scene version is rendered to <media_dir>/videos/<prefix>_scene<i>_v<n>/1080p60/ by 'manim -qh'; combine_videos re-counts scenes from the outline file, picks for each scene the folder with the highest _v suffix, aborts if the number of videos found differs from the scene count, and otherwise ffmpeg-concatenates them (adding silent AAC where a scene has no audio) and shifts each scene's .srt by the cumulative ffprobe duration into <prefix>_combined.mp4/.srt.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L60",
+            "role": "computation",
+            "quote": "[\"manim\", \"-qh\", file_path, \"--media_dir\", media_dir, \"--progress_bar\", \"none\"],"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L192",
+            "role": "computation",
+            "quote": "video_folder_path = os.path.join(search_path, \"media\", \"videos\", f\"{file_prefix}_scene{scene_number}_v{version_number}\", \"1080p60\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L226-L228",
+            "role": "computation",
+            "quote": "if os.path.exists(output_video_path) and os.path.exists(output_srt_path):\n            print(f\"Combined video and subtitles already exist at {output_video_path}, not combining again.\")\n            return"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L237-L238",
+            "role": "computation",
+            "quote": "scene_outline = re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', plan, re.DOTALL).group(1)\n        scene_count = len(re.findall(r'<SCENE_(\\d+)>[^<]', scene_outline))"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L250-L257",
+            "role": "computation",
+            "quote": "for scene_num in range(1, scene_count + 1):\n            folders = [f for f in scene_folders if int(f.split(\"scene\")[-1].split(\"_\")[0]) == scene_num] ... folders.sort(key=lambda f: int(f.split(\"_v\")[-1]))\n            folder = folders[-1]"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L274-L276",
+            "role": "computation",
+            "quote": "if len(scene_videos) != scene_count:\n            print(\"Not all videos/subtitles are found, aborting video combination.\")\n            return"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L300-L308",
+            "role": "computation",
+            "quote": "# Video lacks audio, add silent audio ... silent_audio = ffmpeg.input(f'anullsrc=channel_layout=stereo:sample_rate=44100',\n                                                  f='lavfi', t=duration)['a']"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L313",
+            "role": "computation",
+            "quote": "concat = ffmpeg.concat(*streams, v=1, a=1, unsafe=True)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L437-L440",
+            "role": "computation",
+            "quote": "# Update time offset using ffprobe\n                        probe = ffmpeg.probe(video_file)\n                        duration = float(probe['streams'][0]['duration'])\n                        current_time_offset += duration"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L906-L907",
+            "role": "computation",
+            "quote": "if not args.only_plan and not args.only_render:  # Add condition for only_render\n                            video_generator.combine_videos(topic)"
+          }
+        ],
+        "filtering_note": "The 'latest version' rule assumes the highest-numbered version is the one that rendered; if a later version failed before producing media no folder exists for it, so the rule holds, but if a visual-fix pass had produced v1 media after v0 succeeded both exist and v1 wins. Scene folders are matched by int(f.split('scene')[-1].split('_')[0]), which breaks for topics whose file_prefix itself contains 'scene'. The combine step is all-or-nothing: one unrendered scene means no combined video, which is what --peek_existing_videos counts (L746-L768). The .srt files come from manim-voiceover, not from this repo."
+      },
+      "prerequisites": [
+        {
+          "kp": "error-driven-fix-loop",
+          "basis": "call-order",
+          "note": "combine_videos (hop 103) runs after generate_video_pipeline returns from render_video_fix_code (hop 102)."
+        },
+        {
+          "kp": "scene-outline-plan",
+          "basis": "author-inference",
+          "note": "combine_videos re-derives the scene count from the outline file with the same regex (L237-L238); the KP on that regex explains the count."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "combine_videos stitches whatever scenes rendered, skipping missing ones.",
+          "why_wrong": "It prints a warning per missing scene and then aborts entirely if len(scene_videos) != scene_count (L274-L276)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A 4-scene topic has media folders scene1_v0, scene2_v0, scene2_v2, scene3_v1 and no scene4 folder. What does combine_videos produce?",
+          "format": "short",
+          "answer": "Nothing: it warns 'Missing scene 4', finds 3 videos against scene_count 4, prints the abort message and returns without writing a combined file.",
+          "why": "Per-scene folder selection picks scene2_v2 and scene3_v1 (L256-L257), but the all-or-nothing check at L274-L276 fails.",
+          "targets_misconception": "combine_videos stitches whatever scenes rendered, skipping missing ones."
+        },
+        "transfer": {
+          "q": "You change the planner prompt so videos have exactly 2 scenes and switch manim to '-ql' (480p15) in render_scene only. What does combine_videos find for each scene?",
+          "format": "short",
+          "answer": "Nothing: it still looks only inside the '1080p60' subfolder of each scene version folder, so no .mp4 or .srt is found, 'Missing video' warnings print and the combine aborts.",
+          "why": "The quality subfolder name is hard-coded as '1080p60' in both create_snapshot_scene (L192) and combine_videos (L261), while manim derives it from the -q flag.",
+          "varies": "the render quality flag (functional dimension: output path layout)",
+          "invariant": "the hard-coded 1080p60 path the combiner searches",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A 3-scene topic has media folders scene1_v0, scene2_v1, scene2_v3 and scene3_v0. Every 1080p60 subfolder holds an .mp4 and an .srt, except scene2_v3's, which holds only a partial_movie_files directory from an interrupted render. What does combine_videos do?",
+          "format": "choice",
+          "choices": [
+            "Builds the combined file, stitching v3's partial movie files for scene 2",
+            "Builds the combined file with scene 2 taken from v1, the newest with an .mp4",
+            "Builds the combined file from scenes 1 and 3, skipping the broken scene 2",
+            "Aborts with no combined file: v3 is chosen for scene 2 and has no .mp4"
+          ],
+          "answer": "Aborts with no combined file: v3 is chosen for scene 2 and has no .mp4",
+          "why": "For each scene combine_videos sorts that scene's folders by the integer after '_v' and takes the last (video_renderer.py L256-L257), with no check that it contains a video. Listing scene2_v3/1080p60 finds no .mp4 (L261-L264), so 'Missing video for scene 2' prints (L269-L270). scene_videos then has 2 entries against scene_count 3, so it prints the abort message and returns (L274-L276).",
+          "distractor_from": "B assumes a fallback to an older version; selection is purely by highest _v. C encodes 'combine stitches whatever scenes rendered'. D assumes partial files are used; only .mp4/.srt files directly in 1080p60 are collected.",
+          "targets_misconception": "combine_videos stitches whatever scenes rendered, skipping missing ones",
+          "varies": "Broken newest version of one scene instead of a changed quality flag for all scenes; functional",
+          "invariant": "combine_videos picks folders by naming convention (highest _v, fixed 1080p60 subfolder) and aborts unless exactly scene_count videos are found",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "How does combine_videos decide which version of a scene to include?",
+            "answer": "The media folder with the largest _v<n> suffix for that scene number (L256-L257)."
+          },
+          {
+            "q": "Under what condition does combine_videos refuse to produce a combined file, and what does it print?",
+            "answer": "When len(scene_videos) != scene_count: 'Not all videos/subtitles are found, aborting video combination.' (L274-L276).",
+            "layer": "detail"
+          },
+          {
+            "q": "How are subtitle timestamps of later scenes adjusted?",
+            "answer": "Each scene's cues are shifted by the running sum of previous scenes' ffprobe durations (L437-L440)."
+          }
+        ],
+        "self_explain": "Why is 'highest version number wins' a reasonable proxy for 'the version that rendered' in the error-fix design, and when would that proxy pick the wrong file?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/video_renderer.py:L203-L276"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "src/core/video_renderer.py:L391-L440"
+        }
+      ]
+    },
+    {
+      "id": "evaluator-metrics-judges",
+      "label": "evaluate.py: five 1-5 scores from three judges, aggregated by geometric mean",
+      "kind": "quantity",
+      "statement": "evaluate.py scores a topic folder with three judges at temperature 0: a text model (default azure/gpt-4o) reads the transcript and scores accuracy_and_depth and logical_flow; a Gemini model scores visual_consistency on 10 equal-duration video chunks; an image model (default azure/gpt-4o) scores visual_relevance and element_layout on 10 key frames (one per chunk, most non-black pixels); chunk scores are geometric-mean aggregated per criterion and the overall_score is the geometric mean of all five criterion scores.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "evaluate.py:L357-L370",
+            "role": "claim",
+            "quote": "parser.add_argument('--model_text', type=str, \n                       choices=ALLOWED_MODELS,\n                       default='azure/gpt-4o', ... parser.add_argument('--model_video', type=str,\n                       choices=['gemini/gemini-1.5-pro-002', ... default='gemini/gemini-1.5-pro-002', ... parser.add_argument('--model_image', type=str,\n                       choices=ALLOWED_MODELS,\n                       default='azure/gpt-4o',"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "evaluate.py:L384-L395",
+            "role": "computation",
+            "quote": "text_model = LiteLLMWrapper(\n        model_name=args.model_text,\n        temperature=0.0,\n    )\n    video_model = GeminiWrapper(\n        model_name=args.model_video,\n        temperature=0.0,"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/prompts_raw/__init__.py:L57-L63",
+            "role": "claim",
+            "quote": "### Evaluation Criteria\n1. **Accuracy and Depth**\n    - Does the narration explain the theorem accurately? ... 2. **Logical Flow**\n    - Does the video follow a clear and logical structure?"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/prompts_raw/__init__.py:L7-L11",
+            "role": "claim",
+            "quote": "## Evaluation Criteria\n\n1. **Visual Consistency**\n   - Style Consistency: Does the visual style remain consistent across frames?\n   - Smoothness: Are the motions and transitions smooth?"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/prompts_raw/__init__.py:L104-L112",
+            "role": "claim",
+            "quote": "## Evaluation Criteria\n\n1. **Visual Relevance**\n   - Does the video frame align with the theorem's concepts and derivations?\n\n2. **Element Layout**\n   - Placemend and Size: Are the visual elements well-placed and appropriately sized within the frame?\n   - Overlap: Are the visual elements free of unintentional overlap?"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "evaluate.py:L115-L119",
+            "role": "computation",
+            "quote": "# Chunking\n    num_chunks = 10\n    with VideoFileClip(video_path) as clip:\n        duration = clip.duration\n        chunk_duration = duration / num_chunks"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "evaluate.py:L160-L162",
+            "role": "computation",
+            "quote": "evaluation = {}\n    for key, scores in score_dict.items():\n        evaluation[key] = {\"score\": calculate_geometric_mean(scores)}"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/utils.py:L77-L81",
+            "role": "computation",
+            "quote": "scores = [s for s in scores if s is not None]\n    if not scores:\n        return 0.0\n    product = prod(scores)\n    return product ** (1 / len(scores))"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "evaluate.py:L340-L341",
+            "role": "computation",
+            "quote": "if result:\n            result[\"evaluation\"][\"overall_score\"] = calculate_overall_score(result)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "evaluate.py:L181-L189",
+            "role": "computation",
+            "quote": "if isinstance(data, dict):\n        for key, value in data.items():\n            if \"chunks\" in key:\n                continue ... elif key == 'score':\n                scores.append(value)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/image_utils.py:L28-L29",
+            "role": "computation",
+            "quote": "clip = VideoFileClip(video_path)\n    frames = list(clip.iter_frames(fps=1))  # one frame every second"
+          },
+          {
+            "source": "tea_readme",
+            "ref": "external/TheoremExplainAgent-main/README.md:L225-L228",
+            "role": "citation",
+            "quote": "Evaluation\nNote that Gemini and GPT4o is required for evaluation.\n\nCurrently, evaluation requires a video file and a subtitle file (SRT format)."
+          }
+        ],
+        "filtering_note": "Scores are integers 1-5 enforced by convert_score_fields (eval_suite/utils.py L52-L58), which raises on anything else, so a '4.5' from the judge is a retry. The video judge only gets the theorem description and the chunk, not the transcript (video_utils.py L148-L149: the transcript argument is accepted but unused in the prompt). overall_score averages the five criterion means with equal weight, so one 1 in element_layout pulls a 5,5,5,5 video to about 3.6. The research notes list the same five metric names (atlas_research_02 L5)."
+      },
+      "prerequisites": [
+        {
+          "kp": "render-and-concat",
+          "basis": "author-inference",
+          "note": "evaluate.py is a separate entry (discovered_eval.json); its inputs are the combined .mp4 and .srt that combine_videos produces, so it is placed after that stop."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "One multimodal model watches the whole video and produces the five scores.",
+          "why_wrong": "Three separate judges see three different inputs: transcript text only, 10 video chunks, 10 still frames (evaluate.py L320-L330); none sees the whole video with its narration at once."
+        },
+        {
+          "belief": "The overall score is the arithmetic mean of the five criteria.",
+          "why_wrong": "It is the geometric mean of every non-chunk 'score' field (L196-L208, utils.py L66-L81), so a single low criterion depresses it more than an arithmetic mean would."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A video gets criterion means accuracy_and_depth 5, logical_flow 5, visual_consistency 5, visual_relevance 5, element_layout 1. What overall_score does evaluate.py report (to two decimals)?",
+          "format": "number",
+          "answer": "3.62",
+          "tolerance": 0.01,
+          "why": "Geometric mean of [5,5,5,5,1] = (625)^(1/5) = 3.62 (calculate_overall_score -> calculate_geometric_mean over the five criterion scores, skipping *_chunks).",
+          "targets_misconception": "The overall score is the arithmetic mean of the five criteria."
+        },
+        "transfer": {
+          "q": "You run evaluate.py --eval_type video on a folder with a video but no .srt. Which judge runs, which input does it miss, and does the missing transcript change its prompt?",
+          "format": "short",
+          "answer": "Only the Gemini video judge runs over 10 chunks; it never needed the transcript because _video_eval_new is formatted with the description only, so the prompt is identical with or without the .srt.",
+          "why": "eval_type 'video' skips the text branch (L320-L327); evaluate_video_chunk_new formats _video_eval_new.format(description=description) and ignores the transcript parameter (video_utils.py L148).",
+          "varies": "which input file is present and which eval_type is requested (functional dimension)",
+          "invariant": "each judge's prompt uses a fixed subset of inputs; transcript feeds only the text judge",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "Before running evaluate.py --eval_type all on a topic folder, someone swaps its .srt for the narration of a different theorem and leaves the .mp4 untouched. Which of the five criterion scores can the swap change?",
+          "format": "choice",
+          "choices": [
+            "Only visual_consistency, because the video judge aligns narration to chunks",
+            "All five, because every judge receives the transcript as context",
+            "Only accuracy_and_depth and logical_flow, the two the text judge scores",
+            "Only element_layout, because key frames are picked at subtitle timestamps"
+          ],
+          "answer": "Only accuracy_and_depth and logical_flow, the two the text judge scores",
+          "why": "The transcript reaches only evaluate_text_file (evaluate.py L320-L324). The video judge gets transcript_path but evaluate_video_chunk_new formats _video_eval_new with the description only (video_utils.py L148). The image judge receives the video and topic name (evaluate.py L330), and key frames are one per second, chosen by most non-black pixels per chunk (image_utils.py L29, L37-L51). So only the text judge's two criteria can move.",
+          "distractor_from": "B encodes 'one model sees everything'. C assumes the video judge uses the narration; it never reads it. D assumes frames are tied to subtitles; they are sampled at 1 fps.",
+          "targets_misconception": "One multimodal judge sees the whole video with its narration",
+          "varies": "A corrupted transcript under eval_type all instead of a missing transcript under eval_type video; functional",
+          "invariant": "Three judges see three disjoint inputs: transcript text, 10 video chunks, 10 still frames",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the five criteria evaluate.py scores and the judge (text, video, image) that produces each.",
+            "answer": "accuracy_and_depth and logical_flow (text judge); visual_consistency (video judge); visual_relevance and element_layout (image judge)."
+          },
+          {
+            "q": "How many video chunks and how many key frames are scored per video, and how is a key frame chosen?",
+            "answer": "10 chunks and 10 key frames; per chunk of 1-fps frames, the frame with the most non-black pixels.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which temperature do the evaluation judges use, and what integer range must every score fall in?",
+            "answer": "0.0; integers 1 to 5 (convert_score_fields rejects anything else).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would the authors split judging into text-only, video-chunk and still-frame models instead of one judge, and what inter-modal failure (narration says X while the frame shows Y) can no judge see?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "evaluate.py:L315-L346"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "eval_suite/utils.py:L66-L81",
+          "faded": false,
+          "steps": [
+            {
+              "do": "evaluate.py L206: calculate_overall_score calls extract_scores, which collects every 'score' value and skips keys containing 'chunks' (L184). Here that is the five criterion scores [5, 5, 5, 5, 1].",
+              "why": "Each criterion's score already aggregates its chunks (L160-L162), so skipping the chunk lists keeps them from being counted twice."
+            },
+            {
+              "do": "utils.py L77-L79: drop None values (none here); an empty list would return 0.0.",
+              "why": "A missing judge score shrinks the list instead of counting as 0."
+            },
+            {
+              "tex": "\\left(5^4 \\times 1\\right)^{1/5} = 625^{1/5} \\approx 3.62",
+              "do": "L80-L81: take the product, then the 1/len root.",
+              "why": "A geometric mean multiplies, so one weak criterion pulls the result far below the arithmetic mean (21/5 = 4.2)."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:tea--eval-scores",
+          "notice": "Drop one criterion to 1 and compare the geometric overall bar with the arithmetic one: the geometric score falls much further. Only the two text-judge criteria take the transcript."
+        }
+      ]
+    },
+    {
+      "id": "evaluator-blind-spots",
+      "label": "What no stage checks: geometry, narration-visual agreement, learner outcome",
+      "kind": "comparison",
+      "statement": "Across generation and evaluation, TEA never measures a bounding box, overlap or margin (the 0.5/0.3 constraints are prompt text and element_layout is a 1-5 VLM opinion on 10 stills), never checks that narration and visuals agree (the text judge is told to assume reasonable visuals and the video judge is not given the transcript), and never involves a learner; the only hard gate in generation is manim's exit code, so 'rendered' is the success the pipeline counts.",
+      "provenance": {
+        "status": "documented",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/prompts_raw/__init__.py:L65-L66",
+            "role": "claim",
+            "quote": "### Notes\n* You do not have access to the visual portion of the video as you are given only the textual portion. Do not reference or commentate on the visuals as they will be evaluated separately - just assume that there are reasonable visuals"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/prompts_raw/__init__.py:L5",
+            "role": "claim",
+            "quote": "You are tasked with analyzing and scoring a chunk of a theorem explanation video. Note that you may not have the full context of the video."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "eval_suite/prompts_raw/__init__.py:L102",
+            "role": "claim",
+            "quote": "Note that you may not have the context of the video, so the captured frame may be a frame where some motion of visual elements is taking place."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L65-L68",
+            "role": "computation",
+            "quote": "# if result.returncode != 0, it means that the code is not rendered successfully\n                # so we need to fix the code by returning the code and the error message\n                if result.returncode != 0:\n                    raise Exception(result.stderr)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L746-L756",
+            "role": "computation",
+            "quote": "if args.peek_existing_videos:\n            print(f\"Here's the results of checking whether videos are rendered successfully in {args.output_dir}:\") ... if os.path.exists(os.path.join(args.output_dir, item, f\"{item}_combined.mp4\")):\n                        successful_rendered_videos += 1\n            print(f\"Number of successful rendered videos: {successful_rendered_videos}/{total_folders}\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1699",
+            "role": "claim",
+            "quote": "**Critically, during code generation, implement explicit checks to validate if each object's position and animation adheres to the safe area margins (0.5 units) and minimum spacing (0.3 units).**"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L231",
+            "role": "claim",
+            "quote": "Do not include any promotional elements (like YouTube channel promotion, subscribe messages, or external resources) or quiz sessions."
+          },
+          {
+            "source": "atlas_research_02",
+            "ref": "02-llm-education-systems-2024-2026.md:L5",
+            "role": "citation",
+            "quote": "TheoremExplainBench (240 theorems) with 5 automatic metrics (accuracy, visual relevance, logical flow, element layout, visual consistency). Borrow: \"video exposes reasoning flaws text hides\" as a QA lens. Avoid: success rate ~94% but layout problems in most outputs; no learner study."
+          },
+          {
+            "source": "atlas_research_02",
+            "ref": "02-llm-education-systems-2024-2026.md:L69",
+            "role": "citation",
+            "quote": "Measuring render success / VLM aesthetics and calling it education**: nearly every Manim paper except LLM2Manim; TheoremExplainAgent's 94% success hid pervasive layout errors and zero learner data."
+          }
+        ],
+        "filtering_note": "Basis is inference from absence: the claim 'no code measures geometry' rests on reading all 31 modules (discovered.json) and finding no call that inspects mobject positions, bounding boxes or frame bounds; the atlas tools cannot prove a negative, and a fresh clone could differ. The 94% figure and 'layout problems in most outputs' are taken from the research notes' reading of the paper (tea_paper is cited only). The quiz ban in the planner prompt is a product choice, not an oversight, but it means the generated video never asks the learner to commit to a prediction, which is the atlas's first lever."
+      },
+      "prerequisites": [
+        {
+          "kp": "evaluator-metrics-judges",
+          "basis": "author-inference",
+          "note": "You need to know what the five scores are to see what they omit."
+        },
+        {
+          "kp": "error-driven-fix-loop",
+          "basis": "author-inference",
+          "note": "The exit-code gate is the generation-side half of the blind spot."
+        },
+        {
+          "kp": "visual-fix-path-broken",
+          "basis": "author-inference",
+          "note": "The one layout-aware pass in generation is the broken visual-fix path."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The element_layout score verifies the 0.5-unit margin and 0.3-unit spacing the prompts demand.",
+          "why_wrong": "element_layout is a 1-5 judgement by an image model over 10 stills with no numeric criterion (image_eval L109-L112); the margin numbers never reach the evaluator and are never computed anywhere."
+        },
+        {
+          "belief": "A high accuracy_and_depth score means the animation shows the theorem correctly.",
+          "why_wrong": "That score comes from the transcript alone; the text judge is explicitly told it has no access to visuals and to assume they are reasonable (L65-L66)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A generated scene draws a formula that overlaps the axes labels for its whole duration, renders cleanly, and the narration is correct. Which of TEA's generation-side gates reject it, and which evaluation criteria could lower its score?",
+          "format": "short",
+          "answer": "No generation gate: manim exits 0 so succ_rendered.txt is written and the scene is combined. Only element_layout (image judge on stills) and perhaps visual_consistency could lower the score; accuracy_and_depth and logical_flow cannot, since they see the transcript only.",
+          "why": "render_scene's single test is returncode != 0 (L67-L68); the text judge is told to ignore visuals (L65-L66); overlap appears only in the image judge's criteria (L109-L112).",
+          "targets_misconception": "The element_layout score verifies the 0.5-unit margin and 0.3-unit spacing the prompts demand."
+        },
+        "transfer": {
+          "q": "Transfer to a different pipeline: a slide-deck generator whose only gate is 'LaTeX compiled without error' and whose evaluator is an LLM reading the speaker notes. Name the two analogous blind spots and the one TEA criterion that has no analogue there.",
+          "format": "short",
+          "answer": "Blind spots: compile success is not layout correctness (overfull boxes, overlapping figures pass), and judging notes alone cannot see whether slides match the notes. visual_consistency (smoothness of motion across frames) has no analogue because slides have no temporal animation.",
+          "why": "The structure is identical: an exit-code gate plus a single-modality judge; TEA's video judge criterion exists only because Manim output is temporal (L7-L11).",
+          "varies": "the rendering system and medium (domain dimension: slides instead of animation)",
+          "invariant": "exit-code gates and single-modality LLM judges leave cross-modal and geometric faults unmeasured whatever the medium",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A generated TEA scene has exactly one of the defects below. With default flags (no --use_visual_fix_code), which one does the generation pipeline itself catch and send back for a rewrite, before any eval_suite judge could see it?",
+          "format": "choice",
+          "choices": [
+            "A MathTex label whose LaTeX string has an unbalanced brace",
+            "Two formulas that overlap each other for the entire scene",
+            "Narration describing a step that the animation never shows",
+            "Every object placed off-screen, so the scene looks blank"
+          ],
+          "answer": "A MathTex label whose LaTeX string has an unbalanced brace",
+          "why": "The only hard gate in generation is manim's exit code: render_scene raises only when result.returncode != 0 and passes stderr to the fix loop (video_renderer.py L65-L68; generate_video.py L399-L417). An unbalanced brace makes the LaTeX compile fail, manim exits non-zero, and fix_code_errors is called. Overlapping formulas, off-screen objects and narration that disagrees with the animation all render with exit code 0, so succ_rendered.txt is written (video_renderer.py L122-L124). The 0.5/0.3 layout rules are prompt text only (prompts_raw/__init__.py L1699) and nothing compares narration to visuals; at most these defects lower a 1-5 judge score later.",
+          "distractor_from": "B encodes 'the 0.5/0.3 spacing constraints are enforced somewhere before acceptance' (they are prompt text; element_layout is a later VLM opinion on stills). C encodes 'narration and visuals are checked for agreement' (no stage compares them; the text judge is told to assume reasonable visuals). D encodes 'a scene that renders must show something sensible' (blank output still exits 0; the key-frame picker even favours non-black frames).",
+          "targets_misconception": "The pipeline validates layout or narration-visual agreement before a scene counts as rendered",
+          "varies": "Compares four concrete defect types against TEA's gate instead of mapping blind spots onto a slide-deck pipeline; functional",
+          "invariant": "Rendering success is decided only by manim's exit code; layout, emptiness and narration-visual agreement pass that gate and are at most judged later by single-modality judges",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What is the only automatic, non-LLM success test anywhere in TEA's generation pipeline?",
+            "answer": "The manim subprocess exit code in render_scene (returncode != 0 raises; otherwise succ_rendered.txt is written)."
+          },
+          {
+            "q": "Which evaluation judge is explicitly told to assume the visuals are reasonable, and which judge never receives the transcript?",
+            "answer": "The text judge (_text_eval_new Notes) is told to assume reasonable visuals; the video judge's prompt is formatted with the description only."
+          },
+          {
+            "q": "TheoremExplainAgent reports a ~94% video-generation success rate. What did that rate hide, and what kind of evidence was absent from its evaluation?",
+            "answer": "Pervasive layout errors (success only means manim rendered); any learner (comprehension) data."
+          }
+        ],
+        "self_explain": "Why does a pipeline whose planning prompts repeat '0.5-unit margins' five times still produce overlapping layouts, and where would a deterministic check (bounding boxes before render) have to sit to change that?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "eval_suite/prompts_raw/__init__.py:L41-L88"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "src/core/video_renderer.py:L53-L126"
+        },
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:tea--eval-scores",
+          "notice": "Follow each input to its judge: the transcript reaches only the text judge, the video judge gets chunks and the description, and element_layout is an opinion on 10 stills (the video's tail is never sampled). No row measures geometry or compares narration with picture."
+        }
+      ]
+    },
+    {
+      "id": "task-generation-prompts",
+      "label": "Task generation: prompts_raw/*.txt compiled into constants; theorems as {theorem, description} JSON",
+      "kind": "procedure",
+      "statement": "All prompts live as task_generator/prompts_raw/<name>.txt and eval_suite/prompts_raw/<name>.txt; parse_prompt.py rewrites each folder's __init__.py as `_<name> = \"\"\"<file text>\"\"\"` constants, which task_generator/__init__.py wraps in get_prompt_* functions that call .format(); the theorem inputs are JSON lists of {theorem, description, difficulty, remark, subfield} under data/thb_{easy,medium,hard}/<subject>.json, and only 'theorem' and 'description' are read by the pipeline.",
+      "provenance": {
+        "status": "documented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/parse_prompt.py:L42-L50",
+            "role": "computation",
+            "quote": "out_file.write(\"# This file is generated automatically through parse_prompt.py\\n\\n\")\n        txt_files = [file for root, dirs, files in os.walk(folder_path) for file in files if file.endswith(\".txt\")] ... var_name = \"_\" + file_path.replace(folder_path, \"\").replace(os.sep, \"_\").replace(\".txt\", \"\").strip(\"_\") ... out_file.write(f'{var_name} = \"\"\"{content}\"\"\"\\n\\n')"
+          },
+          {
+            "source": "tea_readme",
+            "ref": "external/TheoremExplainAgent-main/README.md:L268-L279",
+            "role": "citation",
+            "quote": "Misc: Modify the system prompt in TheoremExplainAgent ... 1. Modify files in `task_generator/prompts_raw` folder.\n2. Run `task_generator/parse_prompt.py` to rebuild the `__init__.py` file."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/__init__.py:L28-L40",
+            "role": "computation",
+            "quote": "def get_prompt_scene_plan(topic: str, description: str) -> str: ... prompt = _prompt_scene_plan.format(topic=topic, description=description)\n    return prompt"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/__init__.py:L150-L151",
+            "role": "computation",
+            "quote": "def get_banned_reasonings() -> List[str]:\n    return _banned_reasonings.split(\"\\n\")"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L893-L894",
+            "role": "computation",
+            "quote": "topic = theorem['theorem']\n                    description = theorem['description']"
+          },
+          {
+            "source": "tea_readme",
+            "ref": "external/TheoremExplainAgent-main/README.md:L291-L298",
+            "role": "citation",
+            "quote": "Dataset info: ... features: ['uid', 'subject', 'difficulty', 'theorem', 'description', 'subfield'],\n        num_rows: 240"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "task_generator/prompts_raw/__init__.py:L1",
+            "role": "claim",
+            "quote": "# This file is generated automatically through parse_prompt.py"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/config/config.py:L8-L9",
+            "role": "claim",
+            "quote": "OUTPUT_DIR = \"output\"\n    THEOREMS_PATH = os.path.join(\"data\", \"easy_20.json\")"
+          }
+        ],
+        "filtering_note": "discover_repo.py found 38 templates; 7 are never referenced by code outside their module (_code_background, _code_color_cheatsheet, _prompt_best_practices, _prompt_rag_query_generation_storyboard, _prompt_scene_implementation, _prompt_teaching_framework, and _prompt_visual_self_reflection, which is read from its .txt file instead of the constant). Because prompts are Python-format strings, a literal brace in a .txt must be doubled ({{ }}) by the author; parse_prompt.py does not escape anything. Config.THEOREMS_PATH points at data/easy_20.json which does not exist in this copy; the shipped files are data/thb_{easy,medium,hard}/{math,physics,chemistry,comp_sci}.json (20 entries in thb_easy/math.json). The 240-row TEB dataset is on HuggingFace, not in the repo."
+      },
+      "prerequisites": [
+        {
+          "kp": "cli-run-modes",
+          "basis": "author-inference",
+          "note": "The theorem JSON shape is what --theorems_path consumes; the prompt constants are what every stage formats. Not on the call trace: parse_prompt.py is a build step."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Editing a .txt file under prompts_raw changes the next run's prompts.",
+          "why_wrong": "The code imports the constants in prompts_raw/__init__.py; the .txt is read only by parse_prompt.py (and, as the one exception, prompt_visual_self_reflection.txt at code_generator.py L411). You must re-run parse_prompt.py."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You add a new file task_generator/prompts_raw/prompt_layout_lint.txt and run parse_prompt.py from inside task_generator/. What variable name appears in __init__.py, and what else must change before any stage uses it?",
+          "format": "short",
+          "answer": "_prompt_layout_lint; nothing uses it until a get_prompt_* wrapper in task_generator/__init__.py formats it and a stage calls that wrapper.",
+          "why": "var_name is '_' + the file path with the folder prefix removed and .txt stripped (parse_prompt.py L47); the pipeline only calls get_prompt_* functions (task_generator/__init__.py)."
+        },
+        "transfer": {
+          "q": "A theorem file entry has keys {\"name\": \"Stokes' theorem\", \"statement\": \"...\"} instead of theorem/description. What happens in the batch branch? And once the keys are fixed, does leaving out 'difficulty' and 'subfield' change any prompt?",
+          "format": "short",
+          "answer": "KeyError: 'theorem' when process_theorem reads theorem['theorem'], before any model call. Leaving out difficulty/subfield changes nothing, because only 'theorem' and 'description' are read.",
+          "why": "generate_video.py L893-L894 index exactly those two keys; no other field of the JSON is referenced in the pipeline.",
+          "varies": "the schema of the input records (modality dimension: same theorem, different field names)",
+          "invariant": "the pipeline's contract with the data is exactly the two keys theorem and description",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "You edit task_generator/prompts_raw/prompt_scene_plan.txt so it asks for exactly 2 scenes, run nothing else, and start a fresh topic. Which scene-count rule does the planner model receive?",
+          "format": "choice",
+          "choices": [
+            "Both rules, since the .txt edit is appended after the stored constant",
+            "Exactly 2, since get_prompt_scene_plan reads the .txt at call time",
+            "Between 3 and 7, from the constant stored in prompts_raw/__init__.py",
+            "No rule, since the edited .txt and the constant no longer match"
+          ],
+          "answer": "Between 3 and 7, from the constant stored in prompts_raw/__init__.py",
+          "why": "task_generator/__init__.py imports _prompt_scene_plan from prompts_raw (L1-L5) and get_prompt_scene_plan formats that constant (L28-L40). The constant still says 'between 3 and 7' (prompts_raw/__init__.py L225). The .txt is read only by parse_prompt.py when it rewrites __init__.py (parse_prompt.py L42-L50); the README says to rerun it after editing (L268-L279).",
+          "distractor_from": "B encodes 'editing a .txt changes the next run's prompts' (true only for prompt_visual_self_reflection.txt, code_generator.py L411). C and D invent a merge or consistency check that does not exist.",
+          "targets_misconception": "Editing a .txt file under prompts_raw changes the next run's prompts",
+          "varies": "Prompt-source edits instead of theorem-JSON keys; functional",
+          "invariant": "The pipeline reads exactly what its code imports or indexes (the generated constants, the theorem and description keys) and nothing else",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which two keys of a theorem JSON record does generate_video.py read, and which three others does the shipped data carry unused?",
+            "answer": "theorem and description; difficulty, remark, subfield.",
+            "layer": "detail"
+          },
+          {
+            "q": "How does parse_prompt.py derive a constant's name from a prompt file, and what must you run after editing a prompt?",
+            "answer": "'_' + relative path with separators as '_' and '.txt' removed (e.g. prompt_scene_plan.txt -> _prompt_scene_plan); re-run task_generator/parse_prompt.py."
+          }
+        ],
+        "self_explain": "Why would compiling prompt files into a Python module (rather than reading .txt at runtime) make deployments reproducible but make the one runtime .txt read in visual_self_reflection a trap?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "task_generator/parse_prompt.py:L30-L50"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "task_generator/__init__.py:L28-L40"
+        }
+      ]
+    },
+    {
+      "id": "silent-degradation-points",
+      "label": "Where a run degrades without an error: swallowed exceptions and regex fallbacks",
+      "kind": "mechanism",
+      "statement": "Several places turn failures into ordinary-looking data: LiteLLMWrapper.__call__ catches every exception and returns str(e) as the model's text; generate_scene_outline keeps the whole response when the <SCENE_OUTLINE> regex misses, so an API error string can become the saved outline with zero scenes; RAG query generators return [] on JSON errors; and two call sites are statically wrong (the single-topic --only_gen_vid path calls an async method without await, and the batch --only_gen_vid path omits two positional arguments), so those modes do nothing or crash before rendering.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "tea_repo",
+            "ref": "mllm_tools/litellm.py:L186-L193",
+            "role": "computation",
+            "quote": "content = response.choices[0].message.content\n            if content is None:\n                print(f\"Got null response from model. Full response: {response}\")\n            return content\n        \n        except Exception as e:\n            print(f\"Error in model completion: {e}\")\n            return str(e)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_planner.py:L166-L175",
+            "role": "computation",
+            "quote": "scene_outline = scene_outline_match.group(1) if scene_outline_match else response_text ... with open(os.path.join(self.output_dir, file_prefix, f\"{file_prefix}_scene_outline.txt\"), \"w\") as f:\n            f.write(scene_outline)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/rag_integration.py:L330-L332",
+            "role": "computation",
+            "quote": "except Exception as e:\n            print(f\"Error generating RAG queries: {e}\")\n            return []"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/code_generator.py:L137-L143",
+            "role": "computation",
+            "quote": "try: # add try-except block to handle potential json decode errors\n            queries = re.search(r'```json(.*)```', queries, re.DOTALL).group(1)\n            queries = json.loads(queries)\n        except json.JSONDecodeError as e: ... return [] # Return empty list in case of parsing error"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L937-L939",
+            "role": "computation",
+            "quote": "if args.only_gen_vid:\n            video_generator.render_video_fix_code(args.topic, args.context, max_retries=args.max_retries)\n            exit()"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L291-L297",
+            "role": "computation",
+            "quote": "async def render_video_fix_code(self,\n                              topic: str,\n                              description: str,\n                              scene_outline: str,\n                              implementation_plans: List,\n                              max_retries=3,\n                              session_id: str = None) -> None:"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L800",
+            "role": "computation",
+            "quote": "await video_generator.render_video_fix_code(topic, theorem['description'], max_retries=args.max_retries)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L560-L561",
+            "role": "computation",
+            "quote": "# For only_render mode, only process scenes without code\n            if args.only_render:"
+          },
+          {
+            "source": "tea_readme",
+            "ref": "external/TheoremExplainAgent-main/README.md:L317-L318",
+            "role": "citation",
+            "quote": "Q: Plans / Scenes are missing? <br>\nA: It could be API-related issues. Make sure your `.env` file is properly configured (fill in your API keys), or you can enable litellm debug mode to figure out the issues."
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/core/video_renderer.py:L235-L237",
+            "role": "computation",
+            "quote": "plan = f.read()\n        scene_outline = re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', plan, re.DOTALL).group(1)"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "src/rag/rag_integration.py:L160-L163",
+            "role": "computation",
+            "quote": "try: # add try-except block to handle potential json decode errors\n            queries = re.search(r'```json(.*)```', queries, re.DOTALL).group(1)\n            queries = json.loads(queries)\n        except json.JSONDecodeError as e:"
+          },
+          {
+            "source": "tea_repo",
+            "ref": "generate_video.py:L950-L951",
+            "role": "computation",
+            "quote": "if not args.only_plan and not args.only_render:\n                video_generator.combine_videos(args.topic)"
+          }
+        ],
+        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L938 creates a coroutine object that is never awaited (Python prints a RuntimeWarning at exit, nothing renders); L800 passes 2 positional arguments to a method needing 4, raising TypeError. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do."
+      },
+      "prerequisites": [
+        {
+          "kp": "scene-outline-plan",
+          "basis": "author-inference",
+          "note": "The outline regex fallback is the point where a model-wrapper error string becomes a zero-scene plan."
+        },
+        {
+          "kp": "rag-query-retrieve-k2",
+          "basis": "author-inference",
+          "note": "Empty query lists silently remove RAG from a stage."
+        },
+        {
+          "kp": "cli-run-modes",
+          "basis": "author-inference",
+          "note": "The two broken --only_gen_vid call sites are CLI branches."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "If the API key is missing, generate_video.py fails at the first model call.",
+          "why_wrong": "LiteLLMWrapper returns the exception text as if it were the completion (L191-L193); the planner then saves that text as the outline (L167, L174-L175) and the pipeline finishes with 0 scenes. The only traceback comes afterwards and far from the cause: without --only_plan, combine_videos runs re.search('<SCENE_OUTLINE>...').group(1) on that outline with no guard and raises AttributeError (video_renderer.py L237); with --only_plan there is no traceback at all."
+        },
+        {
+          "belief": "A JSON parsing failure in RAG query generation aborts the scene.",
+          "why_wrong": "It returns [] (code_generator.py L143; rag_integration.py L332), so the stage proceeds with no retrieved docs, only a print."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The .env has no API key. You run generate_video.py --topic X --context Y. Describe what ends up in output/x/x_scene_outline.txt and how many scenes are planned, and which README FAQ entry this matches.",
+          "format": "short",
+          "answer": "The litellm exception message (an authentication error string) is saved as the outline; 0 scenes are counted so no plans or renders happen and the run prints 'No scenes need processing'. It then ends in an AttributeError from combine_videos, whose unguarded <SCENE_OUTLINE> regex finds nothing in that file. It matches 'Plans / Scenes are missing?' -> API-related issues.",
+          "why": "__call__ returns str(e) (litellm.py L193); the <SCENE_OUTLINE> regex fails so the string is kept and written (video_planner.py L167, L175); the scene-count regex finds nothing (generate_video.py L516). Without --only_plan, combine_videos is called next (generate_video.py L950-L951) and calls .group(1) on a failed re.search (video_renderer.py L237).",
+          "targets_misconception": "If the API key is missing, generate_video.py fails at the first model call."
+        },
+        "transfer": {
+          "q": "Same missing key, but the outline file already exists from an earlier good run and RAG is on. Which stages now silently degrade and which artifact reveals it?",
+          "format": "short",
+          "answer": "Only plugin detection degrades silently: it returns [] from its catch-all. The per-scene RAG query generators are not silent: the storyboard, technical, narration and code generators catch only JSONDecodeError, so the error string, which has no ```json fence, makes re.search(...).group(1) raise AttributeError, and the first uncached one (scene 1's storyboard queries) stops the run with a traceback before any subplan is written. What reveals it is that traceback plus a scene1/subplans/ folder holding only scene_trace_id.txt. With RAG off, the stage regexes would instead save the error string as each subplan.",
+          "why": "Outline is reused (L497-L500); detect_relevant_plugins catches all exceptions (rag_integration.py L95-L97); the storyboard RAG call comes before the storyboard model call (video_planner.py L222-L241) and its handler catches only json.JSONDecodeError (rag_integration.py L160-L163; same pattern at L207-L210, L254-L257 and code_generator.py L137-L140); without RAG, stage regexes fall back to the full text (video_planner.py L247, L293, L331).",
+          "varies": "which artifacts already exist when the model wrapper starts failing (functional dimension: resume state)",
+          "invariant": "the wrapper never raises, so whether a failure is silent depends on each parser's own fallback: regex fallbacks keep the text as content, while JSONDecodeError-only handlers crash on a reply with no fence",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "The .env has no API key. In a fresh output directory with RAG off, you run generate_video.py --topic 'Euler line' --context 'Collinear triangle centres' --only_plan. What does the run leave behind?",
+          "format": "choice",
+          "choices": [
+            "An outline file holding the error text, plus a plan per scene holding it too",
+            "No outline file: an authentication traceback stops the first planner call",
+            "An outline file holding the error text, no scene folders, and no traceback",
+            "An empty outline file, after the planner call is retried max_retries times"
+          ],
+          "answer": "An outline file holding the error text, no scene folders, and no traceback",
+          "why": "LiteLLMWrapper catches every exception and returns str(e) (mllm_tools/litellm.py L191-L193). generate_scene_outline finds no <SCENE_OUTLINE> and saves the whole string (video_planner.py L166-L175). The scene regex then counts 0 scenes (generate_video.py L273, L516), so no plans or scene folders are created; only_plan returns before rendering (L537-L539) and combine_videos is skipped because of --only_plan (L950).",
+          "distractor_from": "B encodes 'a missing API key fails at the first model call'. C assumes per-scene planning happens; with 0 scenes counted it does not. D confuses --max_retries (a code-fix budget) with API retries and assumes an empty file.",
+          "targets_misconception": "If the API key is missing, generate_video.py fails at the first model call",
+          "varies": "Fresh topic with --only_plan and RAG off instead of a reused outline with RAG on; functional",
+          "invariant": "The model wrapper turns exceptions into completion text, and regex fallbacks save that text as if it were real output",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does LiteLLMWrapper.__call__ return when litellm.completion raises?",
+            "answer": "str(e), the exception message, as if it were the model's reply (mllm_tools/litellm.py L191-L193)."
+          },
+          {
+            "q": "Why does 'python generate_video.py --topic T --context C --only_gen_vid' render nothing?",
+            "answer": "render_video_fix_code is async and is called without await at L938, so the coroutine is created and discarded; the batch variant at L800 instead raises TypeError for missing scene_outline and implementation_plans."
+          },
+          {
+            "q": "What does a RAG query generator return when the model's reply is not valid JSON?",
+            "answer": "An empty list, so that stage proceeds without retrieved documents."
+          }
+        ],
+        "self_explain": "Why does 'never raise, always return a string' at the model-wrapper layer push every failure downstream into regex fallbacks, and what single change would make the failures loud again?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "mllm_tools/litellm.py:L154-L193"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "generate_video.py:L934-L951"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:tea--outline-parse",
+          "notice": "Load the error-text preset: the error string is saved as the outline, 0 scenes are counted, and nothing raises until combine_videos; with --only_plan nothing raises at all."
+        }
+      ]
+    }
+  ]
+}

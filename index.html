@@ -1,71 +1,128 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="description" content="A source-aligned companion to Stanford CS336 with transcript-indexed excerpts, official source locations, formulas, tables, interactive models, visual replays, evidence, and further reading.">
-    <meta name="theme-color" content="#8c1515">
-    <title>CS336 Enriched · Source-aligned companion</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=lecture-first-20260831e">
-  </head>
-  <body>
-    <a class="skip-link" href="#lecture-runs">Skip to the lecture</a>
-    <header class="site-header">
-      <a class="site-brand" href="#lecture-1" data-lecture="1"><span>CS336</span> Enriched</a>
-      <p class="site-purpose">A time-aligned companion to the original lectures</p>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="course-nav">Lectures</button>
-      <nav id="course-nav" class="course-nav" aria-label="Course navigation">
-        <button type="button" data-lecture="1">L1 · Overview &amp; tokenization</button>
-        <button type="button" data-lecture="2">L2 · Resource accounting</button>
-        <button type="button" data-lecture="3">L3 · Architectures</button>
-        <a href="#feedback-guide">Feedback</a>
-      </nav>
-    </header>
-    <main>
-      <section class="course-intro" aria-labelledby="course-title">
-        <p class="eyebrow">Independent educational companion · Spring 2026</p>
-        <h1 id="course-title">A source-aligned companion to Stanford CS336</h1>
-        <p>The companion follows each lecture in order and places transcript-indexed excerpts, official slide or code locations, formula comparisons, resource-accounting tables, interactive models, slow visual replays, evidence summaries, and further reading at the moment they are useful.</p>
-        <p class="independence"><strong>Scope and attribution.</strong> The original lectures remain the primary course material. Professor content, our source-faithful paraphrases, finished augmentations, and planned work are labeled separately. This project is not affiliated with Stanford University.</p>
-      </section>
-      <section class="lecture-intro" aria-labelledby="lecture-title">
-        <div class="lecture-heading">
-          <p id="lecture-kicker" class="eyebrow"></p>
-          <h2 id="lecture-title"></h2>
-          <p id="lecture-thesis"></p>
-          <div id="lecture-links" class="lecture-links"></div>
-        </div>
-        <aside class="lecture-media-note" aria-label="How original material is presented">
-          <p class="eyebrow">Original material, in context</p>
-          <strong>Transcript-timed video excerpts sit beside the exact slide or executable-source location.</strong>
-          <p>Stanford Online disables third-party playback, so each excerpt opens the official video at its start and keeps the exact stop time visible here. We do not download, cut, or rehost the lecture video.</p>
-        </aside>
-      </section>
-      <div class="lecture-layout">
-        <aside class="run-outline" aria-label="Lecture timeline">
-          <div class="sticky-block"><p class="rail-label">Lecture timeline</p><nav id="run-nav"></nav></div>
-        </aside>
-        <div id="lecture-runs" class="lecture-runs" aria-live="polite"></div>
-        <aside id="context-rail" class="context-rail" aria-label="Current lecture augmentations">
-          <div class="sticky-block"><p class="rail-label">At this moment</p><div id="rail-content"></div></div>
-        </aside>
-      </div>
-      <section id="feedback-guide" class="feedback-guide" aria-labelledby="feedback-title">
-        <div><p class="eyebrow">Shared revision loop</p><h2 id="feedback-title">Comment on the handoff, not an isolated card</h2></div>
-        <p>At the end of each run, choose the legacy anchor closest to the moment you are discussing. Tell us which sentence, code line, or slide the supplement clarified or obscured. Giscus stores the thread under that stable anchor.</p>
-        <p id="discussion-status" class="discussion-status"></p>
-      </section>
-    </main>
-    <footer class="site-footer"><p>CS336 Enriched is an independent educational companion.</p><a href="https://cs336.stanford.edu/">Official CS336 course ↗</a></footer>
-    <div id="feedback-toast" class="toast" role="status" aria-live="polite" hidden></div>
-    <script src="config.js"></script>
-    <script src="data/lectures.js"></script>
-    <script src="data/lecture_runs.js"></script>
-    <script src="data/augmentation_registry_v2.js"></script>
-    <script src="app.js?v=lecture-first-20260831e"></script>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atlas · CS336</title>
+<meta name="description" content="Knowledge points from Stanford CS336, papers and RL repos, with source provenance, the professor's spoken filtering, predict-before-reveal prompts, and mechanisms you can drive.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2324668d' stroke-width='3'/%3E%3Cpath d='M16 5v22M5 16h22' stroke='%23b8582a' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+:root { --bg:#f7f5ef; --card:#fff; --ink:#25313d; --muted:#6b7680; --rule:#e2ddd2; --accent:#24668d; --accent2:#b8582a; --ok:#3c8d5a; --mono: ui-monospace, SFMono-Regular, Menlo, monospace; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#15191d; --card:#1d2329; --ink:#e6e2d9; --muted:#9aa4ad; --rule:#2f363d; --accent:#6aa8cf; --accent2:#e08a5c; --ok:#6cbf88; } }
+:root[data-theme="dark"] { --bg:#15191d; --card:#1d2329; --ink:#e6e2d9; --muted:#9aa4ad; --rule:#2f363d; --accent:#6aa8cf; --accent2:#e08a5c; --ok:#6cbf88; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding: 40px 16px 80px; }
+h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 22px; margin: 48px 0 12px; }
+h3 { font-size: 16px; margin: 0 0 4px; }
+p { margin: 8px 0; }
+.lede { font-size: 18px; color: var(--muted); max-width: 760px; }
+a { color: var(--accent); }
+.cta { display:inline-block; margin: 16px 12px 0 0; padding: 10px 16px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; }
+.cta.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; }
+.card video { width: 100%; border-radius: 6px; border: 1px solid var(--rule); background: #f7f5ef; }
+.card .notice { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.stats { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+.stat { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+.stat b { display:block; font-size: 26px; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.two { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+ol.flow { padding-left: 20px; } ol.flow li { margin: 4px 0; }
+.threads { display:flex; flex-wrap: wrap; gap: 8px; }
+.threads a { font-size: 14px; padding: 4px 10px; border: 1px solid var(--rule); border-radius: 999px; background: var(--card); text-decoration: none; }
+.small { font-size: 14px; color: var(--muted); }
+code { font-family: var(--mono); font-size: 0.92em; }
+footer { margin-top: 56px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Atlas: CS336 as knowledge points you predict, then see</h1>
+  <p class="lede">Stanford CS336 (all 17 lectures), five papers and three repositories, cut into 418 knowledge points. Each one carries where it comes from, including what the professor said but did not write; a prediction you commit before anything is revealed; a mechanism you can drive or watch; and a changed case you answer closed book.</p>
+  <a class="cta" href="site/#/map">Open the course map</a>
+  <a class="cta ghost" href="site/#/session/l5-gpu">Try a 30-minute session (GPUs)</a>
+  <a class="cta ghost" href="site/#/t/lecture_08/_gallery">See one lecture's widgets</a>
+
+  <div class="stats">
+    <div class="stat"><b>418</b><span>knowledge points across 25 threads</span></div>
+    <div class="stat"><b>271</b><span>with an interactive or animation (84 a day earlier)</span></div>
+    <div class="stat"><b>111</b><span>widget models, each tied to its prompts' answers by 1,265 test cases</span></div>
+    <div class="stat"><b>25</b><span>rendered Manim animations, 8 new scene families</span></div>
+    <div class="stat"><b>85%</b><span>of 1,376 minutes of lecture talk mapped to a knowledge point</span></div>
+    <div class="stat"><b>1,074</b><span>spaced-repetition cards, audited blind, in two layers</span></div>
+  </div>
+
+  <h2>One knowledge point, five moves</h2>
+  <div class="two">
+    <div class="card">
+      <ol class="flow">
+        <li><b>Predict.</b> Commit a number, a trend or a sentence before anything is shown.</li>
+        <li><b>See the mechanism.</b> A widget whose control is the quantity the question varies, a stepped animation with one thing to notice, a worked derivation whose last step you write yourself the second time.</li>
+        <li><b>Changed case, closed book.</b> The mechanism, the sources and the cards hide while you answer a new case. Mastery needs it and an auto-graded check.</li>
+        <li><b>Retrieve later.</b> Core cards come back on an FSRS schedule; detail cards (identifiers, exact constants) wait until the core is remembered twice.</li>
+        <li><b>Provenance.</b> Every claim is anchored to a line of the lecture code, a slide page, a paper section or a timestamp in the lecture video.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Two lines meet at the knowledge point</h3>
+      <p><b>Teacher line:</b> recover what the lecture rests on and what it filtered out. Discover tools read the executable lectures, slides and papers; human-made captions add 404 moments where the professor skipped, deferred or digressed, and 42 knowledge points that exist only in the audio.</p>
+      <p><b>Student line:</b> decide what a learner needs to see. Animate only change over time; make a widget's numbers agree with the question; show the worked steps, then fade them.</p>
+      <p class="small"><a href="PHILOSOPHY.md">Philosophy and the evidence behind each rule</a></p>
+    </div>
+  </div>
+
+  <h2>Mechanisms, rendered</h2>
+  <p class="small">Each animation is driven by a JSON fixture, linted for overlap, and cross-checked against the fixture's numbers. On a knowledge point page the step thumbnails are seek points.</p>
+  <div class="grid">
+    <div class="card"><video src="build/lecture_07--ring-allreduce/video.mp4" controls preload="metadata" playsinline></video><h3>Ring all-reduce = reduce-scatter + all-gather</h3><p class="notice">L7 · each rank sends 2(W−1) pieces of size S/W; the sums 6, 10, 14, 18 match the lecture's code.</p></div>
+    <div class="card"><video src="build/flashattention--alg1-loop/video.mp4" controls preload="metadata" playsinline></video><h3>FlashAttention, Algorithm 1 as printed</h3><p class="notice">K/V blocks outside, Q blocks inside: Q and O cross HBM once per K/V block, and S is never written.</p></div>
+    <div class="card"><video src="build/lecture_03--swa-reach/video.mp4" controls preload="metadata" playsinline></video><h3>How far a sliding window reaches</h3><p class="notice">L3 · each local layer adds one window; the full-attention layer lights the whole context.</p></div>
+    <div class="card"><video src="build/lecture_06--blocks-vs-tiles/video.mp4" controls preload="metadata" playsinline></video><h3>Triton: blocks vs tiles</h3><p class="notice">L6 · "These are not blocks. These are tiles." A row sum stays in one program looping over tiles.</p></div>
+    <div class="card"><video src="build/lecture_02--checkpoint-sweep/video.mp4" controls preload="metadata" playsinline></video><h3>Activation checkpointing</h3><p class="notice">L2 · keep every 4th layer; peak 4 + 4 = 8 of 16, at the cost of one extra forward.</p></div>
+    <div class="card"><video src="build/grpo--alg1-iterations/video.mp4" controls preload="metadata" playsinline></video><h3>GRPO's three policies</h3><p class="notice">π_old resets every step; π_ref moves only at an iteration boundary, after the reward model is retrained.</p></div>
+    <div class="card"><video src="build/feynrl--overlap-rounds/video.mp4" controls preload="metadata" playsinline></video><h3>Async RL: staleness in the buffer</h3><p class="notice">FeynRL · a failed weight sync leaves a version gap; FIFO drops the oldest shards before eviction.</p></div>
+    <div class="card"><video src="build/lecture_10--continuous-batching/video.mp4" controls preload="metadata" playsinline></video><h3>Continuous batching</h3><p class="notice">L10 · freed slots refill at every decode step; 13 steps instead of 18.</p></div>
+  </div>
+
+  <h2>Widgets, by thread</h2>
+  <p class="small">Every thread has a gallery of its widgets, shown without gating. On a knowledge point page each appears only after you commit a prediction.</p>
+  <div class="threads">
+    <a href="site/#/t/lecture_01/_gallery">L1 tokenization</a><a href="site/#/t/lecture_02/_gallery">L2 resource accounting</a><a href="site/#/t/lecture_03/_gallery">L3 architectures</a><a href="site/#/t/lecture_04/_gallery">L4 MoE, attention variants</a><a href="site/#/t/lecture_05/_gallery">L5 GPUs</a><a href="site/#/t/lecture_06/_gallery">L6 kernels, Triton</a><a href="site/#/t/lecture_07/_gallery">L7 collectives</a><a href="site/#/t/lecture_08/_gallery">L8 parallelism</a><a href="site/#/t/lecture_09/_gallery">L9 scaling laws</a><a href="site/#/t/lecture_10/_gallery">L10 inference</a><a href="site/#/t/lecture_11/_gallery">L11 scaling in practice</a><a href="site/#/t/lecture_12/_gallery">L12 evaluation</a><a href="site/#/t/lecture_13/_gallery">L13 data I</a><a href="site/#/t/lecture_14/_gallery">L14 data II</a><a href="site/#/t/lecture_15/_gallery">L15 SFT, RLHF</a><a href="site/#/t/lecture_16/_gallery">L16 RLVR</a><a href="site/#/t/lecture_17/_gallery">L17 multimodal</a>
+    <a href="site/#/t/chinchilla/_gallery">Chinchilla</a><a href="site/#/t/flashattention/_gallery">FlashAttention</a><a href="site/#/t/rope/_gallery">RoPE</a><a href="site/#/t/grpo/_gallery">GRPO</a><a href="site/#/t/feynrl_paper/_gallery">FeynRL / P3O</a>
+    <a href="site/#/t/feynrl/_gallery">FeynRL repo</a><a href="site/#/t/edtrace/_gallery">edtrace repo</a><a href="site/#/t/tea/_gallery">TheoremExplainAgent repo</a>
+  </div>
+
+  <h2>What building it found</h2>
+  <div class="two">
+    <div class="card">
+      <h3>In the material</h3>
+      <ul class="small">
+        <li>RefinedWeb's "600B of 5T" is a released share, not a filter rate.</li>
+        <li>FlashAttention's printed loop order is the reverse of the common lecture animation.</li>
+        <li>FeynRL says a temperature shift moves ESS, but its Eq. 11 is invariant to a common scale.</li>
+        <li>Chinchilla's Table A3 prints 1.26e24 FLOPs for the 175B row; 6ND gives 1.26e25.</li>
+        <li>38 slips in the lectures (wrong stage numbers, swapped Q/K/V) recorded and not taught.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>In our own design</h3>
+      <ul class="small">
+        <li>A widget can compute the changed case, so the changed case became closed book.</li>
+        <li>Card titles stated the answer on 24% of review cards; reviews now hide them.</li>
+        <li>"Faded" steps hid nothing; worked steps are now real and the last one is yours to write.</li>
+        <li>About 50 older presentations described things they did not draw, or opened on the asked case.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    <p><b>Status.</b> No learner has used it yet; every number above describes the material, not learning outcomes. A first study session is the next step.</p>
+    <p>Course material: <a href="https://github.com/stanford-cs336/lectures">stanford-cs336/lectures</a> (figures load from there). Lecture video links go to the course's YouTube playlist. Built with Claude Code.</p>
+  </footer>
+</main>
+</body>
 </html>

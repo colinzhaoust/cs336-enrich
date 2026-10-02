@@ -1,0 +1,855 @@
+{
+  "paper": "grpo",
+  "title": "DeepSeekMath: Group Relative Policy Optimization and the unified paradigm (Shao et al., 2024)",
+  "version": "0.1.0",
+  "authoring_note": "Anchors follow sources.json: grpo:§x / grpo:eqN / grpo:tableN / grpo:figN / grpo:algorithm1 for the paper (arXiv HTML v3, text in paper.txt, equation LaTeX in discovered.json), algs/GRPO/grpo.py:Lx etc. for FeynRL at sha dfe85351 (code anchors carry status 'implemented' and are line-checked by tools/check_anchors.py), lecture_16.pdf:pNN for the CS336 slides (page-checked against lecture_16.txt). Paper quotes were checked verbatim against paper.txt by a whitespace-insensitive match (see discovered.json verification_note). Status 'computed' marks KPs whose claim is an equation, 'said' prose claims, 'shown' table/figure results, 'supplement' prerequisites the paper uses without stating. Figures 5-7 are images: statements only repeat what the captions and text say. Numeric answers were computed by hand from the equations; where the paper leaves a convention open (population vs sample std) the prompt fixes it. Cross-thread prerequisites live in external_prerequisites (feynrl:<id>, lecture_16:<id>) and are author inference until a learner attempt confirms them. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later.",
+  "knowledge_points": [
+    {
+      "id": "supp-policy-gradient",
+      "label": "Supplement: the policy-gradient form E[coef · ∇log π] and why a baseline is free",
+      "kind": "mechanism",
+      "statement": "Every method in the paper updates θ along E[(1/|o|) Σ_t c_t ∇_θ log π_θ(o_t | q, o_<t)]: a per-token scalar coefficient times the score function, and subtracting any quantity that does not depend on the sampled output from c_t leaves the expected gradient unchanged while lowering its variance.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:eq5", "role": "computation", "quote": "Generally, the gradient with respect to the parameter $\\theta$ of a training method can be written as:"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.1", "role": "claim", "quote": "during RL training, the value function is treated as a baseline in the calculation of the advantage for variance reduction"},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p5", "role": "claim", "quote": "Attempt 1: Policy gradients (variances are too high)"},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p22", "role": "claim", "quote": "Baselining: We can subtract any state-dependent term from our rewards"}
+        ],
+        "filtering_note": "The paper writes the unified gradient (Eq. 5) and calls the value function a baseline, but never states the baseline identity E[b ∇log π] = 0 that justifies subtracting the group mean. The course does state it (p22, Sutton and Barto) and then notes that dividing by the std is not covered by it (p23). Added as an assumed prerequisite; basis inference."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {"kp": "lecture_16:policy-gradient-variance", "basis": "author-inference", "note": "same identity, stated as REINFORCE on slide p5"}
+      ],
+      "misconceptions": [
+        {"belief": "Subtracting a baseline changes which direction the policy moves in expectation.", "why_wrong": "E_{o~π}[b ∇log π(o)] = b ∇ Σ_o π(o) = b ∇1 = 0 for any b that does not depend on o; only the variance changes."},
+        {"belief": "Any rescaling of the coefficient is equally harmless.", "why_wrong": "Dividing by a quantity that depends on the sampled group (the group std) changes the weighting of questions and is not covered by the identity; the course flags exactly this on p23."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A question has two possible outputs with π(a) = 0.75, π(b) = 0.25 and rewards R(a) = 1, R(b) = 0. Write the expected policy gradient E[R ∇log π] as a combination of ∇log π(a) and ∇log π(b). Then subtract the constant b = 0.5 from both rewards and write it again. Which term changed?",
+          "format": "short",
+          "answer": "Before: 0.75·1·∇log π(a) + 0.25·0·∇log π(b) = 0.75 ∇log π(a). After: 0.75·0.5·∇log π(a) − 0.25·0.5·∇log π(b). They are equal, because 0.25 ∇log π(b) = ∇π(b) = −∇π(a) = −0.75 ∇log π(a).",
+          "why": "Σ_o π(o) ∇log π(o) = ∇ Σ_o π(o) = 0, so the extra −b Σ π ∇log π term vanishes. The sampled estimate differs, the expectation does not."
+        },
+        "transfer": {
+          "q": "Same two outputs, but now the coefficient is divided by a constant s = 0.4 that is the same for every output of this question (GRPO's group std plays this role; treat it here as a fixed number) instead of a constant being subtracted. Does the expected gradient direction stay the same as the un-scaled one, change direction, or only change magnitude? Explain in one clause.",
+          "format": "choice",
+          "choices": ["Direction and magnitude unchanged", "Direction unchanged, magnitude scaled by 1/s", "Direction can change, because s depends on the sampled rewards and does not factor out of the expectation"],
+          "answer": "Direction unchanged, magnitude scaled by 1/s",
+          "why": "With a fixed s the factor leaves the expectation; the catch is that in GRPO s is recomputed per question from the sampled group, so across questions the effective learning rate differs (the course's p24 'upweights too easy or hard questions'). Within one question with s treated as a number, it is a pure rescaling.",
+          "varies": "the operation on the coefficient: multiplicative rescaling instead of additive baseline",
+          "invariant": "the expectation is over o ~ π with the score-function identity",
+          "distractor_from": "Any rescaling of the coefficient is equally harmless; Subtracting a baseline changes the direction",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "State the identity that makes subtracting a baseline b from the reward leave the expected policy gradient unchanged.", "answer": "E_{o~π}[b ∇log π(o)] = b ∇ Σ_o π(o) = 0 for any b independent of o."},
+          {"q": "In the unified policy-gradient form, what multiplies ∇_θ log π_θ(o_t | q, o_<t) inside the sum over tokens?", "answer": "The gradient coefficient GC_A(q, o, t, π_rf), a per-token scalar set by the algorithm."}
+        ],
+        "self_explain": "Why does a baseline that is allowed to depend on the question q but not on the sampled output o still satisfy the identity?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "restate", "ref": "grpo:eq5", "faded": true, "steps": [
+            {"tex": "\\nabla_\\theta\\,\\mathbb{E}_{o\\sim\\pi_\\theta(\\cdot\\mid q)}[R(o)] = \\mathbb{E}_{o}\\big[R(o)\\,\\nabla_\\theta\\log\\pi_\\theta(o\\mid q)\\big]", "why": "This is the log-derivative trick, worked in full in lecture_16:policy-gradient-variance, applied here to one question q."},
+            {"tex": "\\log\\pi_\\theta(o\\mid q) = \\sum_{t=1}^{|o|}\\log\\pi_\\theta(o_t\\mid q,o_{<t})", "why": "The policy is autoregressive, so the sequence score splits into one score per token, and each token can get its own weight."},
+            {"tex": "\\nabla_\\theta\\mathcal{J}_{\\mathcal{A}}(\\theta) = \\mathbb{E}_{(q,o)\\sim\\mathcal{D}}\\Big[\\frac{1}{|o|}\\sum_{t=1}^{|o|} GC_{\\mathcal{A}}(q,o,t)\\,\\nabla_\\theta\\log\\pi_\\theta(o_t\\mid q,o_{<t})\\Big]", "why": "Replace R by a per-token coefficient GC, which can hold the reward, a baseline or a KL term, and average over tokens. This is Eq. 5, the form every method in the paper takes."}
+          ]},
+        {"type": "formula-step", "action": "compare", "ref": "lecture_16.pdf:p22", "faded": true, "steps": [
+            {"tex": "\\mathbb{E}_{o\\sim\\pi}\\big[b\\,\\nabla\\log\\pi(o)\\big] = b\\sum_o\\pi(o)\\nabla\\log\\pi(o) = b\\sum_o\\nabla\\pi(o)", "why": "b does not depend on the sampled output, so it leaves the expectation. Then π·∇log π = ∇π (lecture_16:baseline-validity-std-division works this in full)."},
+            {"tex": "b\\,\\nabla\\sum_o\\pi(o) = b\\,\\nabla 1 = 0", "why": "The output probabilities of one question always sum to 1."},
+            {"do": "The predict's two outputs, π(a) = 0.75 and π(b) = 0.25: 0.75·∇log π(a) + 0.25·∇log π(b) = ∇π(a) + ∇π(b) = 0. So subtracting 0.5 from both rewards removes 0.5 × 0 from the expected gradient.", "why": "This is the identity in numbers. The baseline changes each sample's coefficient, and so the noise of a one-sample estimate, but not the expectation."}
+          ]},
+        {"type": "interactive", "action": "compare", "ref": "fixture:grpo--baseline", "notice": "The blue expected-gradient line stays flat however you move b; only the orange one-sample noise changes (it reaches 0 at b* = π(b)). Dividing by s rescales the blue line without changing its sign."}
+      ]
+    },
+    {
+      "id": "supp-importance-ratio",
+      "label": "Supplement: the ratio π_θ/π_old equals 1 at the first update, so clipping is inactive there",
+      "kind": "mechanism",
+      "statement": "The surrogate's per-token ratio π_θ(o_t|·)/π_old(o_t|·) is exactly 1 when the gradient is taken at θ = θ_old; its gradient there is ∇log π_θ, the clip never binds, and with a single policy update per batch of samples the PPO/GRPO objective reduces to a plain policy gradient weighted by the advantage.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:§A.1.5", "role": "claim", "quote": "it is assumed that the model only has a single update following each exploration stage, thereby ensuring that ... In this case, we can remove the $\\min$ and ${\\rm clip}$ operation"},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "The policy model only has a single update following each exploration stage."},
+          {"source": "grpo_paper", "ref": "grpo:eq17", "role": "computation", "quote": "The gradient of $\\mathcal{J}_{PPO}(\\theta)$ is:"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L169-L171", "role": "computation", "status": "implemented", "quote": "raw_logratio = (logprobs - old_logprobs).to(torch.float32) ... ratio        = torch.exp(logratio)"},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p18", "role": "claim", "quote": "In the online case (rollout+immediate update), this is just policy gradient with group normalized rewards"}
+        ],
+        "filtering_note": "The paper uses the ratio = 1 simplification only in the appendix to derive gradient coefficients, yet §4.2 says their actual runs also used a single update per exploration stage; put together (author inference) the min/clip of Eq. 3 never acted in the reported DeepSeekMath-RL training. The course says the same in one line on p18. FeynRL computes the ratio in float32 from stored old_logprobs and does run several updates per buffer, where clipping does act."
+      },
+      "prerequisites": [{"kp": "supp-policy-gradient", "basis": "author-inference"}],
+      "external_prerequisites": [
+        {"kp": "lecture_16:ppo-ratio-clip", "basis": "author-inference"},
+        {"kp": "feynrl:supp-importance-ratio", "basis": "author-inference", "note": "same supplement from the code side"}
+      ],
+      "misconceptions": [
+        {"belief": "Because the ratio is 1, the ratio term contributes no gradient.", "why_wrong": "The value is 1 but its derivative is ∇π_θ/π_old = ∇log π_θ at θ = θ_old; the term is constant in value, not in slope."},
+        {"belief": "Clipping limits how far each single gradient step can move the policy.", "why_wrong": "Clipping only zeroes the gradient of tokens whose ratio has already left the band; on the first update no ratio has left it, so the first step is unclipped."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "At the moment the first gradient is computed after sampling, θ = θ_old. For one token with advantage Â = 0.8 and ε = 0.2, what are (i) the ratio, (ii) the value of min[ratio·Â, clip(ratio,1−ε,1+ε)·Â], and (iii) the gradient of that expression with respect to θ, written in terms of ∇log π_θ?",
+          "format": "short",
+          "answer": "(i) 1; (ii) 0.8; (iii) 0.8 ∇log π_θ(o_t | q, o_<t): the unclipped branch is active and d(ratio)/dθ = ∇log π_θ at ratio 1.",
+          "why": "π_θ/π_old = 1 and 1 lies inside [0.8, 1.2], so min picks the unclipped term; its derivative is Â ∇(π_θ/π_old) = Â (π_θ/π_old) ∇log π_θ = Â ∇log π_θ (Eq. 17 with A_t = Â)."
+        },
+        "transfer": {
+          "q": "FeynRL runs several optimizer steps on the same replay buffer. After the first step a token's stored old_logprobs is −1.0 and the current logprobs is −0.5; Â = −1, clip band [0.8, 1.2]. Which branch of the min is active now, and what is the gradient from this token?",
+          "format": "short",
+          "answer": "ratio = e^{0.5} ≈ 1.65; unclipped = −1.65, clipped = 1.2·(−1) = −1.2; min = −1.65 (unclipped branch), so the gradient is −1.65 ∇log π_θ, not zero.",
+          "why": "With a negative advantage the clip only protects the low side (ratio < 0.8): the clipped value −1.2 is larger than −1.65, so the minimum is the unclipped term and the policy keeps being pushed down on this token. This is the asymmetry the ratio-clip interactive shows.",
+          "varies": "second update on the same samples (ratio no longer 1) and negative advantage",
+          "invariant": "min over the two surrogates; clip is flat only outside the band on the side the advantage's sign selects",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A run takes several optimizer steps per sampled batch, so the ratio has moved away from 1. For one token the stored old log-probability is −2.0 and the current log-probability is −2.3; its advantage is Â = +1 and the clip band is [0.8, 1.2]. The per-token surrogate is min[ρ·Â, clip(ρ, 0.8, 1.2)·Â] with ρ = π_θ/π_old. Its gradient with respect to θ is c·∇log π_θ for this token. What is c? Give it to three decimals. Type only the number.",
+          "format": "number",
+          "answer": "0.741",
+          "tolerance": 0.03,
+          "value": 0.741,
+          "why": "ρ = exp(−2.3 − (−2.0)) = e^{−0.3} ≈ 0.741. Unclipped term = 0.741·1 = 0.741; clipped term = clip(0.741, 0.8, 1.2)·1 = 0.8. The min is 0.741, the unclipped branch, so the gradient is Â·∇ρ = Â·ρ·∇log π_θ = 0.741 ∇log π_θ. With a positive advantage the clip only binds on the high side (ρ > 1.2); a ratio below the band keeps its full gradient. Answering 0.8 treats the clip as limiting every step; answering 0 treats a moved ratio as gradient-free.",
+          "targets_misconception": "Clipping limits how far each single gradient step can move the policy (so any ratio outside the band is cut off).",
+          "varies": "Sign of the advantage flipped to positive and the ratio moved below the band instead of above it (functional: the other side of the clip asymmetry).",
+          "invariant": "The min picks the unclipped branch unless the ratio has left the band in the direction the advantage pushes; d(ρ)/dθ = ρ·∇log π_θ.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "What is d/dθ of π_θ(o_t|·)/π_old(o_t|·) evaluated at θ = θ_old?", "answer": "∇_θ log π_θ(o_t | q, o_<t)."},
+          {"q": "Which two code lines in FeynRL produce the ratio from stored and current log-probabilities?", "answer": "raw_logratio = (logprobs - old_logprobs).to(torch.float32); ratio = torch.exp(logratio) (algs/GRPO/grpo.py:L169-L171).", "layer": "detail"}
+        ],
+        "self_explain": "Why does the appendix need the single-update assumption to turn Eq. 15 into Eq. 17, and what would the gradient coefficient look like without it?"
+      },
+      "presentations": [
+        {"type": "interactive", "action": "compute", "ref": "fixture:grpo--token-coefficient", "notice": "With log π_θ = log π_old the point sits at ρ = 1 inside the band and the ratio part of GC equals Â; it drops to 0 only once ρ leaves the band on the side Â's sign selects (above 1+ε for Â > 0, below 1−ε for Â < 0), and on the other side it stays ρÂ."},
+        {"type": "code", "action": "trace", "ref": "algs/GRPO/grpo.py:L165-L176"}
+      ]
+    },
+    {
+      "id": "ppo-value-model-cost",
+      "label": "Why PPO's value model is expensive for LLMs, and what GRPO replaces it with",
+      "kind": "comparison",
+      "statement": "PPO's advantage A_t comes from GAE over a learned value function V_ψ, which is typically a second model the size of the policy and must be accurate at every token although only the last token receives a reward; GRPO removes it and uses the mean reward of G outputs sampled for the same question as the baseline.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:§4.1.1", "role": "claim", "quote": "As the value function employed in PPO is typically another model of comparable size as the policy model, it brings a substantial memory and computational burden."},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.1", "role": "claim", "quote": "usually only the last token is assigned a reward score by the reward model, which may complicate the training of a value function that is accurate at each token"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.1", "role": "claim", "quote": "uses the average reward of multiple sampled outputs, produced in response to the same question, as the baseline"},
+          {"source": "grpo_paper", "ref": "grpo:fig4", "role": "figure", "quote": "GRPO foregoes the value model, instead estimating the baseline from group scores, significantly reducing training resources."},
+          {"source": "grpo_paper", "ref": "grpo:eq1", "role": "computation", "quote": "is the advantage, which is computed by applying Generalized Advantage Estimation (GAE) (Schulman et al., 2015), based on the rewards"},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p17", "role": "claim", "quote": "Value model (memory hungry, involves additional tuning for training)"}
+        ],
+        "filtering_note": "The paper gives two reasons (memory/compute of a policy-sized critic; per-token value hard to learn from a last-token reward) and quantifies neither: no memory numbers, no ablation of PPO vs GRPO at equal compute appears in the paper. The course repeats the memory reason and adds 'complicated implementation' (p17). Basis: evidence for the claims, inference for any cost figure a learner derives."
+      },
+      "prerequisites": [{"kp": "supp-policy-gradient", "basis": "author-inference"}],
+      "external_prerequisites": [
+        {"kp": "lecture_16:why-grpo-not-ppo-or-dpo", "basis": "author-inference"},
+        {"kp": "lecture_16:language-rl-is-a-bandit", "basis": "author-inference", "note": "one terminal reward is why a per-token value is hard"}
+      ],
+      "misconceptions": [
+        {"belief": "GRPO is cheaper because it samples fewer outputs.", "why_wrong": "It samples more (G = 64 per question in §4.2); the saving is the absent critic, both its memory and its forward/backward passes."},
+        {"belief": "Dropping the value model removes the reference model too.", "why_wrong": "Eq. 3 still needs π_ref for the KL term; GRPO holds policy, reference and reward model, PPO additionally holds the critic."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "RL fine-tuning of a 7B policy with PPO as described in §4.1.1 (policy, critic of comparable size, reference model, reward model). How many 7B-class networks are resident, and which one does GRPO remove?",
+          "format": "short",
+          "answer": "Four under PPO; GRPO removes the critic (value function V_ψ), leaving three: policy, reference, reward model.",
+          "why": "The paper says the value function is 'typically another model of comparable size'; the reference model stays because Eq. 3's KL term needs it, and the reward model stays because it scores the outputs."
+        },
+        "transfer": {
+          "q": "A team uses a rule-based verifier (exact-answer match) instead of a learned reward model, and sets β = 0 so no reference model is needed. Under PPO and under GRPO respectively, how many trained networks must be resident at training time?",
+          "format": "short",
+          "answer": "PPO: two (policy and critic). GRPO: one (policy only).",
+          "why": "The reward model and reference model were removed by the setup change; the critic is specific to PPO's advantage estimate and is the one network GRPO never needs. This is the configuration FeynRL's gsm8k recipe runs (kl_coeff 0, rule reward).",
+          "varies": "reward source (rule instead of model) and β = 0",
+          "invariant": "PPO's advantage needs a critic; GRPO's does not",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A team fine-tunes a 7B policy with RL. Assume every trained network costs 16 bytes per parameter (weights, gradients, Adam states) and every frozen network costs 2 bytes per parameter. Under PPO as in §4.1.1 they hold a trained policy, a trained value model of the same size, a frozen 7B reference model and a frozen 7B reward model. They switch to GRPO with the same reward model and the same β > 0. How many GB of model-state memory does the switch save (1 GB = 10^9 bytes)? Type only the number, in GB.",
+          "format": "number",
+          "answer": "112",
+          "tolerance": 0.04,
+          "value": 112,
+          "why": "PPO: policy 7e9·16 = 112 GB, critic 112 GB, reference 7e9·2 = 14 GB, reward model 14 GB, total 252 GB. GRPO keeps policy, reference (β > 0 needs π_ref for the KL term in Eq. 3) and reward model: 112 + 14 + 14 = 140 GB. Saving = 252 − 140 = 112 GB, exactly the trained critic. Answering 126 also removes the reference model (wrong: Eq. 3 still needs it).",
+          "targets_misconception": "Dropping the value model removes the reference model too.",
+          "varies": "Asks for a memory figure under an explicit byte budget instead of a count of networks; reward and reference models are kept (domain: systems cost accounting).",
+          "invariant": "GRPO removes exactly one network relative to PPO, the trained, policy-sized critic; reference and reward models stay whenever β > 0 and a learned reward is used.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {"q": "Name the two reasons the GRPO paper gives for not training a value function in the LLM setting.", "answer": "It is another policy-sized model (memory and compute), and with a reward only on the last token a per-token value function is hard to train accurately."},
+          {"q": "What does GRPO use as the baseline in place of the value function?", "answer": "The average reward of the G outputs sampled for the same question."}
+        ],
+        "self_explain": "Why does a reward that arrives only at the last token make a per-token value function harder to learn than a per-token baseline computed from sibling outputs?"
+      },
+      "presentations": [
+        {"type": "figure", "action": "compare", "ref": "grpo:fig4"},
+        {"type": "formula-step", "action": "distinguish", "ref": "grpo:eq1"}
+      ]
+    },
+    {
+      "id": "group-relative-advantage-outcome",
+      "label": "Group sampling and the outcome-supervised advantage: (r_i − mean) / std for every token",
+      "kind": "procedure",
+      "statement": "For each question GRPO samples G outputs from π_old, scores each with a scalar reward r_i, normalizes within the group, Ã_i = (r_i − mean(r)) / std(r), and under outcome supervision assigns that same number as the advantage Â_{i,t} of every token t of output o_i.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:§4.1.2", "role": "computation", "quote": "these rewards are normalized by subtracting the group average and dividing by the group standard deviation"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.2", "role": "claim", "quote": "Outcome supervision provides the normalized reward at the end of each output"},
+          {"source": "grpo_paper", "ref": "grpo:algorithm1", "role": "computation", "quote": "Compute $\\hat{A}_{i,t}$ for the $t$ -th token of $o_{i}$ through group relative advantage estimation."},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L131-L136", "role": "computation", "status": "implemented", "quote": "denom = len(samples) # number of samples in the group ... mean_scores = rewards_array.sum() / denom ... std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L151-L155", "role": "computation", "status": "implemented", "quote": "zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8) ... if self.reward_broadcast: ... sample[\"token_zscores\"][prompt_len:] = zscore[-1]"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L313-L316", "role": "computation", "status": "implemented", "quote": "zscore is normalized rewards using the number of samples for each proompt (X -mu) / (std + eps) ... advs      = micro_batch['zscore'][:, :-1].to(device, non_blocking=True)"},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p18", "role": "claim", "quote": "Calculate the advantage as “z-score within group”"}
+        ],
+        "filtering_note": "The paper does not say whether std(r) divides by G or G−1, and adds no stability constant; FeynRL uses G−1 (Bessel) plus 1e-8, the course's nano-aha-moment example adds 1e-4 (p20). The paper also does not discuss the all-equal group (std = 0), where the formula is 0/0; implementations return 0 via the epsilon. The course further argues (p23-p24) that dividing by std is not a valid baseline and biases toward too-easy/too-hard questions; the paper does not raise this."
+      },
+      "prerequisites": [
+        {"kp": "ppo-value-model-cost", "basis": "teaching-order"},
+        {"kp": "supp-policy-gradient", "basis": "author-inference"}
+      ],
+      "external_prerequisites": [
+        {"kp": "feynrl:group-relative-advantage", "basis": "author-inference", "note": "the same computation in normalize_rewards, with the Bessel and broadcast details"},
+        {"kp": "lecture_16:grpo-group-zscore-advantage", "basis": "author-inference"},
+        {"kp": "lecture_16:baseline-validity-std-division", "basis": "author-inference", "note": "the course's critique of the std division"}
+      ],
+      "misconceptions": [
+        {"belief": "Tokens late in a correct output get a larger advantage than early ones.", "why_wrong": "Under outcome supervision every token of o_i carries the identical Ã_i; token position matters only under process supervision."},
+        {"belief": "A correct output always receives a positive advantage.", "why_wrong": "The sign is relative to the group mean: if all G outputs are correct the advantage is 0, and a partially-credited output below the group mean is negative even if 'correct'."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One question, G = 5, rewards [1, 0, 0, 0, 0]. Using the population standard deviation (divide by G), what advantage does every token of the correct output receive, and what do the tokens of each wrong output receive?",
+          "format": "short",
+          "answer": "Correct output: +2.0 on every token; each wrong output: −0.5 on every token.",
+          "why": "mean = 0.2; deviations 0.8 and −0.2; variance (0.64 + 4·0.04)/5 = 0.16, std 0.4; 0.8/0.4 = 2.0 and −0.2/0.4 = −0.5. The five advantages sum to zero. (With G−1 as FeynRL does: +1.79 and −0.45.)",
+          "targets_misconception": "Tokens late in a correct output get a larger advantage than early ones."
+        },
+        "transfer": {
+          "q": "A learned reward model gives graded scores instead of 0/1: G = 4, rewards [0.9, 0.1, 0.5, 0.5] (population std). Which outputs receive an advantage of exactly zero, and what is the advantage of the first output to two decimals?",
+          "format": "short",
+          "answer": "Outputs 3 and 4 (score 0.5 = group mean) get 0; output 1 gets (0.9 − 0.5)/0.283 ≈ +1.41 (output 2 gets −1.41).",
+          "why": "Normalization is relative to the group: a score equal to the mean is neither reinforced nor penalized whatever its absolute value. std = sqrt((0.16 + 0.16 + 0 + 0)/4) = 0.283.",
+          "varies": "graded rewards from a model instead of binary correctness; G = 4",
+          "invariant": "advantage = (r_i − mean)/std over the group, identical for all tokens of an output",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A reward gives 1.0 for a correct, well-formatted answer and 0.8 for a correct answer with bad formatting. For one question G = 4 outputs score [1.0, 1.0, 1.0, 0.8]. Using GRPO outcome supervision with the population standard deviation (divide by G), what advantage does the 200th token of output 4 receive? Give it to two decimals. Type only the number.",
+          "format": "number",
+          "answer": "-1.73",
+          "tolerance": 0.03,
+          "value": -1.732,
+          "why": "mean = 3.8/4 = 0.95; deviations 0.05, 0.05, 0.05, −0.15; population variance = (3·0.0025 + 0.0225)/4 = 0.0075; std = 0.0866. Ã_4 = (0.8 − 0.95)/0.0866 = −1.732. Under outcome supervision every token of o_4, including the 200th, carries this same value. Output 4 is correct yet negative because it sits below the group mean.",
+          "targets_misconception": "A correct output always receives a positive advantage (and token position changes the advantage).",
+          "varies": "Rewards encode a formatting bonus so a correct output is below the mean; asks about a specific late token (domain: reward design).",
+          "invariant": "Ã_i = (r_i − mean(r))/std(r) is relative to the group and is broadcast unchanged to every token of o_i.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Write the outcome-supervised GRPO advantage for token t of output o_i.", "answer": "Â_{i,t} = (r_i − mean(r)) / std(r), the same for all t."},
+          {"q": "Over the G outputs of one question, what is the sum of the GRPO advantages?", "answer": "Zero, because the group mean was subtracted."},
+          {"q": "Which two details of the std in the group advantage does the paper leave unspecified, so that implementations such as FeynRL and nano-aha-moment fill them in differently?", "answer": "Whether the variance divides by G or G−1, and the stability constant added to the std.", "layer": "detail"}
+        ],
+        "self_explain": "Why does normalizing within the question's own group, rather than across the whole batch, remove the difference in difficulty between questions from the advantage?"
+      },
+      "presentations": [
+        {"type": "interactive", "action": "compute", "ref": "fixture:grpo--advantage-map", "notice": "Every token cell of one output has the same colour: Â depends only on that output's reward relative to its group's mean and std, not on token position, and a group whose rewards are all equal turns white."},
+        {"type": "code", "action": "trace", "ref": "rollouts/base.py:L131-L155"},
+        {"type": "example", "action": "predict-number", "ref": "grpo:§4.1.2", "faded": true, "steps": [
+            {"do": "The predict's group: G = 5, rewards r = [1, 0, 0, 0, 0], so mean(r) = 0.2.", "why": "The group average replaces PPO's value function as the baseline (§4.1.1)."},
+            {"tex": "\\mathrm{std}(\\mathbf r) = \\sqrt{\\tfrac{1}{5}\\big(0.8^2 + 4\\cdot 0.2^2\\big)} = \\sqrt{0.16} = 0.4", "why": "This uses the population std (divide by G). The paper does not say which; FeynRL divides by G − 1 and would give 0.447."},
+            {"tex": "\\tilde r_i = \\frac{r_i - \\mathrm{mean}(\\mathbf r)}{\\mathrm{std}(\\mathbf r)}:\\quad \\tfrac{0.8}{0.4} = +2.0,\\quad \\tfrac{-0.2}{0.4} = -0.5", "why": "The same z-score as lecture_16:grpo-group-zscore-advantage. The rare correct output sits furthest from the mean, and the five values sum to zero."},
+            {"do": "Outcome supervision: Â_{i,t} = r̃_i for every token t of o_i. Every token of the correct output gets +2.0, and every token of each wrong output gets −0.5.", "why": "The reward arrives only at the end of the output, so the paper gives that one normalized number to all of its tokens (§4.1.2)."}
+          ]}
+      ]
+    },
+    {
+      "id": "process-supervision-advantage",
+      "label": "Process supervision: per-step rewards, normalized over all steps, summed from step t onward",
+      "kind": "comparison",
+      "statement": "With a process reward model each reasoning step's final token gets a reward r_i^{index(j)}; all step rewards of all G outputs are normalized by their common mean and std, and a token's advantage is the sum of the normalized rewards of the steps that end at or after it, Â_{i,t} = Σ_{index(j) ≥ t} r̃_i^{index(j)}, so earlier tokens accumulate more terms.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:§4.1.3", "role": "claim", "quote": "we also explore process supervision, which provides a reward at the end of each reasoning step"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.3", "role": "computation", "quote": "the process supervision calculates the advantage of each token as the sum of the normalized rewards from the following steps"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.3", "role": "claim", "quote": "Outcome supervision only provides a reward at the end of each output, which may not be sufficient and efficient to supervise the policy in complex mathematical tasks."},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p21", "role": "claim", "quote": "with some gains from process supervision"}
+        ],
+        "filtering_note": "The normalization is over the pooled set R of all steps of all outputs (not per output and not per step index), and the sum is a reward-to-go without discounting. The paper reports GRPO+PS above GRPO+OS only as curves (Fig. 5); the course mentions 'some gains' (p21) and otherwise skips process supervision. FeynRL does not implement per-token rewards (rollouts/base.py raises on is_per_token)."
+      },
+      "prerequisites": [{"kp": "group-relative-advantage-outcome", "basis": "teaching-order"}],
+      "misconceptions": [
+        {"belief": "Process supervision normalizes each step's reward against the other outputs' same-numbered step.", "why_wrong": "§4.1.3 pools every step reward of every output into one set R and uses its mean and std; step indices are not aligned across outputs."},
+        {"belief": "Under process supervision all tokens of a step share the advantage of that step only.", "why_wrong": "A token's advantage sums the normalized rewards of its own step and every later step; the last step's tokens have one term, the first step's tokens have K_i terms."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "An output has three steps whose normalized step rewards are r̃^{(1)} = +0.5, r̃^{(2)} = −1.0, r̃^{(3)} = +0.8. What advantage do tokens in step 1, step 2 and step 3 receive under process supervision?",
+          "format": "short",
+          "answer": "Step 1 tokens: 0.5 − 1.0 + 0.8 = +0.3; step 2 tokens: −1.0 + 0.8 = −0.2; step 3 tokens: +0.8.",
+          "why": "Â_{i,t} sums the normalized rewards of every step ending at or after t (reward-to-go, no discount). Earlier tokens are credited for what follows them.",
+          "targets_misconception": "Under process supervision all tokens of a step share the advantage of that step only."
+        },
+        "transfer": {
+          "q": "Compare two outputs for the same question under outcome supervision versus process supervision: both end with the correct answer (outcome reward 1), but output B contains a wrong intermediate step that it later corrects. Under which scheme can B's early tokens receive a different advantage from A's, and in what direction for the tokens of the wrong step?",
+          "format": "short",
+          "answer": "Only under process supervision; the wrong step's tokens in B get a lower (more negative) advantage because that step's normalized reward is low and it is included in their sum, while under outcome supervision every token of A and B gets the identical normalized outcome reward.",
+          "why": "Outcome supervision cannot see inside the output; process supervision assigns each step a reward and the token advantage accumulates from that step forward, so a bad step lowers its own and all earlier tokens' advantage.",
+          "varies": "the supervision scheme, with the final answer held fixed",
+          "invariant": "advantage is still a group-normalized reward; only the granularity of the reward and the summation differ",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "Process supervision with G = 2 outputs for one question. A process reward model gives raw step rewards: output A has 2 steps scoring [0.9, 0.5]; output B has 3 steps scoring [0.2, 0.6, 0.8]. Normalize as in §4.1.3, using the population standard deviation (divide by the number of rewards normalized). What advantage does a token inside the first step of output B receive? Give it to two decimals. Type only the number.",
+          "format": "number",
+          "answer": "-0.82",
+          "tolerance": 0.03,
+          "value": -0.8165,
+          "why": "§4.1.3 pools all step rewards R = {0.9, 0.5, 0.2, 0.6, 0.8}: mean = 0.6, population variance = (0.09 + 0.01 + 0.16 + 0 + 0.04)/5 = 0.06, std = 0.2449. B's normalized steps: (0.2−0.6)/0.2449 = −1.633, 0, (0.8−0.6)/0.2449 = +0.816. A token in step 1 sums the normalized rewards of steps ending at or after it: −1.633 + 0 + 0.816 = −0.816. Using step 1 alone gives −1.63; normalizing each step index across outputs gives a different set of numbers.",
+          "targets_misconception": "Under process supervision all tokens of a step share the advantage of that step only (and normalization is per step index).",
+          "varies": "Starts from raw step rewards of two outputs of different length, so the learner must pool-normalize before summing (functional: two-stage computation).",
+          "invariant": "One mean/std over every step reward of every output, then Â_{i,t} = Σ_{index(j) ≥ t} r̃_i^{index(j)}.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In GRPO with process supervision, over which set are the step rewards normalized?", "answer": "All step rewards of all G outputs pooled together, R = {{r_1^{index(1)}, ...}, ..., {r_G^{index(1)}, ...}}."},
+          {"q": "Write the process-supervised advantage of token t of output i.", "answer": "Â_{i,t} = Σ_{index(j) ≥ t} r̃_i^{index(j)}: the sum of normalized rewards of steps ending at or after t."}
+        ],
+        "self_explain": "Why would the authors sum normalized step rewards from step t onward instead of using only the reward of the step containing t?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compute", "ref": "grpo:§4.1.3", "faded": false, "steps": [
+            {"tex": "\\mathbf R = \\big\\{\\{r_1^{index(1)},\\dots,r_1^{index(K_1)}\\},\\dots,\\{r_G^{index(1)},\\dots,r_G^{index(K_G)}\\}\\big\\}", "why": "The process reward model scores the last token of every reasoning step. All step rewards of all G outputs go into one pool."},
+            {"tex": "\\tilde r_i^{index(j)} = \\frac{r_i^{index(j)} - \\mathrm{mean}(\\mathbf R)}{\\mathrm{std}(\\mathbf R)}", "why": "This is the outcome z-score applied to the pooled steps: not per output and not per step index, so a step is judged against every step in the group."},
+            {"tex": "\\hat A_{i,t} = \\sum_{index(j)\\ge t}\\tilde r_i^{index(j)}", "why": "Each token is credited with the normalized rewards of every step that ends at or after it, an undiscounted reward-to-go. Earlier tokens collect more terms."},
+            {"do": "The predict's output, r̃ = (+0.5, −1.0, +0.8): step 3 tokens get +0.8, step 2 tokens −1.0 + 0.8 = −0.2, and step 1 tokens 0.5 − 1.0 + 0.8 = +0.3.", "why": "Sum from the end backwards. Step 2's bad reward lowers its own tokens and step 1's, but not step 3's."}
+          ]},
+        {"type": "example", "action": "distinguish", "ref": "grpo:§4.1.2"},
+        {"type": "interactive", "action": "compute", "ref": "fixture:grpo--advantage-map", "notice": "In process mode a step's tokens sum their own step's r̃ and every later step's, so the first step carries the most terms and can have the opposite sign to its own step reward; the mean and std pool every step of every output."}
+      ]
+    },
+    {
+      "id": "grpo-objective-clip-kl",
+      "label": "The GRPO objective (Eq. 3): clipped ratio × group advantage, minus β·KL inside the loss",
+      "kind": "mechanism",
+      "statement": "J_GRPO averages over the G outputs and over tokens the PPO term min[ρ_{i,t} Â_{i,t}, clip(ρ_{i,t}, 1−ε, 1+ε) Â_{i,t}] and subtracts β·D_KL[π_θ || π_ref] per token directly in the objective, instead of folding the KL penalty into the reward as PPO-for-LLMs does (Eq. 2), so the advantage stays a pure function of the group's rewards.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:eq3", "role": "computation", "quote": "optimizes the policy model by maximizing the following objective:"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.1", "role": "claim", "quote": "instead of adding KL penalty in the reward, GRPO regularizes by directly adding the KL divergence between the trained policy and the reference policy to the loss, avoiding complicating the calculation of"},
+          {"source": "grpo_paper", "ref": "grpo:eq2", "role": "computation", "quote": "the standard approach is to add a per-token KL penalty from a reference model in the reward at each token"},
+          {"source": "grpo_paper", "ref": "grpo:eq21", "role": "computation", "quote": "where $\\hat{A}_{i,t}$ is computed based on the group reward scores."},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L174-L176", "role": "computation", "status": "implemented", "quote": "unclipped = ratio * adv ... clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L182-L188", "role": "computation", "status": "implemented", "quote": "kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs) ... kl_sum  = (kl_dist * mask).sum() ... loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum"},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p19", "role": "claim", "quote": "Compute KL term"}
+        ],
+        "filtering_note": "Eq. 3 is written per output with 1/|o_i| then 1/G; FeynRL sums over all masked tokens of a micro-batch and normalizes by a global token count, so long outputs weigh more than in the paper (the course's 'length normalization' bias on p24 concerns exactly this 1/|o_i|). FeynRL also allows clip_low ≠ clip_high; the paper uses one ε. Algorithm 1 line 11 refers to 'Equation 21' as printed, which in the HTML numbering is the gradient coefficient, not the objective."
+      },
+      "prerequisites": [
+        {"kp": "group-relative-advantage-outcome", "basis": "teaching-order"},
+        {"kp": "supp-importance-ratio", "basis": "author-inference"}
+      ],
+      "external_prerequisites": [
+        {"kp": "feynrl:grpo-clipped-loss", "basis": "author-inference", "note": "compute_policy_loss implements this equation; its unit test pins the clipped value"},
+        {"kp": "lecture_16:per-token-kl-reward-shaping", "basis": "author-inference", "note": "the Eq. 2 alternative: KL inside the reward"},
+        {"kp": "lecture_16:grpo-length-bias", "basis": "author-inference", "note": "the course's critique of the 1/|o_i| term"}
+      ],
+      "misconceptions": [
+        {"belief": "Putting the KL in the loss or in the reward is the same thing.", "why_wrong": "In Eq. 2 the KL changes r_t and therefore flows through GAE into A_t and the value target; in Eq. 3 Â stays the group-normalized reward and the KL adds its own gradient term β(π_ref/π_θ − 1) ∇log π_θ (Eq. 21)."},
+        {"belief": "When all G rewards are equal the question is simply skipped.", "why_wrong": "The ratio term is zero but the KL term is not: with Â = 0 the only gradient on those tokens is the pull toward the reference model."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In Eq. 3, which of the following quantities depends on β: (a) the advantage Â_{i,t}, (b) the clipped ratio term, (c) the per-token objective, (d) the gradient coefficient GC_GRPO of Eq. 21? List the letters.",
+          "format": "short",
+          "answer": "(c) and (d) only. Â is computed from the group rewards alone and the ratio term from π_θ/π_old and Â; β enters additively through the KL term, which gives the coefficient its β(π_ref/π_θ − 1) part.",
+          "why": "This is the point of 'directly adding the KL divergence ... to the loss, avoiding complicating the calculation of Â': the regularizer is separated from the advantage.",
+          "targets_misconception": "Putting the KL in the loss or in the reward is the same thing."
+        },
+        "transfer": {
+          "q": "A question's G = 8 outputs are all judged correct, so every reward is 1 and every Â_{i,t} = 0. β = 0.04. Describe what the GRPO gradient does to a token where π_θ has grown to 2× π_ref, and to one where it has fallen to 0.5× π_ref. Then say what happens in FeynRL's gsm8k recipe where kl_coeff = 0.",
+          "format": "short",
+          "answer": "The ratio term vanishes (0 × anything). The KL term gives coefficient β(π_ref/π_θ − 1): at 2× it is 0.04·(0.5 − 1) = −0.02, pushing that token's probability down toward the reference; at 0.5× it is 0.04·(2 − 1) = +0.04, pushing it up. With kl_coeff = 0 the group contributes exactly zero gradient.",
+          "why": "Eq. 21: GC_GRPO = Â + β(π_ref/π_θ − 1). With Â = 0 only the KL part remains, and its sign is the sign of π_ref − π_θ: it is a restoring force toward the reference policy, independent of the rewards.",
+          "varies": "all rewards equal (Â = 0) and two values of π_θ/π_ref",
+          "invariant": "the gradient coefficient decomposition of Eq. 21",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In GRPO's gradient (Eq. 21) each token's ∇log π_θ is multiplied by a gradient coefficient GC. A token in a mixed group has group advantage Â = −0.6, β = 0.1, and the policy has shrunk this token's probability so that π_ref/π_θ = 3. What is GC for this token? Type only the number.",
+          "format": "number",
+          "answer": "-0.4",
+          "tolerance": 0.03,
+          "value": -0.4,
+          "why": "Eq. 21: GC_GRPO = Â + β(π_ref/π_θ − 1) = −0.6 + 0.1·(3 − 1) = −0.6 + 0.2 = −0.4. The KL sits in the loss, so it adds its own term to the coefficient while Â stays the pure group-normalized reward; the KL partly restores a token the advantage is pushing down. Ignoring the KL gives −0.6; folding β into the reward and re-normalizing would change Â itself.",
+          "targets_misconception": "Putting the KL in the loss or in the reward is the same thing.",
+          "varies": "Nonzero advantage combined with a KL pull in the opposite direction, policy below the reference (functional: two terms compete).",
+          "invariant": "GC_GRPO = Â + β(π_ref/π_θ − 1): an additive KL term separate from the reward-only advantage.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Where does GRPO place the KL penalty against π_ref, and where does PPO-for-LLMs place it?", "answer": "GRPO: directly in the objective/loss as −β D_KL per token; Eq. 2: inside the per-token reward r_t."},
+          {"q": "What reason does the GRPO paper give for moving the KL out of the reward?", "answer": "To avoid complicating the calculation of the advantage Â_{i,t}."},
+          {"q": "In FeynRL's loss_total_sum, which sign does the KL term carry and which coefficient scales it?", "answer": "Plus kl_coeff × kl_sum (penalized), while the entropy term enters with a minus sign.", "layer": "detail"}
+        ],
+        "self_explain": "Why does a KL penalty inside the reward (Eq. 2) interact with the value function in PPO, and why does that interaction disappear in GRPO even if the KL were kept in the reward?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "trace", "ref": "grpo:eq3", "steps": [
+            {"tex": "\\rho_{i,t} = \\frac{\\pi_\\theta(o_{i,t}\\mid q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}\\mid q,o_{i,<t})}", "why": "The G outputs were sampled from π_old. The ratio reweights each token toward the current policy (supp-importance-ratio)."},
+            {"tex": "\\min\\big[\\rho_{i,t}\\hat A_{i,t},\\ \\mathrm{clip}(\\rho_{i,t},1-\\varepsilon,1+\\varepsilon)\\,\\hat A_{i,t}\\big]", "why": "This is PPO's pessimistic surrogate. Once ρ leaves the band in the direction Â favours, the clipped term is constant and its gradient is zero."},
+            {"do": "Example: the correct output from group-relative-advantage-outcome, Â = +2.0. Take ε = 0.2 (lecture 16's AlpacaFarm cliprange; the paper prints no ε) and ρ = 1.3: ρÂ = 2.6, clip term 1.2 × 2.0 = 2.4, min = 2.4.", "why": "The min picks the clipped term, which does not depend on θ, so this token stops being pushed up."},
+            {"tex": "\\Big\\{\\min[\\cdots] - \\beta\\,\\mathbb{D}_{KL}\\big[\\pi_\\theta\\,\\|\\,\\pi_{ref}\\big]\\Big\\}", "why": "The KL is subtracted per token inside the objective instead of being folded into the reward as in Eq. 2. Â therefore stays a function of the group's rewards alone (§4.1.1)."},
+            {"tex": "\\mathcal{J}_{GRPO}(\\theta) = \\mathbb{E}\\Big[\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_i|}\\sum_{t=1}^{|o_i|}\\Big\\{\\min[\\cdots] - \\beta\\,\\mathbb{D}_{KL}\\Big\\}\\Big]", "why": "Average over each output's tokens, then over the group. The 1/|o_i| is the term lecture_16:grpo-length-bias critiques."},
+            {"do": "With a single update per exploration stage (§4.2), π_old = π_θ when the gradient is taken, so ρ = 1 and the clip is inactive.", "why": "Appendix A.1.6 uses exactly this assumption to drop min and clip, which is how Eq. 3 becomes the gradient coefficient of Eq. 21."}
+          ]},
+        {"type": "formula-step", "action": "compare", "ref": "grpo:eq2"},
+        {"type": "code", "action": "trace", "ref": "algs/GRPO/grpo.py:L165-L188"},
+        {"type": "interactive", "action": "compute", "ref": "fixture:grpo--token-coefficient", "notice": "Moving β or log π_ref changes only the KL part β(π_ref/π_θ − 1) of GC; Â and the ratio part do not move. With Â = 0 the KL part is the whole coefficient, and its sign is the sign of π_ref − π_θ."}
+      ]
+    },
+    {
+      "id": "kl-k3-estimator",
+      "label": "The per-token KL estimator (Eq. 4): π_ref/π_θ − log(π_ref/π_θ) − 1, unbiased and never negative",
+      "kind": "quantity",
+      "statement": "GRPO estimates D_KL[π_θ || π_ref] at a sampled token as u − log u − 1 with u = π_ref(o_t|·)/π_θ(o_t|·); its expectation under π_θ is the true KL, and because u − log u − 1 ≥ 0 with equality only at u = 1, every per-token estimate is non-negative.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:eq4", "role": "computation", "quote": "we estimate the KL divergence with the following unbiased estimator (Schulman, 2020):"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.1", "role": "claim", "quote": "which is guaranteed to be positive."},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L131-L139", "role": "computation", "status": "implemented", "quote": "log_ratio = logprobs - ref_logprobs ... exponent = torch.clamp(ref_logprobs - logprobs, min=-10.0, max=10.0) ... ratio_inv = torch.exp(exponent) ... kl_dist = log_ratio + ratio_inv - 1"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L198-L202", "role": "computation", "status": "implemented", "quote": "approx KL (var-reduced): log(pi/pi_old) + pi_old/pi - 1 ... approx_kl_t = logratio + ratio_inv - 1.0"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L98-L101", "role": "computation", "status": "implemented", "quote": "if self.ref_model_path and self.kl_coeff > 0.0:"}
+        ],
+        "filtering_note": "The paper says 'positive'; strictly the estimator is non-negative and equals 0 when π_θ = π_ref at that token. Unbiasedness holds for samples drawn from π_θ; GRPO's samples come from π_old, so after the first update of a batch the estimate is slightly off-policy (not discussed in the paper). FeynRL writes the same formula as log(π/π_ref) + π_ref/π − 1, clamps the exponent to ±10 and reuses the formula for the approx_kl diagnostic between π and π_old."
+      },
+      "prerequisites": [{"kp": "grpo-objective-clip-kl", "basis": "teaching-order"}],
+      "external_prerequisites": [
+        {"kp": "feynrl:kl-reference-penalty", "basis": "author-inference", "note": "compute_kl_distance and the kl_coeff > 0 gate"}
+      ],
+      "misconceptions": [
+        {"belief": "The estimator is the plain log-ratio log(π_θ/π_ref).", "why_wrong": "That is the k1 estimator, also unbiased but it can be negative per sample and has higher variance; Eq. 4 adds u − 1 (which has zero mean) to make every sample non-negative."},
+        {"belief": "A non-negative per-sample estimate must be biased upward.", "why_wrong": "E_{π_θ}[π_ref/π_θ] = Σ π_ref = 1, so the added u − 1 term has expectation exactly 0; the estimate stays unbiased."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "For one token, π_ref(o_t|·)/π_θ(o_t|·) = 2 (the policy has halved the token's probability). What is the Eq. 4 estimate to three decimals?",
+          "format": "number",
+          "answer": "0.307",
+          "tolerance": 0.02,
+          "why": "u − log u − 1 = 2 − 0.693 − 1 = 0.307; at u = 1 it is 1 − 0 − 1 = 0. FeynRL's test uses logprobs −0.1 vs −0.15 and expects 0.05 + e^{−0.05} − 1 ≈ 0.00123.",
+          "targets_misconception": "The estimator is the plain log-ratio log(π_θ/π_ref)."
+        },
+        "transfer": {
+          "q": "Now the policy has doubled the token's probability instead, so π_ref/π_θ = 0.5. Without computing, is the estimate positive, zero or negative, and is it larger or smaller than the 0.307 obtained at ratio 2? Then compute it.",
+          "format": "short",
+          "answer": "Positive and smaller: 0.5 − log 0.5 − 1 = 0.5 + 0.693 − 1 = 0.193.",
+          "why": "u − log u − 1 is convex with its minimum 0 at u = 1, so both deviations are penalized, but the function is asymmetric: shrinking a token's probability (u > 1) is penalized more than growing it by the same factor (u < 1).",
+          "varies": "direction of the policy's deviation from the reference (u = 0.5 instead of 2)",
+          "invariant": "the estimator u − log u − 1 and its non-negativity",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "FeynRL's compute_kl_distance (algs/RL/common.py) computes, per token, log_ratio = logprobs − ref_logprobs and ratio_inv = exp(ref_logprobs − logprobs), then returns log_ratio + ratio_inv − 1. For one token logprobs = −2.0 and ref_logprobs = −1.0. What value does it return? Give it to three decimals. Type only the number.",
+          "format": "number",
+          "answer": "0.718",
+          "tolerance": 0.03,
+          "value": 0.7183,
+          "why": "log_ratio = −2.0 − (−1.0) = −1.0; ratio_inv = exp(1.0) = 2.718; result = −1.0 + 2.718 − 1 = 0.718. This is Eq. 4 with u = π_ref/π_θ = e: u − log u − 1 = e − 1 − 1 = 0.718 (common.py L131-L139, clamp at ±10 not reached). The plain log-ratio (k1) alone would give −1.0, a negative per-token KL; the added u − 1 term makes every sample non-negative.",
+          "targets_misconception": "The estimator is the plain log-ratio log(π_θ/π_ref).",
+          "varies": "Inputs given as log-probabilities in the code's own form instead of a probability ratio (modality: code rather than equation).",
+          "invariant": "k3 = u − log u − 1 with u = π_ref/π_θ, written in log space as (logπ_θ − logπ_ref) + exp(logπ_ref − logπ_θ) − 1.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {"q": "Write GRPO's per-token KL estimator in terms of u = π_ref/π_θ.", "answer": "u − log u − 1."},
+          {"q": "Which fact makes the estimator non-negative for every sample, and which fact makes it unbiased?", "answer": "u − log u − 1 ≥ 0 for all u > 0 (equality at u = 1); E_{π_θ}[u] = 1 so the extra u − 1 term has mean zero and E[−log u] is the true KL."}
+        ],
+        "self_explain": "Why does FeynRL clamp the exponent at ±10 before exponentiating but leave the log-ratio term unclamped?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compute", "ref": "grpo:eq4", "steps": [
+            {"tex": "u = \\frac{\\pi_{ref}(o_{i,t}\\mid q,o_{i,<t})}{\\pi_\\theta(o_{i,t}\\mid q,o_{i,<t})},\\qquad \\hat{\\mathbb{D}}_{KL} = u - \\log u - 1", "why": "Eq. 4 needs only the two log-probabilities of the sampled token, not a sum over the vocabulary."},
+            {"tex": "\\mathbb{E}_{o_t\\sim\\pi_\\theta}[u] = \\sum_{o_t}\\pi_\\theta\\cdot\\frac{\\pi_{ref}}{\\pi_\\theta} = \\sum_{o_t}\\pi_{ref} = 1\\ \\Rightarrow\\ \\mathbb{E}[u-1] = 0", "why": "The u − 1 part has mean zero, so adding it changes the variance but not the expectation."},
+            {"tex": "\\mathbb{E}_{\\pi_\\theta}[-\\log u] = \\mathbb{E}_{\\pi_\\theta}\\Big[\\log\\frac{\\pi_\\theta}{\\pi_{ref}}\\Big] = \\mathbb{D}_{KL}[\\pi_\\theta\\,\\|\\,\\pi_{ref}]", "why": "−log u alone is the plain log-ratio estimator, which is unbiased but negative on some samples. With the zero-mean term added, the total is still unbiased."},
+            {"tex": "f(u) = u - \\log u - 1,\\quad f'(u) = 1 - \\tfrac{1}{u}\\ \\Rightarrow\\ f \\ge f(1) = 0", "why": "f is convex with its minimum 0 at u = 1, so every per-token estimate is non-negative. This is what the paper means by 'guaranteed to be positive'."},
+            {"do": "The predict's token, u = 2: 2 − ln 2 − 1 = 2 − 0.693 − 1 = 0.307.", "why": "The policy halved this token's probability relative to the reference, and the estimate charges 0.307 for it."}
+          ]},
+        {"type": "code", "action": "compute", "ref": "algs/RL/common.py:L120-L139"},
+        {"type": "interactive", "action": "compare", "ref": "fixture:grpo--kl-estimators", "notice": "The orange k3 curve never goes below zero, while blue k1 does wherever π_θ < π_ref (u > 1); the two bars still have the same mean, the green true KL."}
+      ]
+    },
+    {
+      "id": "iterative-grpo",
+      "label": "Iterative GRPO (Algorithm 1): refresh the reward model with replay and reset π_ref to the current policy",
+      "kind": "procedure",
+      "statement": "Algorithm 1 wraps GRPO in outer iterations: at the start of each, the reference model is set to the current policy; inside, each batch gets G samples per question, rewards, group advantages and μ policy updates; at the end the reward model is retrained on new policy samples with a replay buffer that keeps 10% historical data.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:algorithm1", "role": "computation", "quote": "reference model $\\pi_{ref}\\leftarrow\\pi_{\\theta}$ ... Update the old policy model $\\pi_{\\theta_{old}}\\leftarrow\\pi_{\\theta}$ ... for GRPO iteration = 1, …, $\\mu$ do"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.4", "role": "claim", "quote": "continually train the old reward model using a replay mechanism that incorporates 10% of historical data"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.4", "role": "claim", "quote": "we set the reference model as the policy model, and continually train the policy model with the new reward model"},
+          {"source": "grpo_paper", "ref": "grpo:§4.1.4", "role": "claim", "quote": "the old reward model may not be sufficient to supervise the current policy model"},
+          {"source": "grpo_paper", "ref": "grpo:fig6", "role": "figure", "quote": "Performance of iterative reinforcement learning with DeepSeekMath-Instruct 7B on two benchmarks."}
+        ],
+        "filtering_note": "Two refreshes happen per iteration and the paper motivates only the reward-model one (the reward model falls behind the policy); the reference-model reset is stated without a reason. Fig. 6's numbers are image-only. The course does not cover iterative GRPO; FeynRL has no outer loop and never changes ref_model_path."
+      },
+      "prerequisites": [{"kp": "grpo-objective-clip-kl", "basis": "teaching-order"}],
+      "misconceptions": [
+        {"belief": "The reference model in the KL term is always the original SFT model.", "why_wrong": "That holds inside one iteration (and is 'usually the initial SFT model' in Eq. 2's description), but Algorithm 1 line 3 resets π_ref to the current policy at every outer iteration, so the KL anchor moves."},
+        {"belief": "π_old and π_ref are the same model.", "why_wrong": "π_old is reset every step (line 6) and is the sampling distribution for the ratio; π_ref is reset only per outer iteration (line 3) and appears only in the KL term."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "After the first outer iteration of Algorithm 1 finishes and the second begins, what is the KL term in Eq. 3 measuring: distance to the initial SFT model, or distance to the policy as it stood at the end of iteration 1?",
+          "format": "short",
+          "answer": "Distance to the end-of-iteration-1 policy: line 3 sets π_ref ← π_θ at the start of each iteration.",
+          "why": "The reference is refreshed, so the regularizer only restrains drift within an iteration; across iterations the policy can move arbitrarily far from the SFT model as long as each hop is small.",
+          "targets_misconception": "The reference model in the KL term is always the original SFT model."
+        },
+        "transfer": {
+          "q": "Suppose a team keeps Algorithm 1 but skips line 12 (never retrains the reward model) while still resetting π_ref each iteration. Which failure mode does the paper's own motivation predict, and which of the two refreshes was meant to prevent it?",
+          "format": "short",
+          "answer": "The policy keeps drifting (the reference reset lets it) while the fixed reward model stops being able to judge the new, shifted outputs: 'the old reward model may not be sufficient to supervise the current policy model'. The reward-model retraining with replay (line 12) was the refresh meant to prevent that.",
+          "why": "The two refreshes address different things: resetting π_ref removes the brake on drift, retraining r_φ keeps the judge aligned with where the policy has drifted to. Dropping only the second leaves exploration without a reliable signal.",
+          "varies": "which refresh is removed",
+          "invariant": "the roles of π_ref (brake) and r_φ (judge) in Eq. 3",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "Algorithm 1 runs with I = 3 outer iterations and M = 100 steps each. During step 50 of outer iteration 3, which models serve as the ratio's denominator π_old and as the KL term's π_ref?",
+          "format": "choice",
+          "choices": ["π_old and π_ref: both the policy as it stood before step 50's sampling", "π_old: policy before step 50's sampling; π_ref: initial SFT model of the run", "π_old: policy before step 50's sampling; π_ref: policy at iteration 3's start", "π_old and π_ref: both the policy as it stood at the start of iteration 3"],
+          "answer": "π_old: policy before step 50's sampling; π_ref: policy at iteration 3's start",
+          "why": "Line 6 sets π_old ← π_θ at every step before sampling, so π_old is the policy just before step 50's sampling. Line 3 sets π_ref ← π_θ only at the start of each outer iteration, so in iteration 3 π_ref is the policy as it stood when iteration 3 began, not the initial SFT model.",
+          "distractor_from": {"π_old: policy before step 50's sampling; π_ref: initial SFT model of the run": "The reference model is always the original SFT model.", "π_old and π_ref: both the policy as it stood before step 50's sampling": "π_old and π_ref are the same model (both reset every step).", "π_old and π_ref: both the policy as it stood at the start of iteration 3": "π_old and π_ref are the same model (both reset per outer iteration)."},
+          "targets_misconception": "π_old and π_ref are the same model; the reference is always the SFT model.",
+          "varies": "Asks for both anchors at a mid-iteration step of a later iteration rather than about the reward-model refresh (functional: reset schedules).",
+          "invariant": "π_old resets every step (line 6); π_ref resets once per outer iteration (line 3).",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In iterative GRPO, how often is π_old reset and how often is π_ref reset?", "answer": "π_old every step (line 6, before sampling); π_ref once per outer iteration (line 3)."},
+          {"q": "In iterative GRPO, how is the reward model updated between iterations?", "answer": "Continually trained on new samples from the policy with a replay mechanism that keeps 10% historical data."}
+        ],
+        "self_explain": "Why might the authors reset the reference model each iteration rather than keep the SFT model as a fixed anchor, given that they give no reason in the text?"
+      },
+      "presentations": [
+        {"type": "example", "action": "trace", "ref": "grpo:algorithm1", "steps": [
+            {"do": "At the start of each outer iteration, set the reference model π_ref ← π_θ (line 3).", "why": "From here on, Eq. 3's KL measures drift from where this iteration began, not from the SFT model. The paper states the reset without giving a reason."},
+            {"do": "At every step, set π_old ← π_θ (line 6) and sample G outputs per question from π_old.", "why": "The ratio in Eq. 3 is taken against the policy that actually produced the samples."},
+            {"do": "Score the outputs with r_φ and compute Â_{i,t} by group relative advantage estimation.", "why": "No critic is needed: the group supplies the baseline (§4.1.2-4.1.3)."},
+            {"do": "Run μ GRPO iterations on the batch, maximizing Eq. 3.", "why": "Reusing one batch of rollouts μ times is why the ratio and clip exist. With μ = 1 (the §4.2 recipe) ρ = 1."},
+            {"do": "At the end of the iteration, continually train r_φ on samples from the new policy, with a replay mechanism holding 10% historical data (line 12, §4.1.4).", "why": "The replay share keeps the reward model from forgetting how to score earlier outputs while it trains on the new ones."}
+          ]},
+        {"type": "animation", "action": "trace", "ref": "fixture:grpo--alg1-iterations", "notice": "π_old jumps to the current policy before every step's sampling, while π_ref moves only once per iteration, right after r_φ is retrained, and then points at θ₃ (the end of iteration 1), not θ₀."},
+        {"type": "figure", "action": "predict-trend", "ref": "grpo:fig6"}
+      ]
+    },
+    {
+      "id": "unified-paradigm",
+      "label": "The unified paradigm (Eq. 5): data source × reward function × gradient coefficient",
+      "kind": "definition",
+      "statement": "The paper writes every method's update as ∇J_A(θ) = E_{(q,o)~D}[(1/|o|) Σ_t GC_A(q,o,t,π_rf) ∇log π_θ(o_t|q,o_<t)] and names three components: the data source D (where (q,o) come from), the reward function π_rf (the signal), and the algorithm A that turns data and signal into the gradient coefficient GC; SFT, RFT, Online RFT, DPO, PPO and GRPO differ only in these (Table 10).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:eq5", "role": "computation", "quote": "Generally, the gradient with respect to the parameter $\\theta$ of a training method can be written as:"},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.1", "role": "claim", "quote": "There exist three key components:"},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.1", "role": "claim", "quote": "which processes the training data and the reward signal to the gradient coefficient $GC$ that determines the magnitude of the penalty or reinforcement for the data"},
+          {"source": "grpo_paper", "ref": "grpo:table10", "role": "figure", "quote": "The data source and gradient coefficient of different methods."},
+          {"source": "grpo_paper", "ref": "grpo:§A.1.1", "role": "computation", "quote": "Gradient Coefficient: always set to 1."},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.3", "role": "claim", "quote": "all methods now fully TRUST the signal of the reward function to increase or decrease the conditional probability of a certain token"}
+        ],
+        "filtering_note": "The paradigm is exact for SFT, RFT and Online RFT and for PPO/GRPO only under the single-update assumption (π_old = π_θ, Appendix A.1.5-A.1.6); DPO fits with a per-pair coefficient (Eq. 14) and two data terms. Table 10 lists DPO's reward as 'Rule', the text says 'human preference ... (can be Rule in mathematical tasks)'. The course does not present this paradigm; its nearest point is 'RL vs RFT' on p21 and p48."
+      },
+      "prerequisites": [
+        {"kp": "supp-policy-gradient", "basis": "author-inference"},
+        {"kp": "grpo-objective-clip-kl", "basis": "teaching-order"}
+      ],
+      "misconceptions": [
+        {"belief": "SFT is not a special case of the paradigm because it has no reward.", "why_wrong": "Appendix A.1.1 treats human selection of the SFT data as the reward function and sets GC = 1 for every token; the data source is P_sft(Q,O)."},
+        {"belief": "The data source is just the set of questions.", "why_wrong": "D is the joint distribution of (q, o): the same questions with outputs from the SFT model (offline) or from the live policy (online) are different data sources in Table 10."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Fill the three components for RFT and for GRPO as Table 10 does: data source (questions from where, outputs from which model), reward function (Rule or Model), gradient coefficient (which equation / what expression).",
+          "format": "short",
+          "answer": "RFT: q ~ P_sft(Q), o ~ π_sft(O|q); Rule; GC = I(o) ∈ {0,1} (Eq. 10). GRPO: q ~ P_sft(Q), {o_i} ~ π_θ(O|q); Model; GC = Â_{i,t} + β(π_ref/π_θ − 1) (Eq. 21).",
+          "why": "RFT samples once from the frozen SFT model and keeps only correct outputs; GRPO samples a group from the live policy and weights tokens by the group-normalized reward plus the KL coefficient."
+        },
+        "transfer": {
+          "q": "A new method: sample 8 outputs per question from the current policy, grade them with an exact-match checker, train with cross-entropy on the correct ones only, and ignore the rest. Place it in the paradigm (data source, reward, gradient coefficient) and name the Table 10 row it coincides with.",
+          "format": "short",
+          "answer": "Data source: q ~ P_sft(Q), o ~ π_θ(O|q) (online). Reward: Rule. GC = I(o) ∈ {0,1}. That is Online RFT (Eq. 11), i.e. the row sharing Eq. 10 with RFT but with online data.",
+          "why": "Cross-entropy on kept outputs is GC = 1 on their tokens and 0 elsewhere; sampling from the live policy makes the data source online. It differs from GRPO only in the coefficient (binary vs group-normalized, no KL).",
+          "varies": "a method described operationally rather than by name",
+          "invariant": "the decomposition into D, π_rf and GC",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A variant keeps GRPO's questions, reward model and gradient coefficient (group-normalized Â plus the KL term), but all outputs are generated once by the SFT model before training and reused throughout. In the Eq. 5 paradigm, which component differs from GRPO?",
+          "format": "choice",
+          "choices": ["Reward function: stored outputs are graded by a Rule, not a Model", "Gradient coefficient: stored outputs require I(o) instead of Â", "Data source: the outputs come from π_sft instead of the live π_θ", "No component: the questions still come from the same P_sft(Q)"],
+          "answer": "Data source: the outputs come from π_sft instead of the live π_θ",
+          "why": "Table 10 defines the data source as the joint distribution of (q, o): GRPO uses q ~ P_sft(Q), o ~ π_θ(O|q). Generating outputs once from the SFT model makes it o ~ π_sft(O|q), the same change that separates RFT from Online RFT. The reward (Model) and the coefficient (Â + β(π_ref/π_θ − 1)) are kept by construction.",
+          "distractor_from": {"Gradient coefficient: stored outputs require I(o) instead of Â": "Confuses offline data with RFT's binary coefficient; coefficient and data source are independent axes.", "Reward function: stored outputs are graded by a Rule, not a Model": "Confuses offline data with RFT's rule reward; the variant keeps the reward model.", "No component: the questions still come from the same P_sft(Q)": "The data source is just the set of questions."},
+          "targets_misconception": "The data source is just the set of questions.",
+          "varies": "A hypothetical offline-GRPO method is placed in the paradigm instead of an online-RFT-like one (functional: changes the data axis rather than the coefficient axis).",
+          "invariant": "Data source = distribution of (q, o), reward function, and gradient coefficient are three independent components of Eq. 5.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Name the three components of the GRPO paper's unified paradigm for training methods.", "answer": "Data source D, reward function π_rf, algorithm A (which yields the gradient coefficient GC)."},
+          {"q": "What is the gradient coefficient of SFT in the paradigm, and what plays the role of its reward function?", "answer": "GC = 1 for every token; human selection of the SFT data."}
+        ],
+        "self_explain": "Why does the paper call the paradigm 'unified' when PPO and GRPO fit it only after assuming π_old = π_θ?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "restate", "ref": "grpo:eq5"},
+        {"type": "example", "action": "compare", "ref": "grpo:table10"}
+      ]
+    },
+    {
+      "id": "gradient-coefficient-comparison",
+      "label": "Online vs offline data and binary vs graded coefficients: what Fig. 5 attributes to each",
+      "kind": "comparison",
+      "statement": "Holding GC = I(o) fixed, moving the data source from the SFT model (RFT) to the live policy (Online RFT) improves GSM8K/MATH, mainly late in training; holding the online data source fixed, replacing I(o) by the group-normalized Â (+ KL term) that GRPO uses improves further, and process-supervised GRPO improves on outcome-supervised GRPO, all shown as curves on a 1.3B model.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:§5.2.1", "role": "claim", "quote": "RFT and DPO follow the offline style, while Online RFT and GRPO follow the online style."},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.1", "role": "claim", "quote": "we find that the Online RFT significantly outperforms RFT on two benchmarks"},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.1", "role": "claim", "quote": "Online RFT is comparable to RFT in the early stage of training but gains an absolute advantage in the later stage"},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.1", "role": "claim", "quote": "GRPO uniquely adjusts its gradient coefficient based on the reward value provided by the reward model."},
+          {"source": "grpo_paper", "ref": "grpo:eq10", "role": "computation", "quote": "Data Source: question in SFT dataset with outputs sampled from SFT model. Reward Function: Rule (whether the answer is correct or not). Gradient Coefficient:"},
+          {"source": "grpo_paper", "ref": "grpo:fig5", "role": "figure", "quote": "Performance of the DeepSeekMath-Instruct 1.3B model, which was further trained using various methods, on two benchmarks."},
+          {"source": "lecture_16", "ref": "lecture_16.pdf:p21", "role": "claim", "quote": "Outperforms RFT (reinforcing correct answers), with some gains from process supervision"}
+        ],
+        "filtering_note": "All comparisons in Fig. 5 are curves without numbers in the text, on a 1.3B model, and the GRPO rows use a learned reward model while the RFT rows use a rule, so the GC comparison also changes the reward function (Table 10). The paper's explanation for online > offline (the actor drifts from the SFT model so stale samples lose value) is stated as intuition. The course reads the same figure as 'learning from negative gradients' (p21, p48)."
+      },
+      "prerequisites": [
+        {"kp": "unified-paradigm", "basis": "teaching-order"},
+        {"kp": "group-relative-advantage-outcome", "basis": "author-inference"}
+      ],
+      "external_prerequisites": [
+        {"kp": "lecture_16:negative-gradients-vs-positive-only", "basis": "author-inference", "note": "the course's reading of RFT vs GRPO"}
+      ],
+      "misconceptions": [
+        {"belief": "RFT and GRPO differ because GRPO samples more outputs.", "why_wrong": "Both sample multiple outputs per question; in the paradigm they differ in data source (frozen SFT vs live policy) and coefficient (I(o) vs Â + KL)."},
+        {"belief": "A wrong output contributes nothing under either method.", "why_wrong": "Under RFT/Online RFT its coefficient is 0; under GRPO it carries a negative Â and is actively pushed down ('penalization')."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two methods see the same question with 4 sampled outputs, all correct. Online RFT applies GC = I(o); GRPO applies GC = Â (ignore the KL term). What coefficient does each method put on the tokens of these outputs, and which method moves the policy on this question?",
+          "format": "short",
+          "answer": "Online RFT: 1 on every token, so it keeps pushing up the probability of these outputs. GRPO: Â = 0 for all four, so it does not move the policy on this question.",
+          "why": "I(o) is absolute (correct = 1); Â is relative to the group. A question the policy already always solves gives GRPO no signal, which is why difficulty filtering matters for GRPO-style training.",
+          "targets_misconception": "RFT and GRPO differ because GRPO samples more outputs."
+        },
+        "transfer": {
+          "q": "Reverse the case: 4 outputs, all wrong. What coefficient does Online RFT put on them, what does GRPO put on them, and which method 'learns from negative gradients' here?",
+          "format": "short",
+          "answer": "Online RFT: 0 on all tokens (nothing learned). GRPO: Â = 0 as well, because the group is uniform; neither method learns from this question. Negative gradients appear in GRPO only when the group is mixed, where the wrong outputs get Â < 0.",
+          "why": "The group-relative coefficient needs variation inside the group; a uniformly failing group is as uninformative to GRPO as a uniformly succeeding one. The 'negative gradient' advantage over RFT is specific to mixed groups.",
+          "varies": "the group outcome (all wrong instead of all correct)",
+          "invariant": "GC definitions I(o) and Â",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "Three questions, 4 outputs each, binary reward 1 for correct and 0 for wrong: question X has 4 correct outputs, question Y has 4 wrong outputs, question Z has 1 correct and 3 wrong. Under GRPO with group-normalized Â (ignore the KL term), on how many of the 12 outputs are the tokens given a negative coefficient? Type only the number.",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.05,
+          "value": 3,
+          "why": "X and Y are uniform groups: r_i − mean = 0 for every output, so Â = 0 (not negative) for all 8. In Z, mean = 0.25; the correct output gets (1 − 0.25)/std > 0 and each wrong output gets (0 − 0.25)/std < 0. So exactly the 3 wrong outputs of Z are pushed down. Counting Y's wrong outputs too gives 7; Online RFT would give 0 negatives.",
+          "targets_misconception": "A wrong output is always pushed down by GRPO (or contributes nothing under either method).",
+          "varies": "Mixes uniform-correct, uniform-wrong and mixed groups in one batch and asks for a count (functional: aggregate over group types).",
+          "invariant": "GRPO's coefficient is nonzero only when the group's rewards vary; negative gradients come from below-mean outputs of mixed groups.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Which two methods in the unified paradigm share the same gradient coefficient and differ only in data source?", "answer": "RFT (outputs from π_sft, offline) and Online RFT (outputs from π_θ, online)."},
+          {"q": "What single property of its gradient coefficient makes GRPO different from Online RFT?", "answer": "GRPO adjusts the gradient coefficient by the reward value, allowing differential reinforcement and penalization; Online RFT uses a 0/1 coefficient."}
+        ],
+        "self_explain": "Why would online samples become more valuable than offline ones only in the later stage of training, according to the paper's own explanation?"
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "compare", "ref": "grpo:eq10, grpo:eq21", "steps": [
+            {"tex": "GC_{RFT}(q,o,t) = \\mathbb{I}(o) = \\begin{cases}1 & \\text{answer correct}\\\\ 0 & \\text{otherwise}\\end{cases}", "why": "Eq. 10: RFT and Online RFT do SFT on the correct outputs, which is coefficient 1 on their tokens and 0 elsewhere."},
+            {"do": "GRPO under the single-update assumption π_old = π_θ: the ratio term's gradient is Â_{i,t} ∇log π_θ(o_{i,t}|q, o_{i,<t}).", "why": "∇(π_θ/π_old)·Â at π_old = π_θ is Â·∇log π_θ, and with ρ = 1 the clip is inactive (Appendix A.1.6)."},
+            {"tex": "u = \\frac{\\pi_{ref}}{\\pi_\\theta}:\\quad \\nabla_\\theta u = -u\\,\\nabla_\\theta\\log\\pi_\\theta,\\quad \\nabla_\\theta(u - \\log u - 1) = (1-u)\\,\\nabla_\\theta\\log\\pi_\\theta", "why": "Differentiate the Eq. 4 KL estimator. π_ref is frozen, so only π_θ moves."},
+            {"tex": "GC_{GRPO} = \\hat A_{i,t} - \\beta(1-u) = \\hat A_{i,t} + \\beta\\Big(\\frac{\\pi_{ref}}{\\pi_\\theta} - 1\\Big)", "why": "The objective subtracts β times the estimator, which adds −β(1 − u) to the coefficient. This is Eq. 21."},
+            {"do": "Compare: I(o) is absolute and never negative. Â is relative to the group: positive above the group mean, negative below it, zero when all rewards are equal.", "why": "This is the 'key difference' of §5.2.1. GRPO can penalize wrong outputs and reinforce outputs by different amounts; Online RFT reinforces every correct output equally and never penalizes."}
+          ]},
+        {"type": "figure", "action": "predict-trend", "ref": "grpo:fig5"},
+        {"type": "interactive", "action": "compare", "ref": "fixture:grpo--advantage-map", "notice": "Uniform groups (all 1 or all 0) stay white under GRPO while Online RFT's I(o) puts 1 on every correct output; red, pushed-down outputs appear only in mixed groups."}
+      ]
+    },
+    {
+      "id": "grpo-training-recipe",
+      "label": "DeepSeekMath-RL recipe as printed: G = 64, β = 0.04, lr 1e-6, one update per exploration stage",
+      "kind": "quantity",
+      "statement": "RL started from DeepSeekMath-Instruct 7B on about 144K chain-of-thought GSM8K/MATH questions only, with a reward model trained from DeepSeekMath-Base 7B at lr 2e-5; GRPO used policy lr 1e-6, KL coefficient β = 0.04, G = 64 outputs per question, max length 1024, batch size 1024, and a single policy update after each sampling stage.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "The KL coefficient is 0.04. For each question, we sample $64$ outputs. The max length is set to 1024, and the training batch size is 1024."},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "we set the learning rate of the policy model as 1e-6"},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "which consists of around 144K questions"},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "The policy model only has a single update following each exploration stage."},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "We exclude other SFT questions to investigate the impact of RL on benchmarks that lack data throughout the RL phase."}
+        ],
+        "filtering_note": "ε is never given a value in the paper, and with a single update per exploration stage it would not act (see supp-importance-ratio). The number of RL steps/epochs is not printed. FeynRL's gsm8k recipe differs: kl_coeff 0.0, no reference model, n_samples set in its yaml; see repos/feynrl config-recipe-gsm8k."
+      },
+      "prerequisites": [{"kp": "grpo-objective-clip-kl", "basis": "teaching-order"}],
+      "external_prerequisites": [
+        {"kp": "feynrl:config-recipe-gsm8k", "basis": "author-inference", "note": "the comparable recipe in code"}
+      ],
+      "misconceptions": [
+        {"belief": "G = 64 means 64 questions per batch.", "why_wrong": "G is the number of outputs sampled per question; the batch size is a separate 1024."},
+        {"belief": "The paper gives a clip value ε for GRPO.", "why_wrong": "It gives β, G, lr, length and batch size but never ε; with one update per exploration stage ε cannot bind anyway."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Per training batch of 1024 questions, how many outputs does DeepSeekMath-RL's GRPO sample?",
+          "format": "number",
+          "answer": "65536",
+          "tolerance": 0.001,
+          "why": "1024 questions × G = 64 outputs = 65,536 outputs; at max length 1024 that is up to 67,108,864 generated tokens per batch. The rollout cost, not the critic, is where GRPO spends compute.",
+          "targets_misconception": "G = 64 means 64 questions per batch."
+        },
+        "transfer": {
+          "q": "FeynRL's gsm8k recipe sets kl_coeff = 0.0 and loads no reference model. Which of the paper's printed hyper-parameters does that correspond to, and which forward pass per micro-batch disappears compared with the paper's setting?",
+          "format": "short",
+          "answer": "β = 0.04 → 0; the reference-model forward pass (ref_forward) disappears, leaving only the policy forward (the gate at algs/GRPO/grpo.py:L344 is false).",
+          "why": "β multiplies the KL term in Eq. 3; with β = 0 the term and the model that computes π_ref are both unnecessary, which FeynRL exploits by not loading it (grpo.py:L98-L101).",
+          "varies": "β from 0.04 to 0, in code rather than in the paper",
+          "invariant": "Eq. 3's structure; only the KL term is switched off",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "A reproduction of DeepSeekMath-RL needs a value for the clip ε in Eq. 3. What does the paper's §4.2 recipe provide for ε?",
+          "format": "choice",
+          "choices": ["ε = 0.2, the PPO default, stated next to β and the learning rate", "No ε at all; with one update per sampling stage the clip cannot bind", "ε = 0.04, one value printed for both the clip and the KL coefficient"],
+          "answer": "No ε at all; with one update per sampling stage the clip cannot bind",
+          "why": "§4.2 prints policy lr 1e-6, KL coefficient 0.04, 64 outputs per question, max length 1024, batch size 1024 and a single policy update per exploration stage, but no ε. With one update the ratio is 1 when the gradient is taken, so the clip is inactive (Appendix A.1.5 removes min and clip under this assumption).",
+          "distractor_from": {"ε = 0.2, the PPO default, stated next to β and the learning rate": "The paper gives a clip value ε for GRPO.", "ε = 0.04, one value printed for both the clip and the KL coefficient": "Confuses β = 0.04 with a clip value."},
+          "targets_misconception": "The paper gives a clip value ε for GRPO.",
+          "varies": "Asks about an omitted hyper-parameter and why it is irrelevant, instead of the β/reference-model configuration (functional: reading the recipe for what is absent).",
+          "invariant": "The printed recipe is lr, β, G, length, batch and μ = 1; one update per stage makes ε inert.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "State β, G and the policy learning rate used for DeepSeekMath-RL.", "answer": "β = 0.04, G = 64, lr = 1e-6.", "layer": "detail"},
+          {"q": "From which data were the RL questions drawn, and why were other SFT questions excluded?", "answer": "Chain-of-thought GSM8K and MATH questions from the SFT data (~144K); other questions were excluded to test RL's effect on benchmarks with no RL data."}
+        ],
+        "self_explain": "Why does training with a single update per exploration stage make the paper's clipping hyper-parameter irrelevant to its results?"
+      },
+      "presentations": [
+        {"type": "example", "action": "predict-number", "ref": "grpo:§4.2"}
+      ]
+    },
+    {
+      "id": "rl-findings-maj-not-pass",
+      "label": "What the RL experiments showed and did not: +5 points in and out of domain, Maj@K up, Pass@K flat",
+      "kind": "comparison",
+      "statement": "Table 5 (as printed): chain-of-thought GSM8K 82.9 → 88.2 and MATH 46.8 → 51.7 from Instruct to RL, with gains also on the untrained MGSM-zh (73.2 → 79.6), CMATH (84.6 → 88.8) and the tool-integrated setting (MATH 57.4 → 58.8); Fig. 7 reports that RL raised Maj@K but not Pass@K, which the authors read as a more robust output distribution rather than new capability.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "grpo_paper", "ref": "grpo:table5", "role": "figure", "quote": "it improves over DeepSeekMath-Instruct 7B on all benchmarks"},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "DeepSeekMath-RL 7B attains accuracies of 88.2% and 51.7% on GSM8K and MATH, respectively, utilizing chain-of-thought reasoning."},
+          {"source": "grpo_paper", "ref": "grpo:fig7", "role": "figure", "quote": "It was noted that RL enhances Maj@K but not Pass@K."},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.2", "role": "claim", "quote": "boosting the correct response from TopK rather than the enhancement of fundamental capabilities"},
+          {"source": "grpo_paper", "ref": "grpo:§5.2.3", "role": "claim", "quote": "our RL pipeline only improves the Maj@K performance"},
+          {"source": "grpo_paper", "ref": "grpo:§4.2", "role": "claim", "quote": "GSM8K and MATH with chain-of-thought reasoning can be regarded as in-domain tasks and all the other benchmarks can be regarded as out-of-domain tasks"}
+        ],
+        "filtering_note": "Table 5 numbers were parsed from the HTML table (discovered.json tables.table5_deepseekmath_rows): Instruct 82.9/46.8/73.2/84.6 vs RL 88.2/51.7/79.6/88.8 (CoT) and 83.7/57.4/72.0/84.3 vs 86.7/58.8/78.4/87.6 (tool-integrated). No seeds or variance are reported. Fig. 7 is image-only: the K range and the Pass@K values are not in the text, so 'flat' is the authors' description, not a number. The paper does not test whether Pass@K at very large K is unchanged or merely not improved at the K plotted. The course cites the DeepSeekMath results on p21 but not the Maj@K/Pass@K finding."
+      },
+      "prerequisites": [{"kp": "grpo-training-recipe", "basis": "teaching-order"}],
+      "misconceptions": [
+        {"belief": "RL trained only on GSM8K/MATH chain-of-thought should not change tool-integrated or Chinese benchmarks.", "why_wrong": "Table 5 shows gains on every printed out-of-domain column; the authors use this as evidence that RL generalizes beyond its training questions."},
+        {"belief": "A higher Maj@K means the model can now solve problems it could not solve before.", "why_wrong": "Pass@K did not rise: the set of problems solvable in K tries is unchanged, the correct answers are simply sampled more often, which is what majority voting rewards."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "RL used only GSM8K/MATH chain-of-thought questions. Before looking at Table 5: did the Chinese benchmarks (MGSM-zh, CMATH) and the tool-integrated MATH score go up, go down, or stay flat for DeepSeekMath-RL vs Instruct? Give the direction and one printed number.",
+          "format": "trend",
+          "answer": "Up on all of them: MGSM-zh 73.2 → 79.6, CMATH 84.6 → 88.8, tool-integrated MATH 57.4 → 58.8.",
+          "why": "The paper's point in §4.2 is that RL on a narrow question set still improved every benchmark, including ones with no RL data.",
+          "targets_misconception": "RL trained only on GSM8K/MATH chain-of-thought should not change tool-integrated or Chinese benchmarks."
+        },
+        "transfer": {
+          "q": "A model solves a given MATH problem in 10 of 64 samples before RL and in 40 of 64 after. Which of Pass@64 and Maj@64 for this problem can change, and in which direction? Then say which metric the paper found RL to improve overall and what that implies about problems solved in 0 of 64 samples before RL.",
+          "format": "short",
+          "answer": "Pass@64 is 1 both times (unchanged); Maj@64 can flip from wrong to right because the correct answer now dominates the vote. The paper found Maj@K improved and Pass@K did not, implying problems with 0/64 before RL mostly stayed at 0 after: RL re-weighted the distribution over answers it could already produce.",
+          "why": "Pass@K asks whether any sample is right, Maj@K whether the plurality is; concentrating probability on an already-reachable answer moves the second without the first. That is the mechanism behind §5.2.2's reading.",
+          "varies": "a single problem's sample counts instead of a benchmark aggregate",
+          "invariant": "definitions of Pass@K and Maj@K",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "Five MATH problems, 8 samples each. Correct samples per problem before RL: [0, 2, 3, 6, 1]; after RL: [0, 5, 7, 8, 3]. Count a problem as solved under Maj@8 when more than half (at least 5) of its 8 samples are correct, and under Pass@8 when at least one is. By how many percentage points does Maj@8 accuracy over the five problems change from before to after RL? Type only the number of points.",
+          "format": "number",
+          "answer": "40% (Maj@8 goes from 20% to 60%: +40 points)",
+          "tolerance": 0.04,
+          "why": "Maj@8 before: only the problem with 6/8 qualifies, 1/5 = 20%. After: 5/8, 7/8, 8/8 qualify, 3/5 = 60%. Change = +40 points. Pass@8 is 4/5 = 80% both before and after (the 0/8 problem stays at 0), the pattern Fig. 7 reports: RL concentrates probability on answers the model could already reach, so Maj@K rises while Pass@K stays flat.",
+          "targets_misconception": "A higher Maj@K means the model can now solve problems it could not solve before.",
+          "varies": "A five-problem tally with a stated majority rule replaces the single-problem qualitative case (modality: computed metric from sample counts).",
+          "invariant": "Maj@K rewards how often the correct answer is sampled; Pass@K only whether it is sampled at all; re-weighting moves the first, not the second.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Give DeepSeekMath-Instruct 7B and DeepSeekMath-RL 7B chain-of-thought accuracies on GSM8K and MATH.", "answer": "GSM8K 82.9% → 88.2%; MATH 46.8% → 51.7%.", "layer": "detail"},
+          {"q": "Which metric did RL improve and which did it leave unchanged, and what did the authors conclude from that?", "answer": "Maj@K improved, Pass@K did not; they concluded RL makes the output distribution more robust (boosts the correct answer within the top-K) rather than adding fundamental capability."}
+        ],
+        "self_explain": "Why would a method whose coefficient is zero on uniformly-failed groups (gradient-coefficient-comparison) be expected to raise Maj@K more than Pass@K?"
+      },
+      "presentations": [
+        {"type": "example", "action": "predict-trend", "ref": "grpo:table5"},
+        {"type": "figure", "action": "distinguish", "ref": "grpo:fig7"}
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Paper order: §4.1.1 motivates dropping the critic, states Eq. 3 and Eq. 4 and Algorithm 1; §4.1.2-4.1.3 define the outcome and process advantages; §4.1.4 iterative GRPO; §4.2 recipe and Table 5; §5.2.1 unified paradigm with Table 10 and Fig. 5; §5.2.2 Maj@K vs Pass@K. The group-advantage KP is placed before the objective KP because Eq. 3 cannot be read without Â, although the paper prints Eq. 3 first and defines Â 'in the following subsections'. Supplements are the two facts the paper uses without stating: the baseline identity and the ratio-equals-one simplification (which the appendix states only as an assumption).",
+    "stops": ["ppo-value-model-cost", "group-relative-advantage-outcome", "grpo-objective-clip-kl", "kl-k3-estimator", "process-supervision-advantage", "iterative-grpo", "grpo-training-recipe", "rl-findings-maj-not-pass", "unified-paradigm", "gradient-coefficient-comparison"],
+    "supplements": ["supp-policy-gradient", "supp-importance-ratio"]
+  },
+  "course_path": {
+    "basis": "teaching-order",
+    "source": "lecture_16",
+    "note": "Lecture 16 order (p5, p17-p24): policy gradient and its variance first (p5, so supp-policy-gradient is a stop, not a supplement), PPO's ratio clip (p5, p7), why not PPO or DPO (p17), GRPO as PPO minus the value model with a z-score advantage (p18, where the slide also states the ratio-equals-one reading), the tiny-implementation walk-through including the KL term (p19-p20), the original paper's RFT comparison with process-supervision gains (p21), then the course's own critique of the std division and length normalization (p22-p24), which this paper does not contain. The course never shows Eq. 4, iterative GRPO, the recipe numbers, the unified paradigm or the Maj@K/Pass@K finding.",
+    "stops": ["supp-policy-gradient", "supp-importance-ratio", "ppo-value-model-cost", "group-relative-advantage-outcome", "grpo-objective-clip-kl", "gradient-coefficient-comparison", "process-supervision-advantage"],
+    "supplements": [],
+    "not_covered": ["kl-k3-estimator", "iterative-grpo", "grpo-training-recipe", "unified-paradigm", "rl-findings-maj-not-pass"],
+    "course_adds": ["lecture_16:baseline-validity-std-division", "lecture_16:grpo-length-bias"]
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "fixture": "memory-ledger",
+  "family": "bar-ledger",
+  "scene": "MemoryLedgerScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "optimizer-state-memory",
+    "gradient-accumulation"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "9.500000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "lecture values: B=64",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.9,
+      "caption": "changed case: B=4096",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 6.2,
+      "caption": "gradient accumulation: micro=256",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "Only the activation bar moves when B changes; the three parameter-shaped bars stay fixed.",
+      "evidence": [
+        "bar.activation",
+        "bar.param",
+        "bar.grad",
+        "bar.optimizer"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s2",
+      "claim": "Micro-batching shrinks the activation bar; the gradient bar does not shrink because gradients are accumulated, not discarded.",
+      "evidence": [
+        "bar.activation",
+        "bar.grad",
+        "counter.microsteps"
+      ]
+    }
+  ],
+  "lint_worst": "Medium"
+}

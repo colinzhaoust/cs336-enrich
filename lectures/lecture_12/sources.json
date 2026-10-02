@@ -1,0 +1,340 @@
+{
+  "lecture_12": {
+    "title": "CS336 Spring 2026, Lecture 12: Evaluation",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_12.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_12.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_12.json",
+    "note": "Line anchors refer to the local shallow clone (sha256 recorded in discovered.json). Unlike lectures 2, 6 and 10 this file contains no @inspect values and no executable computation: it is 215 text() claims, 51 link() cites and 43 image() figures. So the only 'computed' material in this thread is what the author evaluates from the two formulas the professor writes down, perplexity (1/p(D))^(1/|D|) at L62 and the Elo win-probability 1/(1+10^((ELO_B-ELO_A)/400)) at L172; those evaluations are stated as 'evaluating the professor's formula gives'. Every count the professor reads off a paper in a text() line (57 subjects, 805 instructions, 2294 tasks, 2500 questions, 510 behaviors, 314 categories / 5694 prompts, 44 occupations, 121 tasks, 229 / 89 tasks, 40 CTF tasks, 75 competitions, 65% / 34% / 39% on GPQA, 'drop by 16% to 33%' on MMLU-Pro, 51.3 -> 30.0 on 1BW) is quoted with that attribution and never asserted as a fact of this thread. Numbers that live only inside embedded leaderboard screenshots and paper figures (artificial-analysis, lmarena-leaderboard, openrouter, gpt2-perplexity, mmlu, mmlu-pro, gpqa, hle-results, arena-beets, alpacaeval-leaderboard, wildbench, swebench, terminal-bench-*, cybench-*, mlebench-*, arc-agi-results, arc-agi-3-results, gdpval, clio-table4, contamination-exchangeability, the two Platinum tweets, karpathy-nanogpt-speedrun) are recorded as 'shown' and not restated."
+  },
+  "lecture_12_video": {
+    "title": "CS336 Spring 2026, Lecture 12: Evaluation (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=JpAxdTWQJxM",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_15": {
+    "title": "CS336 Spring 2026, Lecture 15: Mid/post-training: SFT and RLHF",
+    "kind": "slides",
+    "path": "official/lectures/lecture_15.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_15:<kp-id>); see atlas/lectures/lecture_15/knowledge_points.json. The Bradley-Terry pairwise model, pairwise crowdsourced feedback and the length bias of human and GPT judges are taught there as RLHF ingredients; lecture 12 meets the same objects as evaluation instruments (Chatbot Arena Elo at L171-L173, AlpacaEval length gaming at L187-L188)."
+  },
+  "lecture_01": {
+    "title": "CS336 Spring 2026, Lecture 1: Overview and tokenization",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_01.py",
+    "note": "Referenced only through external_prerequisites (lecture_01:compression-ratio). Perplexity at L62 is per token (|D| counts tokens), so comparing perplexities across models with different tokenizers needs the bytes-per-token compression ratio from lecture 1; the professor does not raise this in lecture 12 (author-inference, see perplexity-definition filtering note)."
+  },
+  "artificial_analysis": {
+    "title": "Artificial Analysis (independent model benchmark and cost comparison site)",
+    "kind": "leaderboard",
+    "url": "https://artificialanalysis.ai/",
+    "note": "Linked at lecture_12.py:L45 as the 'does well on benchmarks' notion of good; the two screenshots at L46 and L49 (intelligence index, and intelligence vs cost) are shown and not restated."
+  },
+  "arena_leaderboard": {
+    "title": "Arena AI leaderboard (formerly Chatbot Arena / LMArena)",
+    "kind": "leaderboard",
+    "url": "https://arena.ai/leaderboard",
+    "note": "Linked at lecture_12.py:L52 and L174; the leaderboard screenshot (images/lmarena-leaderboard.png) is shown at L53 and L175 and no rank or score from it is restated."
+  },
+  "openrouter_rankings": {
+    "title": "OpenRouter token-usage rankings",
+    "kind": "leaderboard",
+    "url": "https://openrouter.ai/rankings",
+    "note": "Linked at lecture_12.py:L56 as the 'people simply choose to use (and pay for) it' notion of good; screenshot shown at L57."
+  },
+  "jozefowicz_2016": {
+    "title": "Exploring the Limits of Language Modeling (Jozefowicz et al., 2016)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1602.02410",
+    "note": "Linked at lecture_12.py:L73 for 'Pure CNNs+LSTMs on the One Billion Word Benchmark (perplexity 51.3 -> 30.0)'; the two perplexities are the professor's reading of that paper and are quoted with attribution."
+  },
+  "lambada_2016": {
+    "title": "The LAMBADA dataset: Word prediction requiring a broad discourse context (Paperno et al., 2016)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1606.06031",
+    "note": "Linked at lecture_12.py:L93 as the cloze example of 'perplexity in disguise'; example figure (images/lambada.png) shown at L94."
+  },
+  "hellaswag_2019": {
+    "title": "HellaSwag: Can a Machine Really Finish Your Sentence? (Zellers et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1905.07830",
+    "note": "Linked at lecture_12.py:L95 as the multiple-choice sentence-completion example of 'perplexity in disguise'; figure shown at L96."
+  },
+  "mmlu_2021": {
+    "title": "Measuring Massive Multitask Language Understanding (Hendrycks et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2009.03300.pdf",
+    "note": "Linked at lecture_12.py:L113 via references.mmlu_2021 (references.py L147: '57 subjects, multiple-choice'). The quoted phrase at L115, 'collected by graduate and undergraduate students from freely available sources online', is the paper's own description. The results figure (images/mmlu.png) is shown at L118 and not restated."
+  },
+  "llm_stats_mmlu": {
+    "title": "llm-stats.com: MMLU benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/mmlu",
+    "note": "Linked at lecture_12.py:L119."
+  },
+  "helm_mmlu": {
+    "title": "HELM MMLU leaderboard (with per-instance predictions)",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/mmlu/latest/",
+    "note": "Linked at lecture_12.py:L120 as 'HELM MMLU for visualizing predictions'. The lecture does not discuss prompt-format sensitivity; HELM is where a learner can inspect the exact prompts and predictions."
+  },
+  "mmlu_pro_2024": {
+    "title": "MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark (Wang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2406.01574",
+    "note": "Linked at lecture_12.py:L122. 'Accuracy of models drop by 16% to 33%' (L126) is the professor's reading of this paper; figure shown at L127."
+  },
+  "llm_stats_mmlu_pro": {
+    "title": "llm-stats.com: MMLU-Pro benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/mmlu-pro",
+    "note": "Linked at lecture_12.py:L128."
+  },
+  "helm_mmlu_pro": {
+    "title": "HELM Capabilities leaderboard: MMLU-Pro",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/capabilities/latest/#/leaderboard/mmlu_pro",
+    "note": "Linked at lecture_12.py:L129."
+  },
+  "gpqa_2023": {
+    "title": "GPQA: A Graduate-Level Google-Proof Q&A Benchmark (Rein et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2311.12022",
+    "note": "Linked at lecture_12.py:L131. The '61 PhD contractors', 'PhD experts achieve 65%', 'Non-experts achieve 34% over 30 minutes with access to Google' and 'GPT-4 achieves 39%' (L132-L136) are the professor's reading of this paper, quoted with attribution; figure shown at L133."
+  },
+  "llm_stats_gpqa": {
+    "title": "llm-stats.com: GPQA benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/gpqa",
+    "note": "Linked at lecture_12.py:L137."
+  },
+  "helm_gpqa": {
+    "title": "HELM Capabilities leaderboard: GPQA",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/capabilities/latest/#/leaderboard/gpqa",
+    "note": "Linked at lecture_12.py:L138."
+  },
+  "hle_2025": {
+    "title": "Humanity's Last Exam (Phan et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.14249",
+    "note": "Linked at lecture_12.py:L140. '2500 questions', '$500K prize pool + co-authorship' and 'Filtered by frontier LLMs, multiple stages of review' (L141-L144) are read off the paper; the example, pipeline and results figures (L142, L145, L146) are shown and not restated."
+  },
+  "llm_stats_hle": {
+    "title": "llm-stats.com: Humanity's Last Exam benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/hle",
+    "note": "Linked at lecture_12.py:L147."
+  },
+  "chatbot_arena_2024": {
+    "title": "Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference (Chiang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2403.04132",
+    "note": "Linked at lecture_12.py:L165. Source of the pairwise data-collection protocol (L166-L169) and the Elo-style model fit by maximum likelihood (L171-L173). The beet-salad side-by-side (images/arena-beets.png) is shown at L170."
+  },
+  "alpacaeval_leaderboard": {
+    "title": "AlpacaEval leaderboard (tatsu-lab)",
+    "kind": "leaderboard",
+    "url": "https://tatsu-lab.github.io/alpaca_eval/",
+    "note": "Linked at lecture_12.py:L184. '805 instructions' and 'win rate against baseline model (GPT-4 preview) as judged by GPT-4 preview' (L185-L186) are the professor's description; leaderboard screenshot shown at L192."
+  },
+  "alpacaeval_lc_2024": {
+    "title": "Length-Controlled AlpacaEval: A Simple Way to Debias Automatic Evaluators (Dubois et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2404.04475",
+    "note": "Linked at lecture_12.py:L188 ('Alpaca Eval 2.0 used regression to debias the metric')."
+  },
+  "alpacaeval_correlation_figure": {
+    "title": "alpaca_eval repository figure: correlation of automatic evaluators with Chatbot Arena",
+    "kind": "figure",
+    "url": "https://github.com/tatsu-lab/alpaca_eval/raw/main/figures/chat_correlations_no_ae.png",
+    "note": "Embedded at lecture_12.py:L191 under 'Correlation with Chatbot Arena (humans) is high'; the correlation values are shown and not restated."
+  },
+  "wildbench_2024": {
+    "title": "WildBench: Benchmarking LLMs with Challenging Tasks from Real Users in the Wild (Lin et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2406.04770",
+    "note": "Linked at lecture_12.py:L194. '1024 examples from 1M human-chatbot conversations' and the GPT-4-turbo checklist judge (L195-L196) are the professor's description; figure shown at L198."
+  },
+  "helm_wildbench": {
+    "title": "HELM Capabilities leaderboard: WildBench",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/capabilities/latest/#/leaderboard/wildbench",
+    "note": "Linked at lecture_12.py:L199."
+  },
+  "swebench_2023": {
+    "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues? (Jimenez et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2310.06770",
+    "note": "Linked at lecture_12.py:L216. '2294 tasks across 12 Python repositories' (L217) is read off the paper; figure shown at L220."
+  },
+  "llm_stats_swebench_verified": {
+    "title": "llm-stats.com: SWE-bench Verified benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/swe-bench-verified",
+    "note": "Linked at lecture_12.py:L221."
+  },
+  "terminal_bench_2026": {
+    "title": "Terminal-Bench paper (arXiv 2601.11868, 2026)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2601.11868",
+    "note": "Linked at lecture_12.py:L223 together with the website. '229 tasks crowdsourced from 93 contributors, 89 tasks constitute Terminal-Bench 2.0' (L226) is read off the paper; the three figures (L224, L227, L228) are shown and not restated."
+  },
+  "terminal_bench_site": {
+    "title": "Terminal-Bench website",
+    "kind": "leaderboard",
+    "url": "https://www.tbench.ai/",
+    "note": "Linked at lecture_12.py:L223 as 'website'."
+  },
+  "llm_stats_terminal_bench": {
+    "title": "llm-stats.com: Terminal-Bench benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/terminal-bench",
+    "note": "Linked at lecture_12.py:L229."
+  },
+  "cybench_2024": {
+    "title": "Cybench: A Framework for Evaluating Cybersecurity Capabilities and Risks of Language Models (Zhang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2408.08926",
+    "note": "Linked at lecture_12.py:L231. '40 Capture the Flag (CTF) tasks' and 'first-solve time as a measure of difficulty' (L233-L234) are the professor's reading; the three figures (L232, L235, L236) are shown."
+  },
+  "llm_stats_cybench": {
+    "title": "llm-stats.com: Cybench benchmark page",
+    "kind": "leaderboard",
+    "url": "https://llm-stats.com/benchmarks/cybench",
+    "note": "Linked at lecture_12.py:L237."
+  },
+  "mlebench_2024": {
+    "title": "MLE-bench: Evaluating Machine Learning Agents on Machine Learning Engineering (Chan et al., OpenAI, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2410.07095",
+    "note": "Linked at lecture_12.py:L239. '75 Kaggle competitions' (L240) is read off the paper; two figures shown at L241-L242."
+  },
+  "philschmid_deep_agents": {
+    "title": "Agents 2.0: From Shallow Loops to Deep Agents (Phil Schmid blog post)",
+    "kind": "article",
+    "url": "https://www.philschmid.de/agents-2.0-deep-agents",
+    "note": "Linked at lecture_12.py:L244 via post_link; the overview figure embedded at L245 is this post's. Source of the four scaffold ingredients listed at L246-L249."
+  },
+  "arc_prize": {
+    "title": "ARC Prize: ARC-AGI benchmark page",
+    "kind": "leaderboard",
+    "url": "https://arcprize.org/arc-agi",
+    "note": "Linked at lecture_12.py:L262 as 'website'. The task-grid image (L267), the ARC-AGI-2 unsolved example (L270) and the results figure (images/arc-agi-results.png, L272) are shown and not restated."
+  },
+  "arc_agi_3_report": {
+    "title": "ARC-AGI-3 Technical Report (ARC Prize, 2026)",
+    "kind": "paper",
+    "url": "https://arcprize.org/media/ARC_AGI_3_Technical_Report.pdf",
+    "note": "Linked at lecture_12.py:L276 via post_link ('ARC-AGI-3 (March 2026): interactive environments'); two figures shown at L277-L278."
+  },
+  "crash_test_image": {
+    "title": "Crash-test rating photo (team-bhp forum attachment)",
+    "kind": "figure",
+    "url": "https://www.team-bhp.com/forum/attachments/road-safety/2173645d1625144681-will-crash-test-rating-change-if-higher-variant-chosen-images-30.jpeg",
+    "note": "Embedded at lecture_12.py:L287 as the opening analogy for 'What does safety mean for AI?' (L288)."
+  },
+  "harmbench_2024": {
+    "title": "HarmBench: A Standardized Evaluation Framework for Automated Red Teaming and Robust Refusal (Mazeika et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2402.04249",
+    "note": "Linked at lecture_12.py:L290. '510 harmful behaviors that violate laws or norms' (L291) is read off the paper."
+  },
+  "helm_harmbench": {
+    "title": "HELM Safety leaderboard: HarmBench",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/safety/latest/#/leaderboard/harm_bench",
+    "note": "Linked at lecture_12.py:L292."
+  },
+  "helm_safety_failure_example": {
+    "title": "HELM Safety: example HarmBench run with a safety failure (claude-3-7-sonnet instances page)",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/safety/latest/#/runs/harm_bench:model=anthropic_claude-3-7-sonnet-20250219?instancesPage=4",
+    "note": "Linked at lecture_12.py:L293 as 'Example of safety failure'. The content of the failing instance is not restated."
+  },
+  "air_bench_2024": {
+    "title": "AIR-Bench 2024: A Safety Benchmark Based on Risk Categories from Regulations and Policies (Zeng et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.17436",
+    "note": "Linked at lecture_12.py:L295. 'Taxonomized into 314 risk categories, 5694 prompts' (L297) is read off the paper; overview figure embedded from HELM assets at L298."
+  },
+  "helm_air_bench": {
+    "title": "HELM AIR-Bench leaderboard",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/air-bench/latest/#/leaderboard",
+    "note": "Linked at lecture_12.py:L299."
+  },
+  "gcg_2023": {
+    "title": "Universal and Transferable Adversarial Attacks on Aligned Language Models (Zou et al., 2023; Greedy Coordinate Gradient)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2307.15043",
+    "note": "Linked at lecture_12.py:L303 ('GCG automatically optimizes prompts to bypass safety', 'Transfers from open-weight models (Llama) to closed models (GPT-4)', L303-L304); example figure shown at L305."
+  },
+  "gdpval_2025": {
+    "title": "GDPval: Evaluating AI Model Performance on Real-World Economically Valuable Tasks (OpenAI, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2510.04374",
+    "note": "Linked at lecture_12.py:L319. '44 occupations from top 9 sectors according to US GDP' and 'professionals with ~14 years of experience' (L320-L321) are read off the paper; figure shown at L322."
+  },
+  "medhelm_2025": {
+    "title": "MedHELM: Holistic Evaluation of Large Language Models for Medical Tasks (Bedi et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2505.23802",
+    "note": "Linked at lecture_12.py:L324. '121 clinical tasks sourced from 29 clinicians, mixture of private and public datasets' (L326) is read off the paper; overview figure from HELM assets at L327."
+  },
+  "helm_medhelm": {
+    "title": "HELM MedHELM leaderboard",
+    "kind": "leaderboard",
+    "url": "https://crfm.stanford.edu/helm/medhelm/latest/#/leaderboard",
+    "note": "Linked at lecture_12.py:L328."
+  },
+  "clio_2024": {
+    "title": "Clio: Privacy-Preserving Insights into Real-World AI Use (Tamkin et al., Anthropic, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.13678",
+    "note": "Linked at lecture_12.py:L330 ('Use language models to analyze real user data', 'Share general patterns of what people are asking'); Table 4 image shown at L333 and not restated."
+  },
+  "contamination_exchangeability_2023": {
+    "title": "Proving Test Set Contamination in Black Box Language Models (Oren et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2310.17623",
+    "note": "Linked at lecture_12.py:L347 as Route 1, 'Exploit exchangeability of data points'; figure (images/contamination-exchangeability.png) shown at L348."
+  },
+  "train_test_overlap_reporting_2024": {
+    "title": "Language model developers should report train-test overlap (Zhang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2410.08385",
+    "note": "Linked at lecture_12.py:L351 as Route 2, reporting norms."
+  },
+  "swebench_verified_post": {
+    "title": "Introducing SWE-bench Verified (OpenAI blog post, 2024)",
+    "kind": "article",
+    "url": "https://openai.com/index/introducing-swe-bench-verified/",
+    "note": "Linked at lecture_12.py:L363 via post_link ('Fixed up SWE-Bench to produce SWE-Bench Verified')."
+  },
+  "platinum_benchmarks_2025": {
+    "title": "Do Large Language Model Benchmarks Test Reliability? (Platinum benchmarks; Vendrow et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2502.03461",
+    "note": "Linked at lecture_12.py:L364 ('Create Platinum versions of benchmarks'); the two embedded tweet images at L365-L366 (pbs.twimg.com) are shown and not restated."
+  },
+  "agentic_benchmark_practices_2025": {
+    "title": "Establishing Best Practices for Building Rigorous Agentic Benchmarks (Zhu et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2507.02825",
+    "note": "Linked at lecture_12.py:L367 ('Problems with agentic benchmarks: insufficient test cases, trivial agent can solve task')."
+  },
+  "docent_transluce": {
+    "title": "Introducing Docent (Transluce)",
+    "kind": "article",
+    "url": "https://transluce.org/introducing-docent",
+    "note": "Linked at lecture_12.py:L368 via post_link ('use LLM to inspect agent traces to detect problems')."
+  },
+  "karpathy_speedrun_post": {
+    "title": "Andrej Karpathy on X: nanogpt speedrun (Oct 2024)",
+    "kind": "article",
+    "url": "https://x.com/karpathy/status/1846790537262571739",
+    "note": "Linked at lecture_12.py:L385 via post_link next to images/karpathy-nanogpt-speedrun.png; the example of evaluating methods ('fixed data, compute time to get to a particular validation loss', L384). The record times in the screenshot are not restated."
+  }
+}

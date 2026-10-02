@@ -1,0 +1,33 @@
+{
+  "chinchilla_paper": {
+    "title": "Training Compute-Optimal Large Language Models (Hoffmann, Borgeaud, Mensch, Buchatskaya, Cai, Rutherford, de Las Casas, Hendricks, Welbl, Clark, Hennigan, Noland, Millican, van den Driessche, Damoc, Guy, Osindero, Simonyan, Elsen, Rae, Vinyals, Sifre; 2022)",
+    "kind": "paper",
+    "arxiv": "2203.15556",
+    "revision": "arXiv:2203.15556v1 (only version listed on the abstract page, submitted 29 Mar 2022)",
+    "url": "https://arxiv.org/abs/2203.15556",
+    "text": "atlas/papers/chinchilla/paper.txt (our extraction of https://arxiv.org/html/2203.15556 via html_to_text.py; the fetched HTML is kept as _arxiv_2203.15556.html; no PDF downloaded)",
+    "anchor_convention": "chinchilla:§3.2 (section), chinchilla:§abstract, chinchilla:eqN (equation number as in the HTML: 1-4 main text, 5-11 Appendix D.2), chinchilla:tableN / chinchilla:tableA3, chinchilla:figN / chinchilla:figA1. No page anchors: the HTML carries no page breaks.",
+    "note": "Every anchor quote is a verbatim substring of paper.txt; inline math appears there as $...$ so quotes avoid or include it exactly. `python3 discover_paper.py --check` verifies all quotes (atlas/tools/check_anchors.py skips non-line refs). discovered.json lists the numbers that disagree inside the paper (MMLU 67.5 vs 67.6; Table 3 rows vs §3.4 prose for 175B/280B; Gopher FLOPs 5.76e23 vs 6.3e23)."
+  },
+  "lecture_09": {
+    "title": "CS336 Spring 2026, Lecture 9: Scaling laws - basics (Chinchilla on slides 45-54)",
+    "kind": "slides",
+    "path": "official/lectures/lecture_09.pdf",
+    "text": "atlas/lectures/lecture_09/lecture_09.txt (pdftotext -layout)",
+    "anchor_convention": "lecture_09.pdf:pNN",
+    "note": "Gives the course's teaching order for the three methods (p46-p49), the Kaplan discrepancy (p50-p52), the method-3 re-fit addendum (p53) and the '20 tokens / param' table (p54). Referenced through external_prerequisites (lecture_09:<kp id>) and course_path; quotes from it are taken from the lecture_09 thread's knowledge_points.json and discovered.json."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:six-nd), which supplies the C = 6ND rule the paper takes from Kaplan et al."
+  },
+  "isoflop_fixture": {
+    "title": "IsoFLOP sweep fixture (fitted Approach-3 curves)",
+    "kind": "fixture",
+    "path": "atlas/engine/fixtures/isoflop_sweep.json",
+    "anchor_convention": "fixture:isoflop-sweep",
+    "note": "Interactive widgets for this thread live in site/widgets.d/chinchilla.js (allocation-table, isoflop-parabola, parametric-frontier)."
+  }
+}

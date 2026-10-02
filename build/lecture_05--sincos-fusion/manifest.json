@@ -1,0 +1,65 @@
+{
+  "fixture": "lecture_05--sincos-fusion",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "lecture_05:operator-fusion"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "4.933333"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "naive sin\u00b2x + cos\u00b2x: five kernels, each through HBM",
+      "frame": "frames/s0.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s1",
+      "time": 2.933,
+      "caption": "fused: one kernel, one read, one write",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s0",
+      "claim": "Between kernels the compute lane idles while HBM writes each intermediate and the next kernel reads it back.",
+      "evidence": [
+        "lane.compute",
+        "lane.hbm"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s1",
+      "claim": "Fused, the same five ops run back to back in registers; HBM sees only the read of x and the write of y.",
+      "evidence": [
+        "lane.compute",
+        "lane.hbm",
+        "readout"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

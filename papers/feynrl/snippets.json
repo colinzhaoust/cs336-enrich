@@ -1,0 +1,191 @@
+{
+ "algs/P3O/p3o.py:L192-L196": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 192,
+  "end": 196,
+  "text": "        # 2. calculate ratio = pi / pi_old = exp(logprobs - old_logprobs)\n        raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n        # Ignore invalid (padded) positions before exp to avoid inf * 0 -> nan.\n        logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n        ratio        = torch.exp(logratio)",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/GRPO/grpo.py:L174-L176": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 174,
+  "end": 176,
+  "text": "            unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/GRPO/grpo.py:L169-L176": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py",
+  "start": 169,
+  "end": 176,
+  "text": "            raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio        = torch.exp(logratio)\n\n            # 3. compute loss as raw sums, will be normalized later\n            unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()",
+  "sha256": "ae8a5bf841ff"
+ },
+ "algs/P3O/p3o.py:L204-L208": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 204,
+  "end": 208,
+  "text": "        # 4. P3O loss as raw sum: rho.detach() * log(pi) * advantage\n        # Unlike PPO, P3O clips the importance ratio and uses it as a weighting\n        # coefficient for the policy's log-probability more like policy gradient.\n        rho = torch.clamp(ratio, min=0, max=ess_factor)\n        pi_sum = -(rho.detach() * logprobs * adv * mask).sum()",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/README.md:L32": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md",
+  "start": 32,
+  "end": 32,
+  "text": "The clipped ratio acts as a **non-negative weighting coefficient** for the log-probability; it is detached so it does not contribute gradient itself. This is a REINFORCE-style score-function update with the weight bounded by ESS.",
+  "sha256": "ef8b2bead15a"
+ },
+ "algs/P3O/p3o.py:L107-L135": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 107,
+  "end": 135,
+  "text": "    def calculate_ess(self, ratio, mask_bool):\n        '''\n            Calculate the effective sample size (ESS) across all ranks.\n            ESS = ||w||^2_1 / ||w||^2_2 , ratio = exp(logprobs - old_logprobs)\n            ESS = ESS / n where n is number of valid (non-padded) samples to normalize\n            ESS would be between 1/n and 1, effectively 0 < ESS <= 1\n        '''\n        # Only use valid (non-padded) positions. Padded positions have\n        # ratio = exp(0) = 1.0 which would bias ESS toward 1.0.\n        valid_ratios = ratio[mask_bool]\n\n        # local_stats_per_rank is 1D tensor of shape (3,).\n        local_stats_per_rank = torch.stack([valid_ratios.sum().to(torch.float64),\n                                            valid_ratios.pow(2).sum().to(torch.float64),\n                                            torch.tensor(float(valid_ratios.numel()), device=ratio.device, dtype=torch.float64)])\n\n        # combine across all ranks\n        if torch.distributed.is_available() and torch.distributed.is_initialized():\n            torch.distributed.all_reduce(local_stats_per_rank, op=torch.distributed.ReduceOp.SUM)\n\n        # One sync to extract scalars after the collective.\n        sum_w, sum_w_2, total = local_stats_per_rank.tolist()\n\n        # Avoid division by zero or guard against nans.\n        if total < 0.5 or not math.isfinite(sum_w) or not math.isfinite(sum_w_2) or not math.isfinite(total):\n            return 1.0\n\n        ess = (sum_w**2) / (sum_w_2 + 1e-8) / total\n        return float(ess)",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/p3o.py:L131-L132": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 131,
+  "end": 132,
+  "text": "        if total < 0.5 or not math.isfinite(sum_w) or not math.isfinite(sum_w_2) or not math.isfinite(total):\n            return 1.0",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/README.md:L45": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md",
+  "start": 45,
+  "end": 45,
+  "text": "\\text{ESS} = \\frac{\\left(\\sum_i w_i\\right)^2}{n \\cdot \\sum_i w_i^2} \\in \\left[\\tfrac{1}{n}, 1\\right],",
+  "sha256": "ef8b2bead15a"
+ },
+ "algs/P3O/p3o.py:L207-L208": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 207,
+  "end": 208,
+  "text": "        rho = torch.clamp(ratio, min=0, max=ess_factor)\n        pi_sum = -(rho.detach() * logprobs * adv * mask).sum()",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/p3o.py:L200-L202": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 200,
+  "end": 202,
+  "text": "        kl_dist_behavioral = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=old_logprobs)\n        kl_dist_behavioral = torch.where(mask_bool, kl_dist_behavioral, torch.zeros_like(kl_dist_behavioral))\n        kl_sum_behavioral  = (kl_dist_behavioral * mask).sum()",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/p3o.py:L223": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 223,
+  "end": 223,
+  "text": "        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum_ref +  (1 - ess_factor) * kl_sum_behavioral",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/RL/README.md:L24": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/README.md",
+  "start": 24,
+  "end": 24,
+  "text": "\\mathrm{KL}(\\pi \\,\\|\\, \\pi_{\\mathrm{ref}}) \\approx \\log(\\pi/\\pi_{\\mathrm{ref}}) + \\pi_{\\mathrm{ref}}/\\pi - 1.",
+  "sha256": "46bca7c657b7"
+ },
+ "algs/P3O/README.md:L8": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md",
+  "start": 8,
+  "end": 8,
+  "text": "When data is fresh, ESS ≈ 1: the cap is loose and the trust region is inactive, so learning behaves like standard policy gradient. As data ages, ESS drops: the cap tightens and the trust region takes over, preventing the policy from drifting beyond what the off-policy data can reliably support. This makes P3O a natural fit for replay buffers that mix multiple policy versions.",
+  "sha256": "ef8b2bead15a"
+ },
+ "algs/P3O/p3o.py:L192-L223": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 192,
+  "end": 223,
+  "text": "        # 2. calculate ratio = pi / pi_old = exp(logprobs - old_logprobs)\n        raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n        # Ignore invalid (padded) positions before exp to avoid inf * 0 -> nan.\n        logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n        ratio        = torch.exp(logratio)\n        ess_factor   = self.calculate_ess(ratio=ratio, mask_bool=mask_bool)\n\n        # 3. calculate the KL between policy and old model (behavioral policy) for the KL term in the loss\n        kl_dist_behavioral = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=old_logprobs)\n        kl_dist_behavioral = torch.where(mask_bool, kl_dist_behavioral, torch.zeros_like(kl_dist_behavioral))\n        kl_sum_behavioral  = (kl_dist_behavioral * mask).sum()\n\n        # 4. P3O loss as raw sum: rho.detach() * log(pi) * advantage\n        # Unlike PPO, P3O clips the importance ratio and uses it as a weighting\n        # coefficient for the policy's log-probability more like policy gradient.\n        rho = torch.clamp(ratio, min=0, max=ess_factor)\n        pi_sum = -(rho.detach() * logprobs * adv * mask).sum()\n\n        # 4. compute entropy loss (raw sum)\n        if entropies is not None and self.ent_coeff > 0.0:\n            ent_sum = (entropies * mask).sum()\n\n        if ref_logprobs is not None and self.kl_coeff > 0.0:\n            kl_dist_ref = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs)\n            # avoid calculating kl for padded tokens.\n            kl_dist_ref = torch.where(mask_bool, kl_dist_ref, torch.zeros_like(kl_dist_ref))\n            kl_sum_ref  = (kl_dist_ref * mask).sum()\n\n        # if ess factor is 1, we don't nee much KL_old as current policy and behavioral policy\n        # are close to each other. However, if ess_facotr is clsoe to 0, we need to use KL_old\n        # to enforce the trust region as the policy has diverged a lot.\n        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum_ref +  (1 - ess_factor) * kl_sum_behavioral",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/CISPO/cispo.py:L174-L175": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/CISPO/cispo.py",
+  "start": 174,
+  "end": 175,
+  "text": "            clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high)\n            pi_sum = -(clipped_ratio.detach() * logprobs * adv * mask).sum()",
+  "sha256": "389d68cdaf55"
+ },
+ "algs/P3O/p3o.py:L59-L61": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 59,
+  "end": 61,
+  "text": "        # p3o does not use clip_low and clip_high in loss calculation\n        self.clip_low = float(clip_low)\n        self.clip_high = float(clip_high)",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/README.md:L102": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md",
+  "start": 102,
+  "end": 102,
+  "text": "- `clip_low` / `clip_high` are stored but **not used in the P3O loss**. They control only the `clipfrac` monitoring metric (fraction of tokens where the ratio falls outside $[1 - \\text{clip\\\\_low}, 1 + \\text{clip\\\\_high}]$), so you can read P3O's actual clip behavior on the same scale as a PPO clip range.",
+  "sha256": "ef8b2bead15a"
+ },
+ "algs/CISPO/cispo.py:L164-L175": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/CISPO/cispo.py",
+  "start": 164,
+  "end": 175,
+  "text": "        else:\n            # 2. calculate ratio = pi / pi_old = exp(logprobs - old_logprobs)\n            raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            # Ignore invalid (padded) positions before exp to avoid inf * 0 -> nan.\n            logratio = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio    = torch.exp(logratio)\n\n            # 3. CISPO loss as raw sum: clipped_ratio.detach() * log(pi) * advantage\n            # Unlike PPO, CISPO clips the importance ratio and uses it as a weighting\n            # coefficient for the policy's log-probability more like policy gradient.\n            clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high)\n            pi_sum = -(clipped_ratio.detach() * logprobs * adv * mask).sum()",
+  "sha256": "389d68cdaf55"
+ },
+ "algs/P3O/README.md:L98": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md",
+  "start": 98,
+  "end": 98,
+  "text": "- **Same loss in sync and async; no decoupled loss needed.** P3O's `compute_policy_loss` runs **unchanged** between sync and overlap mode: ESS is computed from each batch's own importance weights and adaptively controls both the ratio cap and the trust-region KL weight, so no separately-tuned staleness coefficient is required. This is one of the main features of P3O.",
+  "sha256": "ef8b2bead15a"
+ },
+ "algs/P3O/README.md:L100": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md",
+  "start": 100,
+  "end": 100,
+  "text": "  This is a structural difference from the other RL algorithms in this repo. PPO / GRPO / CISPO use a **fixed** clip range and therefore auto-enable the [decoupled loss](../GRPO/README.md#decoupled-loss-overlap-mode) in overlap mode (proximal snapshot $\\pi_{\\mathrm{prox}}$ computed once per shard, plus a behavioral importance weight $w = \\pi_{\\mathrm{prox}}/\\pi_{\\mathrm{old}}$ with an optional `overlap.behave_imp_weight_cap`). P3O needs none of that machinery: no proximal snapshot, no behavioral IS correction, and no re-tuning of clip bounds. The `use_decoupled_loss` flag wired from `overlap.enabled` in [`core/rl_engines.py:56`](../../core/rl_engines.py#L56) is consumed by the other algorithms; P3O's constructor accepts it for signature compatibility but treats it as a no-op.",
+  "sha256": "ef8b2bead15a"
+ },
+ "algs/P3O/p3o.py:L67-L69": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 67,
+  "end": 69,
+  "text": "        # params for decoupled ppo clipped loss which is not used in p3o for now.\n        self.use_decoupled_loss = use_decoupled_loss\n        self.behave_imp_weight_cap = float(behave_imp_weight_cap) if behave_imp_weight_cap is not None else None",
+  "sha256": "3bcc5a74099e"
+ },
+ "core/rl_engines.py:L59": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/core/rl_engines.py",
+  "start": 59,
+  "end": 59,
+  "text": "               'use_decoupled_loss': params.overlap.enabled if params.overlap else False,",
+  "sha256": "87c8545899c7"
+ },
+ "algs/RL/README.md:L16": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/README.md",
+  "start": 16,
+  "end": 16,
+  "text": "**`snapshot_prox_logprobs`** runs `policy_forward` under `no_grad` over every micro-batch in the shard *before any optimizer step* and returns one detached `[B, T-1]` tensor per micro-batch. This is the \"proximal policy\" reference $\\log \\pi_{\\mathrm{prox}}$ consumed by the **decoupled loss** that PPO, GRPO, and CISPO all auto-enable when `overlap.enabled=True` (see [`core/rl_engines.py:56`](../../core/rl_engines.py#L56): `use_decoupled_loss = overlap.enabled`). P3O does not use it because it derives its trust region directly from the stored `old_logprobs`.",
+  "sha256": "46bca7c657b7"
+ },
+ "algs/P3O/p3o.py:L59-L79": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 59,
+  "end": 79,
+  "text": "        # p3o does not use clip_low and clip_high in loss calculation\n        self.clip_low = float(clip_low)\n        self.clip_high = float(clip_high)\n        self.ent_coeff = float(entropy_coeff)\n\n        # use cross entropy loss for policy gradient\n        self.cross_entropy = torch.nn.CrossEntropyLoss(reduction=\"none\")\n\n        # params for decoupled ppo clipped loss which is not used in p3o for now.\n        self.use_decoupled_loss = use_decoupled_loss\n        self.behave_imp_weight_cap = float(behave_imp_weight_cap) if behave_imp_weight_cap is not None else None\n\n        # if true, it means the update is done after seeing all samples in the reply buffer\n        # treating the entire buffer as a single batch.\n        self.update_only_after_full_replay = update_after_full_replay\n        self.normalize_loss = normalize_loss\n\n        # for decoupled loss, cache pi_prox once per epoch (not used in p3o for now).\n        self.train_steps_per_epoch = int(train_steps_per_epoch)\n        self.cached_prox_logprobs  = None\n        self.cached_prox_nan_masks = None",
+  "sha256": "3bcc5a74099e"
+ },
+ "core/rl_engines.py:L56-L60": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/core/rl_engines.py",
+  "start": 56,
+  "end": 60,
+  "text": "               'peft_config':params.peft,\n\n               # decoupled loss when async overlap engine is used\n               'use_decoupled_loss': params.overlap.enabled if params.overlap else False,\n               'behave_imp_weight_cap': params.overlap.behave_imp_weight_cap if params.overlap else None,",
+  "sha256": "87c8545899c7"
+ },
+ "algs/P3O/p3o.py:L110-L112": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 110,
+  "end": 112,
+  "text": "            ESS = ||w||^2_1 / ||w||^2_2 , ratio = exp(logprobs - old_logprobs)\n            ESS = ESS / n where n is number of valid (non-padded) samples to normalize\n            ESS would be between 1/n and 1, effectively 0 < ESS <= 1",
+  "sha256": "3bcc5a74099e"
+ },
+ "algs/P3O/p3o.py:L107-L113": {
+  "path": "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py",
+  "start": 107,
+  "end": 113,
+  "text": "    def calculate_ess(self, ratio, mask_bool):\n        '''\n            Calculate the effective sample size (ESS) across all ranks.\n            ESS = ||w||^2_1 / ||w||^2_2 , ratio = exp(logprobs - old_logprobs)\n            ESS = ESS / n where n is number of valid (non-padded) samples to normalize\n            ESS would be between 1/n and 1, effectively 0 < ESS <= 1\n        '''",
+  "sha256": "3bcc5a74099e"
+ }
+}

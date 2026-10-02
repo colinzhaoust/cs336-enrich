@@ -1,0 +1,149 @@
+{
+  "lecture_03": {
+    "title": "CS336 Spring 2026, Lecture 3: Everything you didn't want to know about LM architecture and hyperparameters",
+    "kind": "slides",
+    "path": "official/lectures/lecture_03.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_03 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_03.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1; 67 pages)",
+    "note": "Evidence is the text layer of the slides (lecture_03.txt), extracted page-by-page by discover_slides.py. Most empirical results (pre/post-norm curves, Narang and Shazeer tables, Kaplan basin, aspect-ratio plots, weight-decay plots, perplexity hits of MQA) are figures without a text layer; where a KP relies on such a figure the filtering_note says so and the statement carries only what the slide text says. Stacked fractions (p14 RMSNorm formula, p38 8/3, p58-p61 arithmetic-intensity expressions) come out of pdftotext as scattered digits; the quotes reconstruct them from the layout and say so."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json."
+  },
+  "rope": {
+    "title": "Atlas paper thread: RoFormer (RoPE), Su et al. 2021",
+    "kind": "atlas-thread",
+    "path": "atlas/papers/rope/knowledge_points.json",
+    "url": "https://arxiv.org/abs/2104.09864",
+    "note": "Slides p31-p35 teach RoPE; those pages are covered by the rope thread (rope-position-goal, rope-2d-solution, rope-block-diagonal, rope-relative-position, rope-multiplicative-vs-additive, rope-per-layer-application). Referenced here via external_prerequisites only; the position-embedding KP in this thread covers the taxonomy on p30."
+  },
+  "xiong_2020_prenorm": {
+    "title": "On Layer Normalization in the Transformer Architecture (Xiong et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2002.04745",
+    "note": "Figures on p10, p11, p12 ('Figure from Xiong 2020'): pre-norm vs post-norm block diagram, training curves, and gradient-norm-per-layer (gradient attenuation) plots."
+  },
+  "nguyen_salazar_2019": {
+    "title": "Transformers without Tears: Improving the Normalization of Self-Attention (Nguyen & Salazar, 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1910.05895",
+    "note": "Cited on p11 and p12 as 'Salazar and Ngyuen 2019' (author order and spelling as on the slides); figures for pre-norm training without warmup and gradient spikes."
+  },
+  "rmsnorm_2019": {
+    "title": "Root Mean Square Layer Normalization (Zhang & Sennrich, 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1910.07467",
+    "note": "Not cited by name on the slides; p14 states the RMSNorm formula y = x / sqrt(mean(x^2) + eps) * gamma without attribution."
+  },
+  "ivanov_data_movement": {
+    "title": "Data Movement Is All You Need: A Case Study on Optimizing Transformers (Ivanov et al., MLSys 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2007.00072",
+    "note": "Cited on p15 and p16 as 'Ivanov et al 2023' (the slide's year; the arXiv preprint is 2020, MLSys 2021). Source of the FLOPs-vs-runtime breakdown figure where normalization is a small share of FLOPs but a visible share of runtime."
+  },
+  "narang_2021_modifications": {
+    "title": "Do Transformer Modifications Transfer Across Implementations and Applications? (Narang et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2102.11972",
+    "note": "Cited as 'Narang et al 2020' on p17 (RMSNorm speed and quality) and p25 (gated activations). Tables are figures on the slides."
+  },
+  "shazeer_2020_glu": {
+    "title": "GLU Variants Improve Transformer (Shazeer, 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2002.05202",
+    "note": "p24 'Shazeer 2020': table of GLU variants vs ReLU/GeLU on T5 pretraining; also the origin of the 2/3 scaling of d_ff for gated layers (slide p23 states the 2/3 without citation)."
+  },
+  "kaplan_2020_scaling": {
+    "title": "Scaling Laws for Neural Language Models (Kaplan et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2001.08361",
+    "note": "p40 ('[Kaplan+ 2020]') shows the d_ff/d_model basin figure; p46 shows the aspect-ratio figure. Numbers on those slides are only in figures except the '1-10' basin on p40."
+  },
+  "raffel_2020_t5": {
+    "title": "Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer (Raffel et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1910.10683",
+    "note": "p39: T5 11B d_ff = 65,536 with d_model = 1024 ('64-times multiplier'), and p43/p44 head and aspect-ratio rows for T5 and T5 v1.1."
+  },
+  "tay_2021_scale_efficiently": {
+    "title": "Scale Efficiently: Insights from Pre-training and Fine-tuning Transformers (Tay et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2109.10686",
+    "note": "p45 and p46 ('[Tay et al 2021]'): depth vs width figures; the slide's claim that very deep models are harder to parallelize and have higher latency."
+  },
+  "andriushchenko_2023_wd": {
+    "title": "Why Do We Need Weight Decay in Modern Deep Learning? (Andriushchenko et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2310.04415",
+    "note": "p50: weight decay in LLMs is not about overfitting; it interacts with the (cosine) learning-rate schedule. Supporting plots are figures only."
+  },
+  "devlin_2014_zloss": {
+    "title": "Fast and Robust Neural Network Joint Models for Statistical Machine Translation (Devlin et al., ACL 2014)",
+    "kind": "paper",
+    "url": "https://aclanthology.org/P14-1129/",
+    "note": "p54 '[From Devlin 2014]': the self-normalization penalty on log Z that PaLM later called the z-loss. The formula on p54 is an image; the slide text has no coefficient."
+  },
+  "palm_2022": {
+    "title": "PaLM: Scaling Language Modeling with Pathways (Chowdhery et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2204.02311",
+    "note": "Named on the slides for parallel layers (p28), d_ff ratio 4 under SwiGLU (p38), head dim 258 (p43, as printed), vocab 256000 (p47), z-loss (p54). Not cited by paper on the slides, only by model name."
+  },
+  "dehghani_2023_vit22b": {
+    "title": "Scaling Vision Transformers to 22 Billion Parameters (Dehghani et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2302.05442",
+    "note": "p55 '[Dehgani 2023, Idefcs, Chameleon]' (spelling as on the slide): QK-norm originated in vision and multimodal models."
+  },
+  "gemma2_2024": {
+    "title": "Gemma 2: Improving Open Language Models at a Practical Size (Gemma Team, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2408.00118",
+    "note": "Logit soft-capping via tanh (p56) is the Gemma 2 recipe; the slide names no paper and gives no cap value in text."
+  },
+  "shazeer_2019_mqa": {
+    "title": "Fast Transformer Decoding: One Write-Head is All You Need (Shazeer, 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1911.02150",
+    "note": "p61 (MQA idea) and p63 'Small PPL hit w/ MQA [Shazeer 2019]'; the incremental arithmetic-intensity argument on p58-p61 follows this paper's analysis."
+  },
+  "ainslie_2023_gqa": {
+    "title": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints (Ainslie et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2305.13245",
+    "note": "p62-p63: grouped-query attention, 'Low/no hit w/ GQA [Ainslie 2023]' (table is a figure)."
+  },
+  "child_2019_sparse": {
+    "title": "Generating Long Sequences with Sparse Transformers (Child et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1904.10509",
+    "note": "p64 '[Child et al 2019]': sparse / strided attention pattern figure."
+  },
+  "kv_cache_blog": {
+    "title": "Transformers KV Caching Explained (João Lages, Medium)",
+    "kind": "reading",
+    "url": "https://medium.com/@joaolages/kv-caching-explained-276520203249",
+    "note": "p59: animation of the KV cache (image on the slide)."
+  },
+  "fireworks_mqa_blog": {
+    "title": "Multi-Query Attention is All You Need (Fireworks AI blog)",
+    "kind": "reading",
+    "url": "https://blog.fireworks.ai/multi-query-attention-is-all-you-need-db072e758055",
+    "note": "p61 figure of MQA vs MHA head layout."
+  },
+  "grootendorst_gemma4": {
+    "title": "A Visual Guide to Gemma 4 (Maarten Grootendorst newsletter)",
+    "kind": "reading",
+    "url": "https://newsletter.maartengrootendorst.com/p/a-visual-guide-to-gemma-4",
+    "note": "p66: diagrams of interleaved local/global attention in Gemma 4, OLMo 3, Qwen 3.5."
+  },
+  "lecture_03_video": {
+    "title": "CS336 Spring 2026, Lecture 3: Architectures and hyperparameters (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=lVynu4bo1rY",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

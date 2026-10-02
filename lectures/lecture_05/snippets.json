@@ -1,0 +1,79 @@
+{
+ "lecture_06.py:L42-L44": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 42,
+  "end": 44,
+  "text": "    text(\"| Accelerator                        | A100      | H100      | B200      |\", verbatim=True)\n    text(\"+------------------------------------+-----------+-----------+-----------+\", verbatim=True)\n    text(\"| # SMs                              |       108 |       132 |       148 |\", verbatim=True)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L83-L84": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 83,
+  "end": 84,
+  "text": "    text(\"- Within a thread block, threads are grouped into warps (32 threads per warp).\")\n    text(\"- Example: thread block has 64 threads => it has 2 warps.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L83-L85": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 83,
+  "end": 85,
+  "text": "    text(\"- Within a thread block, threads are grouped into warps (32 threads per warp).\")\n    text(\"- Example: thread block has 64 threads => it has 2 warps.\")\n    text(\"| TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT | TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT |\", verbatim=True)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L46-L54": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 46,
+  "end": 54,
+  "text": "    text(\"| Register size (per SM)             |    256 KB |    256 KB |    256 KB |\", verbatim=True)\n    text(\"| L1 cache + shared memory (per SM)  |    192 KB |    256 KB |    256 KB |\", verbatim=True)\n    text(\"| L2 cache size                      |     40 MB |     50 MB | 96-126 MB |\", verbatim=True)\n    text(\"| HBM size                           |     80 GB |     80 GB |    192 GB |\", verbatim=True)\n    text(\"+------------------------------------+-----------+-----------+-----------+\", verbatim=True)\n    text(\"| Register bandwidth                 | ~116 TB/s | ~401 TB/s | ~447 TB/s |\", verbatim=True)\n    text(\"| L1 cache + shared memory bandwidth |  ~19 TB/s |  ~33 TB/s |  ~19 TB/s |\", verbatim=True)\n    text(\"| L2 cache bandwidth                 | ~5-8 TB/s |  ~12 TB/s |   ~9 TB/s |\", verbatim=True)\n    text(\"| HBM bandwidth                      |    2 TB/s | 3.35 TB/s |    8 TB/s |\", verbatim=True)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L86-L89": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 86,
+  "end": 89,
+  "text": "    text(\"- All threads within a warp must execute same instructions in lockstep on an SM.\")\n    text(\"- Control divergence: if different threads in a warp need to execute different instructions (if A, else B), must be done sequentially (bad)\")\n    text(\"| AAAAAAAAA....................... |\", verbatim=True)\n    text(\"| .........BBBBBBBBBBBBBBBBBBBBBBB |\", verbatim=True)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L87-L89": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 87,
+  "end": 89,
+  "text": "    text(\"- Control divergence: if different threads in a warp need to execute different instructions (if A, else B), must be done sequentially (bad)\")\n    text(\"| AAAAAAAAA....................... |\", verbatim=True)\n    text(\"| .........BBBBBBBBBBBBBBBBBBBBBBB |\", verbatim=True)",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L127-L130": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 127,
+  "end": 130,
+  "text": "    text(\"- When the 32 threads in a warp access HBM, memory accesses combined into transactions of 128 bytes (cache lines).\")\n    text(\"M00 M01 M02 M03 M04 M05 M06 M07 M08 M09 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31\", verbatim=True)\n    text(\"M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55 M56 M57 M58 M59 M60 M61 M62 M63\", verbatim=True)\n    text(\"- Best case: full coalescing, all threads access the same cache line (32 threads x 4 bytes = 128 bytes).\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L134-L137": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 134,
+  "end": 137,
+  "text": "    text(\"- Thread blocks scheduled onto SMs in waves.\")\n    text(\"- B200 has 148 SMs, if we launch 160 thread blocks, first wave has 148 blocks, second wave has 12 blocks.\")\n    text(\"- Wave quantization problem: last wave has fewer thread blocks, leaving some SMs idle (low block occupancy).\")\n    text(\"- Solution: make number of thread blocks divide # SMs.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L90": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 90,
+  "end": 90,
+  "text": "    text(\"- SM runs multiple warps and switches between them (e.g., when one warp is blocked on HBM reads/writes) with zero cost.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L93-L95": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 93,
+  "end": 95,
+  "text": "    text(\"- Each thread can use between 0 and 255 registers.\")\n    text(\"- The more registers threads use, the fewer threads can be scheduled on an SM (low occupancy).\")\n    text(\"- Low occupancy isn't necessarily bad if each thread is doing more work.\")",
+  "sha256": "d21a54725f5b"
+ },
+ "lecture_06.py:L100-L112": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_06.py",
+  "start": 100,
+  "end": 112,
+  "text": "    num_threads_per_block = 128\n    num_registers_per_thread = 160\n\n    # What hardware offers\n    max_registers = 65536  # Registers allowed per SM\n    max_warps = 64         # Concurrent warps allowed per SM\n\n    # What we can run at once\n    assert num_registers_per_thread <= 255\n    num_registers_per_block = num_threads_per_block * num_registers_per_thread  # @inspect num_registers_per_block\n    num_blocks = max_registers // num_registers_per_block  # Limited by registers @inspect num_blocks\n    num_warps = num_blocks * num_threads_per_block / 32  # @inspect num_warps\n    occupancy = num_warps / max_warps  # @inspect occupancy",
+  "sha256": "d21a54725f5b"
+ }
+}

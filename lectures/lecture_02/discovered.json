@@ -1,0 +1,4306 @@
+{
+  "lecture": "lecture_02",
+  "source_path": "official/lectures/lecture_02.py",
+  "source_sha256": "f731b3849afc970a062f1fe692d7d80f5952cf82c2a4f6f2803a8fb9a9dabfd6",
+  "summary": {
+    "counts": {
+      "section_start": 25,
+      "claim": 196,
+      "figure": 11,
+      "code": 103,
+      "value": 73,
+      "section_end": 25,
+      "cite": 18,
+      "heading": 14,
+      "directive": 12
+    },
+    "sections_in_order": [
+      "main",
+      "motivating_questions",
+      "tensors_basics",
+      "tensors_memory",
+      "tensors_on_gpus",
+      "tensor_einops",
+      "einops_motivation",
+      "einops_einsum",
+      "einops_reduce",
+      "einops_rearrange",
+      "tensor_operations_flops",
+      "arithmetic_intensity",
+      "arithmetic_intensity_relu",
+      "arithmetic_intensity_gelu",
+      "arithmetic_intensity_dot_product",
+      "arithmetic_intensity_matrix_vector_product",
+      "arithmetic_intensity_matmul",
+      "roofline_plots",
+      "deep_network",
+      "gradients_basics",
+      "gradients_flops",
+      "optimizer",
+      "train_loop",
+      "gradient_accumulation",
+      "activation_checkpointing"
+    ],
+    "n_reference_cites": 3,
+    "n_url_cites": 15
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 16,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 17,
+      "section": "main",
+      "depth": 0,
+      "text": "Announcements:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 18,
+      "section": "main",
+      "depth": 0,
+      "text": "- Join the CS336 slack",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 19,
+      "section": "main",
+      "depth": 0,
+      "text": "- Sign up on Modal with your **Stanford** email",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 20,
+      "section": "main",
+      "depth": 0,
+      "text": "- Read the [AI policy guide](https://docs.google.com/document/d/1SZAlExB1qAc9izHt54gwunNpjKE6wXb8Y7yA_e-baK8/edit?tab=t.0)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 21,
+      "section": "main",
+      "depth": 0,
+      "text": "- Read the [cluster guide](https://docs.google.com/document/d/1cHE0iKVyXLJ3XpIs2XuXTmZ-HMmPk2hIPeCvy-AydMg/edit?tab=t.otis27tacaef)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 23,
+      "section": "main",
+      "depth": 0,
+      "text": "Marin 1e23 FLOPs run finished and [matched forecasts](https://x.com/WilliamBarrHeld/status/2039373983632814318)!",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 24,
+      "section": "main",
+      "depth": 0,
+      "text": "https://pbs.twimg.com/media/HE1P1HmaUAAjLXF?format=jpg&name=medium",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 26,
+      "section": "main",
+      "depth": 0,
+      "text": "Last lecture: overview, tokenization",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 27,
+      "section": "main",
+      "depth": 0,
+      "text": "Today: resource accounting (systems)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 29,
+      "section": "main",
+      "depth": 0,
+      "text": "Recall: what's the best model one can train given fixed resources (compute, memory)?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 30,
+      "section": "main",
+      "depth": 0,
+      "text": "In other words: maximize (computational) **efficiency**.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 31,
+      "section": "main",
+      "depth": 0,
+      "text": "Prerequisite: understand the resources (compute, memory) for a given computation.",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 71,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 72,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "**Question**: How long would it take to train a 70B parameter model on 15T tokens on 1024 H100s?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 73,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "total_flops = 6 * 70e9 * 15e12  # @inspect total_flops",
+      "extra": {
+        "end_line": 73
+      }
+    },
+    {
+      "kind": "value",
+      "line": 73,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "total_flops",
+      "extra": {
+        "expr": "total_flops = 6 * 70e9 * 15e12"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 74,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "h100_flop_per_sec = 1979e12 / 2\nmfu = 0.5\nflops_per_day = h100_flop_per_sec * mfu * 1024 * 60 * 60 * 24  # @inspect flops_per_day",
+      "extra": {
+        "end_line": 76
+      }
+    },
+    {
+      "kind": "value",
+      "line": 76,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "flops_per_day",
+      "extra": {
+        "expr": "flops_per_day = h100_flop_per_sec * mfu * 1024 * 60 * 60 * 24"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 77,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "days = total_flops / flops_per_day  # @inspect days",
+      "extra": {
+        "end_line": 77
+      }
+    },
+    {
+      "kind": "value",
+      "line": 77,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "days",
+      "extra": {
+        "expr": "days = total_flops / flops_per_day"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 79,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "**Question**: What's the largest model that can you can train on 8 H100s using AdamW?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 80,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "h100_bytes = 80e9  # @inspect h100_bytes",
+      "extra": {
+        "end_line": 80
+      }
+    },
+    {
+      "kind": "value",
+      "line": 80,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "h100_bytes",
+      "extra": {
+        "expr": "h100_bytes = 80e9"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 81,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "bytes_per_parameter = 2 + 2 + (4 + 4)  # parameters (2), gradients (2), optimizer state (4 + 4) @inspect bytes_per_parameter",
+      "extra": {
+        "end_line": 81
+      }
+    },
+    {
+      "kind": "value",
+      "line": 81,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "bytes_per_parameter",
+      "extra": {
+        "expr": "bytes_per_parameter = 2 + 2 + (4 + 4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 82,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "num_parameters = (h100_bytes * 8) / bytes_per_parameter  # @inspect num_parameters",
+      "extra": {
+        "end_line": 82
+      }
+    },
+    {
+      "kind": "value",
+      "line": 82,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "num_parameters",
+      "extra": {
+        "expr": "num_parameters = (h100_bytes * 8) / bytes_per_parameter"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 83,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "Caveat: activations are not accounted for (depends on batch size and sequence length), so this is an upper bound.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 85,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "This is a rough back-of-the-envelope calculation.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 86,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "But it gives you the flavor of napkin math one can quickly do to get a sense of resources.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 86,
+      "section": "motivating_questions",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 35,
+      "section": "main",
+      "depth": 0,
+      "text": "What knowledge to take away from this lecture:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 36,
+      "section": "main",
+      "depth": 0,
+      "text": "- Mechanics: straightforward (PyTorch semantics)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 37,
+      "section": "main",
+      "depth": 0,
+      "text": "- Mindset: resource accounting (remember to do it)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 38,
+      "section": "main",
+      "depth": 0,
+      "text": "- Intuitions: get a sense of how resources are spent, no ML magic today",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 89,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 90,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "Tensors are the basic building block for storing everything:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 91,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "- data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 92,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "- parameters",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 93,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "- gradients",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 94,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "- optimizer state",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 95,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "- activations",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 97,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "Example: parameters of the DeepSeek v3.2 model",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 97,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "deepseek_v3_2_2025",
+      "extra": {
+        "ref": "deepseek_v3_2_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 98,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "DeepSeek v3.2 model on Hugging Face",
+      "extra": {
+        "title": "DeepSeek v3.2 model on Hugging Face",
+        "url": "https://huggingface.co/deepseek-ai/DeepSeek-V3.2?show_file_info=model.safetensors.index.json",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 100,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "Each tensor has a rank, which is the number of dimensions.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 101,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "x = torch.zeros(4)        # rank 1 tensor (vector) @inspect x",
+      "extra": {
+        "end_line": 101
+      }
+    },
+    {
+      "kind": "value",
+      "line": 101,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.zeros(4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 102,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "x = torch.zeros(4, 8)     # rank 2 tensor (matrix) @inspect x",
+      "extra": {
+        "end_line": 102
+      }
+    },
+    {
+      "kind": "value",
+      "line": 102,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.zeros(4, 8)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 103,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "x = torch.zeros(4, 8, 2)  # rank 3 tensor @inspect x",
+      "extra": {
+        "end_line": 103
+      }
+    },
+    {
+      "kind": "value",
+      "line": 103,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.zeros(4, 8, 2)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 105,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "In Transformers, will see tensors of rank 4:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 106,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "B = 32   # Batch size\nS = 16   # Sequence length\nH = 16   # Number of heads\nD = 64   # Hidden dimension per head\nx = torch.zeros(B, S, H, D)",
+      "extra": {
+        "end_line": 110
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 110,
+      "section": "tensors_basics",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 113,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 114,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Elements of tensors are generally floating point numbers.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 116,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "fp32",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 117,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Wikipedia",
+      "extra": {
+        "title": "Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Single-precision_floating-point_format",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 118,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "images/fp32.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 119,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "The fp32 data type (also known as float32 or single precision) is the default.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 120,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Traditionally, in scientific computing, fp32 is the baseline; you could use double precision (fp64) in some cases.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 121,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "In deep learning, you can be a lot sloppier.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 123,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Let's examine memory usage of these tensors.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 124,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Memory is determined by the (i) number of values and (ii) data type of each value.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 125,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x = torch.zeros(4, 8)  # @inspect x",
+      "extra": {
+        "end_line": 125
+      }
+    },
+    {
+      "kind": "value",
+      "line": 125,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.zeros(4, 8)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 126,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "assert x.dtype == torch.float32  # Default type\nassert x.numel() == 4 * 8\nassert x.element_size() == 4  # Float is 4 bytes\nassert get_memory_usage(x) == 4 * 8 * 4  # 128 bytes",
+      "extra": {
+        "end_line": 129
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 131,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "One matrix in the feedforward layer of GPT-3:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 132,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "assert get_memory_usage(torch.empty(12288 * 4, 12288)) == 2304 * 1024 * 1024  # 2.3 GB @stepover",
+      "extra": {
+        "end_line": 132
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 132,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 134,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "fp16",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 135,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Wikipedia",
+      "extra": {
+        "title": "Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Half-precision_floating-point_format",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 136,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "images/fp16.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 137,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "The fp16 data type (also known as float16 or half precision) cuts down the memory.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 138,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x = torch.zeros(4, 8, dtype=torch.float16)  # @inspect x",
+      "extra": {
+        "end_line": 138
+      }
+    },
+    {
+      "kind": "value",
+      "line": 138,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.zeros(4, 8, dtype=torch.float16)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 139,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "assert x.element_size() == 2",
+      "extra": {
+        "end_line": 139
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 140,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "However, the dynamic range (especially for small numbers) isn't great.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 141,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x = torch.tensor([1e-8], dtype=torch.float16)  # @inspect x",
+      "extra": {
+        "end_line": 141
+      }
+    },
+    {
+      "kind": "value",
+      "line": 141,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.tensor([1e-8], dtype=torch.float16)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 142,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "assert x == 0  # Underflow!",
+      "extra": {
+        "end_line": 142
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 143,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "If this happens when you train, you can get instability.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 145,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "bf16",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 146,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Wikipedia",
+      "extra": {
+        "title": "Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/Bfloat16_floating-point_format",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 147,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "images/bf16.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 148,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Google Brain developed brain floating point (bf16) in 2018 to address this issue.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 149,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "bf16 uses the same memory as fp16 but has the same dynamic range as fp32!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 150,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "The only catch is that the resolution is worse, but this matters less for deep learning.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 151,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x = torch.tensor([1e-8], dtype=torch.bfloat16)  # @inspect x",
+      "extra": {
+        "end_line": 151
+      }
+    },
+    {
+      "kind": "value",
+      "line": 151,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.tensor([1e-8], dtype=torch.bfloat16)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 152,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "assert x != 0  # No underflow!",
+      "extra": {
+        "end_line": 152
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 154,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Mixed precision",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 155,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Implications on training:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 156,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "- Training with fp32 works, but requires lots of memory.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 157,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "- Training with fp16 and even bf16 is risky, and you can get instability.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 159,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Solution: mixed precision training",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 159,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/1710.03740.pdf",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 160,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "- Use bf16 for parameters, activations, and gradients",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 161,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "- Use fp32 for optimizer states",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 163,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Pytorch has an automatic mixed precision (AMP) library.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 163,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "docs",
+      "extra": {
+        "title": "docs",
+        "url": "https://pytorch.org/docs/stable/amp.html",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 164,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Tries to cast things into bf16 when safe (matmuls, not exp).",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 165,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "with torch.amp.autocast(\"cuda\", dtype=torch.bfloat16):\nx = torch.zeros(4, 8)  # @inspect x",
+      "extra": {
+        "end_line": 166
+      }
+    },
+    {
+      "kind": "value",
+      "line": 166,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.zeros(4, 8)"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 168,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "fp8",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 169,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "In 2022, fp8 was standardized, motivated by machine learning workloads [primer](https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/fp8_primer.html).",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 170,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/_images/fp8_formats.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 171,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "H100s support two variants of FP8: E4M3 (range [-448, 448]) and E5M2 ([-57344, 57344]).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 172,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Reference:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 172,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2209.05433.pdf",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 174,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "fp4",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 175,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "In 2025, NVIDIA developed [nvfp4](https://developer.nvidia.com/blog/introducing-nvfp4-for-efficient-and-accurate-low-precision-inference/)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 176,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Only 4 bits per value!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 177,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Values: -6, -4, -3, -2, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2, 3, 4, 6",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 178,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Use a separate scale factor per block, so actually get more dynamic range (but just can't vary freely from neighbors).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 179,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Nemotron 3 Super was trained in NVFP4",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 179,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "nemotron_3_super_2026",
+      "extra": {
+        "ref": "nemotron_3_super_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 181,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "Some of this is done in NVIDIA libraries outside of user control.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 181,
+      "section": "tensors_memory",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 184,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 185,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "By default, tensors are stored in CPU memory.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 186,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "x = torch.zeros(32, 32)\nassert x.device == torch.device(\"cpu\")",
+      "extra": {
+        "end_line": 187
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 189,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "However, what about GPUs?",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 190,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "images/cpu-gpu.png",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 191,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "device = cuda_if_available()  # @inspect device",
+      "extra": {
+        "end_line": 191
+      }
+    },
+    {
+      "kind": "value",
+      "line": 191,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "device",
+      "extra": {
+        "expr": "device = cuda_if_available()"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 193,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "In order to take advantage of the massive parallelism of GPUs, we need to move them to GPU memory.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 194,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "x = x.to(device)",
+      "extra": {
+        "end_line": 194
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 196,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "Or create the tensor directly on the GPU:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 197,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "with torch.device(device):\nx = torch.zeros(32, 32)\nassert x.device == device",
+      "extra": {
+        "end_line": 199
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 199,
+      "section": "tensors_on_gpus",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 202,
+      "section": "tensor_einops",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 214,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 215,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "Traditional PyTorch code:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 216,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "x = torch.ones(2, 2, 3)      # batch seq hidden  @inspect x",
+      "extra": {
+        "end_line": 216
+      }
+    },
+    {
+      "kind": "value",
+      "line": 216,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.ones(2, 2, 3)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 217,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "y = torch.ones(2, 2, 3)      # batch seq hidden  @inspect y",
+      "extra": {
+        "end_line": 217
+      }
+    },
+    {
+      "kind": "value",
+      "line": 217,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "y",
+      "extra": {
+        "expr": "y = torch.ones(2, 2, 3)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 218,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "z = x @ y.transpose(-2, -1)  # batch seq seq  @inspect z",
+      "extra": {
+        "end_line": 218
+      }
+    },
+    {
+      "kind": "value",
+      "line": 218,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "z",
+      "extra": {
+        "expr": "z = x @ y.transpose(-2, -1)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 219,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "Easy to mess up the dimensions (what is -2, -1?)...",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 219,
+      "section": "einops_motivation",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 205,
+      "section": "tensor_einops",
+      "depth": 1,
+      "text": "Einops is a library for manipulating tensors where dimensions are named.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 206,
+      "section": "tensor_einops",
+      "depth": 1,
+      "text": "It is inspired by Einstein summation notation (Einstein, 1916).",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 207,
+      "section": "tensor_einops",
+      "depth": 1,
+      "text": "Einops tutorial",
+      "extra": {
+        "title": "Einops tutorial",
+        "url": "https://einops.rocks/1-einops-basics/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "section_start",
+      "line": 222,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 223,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "Einsum is generalized matrix multiplication with good bookkeeping.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 225,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "x = torch.ones(3, 4)  # seq1 hidden @inspect x",
+      "extra": {
+        "end_line": 225
+      }
+    },
+    {
+      "kind": "value",
+      "line": 225,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.ones(3, 4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 226,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "y = torch.ones(4, 3)  # hidden seq2 @inspect y",
+      "extra": {
+        "end_line": 226
+      }
+    },
+    {
+      "kind": "value",
+      "line": 226,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "y",
+      "extra": {
+        "expr": "y = torch.ones(4, 3)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 229,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z = x @ y   # seq1 seq2 @inspect z",
+      "extra": {
+        "end_line": 229
+      }
+    },
+    {
+      "kind": "value",
+      "line": 229,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z",
+      "extra": {
+        "expr": "z = x @ y"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 232,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z = einsum(x, y, \"seq1 hidden, hidden seq2 -> seq1 seq2\")  # @inspect z",
+      "extra": {
+        "end_line": 232
+      }
+    },
+    {
+      "kind": "value",
+      "line": 232,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z",
+      "extra": {
+        "expr": "z = einsum(x, y, \"seq1 hidden, hidden seq2 -> seq1 seq2\")"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 234,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "Let's try a more complex example...",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 236,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "x = torch.ones(2, 3, 4)  # batch seq1 hidden @inspect x",
+      "extra": {
+        "end_line": 236
+      }
+    },
+    {
+      "kind": "value",
+      "line": 236,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.ones(2, 3, 4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 237,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "y = torch.ones(2, 3, 4)  # batch seq2 hidden @inspect y",
+      "extra": {
+        "end_line": 237
+      }
+    },
+    {
+      "kind": "value",
+      "line": 237,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "y",
+      "extra": {
+        "expr": "y = torch.ones(2, 3, 4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 240,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z = x @ y.transpose(-2, -1)  # batch seq1 seq2  @inspect z",
+      "extra": {
+        "end_line": 240
+      }
+    },
+    {
+      "kind": "value",
+      "line": 240,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z",
+      "extra": {
+        "expr": "z = x @ y.transpose(-2, -1)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 243,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z = einsum(x, y, \"batch seq1 hidden, batch seq2 hidden -> batch seq1 seq2\")  # @inspect z",
+      "extra": {
+        "end_line": 243
+      }
+    },
+    {
+      "kind": "value",
+      "line": 243,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z",
+      "extra": {
+        "expr": "z = einsum(x, y, \"batch seq1 hidden, batch seq2 hidden -> batch seq1 seq2\")"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 244,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "Dimensions that are not named in the output are summed over.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 247,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z = einsum(x, y, \"... seq1 hidden, ... seq2 hidden -> ... seq1 seq2\")  # @inspect z",
+      "extra": {
+        "end_line": 247
+      }
+    },
+    {
+      "kind": "value",
+      "line": 247,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "z",
+      "extra": {
+        "expr": "z = einsum(x, y, \"... seq1 hidden, ... seq2 hidden -> ... seq1 seq2\")"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 247,
+      "section": "einops_einsum",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 250,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 251,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "You can reduce a single tensor via some operation (e.g., sum, mean, max, min).",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 252,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "x = torch.ones(2, 3, 4)  # batch seq hidden @inspect x",
+      "extra": {
+        "end_line": 252
+      }
+    },
+    {
+      "kind": "value",
+      "line": 252,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.ones(2, 3, 4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 255,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "y = x.sum(dim=-1)  # @inspect y",
+      "extra": {
+        "end_line": 255
+      }
+    },
+    {
+      "kind": "value",
+      "line": 255,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "y",
+      "extra": {
+        "expr": "y = x.sum(dim=-1)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 258,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "y = reduce(x, \"... hidden -> ...\", \"sum\")  # @inspect y",
+      "extra": {
+        "end_line": 258
+      }
+    },
+    {
+      "kind": "value",
+      "line": 258,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "y",
+      "extra": {
+        "expr": "y = reduce(x, \"... hidden -> ...\", \"sum\")"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 258,
+      "section": "einops_reduce",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 261,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 262,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "Sometimes, a dimension represents two dimensions",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 263,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "...and you want to operate on one of them.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 265,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x = torch.ones(3, 8)  # seq total_hidden @inspect x",
+      "extra": {
+        "end_line": 265
+      }
+    },
+    {
+      "kind": "value",
+      "line": 265,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.ones(3, 8)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 266,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "...where `total_hidden` is a flattened representation of `heads * hidden1`",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 267,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "w = torch.ones(4, 4)  # hidden1 hidden2 @inspect w",
+      "extra": {
+        "end_line": 267
+      }
+    },
+    {
+      "kind": "value",
+      "line": 267,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "w",
+      "extra": {
+        "expr": "w = torch.ones(4, 4)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 270,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x = rearrange(x, \"... (heads hidden1) -> ... heads hidden1\", heads=2)  # @inspect x",
+      "extra": {
+        "end_line": 270
+      }
+    },
+    {
+      "kind": "value",
+      "line": 270,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = rearrange(x, \"... (heads hidden1) -> ... heads hidden1\", heads=2)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 273,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x = einsum(x, w, \"... hidden1, hidden1 hidden2 -> ... hidden2\")  # @inspect x",
+      "extra": {
+        "end_line": 273
+      }
+    },
+    {
+      "kind": "value",
+      "line": 273,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = einsum(x, w, \"... hidden1, hidden1 hidden2 -> ... hidden2\")"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 276,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x = rearrange(x, \"... heads hidden2 -> ... (heads hidden2)\")  # @inspect x",
+      "extra": {
+        "end_line": 276
+      }
+    },
+    {
+      "kind": "value",
+      "line": 276,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "x",
+      "extra": {
+        "expr": "x = rearrange(x, \"... heads hidden2 -> ... (heads hidden2)\")"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 276,
+      "section": "einops_rearrange",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 211,
+      "section": "tensor_einops",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 279,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 280,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Having gone through all the operations, let us examine their computational cost.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 282,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "A floating-point operation (FLOP) is a basic operation like addition (x + y) or multiplication (x y).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 284,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Two terribly confusing acronyms (pronounced the same!):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 285,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "- FLOPs: floating-point operations (measure of computation done)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 286,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "- FLOP/s: floating-point operations per second (also written as FLOPS), which is used to measure the speed of hardware.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 288,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Intuitions",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 289,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Training GPT-3 (2020) took 3.14e23 FLOPs.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 289,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "https://lambdalabs.com/blog/demystifying-gpt-3",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 290,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Training GPT-4 (2023) is speculated to take 2e25 FLOPs.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 290,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "https://patmcguinness.substack.com/p/gpt-4-details-revealed",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 292,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "H100 has a peak performance of 1979 teraFLOP/s with sparsity, 50% without",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 292,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "spec",
+      "extra": {
+        "title": "spec",
+        "url": "https://resources.nvidia.com/en-us-tensor-core/nvidia-tensor-core-gpu-datasheet",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 293,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "h100_flop_per_sec = 1979e12 / 2",
+      "extra": {
+        "end_line": 293
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 295,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "8 H100s for 2 weeks:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 296,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "total_flops = 8 * 2 * (60 * 60 * 24 * 7) * h100_flop_per_sec  # @inspect total_flops",
+      "extra": {
+        "end_line": 296
+      }
+    },
+    {
+      "kind": "value",
+      "line": 296,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "total_flops",
+      "extra": {
+        "expr": "total_flops = 8 * 2 * (60 * 60 * 24 * 7) * h100_flop_per_sec"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 298,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Linear model",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 299,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "if torch.cuda.is_available():\nB = 16384  # Number of points\nD = 32768  # Dimension of each point\nK = 8192   # Number of outputs\nB = 1024\nD = 256\nK = 64\nx = torch.ones(B, D, device=cuda_if_available())\nw = torch.randn(D, K, device=cuda_if_available())\ny = x @ w",
+      "extra": {
+        "end_line": 310
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 312,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "How many FLOPs is this matmul?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 313,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "We have one multiplication (x[i][j] * w[j][k]) and one addition per (i, j, k) triple.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 314,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "actual_num_flops = 2 * B * D * K  # @inspect actual_num_flops",
+      "extra": {
+        "end_line": 314
+      }
+    },
+    {
+      "kind": "value",
+      "line": 314,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "actual_num_flops",
+      "extra": {
+        "expr": "actual_num_flops = 2 * B * D * K"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 316,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "We can also time this operation to see how long it takes.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 317,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "actual_time = benchmark(lambda: x @ w)  # @inspect actual_time",
+      "extra": {
+        "end_line": 317
+      }
+    },
+    {
+      "kind": "value",
+      "line": 317,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "actual_time",
+      "extra": {
+        "expr": "actual_time = benchmark(lambda: x @ w)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 319,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "The actual FLOP/s of this operation:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 320,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "actual_flop_per_sec = actual_num_flops / actual_time  # @inspect actual_flop_per_sec",
+      "extra": {
+        "end_line": 320
+      }
+    },
+    {
+      "kind": "value",
+      "line": 320,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "actual_flop_per_sec",
+      "extra": {
+        "expr": "actual_flop_per_sec = actual_num_flops / actual_time"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 322,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Each GPU has a specification sheet that provides the peak performance.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 323,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "- Example:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 323,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "H100 spec",
+      "extra": {
+        "title": "H100 spec",
+        "url": "https://resources.nvidia.com/en-us-gpu-resources/h100-datasheet-24306",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 324,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Note that the FLOP/s depends heavily on the data type!",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 325,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "promised_flop_per_sec = get_promised_flop_per_sec(x.dtype)  # @inspect promised_flop_per_sec",
+      "extra": {
+        "end_line": 325
+      }
+    },
+    {
+      "kind": "value",
+      "line": 325,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "promised_flop_per_sec",
+      "extra": {
+        "expr": "promised_flop_per_sec = get_promised_flop_per_sec(x.dtype)"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 327,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Model FLOPs utilization (MFU)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 329,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Definition: MFU = (actual FLOP/s) / (promised FLOP/s) [ignore communication/overhead]",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 330,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "mfu = actual_flop_per_sec / promised_flop_per_sec if promised_flop_per_sec else None  # @inspect mfu",
+      "extra": {
+        "end_line": 330
+      }
+    },
+    {
+      "kind": "value",
+      "line": 330,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "mfu",
+      "extra": {
+        "expr": "mfu = actual_flop_per_sec / promised_flop_per_sec if promised_flop_per_sec else None"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 332,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "Usually, MFU of ≥ 0.5 is quite good!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 334,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "But why is MFU not closer to 1?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 335,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "To answer this question, we need to look more closely at how computations are done on GPUs...",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 335,
+      "section": "tensor_operations_flops",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 338,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 339,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "images/compute-memory.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 340,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "How to compute a thing:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 341,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "1. Send inputs from memory to accelerator",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 342,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "2. Perform computation",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 343,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "3. Send outputs from accelerator to memory",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 345,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "How long does this take?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 347,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "Depends on two things:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 348,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "1. Accelerator speed (FLOP/s)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 349,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "2. Memory bandwidth (bytes/s)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 350,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "assert h100_flop_per_sec == 1979e12 / 2  # Half without sparsity\nassert h100_bytes_per_sec == 3.35e12",
+      "extra": {
+        "end_line": 351
+      }
+    },
+    {
+      "kind": "section_start",
+      "line": 363,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 364,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "n = 1024 * 1024\nx = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\ny = torch.relu(x)\nbytes = (2 * n) + (2 * n)  # Read x, write y (bf16 is 2 bytes/float)\nflops = n  # n comparisons\ncommunication_time = bytes / h100_bytes_per_sec  # @inspect communication_time",
+      "extra": {
+        "end_line": 371
+      }
+    },
+    {
+      "kind": "value",
+      "line": 371,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "communication_time",
+      "extra": {
+        "expr": "communication_time = bytes / h100_bytes_per_sec"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 372,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "computation_time = flops / h100_flop_per_sec  # @inspect computation_time",
+      "extra": {
+        "end_line": 372
+      }
+    },
+    {
+      "kind": "value",
+      "line": 372,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "computation_time",
+      "extra": {
+        "expr": "computation_time = flops / h100_flop_per_sec"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 374,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "Assume we can overlap communication and computation perfectly.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 375,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "total_time = max(communication_time, computation_time)  # @inspect total_time",
+      "extra": {
+        "end_line": 375
+      }
+    },
+    {
+      "kind": "value",
+      "line": 375,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "total_time",
+      "extra": {
+        "expr": "total_time = max(communication_time, computation_time)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 377,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "What is the bottleneck?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 378,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "- Memory-bound: communication time > computation time",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 379,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "- Compute-bound: computation time > communication time",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 381,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "In this case, ReLU is memory-bound.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 383,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "Alternative way to see this:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 384,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "Accelerator intensity: how much work can the accelerator do per byte transferred?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 385,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec  # @inspect h100_accelerator_intensity",
+      "extra": {
+        "end_line": 385
+      }
+    },
+    {
+      "kind": "value",
+      "line": 385,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "h100_accelerator_intensity",
+      "extra": {
+        "expr": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 387,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "Arithmetic intensity: how much actual work per byte for this workload?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 388,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "arithmetic_intensity = flops / bytes  # ~1/4 @inspect arithmetic_intensity",
+      "extra": {
+        "end_line": 388
+      }
+    },
+    {
+      "kind": "value",
+      "line": 388,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "arithmetic_intensity",
+      "extra": {
+        "expr": "arithmetic_intensity = flops / bytes"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 390,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "What is the bottleneck?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 391,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "- Memory-bound: arithmetic intensity < accelerator intensity",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 392,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "- Compute-bound: arithmetic intensity > accelerator intensity",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 394,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "assert arithmetic_intensity < h100_accelerator_intensity",
+      "extra": {
+        "end_line": 394
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 396,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "In general, we'll find ourselves memory bound.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 397,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "Can we increase arithmetic intensity?",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 397,
+      "section": "arithmetic_intensity_relu",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 400,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 401,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "n = 1024 * 1024\nx = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\ny = F.gelu(x)  # GELU(x) = 0.5 x (1 + tanh(sqrt(2/pi) (x + 0.044715 x^3)))\nbytes = (2 * n) + (2 * n)  # Read x, write y (bf16 is 2 bytes/float)\nflops = 20 * n  # tanh can be approximated in various ways (e.g., polynomials)\narithmetic_intensity = flops / bytes  # @inspect arithmetic_intensity",
+      "extra": {
+        "end_line": 408
+      }
+    },
+    {
+      "kind": "value",
+      "line": 408,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "arithmetic_intensity",
+      "extra": {
+        "expr": "arithmetic_intensity = flops / bytes"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 410,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec  # @inspect h100_accelerator_intensity",
+      "extra": {
+        "end_line": 410
+      }
+    },
+    {
+      "kind": "value",
+      "line": 410,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "h100_accelerator_intensity",
+      "extra": {
+        "expr": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 411,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "assert arithmetic_intensity < h100_accelerator_intensity",
+      "extra": {
+        "end_line": 411
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 413,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "Note that GeLU does more work than ReLU per byte moved, so it has higher arithmetic intensity.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 414,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "But still memory-bound!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 415,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "In other words, ReLU is not faster than GeLU (when doing things in an isolated way).",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 415,
+      "section": "arithmetic_intensity_gelu",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 418,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 419,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "n = 1024 * 1024\nx = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\nw = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\ny = x @ w\nbytes = (2 * n) + (2 * n) + 2  # Read x, read w, write y\nflops = 2 * n - 1  # n multiplications, n-1 additions\narithmetic_intensity = flops / bytes  # ~1/2 @inspect arithmetic_intensity",
+      "extra": {
+        "end_line": 427
+      }
+    },
+    {
+      "kind": "value",
+      "line": 427,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "arithmetic_intensity",
+      "extra": {
+        "expr": "arithmetic_intensity = flops / bytes"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 429,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec  # @inspect h100_accelerator_intensity",
+      "extra": {
+        "end_line": 429
+      }
+    },
+    {
+      "kind": "value",
+      "line": 429,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "h100_accelerator_intensity",
+      "extra": {
+        "expr": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 430,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "assert arithmetic_intensity < h100_accelerator_intensity",
+      "extra": {
+        "end_line": 430
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 431,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "Memory-bound!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 431,
+      "section": "arithmetic_intensity_dot_product",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 434,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 435,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "n = 1024\nx = torch.ones(n, dtype=torch.bfloat16, device=cuda_if_available())\nw = torch.ones(n, n, dtype=torch.bfloat16, device=cuda_if_available())\ny = x @ w\nbytes = (2 * n) + (2 * n * n) + (2 * n)  # Read x, read w, write y\nflops = n * (2 * n - 1)  # n dot-products\narithmetic_intensity = flops / bytes  # ~1 @inspect arithmetic_intensity",
+      "extra": {
+        "end_line": 443
+      }
+    },
+    {
+      "kind": "value",
+      "line": 443,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "arithmetic_intensity",
+      "extra": {
+        "expr": "arithmetic_intensity = flops / bytes"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 445,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec  # @inspect h100_accelerator_intensity",
+      "extra": {
+        "end_line": 445
+      }
+    },
+    {
+      "kind": "value",
+      "line": 445,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "h100_accelerator_intensity",
+      "extra": {
+        "expr": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 446,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "assert arithmetic_intensity < h100_accelerator_intensity",
+      "extra": {
+        "end_line": 446
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 447,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "Memory-bound!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 447,
+      "section": "arithmetic_intensity_matrix_vector_product",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 449,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 450,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "n = 1024\nx = torch.ones(n, n, dtype=torch.bfloat16, device=cuda_if_available())\nw = torch.ones(n, n, dtype=torch.bfloat16, device=cuda_if_available())\ny = x @ w\nbytes = (2 * n * n) + (2 * n * n) + (2 * n * n)  # Read x, read w, write y\nflops = n * n * (2 * n - 1)  # n^2 dot products\narithmetic_intensity = flops / bytes  # ~n/3 @inspect arithmetic_intensity",
+      "extra": {
+        "end_line": 458
+      }
+    },
+    {
+      "kind": "value",
+      "line": 458,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "arithmetic_intensity",
+      "extra": {
+        "expr": "arithmetic_intensity = flops / bytes"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 460,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec  # @inspect h100_accelerator_intensity",
+      "extra": {
+        "end_line": 460
+      }
+    },
+    {
+      "kind": "value",
+      "line": 460,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "h100_accelerator_intensity",
+      "extra": {
+        "expr": "h100_accelerator_intensity = h100_flop_per_sec / h100_bytes_per_sec"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 461,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "assert arithmetic_intensity > h100_accelerator_intensity",
+      "extra": {
+        "end_line": 461
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 462,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "Finally, compute-bound!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 464,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "As long as we have large matrices, we're compute-bound (saturating the accelerator).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 465,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "Training Transformers involves big matrix multiplications.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 466,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "Matrix-vector product is what happens during inference, which is why inference is memory-bound.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 468,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "Note: arithmetic/accelerator intensity also depends on the precision (bf16 versus fp32).",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 468,
+      "section": "arithmetic_intensity_matmul",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 471,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 472,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "We can visualize the relationship between arithmetic intensity and performance using roofline plots.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 473,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "https://jax-ml.github.io/scaling-book/assets/img/roofline-improved-1400.webp",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 474,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "- Each slice on the x-axis is a particular computation (with some arithmetic intensity)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 475,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "- Each piecewise linear function corresponds to a particular hardware",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 476,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "- Kink is the accelerator intensity (transition from memory-bound to compute-bound)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 478,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "We can now relate this back to MFU:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 479,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "MFU = min(1, arithmetic-intensity / accelerator-intensity)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 481,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "reference",
+      "extra": {
+        "title": "reference",
+        "url": "https://jax-ml.github.io/scaling-book/roofline/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 481,
+      "section": "roofline_plots",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 360,
+      "section": "arithmetic_intensity",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 559,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 560,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "images/deep-network.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 561,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "Consider a deep network with L layers and D-dimensional inputs, activations, and outputs.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 564,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "D = 8  # Dimensionality of input, activations, and output\nL = 3  # Number of layers\nmodel = DeepNetwork(dim=D, num_layers=L).to(cuda_if_available())\nnum_parameters = get_num_parameters(model)  # @inspect num_parameters @stepover",
+      "extra": {
+        "end_line": 568
+      }
+    },
+    {
+      "kind": "value",
+      "line": 568,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "num_parameters",
+      "extra": {
+        "expr": "num_parameters = get_num_parameters(model)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 568,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 569,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "assert num_parameters == (D * D) * L\nB = 4  # Batch size\nx = torch.randn(B, D, device=cuda_if_available())  # @inspect x",
+      "extra": {
+        "end_line": 573
+      }
+    },
+    {
+      "kind": "value",
+      "line": 573,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "x = torch.randn(B, D, device=cuda_if_available())"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 574,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "y = model(x)  # @inspect y",
+      "extra": {
+        "end_line": 574
+      }
+    },
+    {
+      "kind": "value",
+      "line": 574,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "y",
+      "extra": {
+        "expr": "y = model(x)"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 574,
+      "section": "deep_network",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 484,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 485,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "So far, we've constructed tensors and passed them through operations (forward).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 486,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "Now, we're going to compute the gradient (backward).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 488,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "As a simple example, let's consider the simple linear model:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 489,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "y = 0.5 (x * w - 5)^2",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 491,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "Forward pass: compute loss",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 492,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "x = torch.tensor([1., 2, 3])\nw = torch.tensor([1., 1, 1], requires_grad=True)  # Want gradient\npred_y = x @ w\nloss = 0.5 * (pred_y - 5).pow(2)",
+      "extra": {
+        "end_line": 495
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 497,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "Backward pass: compute gradients",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 498,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "loss.backward()\nassert torch.equal(w.grad, torch.tensor([1, 2, 3]))  # @inspect w.grad",
+      "extra": {
+        "end_line": 499
+      }
+    },
+    {
+      "kind": "value",
+      "line": 499,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "w.grad",
+      "extra": {
+        "expr": "assert torch.equal(w.grad, torch.tensor([1, 2, 3]))"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 499,
+      "section": "gradients_basics",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 502,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 503,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Let us count the FLOPs for computing gradients.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 505,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "images/deep-network.png",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 507,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "B = 1024  # Number of points\nD = 256   # Dimension",
+      "extra": {
+        "end_line": 508
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 510,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Define a simplified model (2-layer linear network):",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 511,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "x = torch.ones(B, D, device=cuda_if_available())\nw1 = torch.randn(D, D, device=cuda_if_available(), requires_grad=True)\nw2 = torch.randn(D, D, device=cuda_if_available(), requires_grad=True)\nh1 = einsum(x, w1, \"batch in, in out -> batch out\")  # x @ w1\nh2 = einsum(h1, w2, \"batch in, in out -> batch out\")  # h1 @ w2\nloss = (h2.mean() - 0)**2  # Regress everything to 0 (arbitrary)\nh1.retain_grad()  # For debugging\nh2.retain_grad()  # For debugging\nloss.backward()",
+      "extra": {
+        "end_line": 523
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 525,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Zoom in on one layer",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 526,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Let's focus on the second layer (h2 = h1 @ w2)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 528,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "**Forward pass**: Recall the number of forward FLOPs:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 529,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "num_forward_flops = 2 * B * D * D   # @inspect num_forward_flops",
+      "extra": {
+        "end_line": 529
+      }
+    },
+    {
+      "kind": "value",
+      "line": 529,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "num_forward_flops",
+      "extra": {
+        "expr": "num_forward_flops = 2 * B * D * D"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 531,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "**Backward pass**: How many FLOPs is running the backward pass?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 533,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "We need to compute:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 534,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "- h1.grad = d loss / d h1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 535,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "- w2.grad = d loss / d w2",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 537,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "h1_grad = einsum(h2.grad, w2, \"batch out, in out -> batch in\")\nassert torch.allclose(h1.grad, h1_grad)\nw2_grad = einsum(h2.grad, h1, \"batch out, batch in -> in out\")\nassert torch.allclose(w2.grad, w2_grad)\nnum_backward_flops = (2 * B * D * D) + (2 * B * D * D)  # @inspect num_backward_flops",
+      "extra": {
+        "end_line": 543
+      }
+    },
+    {
+      "kind": "value",
+      "line": 543,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "num_backward_flops",
+      "extra": {
+        "expr": "num_backward_flops = (2 * B * D * D) + (2 * B * D * D)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 545,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Note that the backward pass is 2x more expensive than the forward pass.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 547,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Consider all layers",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 548,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "This was just for w2, need to apply it to all parameters in the network.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 550,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "Putting it together:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 551,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "- Forward pass: 2 (# data points) (# parameters) FLOPs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 552,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "- Backward pass: 4 (# data points) (# parameters) FLOPs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 553,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "- Total: 6 (# data points) (# parameters) FLOPs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 555,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "This is for multilayer perceptrons (MLPs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 556,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "...but it turns out to be a good approximation for Transformers for short context lengths as well.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 556,
+      "section": "gradients_flops",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 602,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 603,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Recall our deep network.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 604,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "B = 2  # Batch size\nD = 4  # Dimensionality of input, activations, and output\nL = 3  # Number of layers\nmodel = DeepNetwork(dim=D, num_layers=L).to(cuda_if_available())  # @stepover",
+      "extra": {
+        "end_line": 607
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 607,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 609,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Let's define the AdaGrad optimizer",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 610,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "- momentum = SGD + exponential averaging of grad",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 611,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "- AdaGrad = SGD + averaging by grad^2",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 612,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "- RMSProp = AdaGrad but with exponential averaging of grad^2",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 613,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "- Adam = RMSProp + momentum",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 615,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "AdaGrad",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 615,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "adagrad_2011",
+      "extra": {
+        "ref": "adagrad_2011",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 616,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "optimizer = AdaGrad(model.parameters(), lr=0.01)  # @stepover",
+      "extra": {
+        "end_line": 616
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 616,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 617,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "state = model.state_dict()  # @inspect state",
+      "extra": {
+        "end_line": 617
+      }
+    },
+    {
+      "kind": "value",
+      "line": 617,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "state",
+      "extra": {
+        "expr": "state = model.state_dict()"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 620,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "x = torch.randn(B, D, device=cuda_if_available())\ny = torch.tensor([4., 5.], device=cuda_if_available())\npred_y = model(x).mean()  # @stepover",
+      "extra": {
+        "end_line": 622
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 622,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 623,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "loss = F.mse_loss(input=pred_y, target=y)\nloss.backward()\noptimizer.step()\noptimizer_state = {i: dict(p_state) for i, (p, p_state) in enumerate(optimizer.state.items())}  # @inspect optimizer_state",
+      "extra": {
+        "end_line": 628
+      }
+    },
+    {
+      "kind": "value",
+      "line": 628,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "optimizer_state",
+      "extra": {
+        "expr": "optimizer_state = {i: dict(p_state) for i, (p, p_state) in enumerate(optimizer.state.items())}"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 631,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "optimizer.zero_grad(set_to_none=True)",
+      "extra": {
+        "end_line": 631
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 633,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Memory",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 635,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "num_parameters = D * D * L\nparameter_memory = 2 * num_parameters  # (2 bytes for bf16) @inspect parameter_memory",
+      "extra": {
+        "end_line": 636
+      }
+    },
+    {
+      "kind": "value",
+      "line": 636,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "parameter_memory",
+      "extra": {
+        "expr": "parameter_memory = 2 * num_parameters"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 637,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "gradient_memory = 2 * num_parameters  # (2 bytes for bf16) @inspect gradient_memory",
+      "extra": {
+        "end_line": 637
+      }
+    },
+    {
+      "kind": "value",
+      "line": 637,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "gradient_memory",
+      "extra": {
+        "expr": "gradient_memory = 2 * num_parameters"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 638,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "optimizer_state_memory = 4 * num_parameters  # (4 bytes for fp32) @inspect optimizer_state_memory",
+      "extra": {
+        "end_line": 638
+      }
+    },
+    {
+      "kind": "value",
+      "line": 638,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "optimizer_state_memory",
+      "extra": {
+        "expr": "optimizer_state_memory = 4 * num_parameters"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 639,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "activation_memory = 2 * (B * D * L)  # (2 bytes for bf16) @inspect activation_memory",
+      "extra": {
+        "end_line": 639
+      }
+    },
+    {
+      "kind": "value",
+      "line": 639,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "activation_memory",
+      "extra": {
+        "expr": "activation_memory = 2 * (B * D * L)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 640,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "It is customary to use fp32 for stability (accumulating averages over powers over many steps).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 641,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Optimizer state memory:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 642,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "- AdaGrad: 4 bytes/parameter for storing second moments",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 643,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "- Adam: 8 bytes/parameter for storing first and second moments",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 646,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "total_memory = parameter_memory + activation_memory + gradient_memory + optimizer_state_memory  # @inspect total_memory",
+      "extra": {
+        "end_line": 646
+      }
+    },
+    {
+      "kind": "value",
+      "line": 646,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "total_memory",
+      "extra": {
+        "expr": "total_memory = parameter_memory + activation_memory + gradient_memory + optimizer_state_memory"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 648,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Compute (for one training step)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 649,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "num_parameters = D * D * L\nflops = 6 * B * num_parameters  # @inspect flops",
+      "extra": {
+        "end_line": 650
+      }
+    },
+    {
+      "kind": "value",
+      "line": 650,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "flops",
+      "extra": {
+        "expr": "flops = 6 * B * num_parameters"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 652,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Transformers",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 653,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "The accounting for a Transformer is more complicated, but the same idea.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 654,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Assignment 1 will ask you to do that.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 656,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Blog post describing memory usage for Transformer training",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 656,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "https://erees.dev/transformer-memory/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 657,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "Blog post describing FLOPs for a Transformer:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 657,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "https://www.adamcasson.com/posts/transformer-flops",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 657,
+      "section": "optimizer",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 683,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 685,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "D = 16  # Dimensionality\ntrue_w = torch.arange(D, dtype=torch.float32, device=cuda_if_available())\nB = 4  # Batch size\nL = 2  # Number of layers\nmodel = DeepNetwork(dim=D, num_layers=L).to(cuda_if_available()) # @stepover",
+      "extra": {
+        "end_line": 697
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 697,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 698,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "optimizer = AdaGrad(model.parameters(), lr=0.01) # @stepover",
+      "extra": {
+        "end_line": 698
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 698,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 701,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "num_train_steps = 3\nfor t in range(num_train_steps):\nx, y = get_batch()\npred_y = model(x).mean()  # @stepover",
+      "extra": {
+        "end_line": 707
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 707,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 708,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "loss = F.mse_loss(pred_y, y)\nloss.backward()\noptimizer.step()\noptimizer.zero_grad(set_to_none=True)",
+      "extra": {
+        "end_line": 715
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 715,
+      "section": "train_loop",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 718,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 719,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "Large batch sizes: improve training stability",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 720,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "However, activation memory scales with batch size, so might run out.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 721,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "B = 64     # Batch size\nD = 1024   # Dimensionality\nL = 16     # Number of layers\nactivation_memory = 2 * B * D * L  # (2 bytes for bf16) @inspect activation_memory",
+      "extra": {
+        "end_line": 724
+      }
+    },
+    {
+      "kind": "value",
+      "line": 724,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "activation_memory",
+      "extra": {
+        "expr": "activation_memory = 2 * B * D * L"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 725,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "Gradient accumulation:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 726,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "- Compute gradient on micro batches",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 727,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "- Accumulate the gradients (don't zero it out)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 728,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "- Every batch_size / micro_batch_size steps, update the parameters and zero out the gradients",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 729,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "micro_batch_size = B / 4\nactivation_memory = 2 * micro_batch_size * D * L  # (2 bytes for bf16) @inspect activation_memory",
+      "extra": {
+        "end_line": 730
+      }
+    },
+    {
+      "kind": "value",
+      "line": 730,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "activation_memory",
+      "extra": {
+        "expr": "activation_memory = 2 * micro_batch_size * D * L"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 730,
+      "section": "gradient_accumulation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 733,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 734,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "For training, we need to store the activations of all layers",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 735,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "For inference, we don't compute gradients, so we only need to store the current layer's activations.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 737,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "images/deep-network.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 738,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "The memory usage is",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 739,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "B = 64     # Batch size\nD = 1024   # Dimensionality\nL = 16     # Number of layers\nx = torch.randn(B, D, device=cuda_if_available(), requires_grad=True)\nactivation_memory = 2 * B * D * L  # @inspect activation_memory",
+      "extra": {
+        "end_line": 744
+      }
+    },
+    {
+      "kind": "value",
+      "line": 744,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "activation_memory",
+      "extra": {
+        "expr": "activation_memory = 2 * B * D * L"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 746,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "model = DeepNetwork(dim=D, num_layers=L).to(cuda_if_available())  # @stepover",
+      "extra": {
+        "end_line": 746
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 746,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 747,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "memory = get_max_memory_usage(lambda: model(x).sum().backward())  # @inspect memory @stepover",
+      "extra": {
+        "end_line": 747
+      }
+    },
+    {
+      "kind": "value",
+      "line": 747,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "memory",
+      "extra": {
+        "expr": "memory = get_max_memory_usage(lambda: model(x).sum().backward())"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 747,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 749,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "Can we reduce this?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 751,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "Activation checkpointing = gradient checkpointing = rematerialization",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 752,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "Key idea:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 753,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "- Forward pass: keep only activations at subset of layers",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 754,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "- Backward pass: recompute the missing activations from the last checkpoint",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 755,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "Philosophy: tradeoff memory for compute",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 761,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "model = DeepNetworkCheckpointed(dim=D, num_layers=L).to(cuda_if_available())  # @stepover",
+      "extra": {
+        "end_line": 761
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 761,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 762,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "checkpointed_memory = get_max_memory_usage(lambda: model(x).sum().backward())  # @inspect checkpointed_memory @stepover",
+      "extra": {
+        "end_line": 762
+      }
+    },
+    {
+      "kind": "value",
+      "line": 762,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "checkpointed_memory",
+      "extra": {
+        "expr": "checkpointed_memory = get_max_memory_usage(lambda: model(x).sum().backward())"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 762,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 764,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "Can we reduce this even more, especially for deep networks (large L)?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 770,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "How frequently to checkpoint?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 771,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "- If store each layer's activations, then activation memory is O(L) and no recomputation.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 772,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "- If store no activations, then activation memory is O(1) and compute is O(L^2) (recompute from the start for each layer).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 773,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "- If store every sqrt(L) layers, then activation memory is O(sqrt(L)) and O(L) recomputation.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 773,
+      "section": "activation_checkpointing",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "main",
+      "depth": 0,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 63,
+      "section": "main",
+      "depth": 0,
+      "text": "- Everything is operations on tensors (parameters, gradients, activations, optimizer states, data)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 64,
+      "section": "main",
+      "depth": 0,
+      "text": "- einops: better way to think about tensor operations",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 65,
+      "section": "main",
+      "depth": 0,
+      "text": "- 6 (# data points) (# parameters) FLOPs per training step",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 66,
+      "section": "main",
+      "depth": 0,
+      "text": "- Arithmetic intensity / roofline analysis: compute-bound or memory-bound?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 67,
+      "section": "main",
+      "depth": 0,
+      "text": "- Matrix multiplications are compute-bound, elementwise operations are memory-bound",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "main",
+      "depth": 0,
+      "text": "- Gradient accumulation, activation checkpointing: reduce memory to use bigger batch sizes",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 68,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

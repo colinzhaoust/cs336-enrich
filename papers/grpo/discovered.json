@@ -1,0 +1,877 @@
+{
+  "paper": {
+    "id": "grpo",
+    "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models",
+    "arxiv": "2402.03300",
+    "revision": "arXiv:2402.03300v3",
+    "source_url": "https://arxiv.org/html/2402.03300v3",
+    "text_sha256": "4a672f1a7d76cd50c9beb66f9b1c3305cd82eab7717cb4b09c1c23e2792ea4b5"
+  },
+  "generated_by": "discover_paper.py",
+  "inputs": {
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/grpo/paper.txt": "4a672f1a7d76cd50c9beb66f9b1c3305cd82eab7717cb4b09c1c23e2792ea4b5",
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/grpo/lecture_16.txt": "b56e3c63d30c35872c96fc8d7641b84a0b41e2ac20ed869a9262fcd8aebd9ce3",
+    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py": "ae8a5bf841ff58c2147aa85c6faca4fe5403f008902cc37d6b57098326866cf7",
+    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/common.py": "593d1ce02e77a2084fda83bd1d6f1d95f4bbd46cee83f7371a77f6e328361f7a",
+    "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py": "570ce155411a0c024c2af47a5e9963a14c3d325edeea70994d6ab55d0a35f1ba"
+  },
+  "verification_note": "Section and equation numbers are those printed in the arXiv HTML (v3); no PDF was downloaded, so page numbers are not recorded. Figures 5-7 are images in the HTML; only their captions and the surrounding text are evidence here. Algorithm 1 line 11 cites 'Equation 21' as printed (in the HTML numbering, Eq. 21 is the GRPO gradient coefficient and Eq. 3 is the objective).",
+  "sections": [
+    {
+      "id": "sec1",
+      "ref": "grpo:§1",
+      "title": "1 Introduction",
+      "line": 35,
+      "claims": [
+        "GRPO is introduced as a PPO variant that 'enhances mathematical reasoning abilities while concurrently optimizing the memory usage of PPO' (abstract).",
+        "DeepSeekMath-RL 7B: 88.2% GSM8K, 51.7% MATH with chain-of-thought (Table 5, §4.2)."
+      ],
+      "equations": [],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p4",
+          "match": "PPO → GRPO      GRPO variants"
+        }
+      ]
+    },
+    {
+      "id": "sec4.1.1",
+      "ref": "grpo:§4.1.1",
+      "title": "4.1.1 From PPO to GRPO",
+      "line": 838,
+      "claims": [
+        "PPO objective (Eq. 1): clipped importance ratio times a GAE advantage A_t that needs a learned value function V_psi.",
+        "Standard PPO-for-LLMs puts a per-token KL penalty against pi_ref inside the reward (Eq. 2).",
+        "The value model is typically another model of comparable size; only the last token gets a reward, which complicates a per-token value function.",
+        "GRPO samples a group {o_1..o_G} per question from pi_old and uses the group's rewards as the baseline (Eq. 3).",
+        "The KL term is added to the loss, not the reward, 'avoiding complicating the calculation of A_hat'.",
+        "KL is estimated with the unbiased estimator of Eq. 4, 'which is guaranteed to be positive'.",
+        "Algorithm 1 (iterative GRPO): reference model <- policy at the start of each iteration; mu GRPO updates per batch; reward model continually trained with a replay mechanism."
+      ],
+      "equations": [
+        {
+          "number": 1,
+          "ref": "grpo:eq1",
+          "section": "grpo:§4.1.1",
+          "line": 843,
+          "latex": "\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\min\\left[\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})}A_{t},\\text{clip}\\left(\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})},1-\\varepsilon,1+\\varepsilon\\right)A_{t}\\right],"
+        },
+        {
+          "number": 2,
+          "ref": "grpo:eq2",
+          "section": "grpo:§4.1.1",
+          "line": 850,
+          "latex": "r_{t}=r_{\\varphi}(q,o_{\\leq t})-\\beta\\log\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{ref}(o_{t}|q,o_{<t})},"
+        },
+        {
+          "number": 3,
+          "ref": "grpo:eq3",
+          "section": "grpo:§4.1.1",
+          "line": 861,
+          "latex": "\\begin{split}\\mathcal{J}_{GRPO}(\\theta)&=\\mathbb{E}{[q\\sim P(Q),\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(O|q)]}\\\\\n&\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_{i}|}\\sum_{t=1}^{|o_{i}|}\\left\\{\\min\\left[\\frac{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}|q,o_{i,<t})}\\hat{A}_{i,t},\\text{clip}\\left(\\frac{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}|q,o_{i,<t})},1-\\varepsilon,1+\\varepsilon\\right)\\hat{A}_{i,t}\\right]-\\beta\\mathbb{D}_{KL}\\left[\\pi_{\\theta}||\\pi_{ref}\\right]\\right\\},\\end{split}"
+        },
+        {
+          "number": 4,
+          "ref": "grpo:eq4",
+          "section": "grpo:§4.1.1",
+          "line": 869,
+          "latex": "\\mathbb{D}_{KL}\\left[\\pi_{\\theta}||\\pi_{ref}\\right]=\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-\\log\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-1,"
+        }
+      ],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p17",
+          "match": "•   Value model (memory hungry, involves additional tuning for training)"
+        },
+        {
+          "ref": "lecture_16.pdf:p18",
+          "match": "• Remove the value function / advantage computation"
+        },
+        {
+          "ref": "lecture_16.pdf:p19",
+          "match": "•   Compute KL term"
+        }
+      ]
+    },
+    {
+      "id": "sec4.1.2",
+      "ref": "grpo:§4.1.2",
+      "title": "4.1.2 Outcome Supervision RL with GRPO",
+      "line": 931,
+      "claims": [
+        "Rewards r_1..r_G are normalized by group mean and std; every token of output o_i gets A_hat_{i,t} = (r_i - mean(r)) / std(r)."
+      ],
+      "equations": [],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p18",
+          "match": "• Calculate the advantage as “z-score within group”"
+        },
+        {
+          "ref": "lecture_16.pdf:p19",
+          "match": "•   Mean/Var normalization per group"
+        }
+      ]
+    },
+    {
+      "id": "sec4.1.3",
+      "ref": "grpo:§4.1.3",
+      "title": "4.1.3 Process Supervision RL with GRPO",
+      "line": 935,
+      "claims": [
+        "A process reward model scores the end of each reasoning step; step rewards are normalized over all steps of all G outputs; a token's advantage is the sum of normalized rewards of the steps ending at or after it."
+      ],
+      "equations": [],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p21",
+          "match": "with some gains from process supervision"
+        }
+      ]
+    },
+    {
+      "id": "sec4.1.4",
+      "ref": "grpo:§4.1.4",
+      "title": "4.1.4 Iterative RL with GRPO",
+      "line": 941,
+      "claims": [
+        "The reward model is retrained on new policy samples with 10% historical data replayed; the reference model is then set to the current policy and training continues."
+      ],
+      "equations": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec4.2",
+      "ref": "grpo:§4.2",
+      "title": "4.2 Training and Evaluating DeepSeekMath-RL",
+      "line": 948,
+      "claims": [
+        "RL data: ~144K chain-of-thought questions from GSM8K and MATH only; reward model from DeepSeekMath-Base 7B at lr 2e-5.",
+        "GRPO hyper-parameters: policy lr 1e-6, KL coefficient 0.04, 64 outputs per question, max length 1024, batch 1024, a single policy update per exploration stage.",
+        "Table 5: RL improves over Instruct on every benchmark, including the out-of-domain ones."
+      ],
+      "equations": [],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p21",
+          "match": "GRPO from the original paper"
+        }
+      ]
+    },
+    {
+      "id": "sec5.2.1",
+      "ref": "grpo:§5.2.1",
+      "title": "5.2.1 Towards to a Unified Paradigm",
+      "line": 1350,
+      "claims": [
+        "Any method's gradient = E_{(q,o)~D} (1/|o|) sum_t GC_A(q,o,t,pi_rf) grad log pi_theta(o_t|q,o_<t) (Eq. 5).",
+        "Three components: Data Source D, Reward Function pi_rf, Algorithm A -> gradient coefficient GC.",
+        "Table 10: SFT (GC 1), RFT (Eq. 10), DPO (Eq. 14), Online RFT (Eq. 10, online data), PPO (Eq. 18), GRPO (Eq. 21).",
+        "Observation on data source: Online RFT beats RFT, especially late in training (Fig. 5).",
+        "Observation on gradient coefficient: GRPO differs from Online RFT by scaling the coefficient with the reward value; GRPO+PS > GRPO+OS; iterative RL improves further (Fig. 5, Fig. 6)."
+      ],
+      "equations": [
+        {
+          "number": 5,
+          "ref": "grpo:eq5",
+          "section": "grpo:§5.2.1",
+          "line": 1356,
+          "latex": "\\nabla_{\\theta}\\mathcal{J}_{{\\color[rgb]{1,0,0}\\mathcal{A}}}(\\theta)=\\mathbb{E}[\\underbrace{(q,o)\\sim{\\color[rgb]{1,0,0}\\mathcal{D}}}_{Data\\ Source}]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\underbrace{GC_{{\\mathcal{A}}}(q,o,t,{\\color[rgb]{1,0,0}\\pi_{{rf}}})}_{Gradient\\ Coefficient}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+        }
+      ],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p21",
+          "match": "Outperforms RFT (reinforcing correct answers),"
+        }
+      ]
+    },
+    {
+      "id": "sec5.2.2",
+      "ref": "grpo:§5.2.2",
+      "title": "5.2.2 Why RL Works?",
+      "line": 1452,
+      "claims": [
+        "Fig. 7: RL enhances Maj@K but not Pass@K; the improvement is attributed to making the output distribution more robust, 'boosting the correct response from TopK rather than the enhancement of fundamental capabilities'."
+      ],
+      "equations": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec5.2.3",
+      "ref": "grpo:§5.2.3",
+      "title": "5.2.3 How to Achieve More Effective RL?",
+      "line": 1458,
+      "claims": [
+        "Future directions per component: data source (OOD prompts, tree search), algorithms robust to noisy rewards (PRM800K ~20% wrong labels), reward models (generalization, uncertainty, process rewards)."
+      ],
+      "equations": [],
+      "course_restates": []
+    },
+    {
+      "id": "secA.1",
+      "ref": "grpo:§A.1",
+      "title": "A.1 Analysis of Reinforcement Learning",
+      "line": 2064,
+      "claims": [
+        "Per-method objective, gradient and gradient coefficient: SFT Eqs. 6-7, RFT Eqs. 8-10, Online RFT Eq. 11, DPO Eqs. 12-14, PPO Eqs. 15-18 (assuming pi_old = pi_theta so min/clip drop), GRPO Eqs. 19-21.",
+        "Eq. 21: GC_GRPO = A_hat_{i,t} + beta (pi_ref/pi_theta - 1): the KL term contributes a per-token coefficient of its own."
+      ],
+      "equations": [
+        {
+          "number": 6,
+          "ref": "grpo:eq6",
+          "section": "grpo:§A.1.1",
+          "line": 2073,
+          "latex": "\\mathcal{J}_{SFT}(\\theta)=\\mathbb{E}[q,o\\sim P_{sft}(Q,O)]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+        },
+        {
+          "number": 7,
+          "ref": "grpo:eq7",
+          "section": "grpo:§A.1.1",
+          "line": 2080,
+          "latex": "\\nabla_{\\theta}\\mathcal{J}_{SFT}=\\mathbb{E}[q,o\\sim P_{sft}(Q,O)]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+        },
+        {
+          "number": 8,
+          "ref": "grpo:eq8",
+          "section": "grpo:§A.1.2",
+          "line": 2092,
+          "latex": "\\mathcal{J}_{RFT}(\\theta)=\\mathbb{E}[q\\sim P_{sft}(Q),o\\sim\\pi_{sft}(O|q)]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\mathbb{I}(o)\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+        },
+        {
+          "number": 9,
+          "ref": "grpo:eq9",
+          "section": "grpo:§A.1.2",
+          "line": 2099,
+          "latex": "\\nabla_{\\theta}\\mathcal{J}_{RFT}(\\theta)=\\mathbb{E}[{q\\sim P_{sft}(Q),o\\sim\\pi_{sft}(O|q)}]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}{\\mathbb{I}(o)}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+        },
+        {
+          "number": 10,
+          "ref": "grpo:eq10",
+          "section": "grpo:§A.1.2",
+          "line": 2106,
+          "latex": "GC_{RFT}(q,o,t)=\\mathbb{I}(o)=\\left\\{\\begin{aligned} 1&&{\\rm the\\ answer\\ of\\ o\\ is\\ correct}\\\\\n0&&{\\rm the\\ answer\\ of\\ o\\ is\\ incorrect}\\\\\n\\end{aligned}\\right."
+        },
+        {
+          "number": 11,
+          "ref": "grpo:eq11",
+          "section": "grpo:§A.1.3",
+          "line": 2117,
+          "latex": "\\nabla_{\\theta}\\mathcal{J}_{OnRFT}(\\theta)=\\mathbb{E}[{q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta}(O|q)}]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}{\\mathbb{I}(o)}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+        },
+        {
+          "number": 12,
+          "ref": "grpo:eq12",
+          "section": "grpo:§A.1.4",
+          "line": 2126,
+          "latex": "\\begin{split}\\mathcal{J}_{DPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o^{+},o^{-}\\sim\\pi_{sft}(O|q)]}\\log\\sigma\\left(\\beta\\frac{1}{|o^{+}|}\\sum_{t=1}^{|o^{+}|}\\log\\frac{\\pi_{\\theta}(o^{+}_{t}|q,o^{+}_{<t})}{\\pi_{\\text{ref}}(o^{+}_{t}|q,o^{+}_{<t})}-\\beta\\frac{1}{|o^{-}|}\\sum_{t=1}^{|o^{-}|}\\log\\frac{\\pi_{\\theta}(o^{-}_{<t}|q,o^{-}_{<t})}{\\pi_{\\text{ref}}(o^{-}_{<t}|q,o^{-}_{<t})}\\right)\\end{split}"
+        },
+        {
+          "number": 13,
+          "ref": "grpo:eq13",
+          "section": "grpo:§A.1.4",
+          "line": 2133,
+          "latex": "\\begin{split}\\nabla_{\\theta}\\mathcal{J}_{DPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o^{+},o^{-}\\sim\\pi_{sft}(O|q)]}&\\left(\\frac{1}{|o^{+}|}\\sum_{t=1}^{|o^{+}|}GC_{DPO}(q,o,t)\\nabla_{\\theta}\\log\\pi_{\\theta}(o^{+}_{t}|q,o^{+}_{<t})\\right.\\\\\n-&\\left.\\frac{1}{|o^{-}|}\\sum_{t=1}^{|o^{-}|}GC_{DPO}(q,o,t)\\nabla_{\\theta}\\log\\pi_{\\theta}(o^{-}_{t}|q,o^{-}_{<t})\\right)\\end{split}"
+        },
+        {
+          "number": 14,
+          "ref": "grpo:eq14",
+          "section": "grpo:§A.1.4",
+          "line": 2143,
+          "latex": " GC_{DPO}(q,o,t)=\\sigma\\left(\\beta\\log\\frac{\\pi_{\\theta}(o^{-}_{t}|q,o^{-}_{<t})}{\\pi_{\\text{ref}}(o^{-}_{t}|q,o^{-}_{<t})}-\\beta\\log\\frac{\\pi_{\\theta}(o^{+}_{t}|q,o^{+}_{<t})}{\\pi_{\\text{ref}}(o^{+}_{t}|q,o^{+}_{<t})}\\right)"
+        },
+        {
+          "number": 15,
+          "ref": "grpo:eq15",
+          "section": "grpo:§A.1.5",
+          "line": 2152,
+          "latex": "\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\min\\left[\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})}A_{t},\\text{clip}\\left(\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})},1-\\varepsilon,1+\\varepsilon\\right)A_{t}\\right]."
+        },
+        {
+          "number": 16,
+          "ref": "grpo:eq16",
+          "section": "grpo:§A.1.5",
+          "line": 2160,
+          "latex": "\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})}A_{t}."
+        },
+        {
+          "number": 17,
+          "ref": "grpo:eq17",
+          "section": "grpo:§A.1.5",
+          "line": 2167,
+          "latex": "\\begin{split}\\nabla_{\\theta}\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}A_{t}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\end{split}"
+        },
+        {
+          "number": 18,
+          "ref": "grpo:eq18",
+          "section": "grpo:§A.1.5",
+          "line": 2176,
+          "latex": "GC_{PPO}(q,o,t,\\pi_{\\theta_{rm}})=A_{t},"
+        },
+        {
+          "number": 19,
+          "ref": "grpo:eq19",
+          "section": "grpo:§A.1.6",
+          "line": 2187,
+          "latex": "\\begin{split}\\mathcal{J}_{GRPO}(\\theta)&=\\mathbb{E}{[q\\sim P_{sft}(Q),\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(O|q)]}\\\\\n&\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_{i}|}\\sum_{t=1}^{|o_{i}|}\\left[\\frac{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}|q,o_{i,<t})}\\hat{A}_{i,t}-\\beta(\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-\\log\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-1)\\right].\\end{split}"
+        },
+        {
+          "number": 20,
+          "ref": "grpo:eq20",
+          "section": "grpo:§A.1.6",
+          "line": 2195,
+          "latex": "\\begin{split}\\nabla_{\\theta}\\mathcal{J}_{GRPO}(\\theta)&=\\mathbb{E}{[q\\sim P_{sft}(Q),\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(O|q)]}\\\\\n&\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_{i}|}\\sum_{t=1}^{|o_{i}|}\\left[\\hat{A}_{i,t}+\\beta\\left(\\frac{\\pi_{ref}(o_{i,t}|o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|o_{i,<t})}-1\\right)\\right]\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{i,t}|q,o_{i,<t}).\\end{split}"
+        },
+        {
+          "number": 21,
+          "ref": "grpo:eq21",
+          "section": "grpo:§A.1.6",
+          "line": 2205,
+          "latex": " GC_{GRPO}(q,o,t,\\pi_{\\theta_{rm}})=\\hat{A}_{i,t}+\\beta\\left(\\frac{\\pi_{ref}(o_{i,t}|o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|o_{i,<t})}-1\\right),"
+        }
+      ],
+      "course_restates": [
+        {
+          "ref": "lecture_16.pdf:p18",
+          "match": "In the online case (rollout+immediate update), this is just policy gradient with group normalized rewards"
+        }
+      ]
+    }
+  ],
+  "equations_all": [
+    {
+      "number": 1,
+      "ref": "grpo:eq1",
+      "section": "grpo:§4.1.1",
+      "line": 843,
+      "latex": "\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\min\\left[\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})}A_{t},\\text{clip}\\left(\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})},1-\\varepsilon,1+\\varepsilon\\right)A_{t}\\right],"
+    },
+    {
+      "number": 2,
+      "ref": "grpo:eq2",
+      "section": "grpo:§4.1.1",
+      "line": 850,
+      "latex": "r_{t}=r_{\\varphi}(q,o_{\\leq t})-\\beta\\log\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{ref}(o_{t}|q,o_{<t})},"
+    },
+    {
+      "number": 3,
+      "ref": "grpo:eq3",
+      "section": "grpo:§4.1.1",
+      "line": 861,
+      "latex": "\\begin{split}\\mathcal{J}_{GRPO}(\\theta)&=\\mathbb{E}{[q\\sim P(Q),\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(O|q)]}\\\\\n&\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_{i}|}\\sum_{t=1}^{|o_{i}|}\\left\\{\\min\\left[\\frac{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}|q,o_{i,<t})}\\hat{A}_{i,t},\\text{clip}\\left(\\frac{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}|q,o_{i,<t})},1-\\varepsilon,1+\\varepsilon\\right)\\hat{A}_{i,t}\\right]-\\beta\\mathbb{D}_{KL}\\left[\\pi_{\\theta}||\\pi_{ref}\\right]\\right\\},\\end{split}"
+    },
+    {
+      "number": 4,
+      "ref": "grpo:eq4",
+      "section": "grpo:§4.1.1",
+      "line": 869,
+      "latex": "\\mathbb{D}_{KL}\\left[\\pi_{\\theta}||\\pi_{ref}\\right]=\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-\\log\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-1,"
+    },
+    {
+      "number": 5,
+      "ref": "grpo:eq5",
+      "section": "grpo:§5.2.1",
+      "line": 1356,
+      "latex": "\\nabla_{\\theta}\\mathcal{J}_{{\\color[rgb]{1,0,0}\\mathcal{A}}}(\\theta)=\\mathbb{E}[\\underbrace{(q,o)\\sim{\\color[rgb]{1,0,0}\\mathcal{D}}}_{Data\\ Source}]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\underbrace{GC_{{\\mathcal{A}}}(q,o,t,{\\color[rgb]{1,0,0}\\pi_{{rf}}})}_{Gradient\\ Coefficient}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+    },
+    {
+      "number": 6,
+      "ref": "grpo:eq6",
+      "section": "grpo:§A.1.1",
+      "line": 2073,
+      "latex": "\\mathcal{J}_{SFT}(\\theta)=\\mathbb{E}[q,o\\sim P_{sft}(Q,O)]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+    },
+    {
+      "number": 7,
+      "ref": "grpo:eq7",
+      "section": "grpo:§A.1.1",
+      "line": 2080,
+      "latex": "\\nabla_{\\theta}\\mathcal{J}_{SFT}=\\mathbb{E}[q,o\\sim P_{sft}(Q,O)]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+    },
+    {
+      "number": 8,
+      "ref": "grpo:eq8",
+      "section": "grpo:§A.1.2",
+      "line": 2092,
+      "latex": "\\mathcal{J}_{RFT}(\\theta)=\\mathbb{E}[q\\sim P_{sft}(Q),o\\sim\\pi_{sft}(O|q)]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\mathbb{I}(o)\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+    },
+    {
+      "number": 9,
+      "ref": "grpo:eq9",
+      "section": "grpo:§A.1.2",
+      "line": 2099,
+      "latex": "\\nabla_{\\theta}\\mathcal{J}_{RFT}(\\theta)=\\mathbb{E}[{q\\sim P_{sft}(Q),o\\sim\\pi_{sft}(O|q)}]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}{\\mathbb{I}(o)}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+    },
+    {
+      "number": 10,
+      "ref": "grpo:eq10",
+      "section": "grpo:§A.1.2",
+      "line": 2106,
+      "latex": "GC_{RFT}(q,o,t)=\\mathbb{I}(o)=\\left\\{\\begin{aligned} 1&&{\\rm the\\ answer\\ of\\ o\\ is\\ correct}\\\\\n0&&{\\rm the\\ answer\\ of\\ o\\ is\\ incorrect}\\\\\n\\end{aligned}\\right."
+    },
+    {
+      "number": 11,
+      "ref": "grpo:eq11",
+      "section": "grpo:§A.1.3",
+      "line": 2117,
+      "latex": "\\nabla_{\\theta}\\mathcal{J}_{OnRFT}(\\theta)=\\mathbb{E}[{q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta}(O|q)}]\\left(\\frac{1}{|o|}\\sum_{t=1}^{|o|}{\\mathbb{I}(o)}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\right)."
+    },
+    {
+      "number": 12,
+      "ref": "grpo:eq12",
+      "section": "grpo:§A.1.4",
+      "line": 2126,
+      "latex": "\\begin{split}\\mathcal{J}_{DPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o^{+},o^{-}\\sim\\pi_{sft}(O|q)]}\\log\\sigma\\left(\\beta\\frac{1}{|o^{+}|}\\sum_{t=1}^{|o^{+}|}\\log\\frac{\\pi_{\\theta}(o^{+}_{t}|q,o^{+}_{<t})}{\\pi_{\\text{ref}}(o^{+}_{t}|q,o^{+}_{<t})}-\\beta\\frac{1}{|o^{-}|}\\sum_{t=1}^{|o^{-}|}\\log\\frac{\\pi_{\\theta}(o^{-}_{<t}|q,o^{-}_{<t})}{\\pi_{\\text{ref}}(o^{-}_{<t}|q,o^{-}_{<t})}\\right)\\end{split}"
+    },
+    {
+      "number": 13,
+      "ref": "grpo:eq13",
+      "section": "grpo:§A.1.4",
+      "line": 2133,
+      "latex": "\\begin{split}\\nabla_{\\theta}\\mathcal{J}_{DPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o^{+},o^{-}\\sim\\pi_{sft}(O|q)]}&\\left(\\frac{1}{|o^{+}|}\\sum_{t=1}^{|o^{+}|}GC_{DPO}(q,o,t)\\nabla_{\\theta}\\log\\pi_{\\theta}(o^{+}_{t}|q,o^{+}_{<t})\\right.\\\\\n-&\\left.\\frac{1}{|o^{-}|}\\sum_{t=1}^{|o^{-}|}GC_{DPO}(q,o,t)\\nabla_{\\theta}\\log\\pi_{\\theta}(o^{-}_{t}|q,o^{-}_{<t})\\right)\\end{split}"
+    },
+    {
+      "number": 14,
+      "ref": "grpo:eq14",
+      "section": "grpo:§A.1.4",
+      "line": 2143,
+      "latex": " GC_{DPO}(q,o,t)=\\sigma\\left(\\beta\\log\\frac{\\pi_{\\theta}(o^{-}_{t}|q,o^{-}_{<t})}{\\pi_{\\text{ref}}(o^{-}_{t}|q,o^{-}_{<t})}-\\beta\\log\\frac{\\pi_{\\theta}(o^{+}_{t}|q,o^{+}_{<t})}{\\pi_{\\text{ref}}(o^{+}_{t}|q,o^{+}_{<t})}\\right)"
+    },
+    {
+      "number": 15,
+      "ref": "grpo:eq15",
+      "section": "grpo:§A.1.5",
+      "line": 2152,
+      "latex": "\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\min\\left[\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})}A_{t},\\text{clip}\\left(\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})},1-\\varepsilon,1+\\varepsilon\\right)A_{t}\\right]."
+    },
+    {
+      "number": 16,
+      "ref": "grpo:eq16",
+      "section": "grpo:§A.1.5",
+      "line": 2160,
+      "latex": "\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}\\frac{\\pi_{\\theta}(o_{t}|q,o_{<t})}{\\pi_{\\theta_{old}}(o_{t}|q,o_{<t})}A_{t}."
+    },
+    {
+      "number": 17,
+      "ref": "grpo:eq17",
+      "section": "grpo:§A.1.5",
+      "line": 2167,
+      "latex": "\\begin{split}\\nabla_{\\theta}\\mathcal{J}_{PPO}(\\theta)=\\mathbb{E}{[q\\sim P_{sft}(Q),o\\sim\\pi_{\\theta_{old}}(O|q)]}\\frac{1}{|o|}\\sum_{t=1}^{|o|}A_{t}\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{t}|q,o_{<t})\\end{split}"
+    },
+    {
+      "number": 18,
+      "ref": "grpo:eq18",
+      "section": "grpo:§A.1.5",
+      "line": 2176,
+      "latex": "GC_{PPO}(q,o,t,\\pi_{\\theta_{rm}})=A_{t},"
+    },
+    {
+      "number": 19,
+      "ref": "grpo:eq19",
+      "section": "grpo:§A.1.6",
+      "line": 2187,
+      "latex": "\\begin{split}\\mathcal{J}_{GRPO}(\\theta)&=\\mathbb{E}{[q\\sim P_{sft}(Q),\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(O|q)]}\\\\\n&\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_{i}|}\\sum_{t=1}^{|o_{i}|}\\left[\\frac{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta_{old}}(o_{i,t}|q,o_{i,<t})}\\hat{A}_{i,t}-\\beta(\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-\\log\\frac{\\pi_{ref}(o_{i,t}|q,o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|q,o_{i,<t})}-1)\\right].\\end{split}"
+    },
+    {
+      "number": 20,
+      "ref": "grpo:eq20",
+      "section": "grpo:§A.1.6",
+      "line": 2195,
+      "latex": "\\begin{split}\\nabla_{\\theta}\\mathcal{J}_{GRPO}(\\theta)&=\\mathbb{E}{[q\\sim P_{sft}(Q),\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(O|q)]}\\\\\n&\\frac{1}{G}\\sum_{i=1}^{G}\\frac{1}{|o_{i}|}\\sum_{t=1}^{|o_{i}|}\\left[\\hat{A}_{i,t}+\\beta\\left(\\frac{\\pi_{ref}(o_{i,t}|o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|o_{i,<t})}-1\\right)\\right]\\nabla_{\\theta}\\log\\pi_{\\theta}(o_{i,t}|q,o_{i,<t}).\\end{split}"
+    },
+    {
+      "number": 21,
+      "ref": "grpo:eq21",
+      "section": "grpo:§A.1.6",
+      "line": 2205,
+      "latex": " GC_{GRPO}(q,o,t,\\pi_{\\theta_{rm}})=\\hat{A}_{i,t}+\\beta\\left(\\frac{\\pi_{ref}(o_{i,t}|o_{i,<t})}{\\pi_{\\theta}(o_{i,t}|o_{i,<t})}-1\\right),"
+    }
+  ],
+  "algorithm1": {
+    "ref": "grpo:algorithm1",
+    "line": 875,
+    "steps": [
+      {
+        "step": 1,
+        "text": "policy model $\\pi_{\\theta}\\leftarrow\\pi_{\\theta_{\\text{init}}}$"
+      },
+      {
+        "step": 2,
+        "text": "for iteration = 1, …, I do"
+      },
+      {
+        "step": 3,
+        "text": "reference model $\\pi_{ref}\\leftarrow\\pi_{\\theta}$"
+      },
+      {
+        "step": 4,
+        "text": "for step = 1, …, M do"
+      },
+      {
+        "step": 5,
+        "text": "Sample a batch $\\mathcal{D}_{b}$ from $\\mathcal{D}$"
+      },
+      {
+        "step": 6,
+        "text": "Update the old policy model $\\pi_{\\theta_{old}}\\leftarrow\\pi_{\\theta}$"
+      },
+      {
+        "step": 7,
+        "text": "Sample $G$ outputs $\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{old}}(\\cdot\\mid q)$ for each question $q\\in\\mathcal{D}_{b}$"
+      },
+      {
+        "step": 8,
+        "text": "Compute rewards $\\{r_{i}\\}_{i=1}^{G}$ for each sampled output $o_{i}$ by running $r_{\\varphi}$"
+      },
+      {
+        "step": 9,
+        "text": "Compute $\\hat{A}_{i,t}$ for the $t$ -th token of $o_{i}$ through group relative advantage estimation."
+      },
+      {
+        "step": 10,
+        "text": "for GRPO iteration = 1, …, $\\mu$ do"
+      },
+      {
+        "step": 11,
+        "text": "Update the policy model $\\pi_{\\theta}$ by maximizing the GRPO objective (Equation 21)"
+      },
+      {
+        "step": 12,
+        "text": "Update $r_{\\varphi}$ through continuous training using a replay mechanism."
+      }
+    ]
+  },
+  "tables": {
+    "table5_deepseekmath_rows": [
+      {
+        "model": "DeepSeekMath-Instruct 7B",
+        "setting": "chain-of-thought",
+        "GSM8K": "82.9%",
+        "MATH": "46.8%",
+        "MGSM-zh": "73.2%",
+        "CMATH": "84.6%",
+        "line": 749
+      },
+      {
+        "model": "DeepSeekMath-RL 7B",
+        "setting": "chain-of-thought",
+        "GSM8K": "88.2%",
+        "MATH": "51.7%",
+        "MGSM-zh": "79.6%",
+        "CMATH": "88.8%",
+        "line": 756
+      },
+      {
+        "model": "DeepSeekMath-Instruct 7B",
+        "setting": "tool-integrated",
+        "GSM8K": "83.7%",
+        "MATH": "57.4%",
+        "MGSM-zh": "72.0%",
+        "CMATH": "84.3%",
+        "line": 804
+      },
+      {
+        "model": "DeepSeekMath-RL 7B",
+        "setting": "tool-integrated",
+        "GSM8K": "86.7%",
+        "MATH": "58.8%",
+        "MGSM-zh": "78.4%",
+        "CMATH": "87.6%",
+        "line": 811
+      }
+    ],
+    "table10": {
+      "columns": [
+        "Methods",
+        "Data Source",
+        "Reward Function",
+        "Gradient Coefficient"
+      ],
+      "rows": [
+        {
+          "Methods": "SFT",
+          "Data Source": "$q,o\\sim P_{sft}(Q,O)$",
+          "Reward Function": "-",
+          "Gradient Coefficient": "1"
+        },
+        {
+          "Methods": "RFT",
+          "Data Source": "$q\\sim P_{sft}(Q)$ , $o\\sim\\pi_{sft}(O|q)$",
+          "Reward Function": "Rule",
+          "Gradient Coefficient": "Equation 10"
+        },
+        {
+          "Methods": "DPO",
+          "Data Source": "$q\\sim P_{sft}(Q)$ , $o^{+},o^{-}\\sim\\pi_{sft}(O|q)$",
+          "Reward Function": "Rule",
+          "Gradient Coefficient": "Equation 14"
+        },
+        {
+          "Methods": "Online RFT",
+          "Data Source": "$q\\sim P_{sft}(Q)$ , $o\\sim\\pi_{\\theta}(O|q)$",
+          "Reward Function": "Rule",
+          "Gradient Coefficient": "Equation 10"
+        },
+        {
+          "Methods": "PPO",
+          "Data Source": "$q\\sim P_{sft}(Q)$ , $o\\sim\\pi_{\\theta}(O|q)$",
+          "Reward Function": "Model",
+          "Gradient Coefficient": "Equation 18"
+        },
+        {
+          "Methods": "GRPO",
+          "Data Source": "$q\\sim P_{sft}(Q)$ , $\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta}(O|q)$",
+          "Reward Function": "Model",
+          "Gradient Coefficient": "Equation 21"
+        }
+      ],
+      "caption_line": 1400
+    }
+  },
+  "figures_tables": {
+    "grpo:fig4": {
+      "line": 856,
+      "caption": "Demonstration of PPO and our GRPO. GRPO foregoes the value model, instead estimating the baseline from group scores, significantly reducing training resources."
+    },
+    "grpo:table10": {
+      "line": 1400,
+      "caption": "The data source and gradient coefficient of different methods. $P_{sft}$ denotes the data distribution of supervised fine-tuning datasets. $\\pi_{\\theta_{sft}}$ and $\\pi_{\\theta}$ denote the supervised fine-tuned model and the real-time policy model during the online training process, respectively."
+    },
+    "grpo:fig5": {
+      "line": 1425,
+      "caption": "Performance of the DeepSeekMath-Instruct 1.3B model, which was further trained using various methods, on two benchmarks."
+    },
+    "grpo:fig6": {
+      "line": 1427,
+      "caption": "Performance of iterative reinforcement learning with DeepSeekMath-Instruct 7B on two benchmarks."
+    },
+    "grpo:fig7": {
+      "line": 1450,
+      "caption": "The Maj@K and Pass@K of SFT and RL DeepSeekMath 7B on GSM8K and MATH (temperature $0.7$ ). It was noted that RL enhances Maj@K but not Pass@K."
+    }
+  },
+  "findings": [
+    {
+      "id": "rl_in_domain_gain",
+      "question": "How much did GRPO add on the in-domain benchmarks?",
+      "setting": "DeepSeekMath-Instruct 7B -> DeepSeekMath-RL 7B, chain-of-thought, GSM8K/MATH questions only (~144K), G=64, beta=0.04",
+      "metric": "accuracy, chain-of-thought",
+      "evidence_kind": "table",
+      "refs": [
+        "grpo:table5",
+        "grpo:§4.2"
+      ],
+      "takeaway": "GSM8K 82.9 -> 88.2, MATH 46.8 -> 51.7 (parsed from Table 5)."
+    },
+    {
+      "id": "rl_out_of_domain_gain",
+      "question": "Did RL on GSM8K/MATH CoT data help benchmarks it never saw?",
+      "setting": "same models; MGSM-zh, CMATH, and the tool-integrated setting",
+      "metric": "accuracy",
+      "evidence_kind": "table",
+      "refs": [
+        "grpo:table5",
+        "grpo:§4.2"
+      ],
+      "takeaway": "Yes on every column printed: MGSM-zh 73.2 -> 79.6, CMATH 84.6 -> 88.8 (CoT); tool-integrated GSM8K 83.7 -> 86.7, MATH 57.4 -> 58.8."
+    },
+    {
+      "id": "maj_not_pass",
+      "question": "Does RL raise the model's ceiling or its reliability?",
+      "setting": "Instruct vs RL 7B, GSM8K and MATH, temperature 0.7, Pass@K and Maj@K over K samples",
+      "metric": "Pass@K, Maj@K",
+      "evidence_kind": "figure (curves only; no numbers in text)",
+      "refs": [
+        "grpo:fig7",
+        "grpo:§5.2.2",
+        "grpo:§5.2.3"
+      ],
+      "takeaway": "RL enhances Maj@K but not Pass@K; the authors read this as robustness of the output distribution, not new capability, and in §5.2.3 call it a limitation of their data source and sampling."
+    },
+    {
+      "id": "online_vs_offline",
+      "question": "Does sampling from the live policy matter?",
+      "setting": "DeepSeekMath-Instruct 1.3B, RFT vs Online RFT (same GC, different data source)",
+      "metric": "GSM8K/MATH accuracy over training",
+      "evidence_kind": "figure (curves only)",
+      "refs": [
+        "grpo:fig5",
+        "grpo:§5.2.1"
+      ],
+      "takeaway": "Online RFT matches RFT early and pulls ahead later; the paper's explanation is that the policy drifts from the SFT model so stale samples lose value."
+    },
+    {
+      "id": "gc_graded_vs_binary",
+      "question": "Does a reward-scaled gradient coefficient beat a 0/1 coefficient?",
+      "setting": "1.3B, GRPO+OS vs Online RFT; GRPO+PS vs GRPO+OS",
+      "metric": "GSM8K/MATH accuracy",
+      "evidence_kind": "figure (curves only)",
+      "refs": [
+        "grpo:fig5",
+        "grpo:§5.2.1",
+        "grpo:eq10",
+        "grpo:eq21"
+      ],
+      "takeaway": "GRPO+OS > Online RFT, and GRPO+PS > GRPO+OS as printed; the only equation-level difference between Online RFT and GRPO is the coefficient I(o) vs A_hat (+ KL term)."
+    },
+    {
+      "id": "iterative_gain",
+      "question": "Does refreshing the reward and reference model help?",
+      "setting": "DeepSeekMath-Instruct 7B, iterative GRPO (Algorithm 1)",
+      "metric": "GSM8K/MATH accuracy",
+      "evidence_kind": "figure (curves only)",
+      "refs": [
+        "grpo:fig6",
+        "grpo:§4.1.4",
+        "grpo:algorithm1"
+      ],
+      "takeaway": "The caption and text report improvement from iterative RL; the numbers live only in the figure image and are not recorded here."
+    }
+  ],
+  "code": {
+    "repo": "FeynRL (local clone 4blue2brown/external/FeynRL)",
+    "revision": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "links": [
+      {
+        "paper": "grpo:eq3 (ratio, min, clip)",
+        "ref": "algs/GRPO/grpo.py:L169-L176",
+        "text": [
+          "            raw_logratio = (logprobs - old_logprobs).to(torch.float32)",
+          "            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))",
+          "            ratio        = torch.exp(logratio)",
+          "",
+          "            # 3. compute loss as raw sums, will be normalized later",
+          "            unclipped = ratio * adv",
+          "            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv",
+          "            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
+        ]
+      },
+      {
+        "paper": "grpo:eq3 (beta * KL added to the loss)",
+        "ref": "algs/GRPO/grpo.py:L182-L188",
+        "text": [
+          "        if ref_logprobs is not None and self.kl_coeff > 0.0:",
+          "            kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs)",
+          "            # avoid calculating kl for padded tokens.",
+          "            kl_dist = torch.where(mask_bool, kl_dist, torch.zeros_like(kl_dist))",
+          "            kl_sum  = (kl_dist * mask).sum()",
+          "",
+          "        loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum"
+        ]
+      },
+      {
+        "paper": "grpo:eq4 (k3 estimator)",
+        "ref": "algs/RL/common.py:L131-L139",
+        "text": [
+          "        log_ratio = logprobs - ref_logprobs",
+          "        # pi_ref/pi = exp(ref_logprobs - logprobs)",
+          "        exponent = torch.clamp(ref_logprobs - logprobs, min=-10.0, max=10.0)",
+          "        #if exponent.max().item() > 10.0:",
+          "        #    print(f\"[WARNING] compute_kl_distance: extreme divergence detected, max exponent={exponent.max().item():.1f}\")",
+          "",
+          "        ratio_inv = torch.exp(exponent)",
+          "        kl_dist = log_ratio + ratio_inv - 1",
+          "        return kl_dist"
+        ]
+      },
+      {
+        "paper": "grpo:§4.1.2 (group mean/std, Bessel-corrected here)",
+        "ref": "rollouts/base.py:L131-L136",
+        "text": [
+          "        denom = len(samples) # number of samples in the group",
+          "        if len(samples) > 1:",
+          "            rewards_array = np.array(stats['rewards'])",
+          "            mean_scores = rewards_array.sum() / denom",
+          "            # Bessel's correction (n-1) for unbiased sample std with small n_samples",
+          "            std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))"
+        ]
+      },
+      {
+        "paper": "grpo:§4.1.2 (every response token gets the normalized reward when reward.broadcast)",
+        "ref": "rollouts/base.py:L151-L155",
+        "text": [
+          "            zscore = torch.zeros_like(sample['token_rewards'], dtype=torch.float)",
+          "            zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)",
+          "            sample[\"token_zscores\"] = zscore",
+          "            if self.reward_broadcast:",
+          "                sample[\"token_zscores\"][prompt_len:] = zscore[-1]"
+        ]
+      },
+      {
+        "paper": "grpo:algorithm1 line 11 (mu updates); FeynRL reads the stored zscore as the advantage",
+        "ref": "algs/GRPO/grpo.py:L313-L316",
+        "text": [
+          "            # zscore is normalized rewards using the number of samples for each proompt (X -mu) / (std + eps)",
+          "            # this is a simple baseline for policy gradients (PPO in this code) as it reflects relative quality",
+          "            # among that prompt’s samples.",
+          "            advs      = micro_batch['zscore'][:, :-1].to(device, non_blocking=True)"
+        ]
+      }
+    ],
+    "divergences": [
+      "Paper std(r) does not say population or sample; FeynRL uses Bessel's correction (n-1) and adds 1e-8 to the std.",
+      "FeynRL's gsm8k recipe sets kl_coeff 0.0 and no reference model (algs/GRPO/grpo.py:L98-L101 skips loading it); the paper trains with beta = 0.04.",
+      "FeynRL exposes asymmetric clip_low/clip_high; the paper uses a single epsilon.",
+      "FeynRL normalizes by a global token count (normalize_loss) rather than the paper's 1/G * 1/|o_i| per-output mean."
+    ]
+  },
+  "course": {
+    "source": "lecture_16.pdf",
+    "grpo_pages": [
+      "lecture_16.pdf:p4",
+      "lecture_16.pdf:p18",
+      "lecture_16.pdf:p19",
+      "lecture_16.pdf:p20",
+      "lecture_16.pdf:p21",
+      "lecture_16.pdf:p22",
+      "lecture_16.pdf:p23",
+      "lecture_16.pdf:p24",
+      "lecture_16.pdf:p27",
+      "lecture_16.pdf:p30",
+      "lecture_16.pdf:p31",
+      "lecture_16.pdf:p35",
+      "lecture_16.pdf:p43",
+      "lecture_16.pdf:p51",
+      "lecture_16.pdf:p61"
+    ],
+    "order": [
+      {
+        "ref": "lecture_16.pdf:p5",
+        "step": "recap: policy gradient (variance too high) -> TRPO -> PPO (clip the ratios)"
+      },
+      {
+        "ref": "lecture_16.pdf:p17",
+        "step": "why not PPO: complicated implementation, value model memory hungry; why not DPO: data not pairwise, offline"
+      },
+      {
+        "ref": "lecture_16.pdf:p18",
+        "step": "GRPO = PPO minus value function; advantage = z-score within group; online case is policy gradient with group-normalized rewards"
+      },
+      {
+        "ref": "lecture_16.pdf:p19",
+        "step": "tiny implementations: reward per rollout, mean/var normalization per group, KL term, gradient update (nano-aha-moment)"
+      },
+      {
+        "ref": "lecture_16.pdf:p20",
+        "step": "advantage code: vanilla GRPO plus a 1e-4 stability term in the std"
+      },
+      {
+        "ref": "lecture_16.pdf:p21",
+        "step": "results from the original paper: outperforms RFT, some gains from process supervision"
+      },
+      {
+        "ref": "lecture_16.pdf:p22",
+        "step": "detour: baselining; any state-dependent term may be subtracted"
+      },
+      {
+        "ref": "lecture_16.pdf:p23",
+        "step": "critique: dividing by the std is not a valid baseline (Dr. GRPO, Liu et al. 2025)"
+      },
+      {
+        "ref": "lecture_16.pdf:p24",
+        "step": "length biases of GRPO: std upweights too-easy/too-hard questions; length normalization"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2922 @@
+{
+  "lecture": "lecture_07",
+  "title": "Parallelism",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are line ranges in official/lectures/lecture_07.py (see sources.json; sha256 in discovered.json). Status and anchors are evidence read from the executable lecture by atlas/tools/discover_lecture.py; prerequisite edges marked author-inference are hypotheses until a learner attempt confirms them. Cross-lecture prerequisites are listed under external_prerequisites (lecture_02:<id>, lecture_05:<id>). The recorded stdout (lecture_07_stdout) is anchored only for relative observations; its millisecond and GB/s readouts are never restated as facts. Two KPs (zero-sharding, pipeline-bubble) carry formulas the professor did not state; they are marked basis=inference and anchored to the ZeRO and GPipe papers. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer (2026-10-01): anchors with ref 'video:M:SS-M:SS' and role 'spoken' quote the human-made YouTube captions in transcript.json (source lecture_07_video; verified by tools/check_anchors.py, ±8 s). Filtering notes that begin 'Spoken evidence' record what the audio adds to or corrects in the written source; 'Spoken slip' marks speech that disagrees with the code and was not imported. Durations and bandwidths read aloud are not quoted, by the rule above. Status 'spoken' marks KPs whose testable content exists only in the audio. Top-level spoken_filtering lists every explicit skip, deferral and aside, read from the full transcript; spoken_map segments the whole talk by KP.",
+  "knowledge_points": [
+    {
+      "id": "interconnect-hierarchy",
+      "label": "The data-movement hierarchy extends across GPUs and nodes",
+      "kind": "quantity",
+      "statement": "Compute is far from data at every level, and each level is slower: L1/shared memory → HBM (8 TB/s on B200) → NVLink/NVSwitch within a node (1.8 TB/s) → Infiniband across nodes (~0.05 TB/s) → Ethernet across pods; last week's fusion/tiling and this week's replication/sharding are the same move at different levels.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L25-L26",
+            "role": "claim",
+            "quote": "compute (arithmetic logic units) is far from inputs/outputs (data). Unifying theme: orchestrate computation to avoid data transfer bottlenecks"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L28-L35",
+            "role": "claim",
+            "quote": "Generalized hierarchy: ... L1 cache / shared memory (fastest) ... HBM ... NVLink/NVSwitch ... Infiniband/Ethernet (slowest)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L218-L221",
+            "role": "claim",
+            "quote": "8 GPUs per node, connected by NVLink to an NVSwitch (B200s' NVLink 5.0 gets 1.8 TB/s; HBM was 8 TB/s) ... Infiniband ... (~0.05 TB/s)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L212-L213",
+            "role": "claim",
+            "quote": "PCI(e) bus (v7.0, 16 lanes => 242 GB/s) ... Ethernet (~200 MB/s)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L229",
+            "role": "claim",
+            "quote": "GB200/GB300 NVL72: 8 GPUs per tray, 9 trays per rack -> 72 GPUs in one NVLink domain"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:2:01-2:30",
+            "role": "spoken",
+            "quote": "taking a little bit of liberty, we can think about the generalized hierarchy ... HBM, which we lamented was so slow. ... But in this lecture, HBM is going to be considered fast."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:23:40-24:13",
+            "role": "spoken",
+            "quote": "typically, you have eight GPUs per node. ... if you use NVLink 5, then you're getting 1.8 terabytes per second of total bandwidth. ... remember, HBM for B200 was 8 terabytes per second. ... So it's about 4x slower."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:25:02-26:11",
+            "role": "spoken",
+            "quote": "as your number of GPUs grows, then you're going to have to put these nodes into pods, which are connected by InfiniBand. ... you see that the speeds are much, much lower. ... You can't have an NVSwitch handling 100,000 GPUs."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:28:22-28:46",
+            "role": "spoken",
+            "quote": "normally, if you're mortal, you think, well OK, I have eight GPUs that are interlinked really fast. ... if you have a lot of money, you can buy this really fancy hardware and you can get really fast interconnects up to 72 GPUs."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:35:00-35:23",
+            "role": "spoken",
+            "quote": "let's say you have eight GPUs per node. ... So then the ninth one would be on a different node. ... that's going to be one node which is not providing that much compute and also very expensive to communicate with."
+          }
+        ],
+        "filtering_note": "Bandwidths are single round numbers without derivation: the HBM figure is for B200 (lecture 5/6 used H100's 3.35 TB/s), the '~200 MB/s' Ethernet number is the home-network case (L213), and the PCIe figure comes from Wikipedia (L212). The professor uses them only to order the levels, not to compute anything. Spoken evidence (2:25, 24:03-24:08): the levels are relative to the lecture ('in this lecture, HBM is going to be considered fast'), and the numbers are used once aloud for a ratio: NVLink 5 at 1.8 TB/s against B200 HBM at 8 TB/s is 'about 4x slower' (8 / 1.8 = 4.4). This corrects the sentence above that the professor uses the bandwidths 'only to order the levels, not to compute anything': that ratio is the one computation. He also says the figure's '8 is typical, but this 256 is kind of made up' (23:35), gives the reason for the hierarchy, 'You can't have an NVSwitch handling 100,000 GPUs' (26:11), and presents NVL72 as moving the fast domain from 8 to 72 GPUs for those with 'a lot of money' (28:22-28:46). Spoken evidence (35:00-35:23, Q&A): a ninth GPU on another node without NVLink is 'really bad': little extra compute and expensive to reach. The tray answer (31:41-31:53: 'two CPUs. And each CPU is connected to four GPUs. So each tray has eight GPUs') matches L229's 8 per tray x 9 trays; NVIDIA's published GB200 NVL72 layout is 18 compute trays of 4 GPUs (author note, not anchored; flagged for review)."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:gpu-memory-hierarchy",
+          "basis": "author-inference",
+          "note": "The first two levels (shared memory, HBM) are lecture 5's hierarchy; this KP appends NVLink and Infiniband below them."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "NVLink is about as fast as HBM, so spreading a model over 8 GPUs in a node is nearly free.",
+          "why_wrong": "With the lecture's numbers NVLink 5.0 (1.8 TB/s) is ~4.4× slower than HBM (8 TB/s), and Infiniband (0.05 TB/s) is another ~36× slower; every level down costs an order of magnitude or so."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Using only the lecture's numbers (HBM 8 TB/s, NVLink 5.0 1.8 TB/s, Infiniband ~0.05 TB/s): by what factor is NVLink slower than HBM, and Infiniband slower than NVLink?",
+          "format": "short",
+          "answer": "≈4.4× and ≈36×",
+          "why": "8/1.8 ≈ 4.4; 1.8/0.05 = 36. Each hop down the hierarchy costs roughly an order of magnitude (L219-L220).",
+          "targets_misconception": "NVLink is about as fast as HBM, so spreading a model over 8 GPUs in a node is nearly free."
+        },
+        "transfer": {
+          "q": "A 16 GB gradient tensor must cross one link. With the lecture's bandwidths, how long does it take over NVLink 5.0 (1.8 TB/s) versus Infiniband (0.05 TB/s)? Give both in milliseconds.",
+          "format": "short",
+          "answer": "≈8.9 ms vs ≈320 ms",
+          "why": "16/1800 s ≈ 0.0089 s; 16/50 s = 0.32 s. Same bytes, 36× the time: this is why the summary says tensor parallelism wants NVLink and pipeline parallelism can tolerate slow links (L69-L70)."
+        },
+        "check": {
+          "q": "Using the lecture's bandwidths (HBM 8 TB/s on B200, NVLink 5.0 1.8 TB/s), reading a tensor out of one GPU's HBM takes 0.9 ms. How many milliseconds does sending the same tensor to another GPU in the node over NVLink 5.0 take?",
+          "format": "number",
+          "answer": "4 ms",
+          "tolerance": 0.05,
+          "why": "Transfer time is bytes / bandwidth, so the time scales by the inverse bandwidth ratio: 0.9 ms × 8 / 1.8 = 4.0 ms. One hop down the hierarchy (HBM to NVLink) already costs about 4.4× (L219).",
+          "varies": "the pair of levels compared (HBM vs NVLink instead of NVLink vs Infiniband) and the given quantity (a time, not a byte count)",
+          "invariant": "time = bytes / bandwidth, so the time ratio between two levels is the inverse of their bandwidth ratio",
+          "targets_misconception": "NVLink is about as fast as HBM, so spreading a model over 8 GPUs in a node is nearly free.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "List the four levels of the lecture's generalized data-movement hierarchy from fastest to slowest.",
+            "answer": "L1 cache / shared memory; HBM; NVLink/NVSwitch (multi-GPU, one node); Infiniband/Ethernet (multi-node) (L29-L32)."
+          },
+          {
+            "q": "What one-sentence 'unifying theme' does the professor give for both single-GPU and multi-GPU work?",
+            "answer": "Orchestrate computation to avoid data-transfer bottlenecks, because compute is far from data (L25-L26)."
+          },
+          {
+            "q": "How many GPUs share one NVLink domain in a GB200 NVL72 rack? Type only the number.",
+            "answer": "72. NVIDIA's published GB200 NVL72 layout is 18 compute trays × 4 GPUs; the lecture (L229, and aloud at 31:41) says 8 per tray × 9 trays, which gives the same total.",
+            "format": "number",
+            "tolerance": 0.01, "layer": "detail"
+          }
+        ],
+        "self_explain": "The professor says last week was 'fusion/tiling' and this week is 'replication/sharding'. What is the shared enemy, and why does the remedy change name as you move down the hierarchy?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_07--link-ladder",
+          "notice": "For the same bytes, each hop down the ladder multiplies the time by a fixed factor, whatever the payload: about 4.4x from HBM to NVLink and 36x from NVLink to Infiniband."
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/gpu-node-overview.png"
+        },
+        {
+          "type": "example",
+          "action": "compare",
+          "ref": "lecture_07.py:L218-L221",
+          "steps": [
+            {
+              "tex": "\\frac{8\\ \\text{TB/s}}{1.8\\ \\text{TB/s}} \\approx 4.4",
+              "do": "HBM to NVLink 5.0 on a B200 node.",
+              "why": "Leaving the chip for another GPU in the same node already costs a factor of about 4."
+            },
+            {
+              "tex": "\\frac{1.8\\ \\text{TB/s}}{0.05\\ \\text{TB/s}} = 36",
+              "do": "NVLink to Infiniband.",
+              "why": "Leaving the node costs a bigger factor than leaving the chip did."
+            },
+            {
+              "tex": "\\frac{8}{0.05} = 160 \\approx 4.4 \\times 36",
+              "do": "HBM to Infiniband overall.",
+              "why": "The ratios multiply down the hierarchy, so the traffic that crosses nodes should be the smallest (the summary puts tensor parallelism on NVLink and lets pipeline parallelism use slow links)."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:23:40-24:13",
+          "notice": "listen for: NVLink is about 4x slower than HBM, and HBM now counts as the fast level"
+        }
+      ]
+    },
+    {
+      "id": "collective-taxonomy",
+      "label": "Ranks, world size, and the collective-operation vocabulary",
+      "kind": "definition",
+      "statement": "A collective is one communication pattern specified over all ranks (rank = one device, world size = number of devices); broadcast/scatter/gather/reduce are the foundations, all-gather/reduce-scatter/all-reduce the workhorses, all-to-all the most general; 'reduce' applies an associative op, 'scatter' is the inverse of gather, and 'all-' means the destination is every rank.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L76-L79",
+            "role": "claim",
+            "quote": "Collective means that you specify a general communication pattern across many devices. This can be better/faster than managing point-to-point communication yourself."
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L83-L84",
+            "role": "claim",
+            "quote": "Rank: a particular device/GPU (e.g., 0, 1, 2, 3). World size: total number of devices (e.g., 4)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L86-L89",
+            "role": "claim",
+            "quote": "Broadcast, scatter, gather, reduce (foundations). All-gather, reduce-scatter, all-reduce (workhorse). All-to-all (for MoEs)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L203-L206",
+            "role": "claim",
+            "quote": "Reduce: performs some associative/commutative operation (sum, min, max). Scatter is inverse of gather. All: means destination is all devices"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L91-L137",
+            "role": "computation",
+            "quote": "rank0 = tensor([6.])  # Sum of all ranks (0 + 1 + 2 + 3)"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:5:56-6:18",
+            "role": "spoken",
+            "quote": "collective operations are these primitives from distributed programming that go back to the '80s. ... It wasn't invented for LLM training."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:7:37-7:56",
+            "role": "spoken",
+            "quote": "So the first three, broadcast, scatter, gather, reduce, are really just warm ups, I would say. ... All gather, reduce scatter, and all reduce are the ones that are going to show up again and again"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:11:26-11:37",
+            "role": "spoken",
+            "quote": "So you can think about gather as a reduction where the operation is concatenation, if you will."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:20:48-21:10",
+            "role": "spoken",
+            "quote": "You'll see later in the code, you basically specify the GPU ID or the rank and it goes there."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:10:13-10:26",
+            "role": "spoken",
+            "quote": "So the inverse of scatter is scatter. ... So this should be very predictable."
+          }
+        ],
+        "filtering_note": "The four foundations are shown as literal 4-rank tensors (L91-L137) with no code run; the professor calls them stepping stones and spends the real time on the three workhorses. Broadcast's use case is reduced to 'rank 0 loads a checkpoint' (L101). Spoken evidence (5:56, 7:37): the collectives are introduced as old parallel-programming primitives ('go back to the '80s'), and the four foundations are 'really just warm ups'. Spoken evidence (11:26): gather is 'a reduction where the operation is concatenation', which ties the gather and reduce rows together. Q&A (20:48-21:10): the destination rank of a gather or reduce is an argument of the call, not fixed in advance; (12:06-12:27) broadcast matches NumPy broadcasting only as the idea of 'one thing that goes to many things'. Spoken slip (10:13): 'So the inverse of scatter is scatter'; the next sentences describe gather, and L205 and his own mnemonic at 20:07 say 'Scatter is the inverse gather'. Not imported."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "Gather and reduce are the same thing: both bring data to rank 0.",
+          "why_wrong": "Gather concatenates the pieces (rank 0 ends with [0,1,2,3], length = world size); reduce combines them with an op (rank 0 ends with [6], same length as each input) (L115-L135)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Four ranks each hold a length-1 tensor containing their rank. After a gather to rank 0, versus a reduce(SUM) to rank 0, what does rank 0 hold in each case?",
+          "format": "short",
+          "answer": "gather: [0, 1, 2, 3]; reduce: [6]",
+          "why": "Gather concatenates (length grows to world size); reduce applies the op across ranks (length unchanged) (L117-L123, L129-L135).",
+          "targets_misconception": "Gather and reduce are the same thing: both bring data to rank 0."
+        },
+        "transfer": {
+          "q": "World size 8; each rank holds the length-1 tensor [rank]. Give the shape and contents of rank 0 after reduce with op=MAX, and after gather.",
+          "format": "short",
+          "answer": "reduce MAX: [7] (length 1); gather: [0, 1, 2, 3, 4, 5, 6, 7] (length 8)",
+          "why": "Reduce keeps the input shape and applies the associative op (max of 0..7 = 7); gather's output length is world size × input length (L204-L205)."
+        },
+        "check": {
+          "q": "World size 6; each rank holds a length-3 tensor. After reduce with op=SUM to rank 0, how many elements does rank 0's result tensor have?",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.05,
+          "why": "Reduce applies the associative op elementwise across ranks and keeps the input shape, so the result has 3 elements; a gather would instead concatenate 6 × 3 = 18 elements (L204-L205).",
+          "varies": "world size (6), tensor length (3), op (SUM); asks only for the output length",
+          "invariant": "reduce keeps the input shape; gather multiplies the length by the world size",
+          "targets_misconception": "Gather and reduce are the same thing: both bring data to rank 0.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Define 'rank' and 'world size' in one phrase each.",
+            "answer": "Rank: the index of one device/process; world size: the total number of devices (L83-L84)."
+          },
+          {
+            "q": "Name the three 'workhorse' collectives the professor contrasts with the four 'foundations'.",
+            "answer": "All-gather, reduce-scatter, all-reduce (L88)."
+          },
+          {
+            "q": "In the professor's mnemonic, what does the prefix 'all-' change about an operation?",
+            "answer": "The destination: the result lands on every rank instead of only rank 0 (L206)."
+          }
+        ],
+        "self_explain": "Why might a library collective beat hand-written point-to-point sends even though both move the same bytes?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:lecture_07--collective-grid",
+          "notice": "Gather's output on rank 0 is W times as long as one input; reduce's output keeps the input length, and each of its cells outlines one input cell from every rank."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L91-L137"
+        },
+        {
+          "type": "figure",
+          "action": "restate",
+          "ref": "official/lectures/images/ranks.png"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:7:37-7:56",
+          "notice": "listen for: which four collectives are warm-ups and which three drive training"
+        }
+      ]
+    },
+    {
+      "id": "all-gather",
+      "label": "All-gather: every rank ends with the concatenation of all shards",
+      "kind": "mechanism",
+      "statement": "All-gather is gather to every rank: W shards of length n become the same length-W·n tensor on every rank, with nothing summed; its training use is assembling full parameters from parameter shards before a forward pass.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L139-L150",
+            "role": "computation",
+            "quote": "All-gather: perform gather to all ranks, not just rank 0 ... rank3 = tensor([0., 1, 2, 3])"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L152",
+            "role": "claim",
+            "quote": "Use case: each rank holds parameter shard, gather to get full parameters for forward pass"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L275-L280",
+            "role": "computation",
+            "quote": "output = torch.empty(world_size, ...) ... dist.all_gather_into_tensor(output_tensor=output, input_tensor=input, async_op=False)"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L44-L47",
+            "role": "computation",
+            "quote": "Rank 2 [after all-gather]: input = tensor([14.], device='cuda:2'), output = tensor([ 6., 10., 14., 18.], device='cuda:2')"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:12:35-13:01",
+            "role": "spoken",
+            "quote": "all gather is what you do to-- basically, you perform gather to all ranks, not just rank 0. ... And now all gather just does it for every single rank."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:13:16-13:43",
+            "role": "spoken",
+            "quote": "later we'll see that each rank holds part of the parameters. ... all gather the parameters to get the full parameters for the full forward pass. ... we're going to see a lot of this gather to do something and then scatter and then gather and scatter again."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:45:20-45:37",
+            "role": "spoken",
+            "quote": "The output is just allocated. ... It happens to have some values in it, but don't worry about it."
+          }
+        ],
+        "filtering_note": "The lecture shows only equal-sized shards and the SUM-free semantics; the 'before all-gather' stdout lines show torch.empty garbage in the output buffer (L40-L43 of the trace), which the professor does not comment on. Spoken evidence (13:32): the pattern to expect in training is 'gather to do something and then scatter and then gather and scatter again'. Correction (45:28-45:37): the note above says the garbage in the 'before all-gather' output buffer gets no comment; it gets one line: 'The output is just allocated. It happens to have some values in it, but don't worry about it.' (Likewise for reduce-scatter at 42:49: the output 'happens to be zeros, but it could be just anything'.)"
+      },
+      "prerequisites": [
+        {
+          "kp": "collective-taxonomy",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "All-gather sums the shards.",
+          "why_wrong": "It concatenates; nothing is reduced. In the lecture's example 0, 1, 2, 3 become [0, 1, 2, 3] on every rank, not 6 (L141-L150)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "World size 4; rank r holds the length-2 tensor [r, r]. After all-gather, what tensor does rank 2 hold?",
+          "format": "short",
+          "answer": "[0, 0, 1, 1, 2, 2, 3, 3]",
+          "why": "Shards are concatenated in rank order on every rank; rank 2's output is the same as rank 0's (L139-L150).",
+          "targets_misconception": "All-gather sums the shards."
+        },
+        "transfer": {
+          "q": "World size 8; each rank holds a shard of 1,000,000 bf16 parameters. After all-gather, how many MB of parameters does each rank hold, and how many of those MB arrived from other ranks?",
+          "format": "short",
+          "answer": "16 MB held; 14 MB received",
+          "why": "8 × 1e6 × 2 bytes = 16 MB on every rank; 7/8 of it (14 MB) came over the interconnect, only the rank's own 2 MB shard was local. This is the per-layer cost ZeRO-3/FSDP pays to run a forward pass (L152)."
+        },
+        "check": {
+          "q": "World size 4; each rank holds a shard of 3,000,000 fp32 parameters (4 bytes each). After all-gather, how many MB on each rank arrived from the other ranks? Use 1 MB = 10^6 bytes and do not count the rank's own shard.",
+          "format": "number",
+          "answer": "36 MB",
+          "tolerance": 0.05,
+          "why": "Every rank ends with 4 × 3e6 × 4 B = 48 MB; its own 12 MB shard was already local, so 3 × 12 = 36 MB came over the interconnect. Nothing is summed: a summing collective would leave only 12 MB per rank.",
+          "varies": "world size 4, fp32 instead of bf16, and only the received bytes are asked",
+          "invariant": "all-gather leaves W × shard on every rank, of which (W − 1)/W arrives from other ranks",
+          "targets_misconception": "All-gather sums the shards.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which torch.distributed call does the lecture use for all-gather into a preallocated tensor, and how long must the output be relative to the input?",
+            "answer": "all_gather_into_tensor; world_size × the input length (L276, L279).", "layer": "detail"
+          },
+          {
+            "q": "State the sharded-training use case the professor attaches to all-gather.",
+            "answer": "Each rank holds a parameter shard; all-gather assembles the full parameters for the forward pass (L152)."
+          }
+        ],
+        "self_explain": "Why is the output of all-gather identical on every rank even though every rank's input differs?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:lecture_07--collective-grid",
+          "notice": "Every rank's output row is the same concatenation in rank order, and each output cell outlines exactly one input cell: nothing is summed."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L139-L150"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L272-L280"
+        }
+      ]
+    },
+    {
+      "id": "reduce-scatter",
+      "label": "Reduce-scatter: sum each slot across ranks, deliver slot i to rank i",
+      "kind": "mechanism",
+      "statement": "In reduce-scatter every rank holds a full-length vector; slot i is reduced across all ranks and only rank i receives that result (W inputs of length W·n → one length-n shard per rank), so gradients from data shards get summed while the storage is distributed.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L154-L165",
+            "role": "computation",
+            "quote": "rank1 = tensor([10.]) # Sum along dim 1 (1 + 2 + 3 + 4)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L167",
+            "role": "claim",
+            "quote": "Use case: after backward pass, sum gradients from different data shards, but distribute storage"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L265-L270",
+            "role": "computation",
+            "quote": "output = torch.empty(1, ...) ... dist.reduce_scatter_tensor(output=output, input=input, op=dist.ReduceOp.SUM, async_op=False)"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L36-L39",
+            "role": "computation",
+            "quote": "Rank 3 [after reduce-scatter]: input = tensor([3., 4., 5., 6.], device='cuda:3'), output = tensor([18.], device='cuda:3')"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:14:14-14:36",
+            "role": "spoken",
+            "quote": "But now reduce scatter says that for each component of this tensor, I'm going to do a reduction, and then I'm going to put it on a different rank. ... So the first dimension, I'm going to add these up, I get 6."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:14:47-15:10",
+            "role": "spoken",
+            "quote": "after the backward pass, when you sum what you're going to do is each GPU will be dealing with different data. ... you need to sum all of the gradients from the different shards. ... And then you're going to redistribute this storage."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:43:04-43:36",
+            "role": "spoken",
+            "quote": "Here instead of writing in place, I have an output tensor and an input tensor. ... the input is not touched, but the output I get the reduction of each component written into the respective ranks."
+          }
+        ],
+        "filtering_note": "Scatter (L103-L113) is introduced only as a stepping stone to this. The professor shows SUM only; MIN/MAX are mentioned in the mnemonic (L204) but never run. Spoken evidence (43:08-43:13): unlike all_reduce, which 'writes in place to the data' (41:21), reduce_scatter_tensor takes a separate output and leaves its input untouched, and the output buffer's initial contents do not matter (42:49)."
+      },
+      "prerequisites": [
+        {
+          "kp": "collective-taxonomy",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "After reduce-scatter every rank holds the full summed vector.",
+          "why_wrong": "That is all-reduce. After reduce-scatter rank i holds only slot i's sum: rank 1 holds [10], not [6, 10, 14, 18] (L162-L165)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The lecture's inputs: rank r holds [r, r+1, r+2, r+3] for r = 0..3. After reduce-scatter(SUM), what single number does rank 3 hold?",
+          "format": "number",
+          "answer": "18",
+          "tolerance": 0.001,
+          "why": "Slot 3 across the four ranks is 3 + 4 + 5 + 6 = 18, delivered only to rank 3 (L165).",
+          "targets_misconception": "After reduce-scatter every rank holds the full summed vector."
+        },
+        "transfer": {
+          "q": "World size 3; rank 0 holds [1, 2, 3], rank 1 holds [10, 20, 30], rank 2 holds [100, 200, 300]. After reduce-scatter(SUM), what does rank 1 hold?",
+          "format": "number",
+          "answer": "222",
+          "tolerance": 0.001,
+          "why": "Rank 1 receives the reduction of slot 1: 2 + 20 + 200 = 222; rank 0 would get 111 and rank 2 would get 333. Output length is input length / world size = 1."
+        },
+        "retrieval": [
+          {
+            "q": "After reduce-scatter over world size W on inputs of length L, what is the length of each rank's output?",
+            "answer": "L / W (L265-L266: input arange(world_size), output empty(1))."
+          },
+          {
+            "q": "The professor gives the same gradient use case for reduce-scatter and all-reduce; which word differs?",
+            "answer": "Reduce-scatter: sum gradients but *distribute* storage; all-reduce: sum gradients but *replicate* full parameters (L167 vs L182)."
+          }
+        ],
+        "self_explain": "Why is reduce-scatter the natural primitive when gradients must be summed but no single rank needs the whole gradient?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_07--collective-grid",
+          "notice": "Rank i's one output cell outlines slot i on every input rank: one value from each rank, summed, delivered only to rank i."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L154-L165"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L262-L270"
+        }
+      ]
+    },
+    {
+      "id": "all-reduce-decomposition",
+      "label": "All-reduce = reduce-scatter + all-gather",
+      "kind": "mechanism",
+      "statement": "All-reduce leaves every rank with the full elementwise reduction and is exactly reduce-scatter followed by all-gather; the lecture feeds the reduce-scatter output into an all-gather and reproduces the all-reduce result, and that split is what lets ZeRO/FSDP keep state sharded between the two halves.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L169-L183",
+            "role": "computation",
+            "quote": "All-reduce = reduce-scatter + all-gather ... Breaking all-reduce into reduce-scatter + all-gather allows for flexibility (e.g., ZeRO/FSDP)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L275-L282",
+            "role": "computation",
+            "quote": "input = output  # Input is the output of reduce-scatter ... Indeed, all-reduce = reduce-scatter + all-gather!"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L369-L370",
+            "role": "claim",
+            "quote": "all-reduce moves 2x the data in 2x the time compared to reduce-scatter, so similar bandwidth"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L28-L31",
+            "role": "computation",
+            "quote": "Rank 0 [after all-reduce]: tensor([ 6., 10., 14., 18.])"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:15:18-15:56",
+            "role": "spoken",
+            "quote": "it's basically you do one and then you do the other. ... And the all gather part of all reduce just puts them all on the same-- everything on the same node."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:16:22-16:41",
+            "role": "spoken",
+            "quote": "Later, we're going to see how to get to fancier things like 0 or FSDP. ... We need to break the all reduce into reduce scatter and all gather, because then you can intervene and you can manage things a bit more."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:41:08-41:26",
+            "role": "spoken",
+            "quote": "it would be gloo, but it could be NCCL, in which case, it would spin up the Cuda kernels. ... And then it basically writes in place to the data."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:45:59-46:13",
+            "role": "spoken",
+            "quote": "proof via example that all reduce is equal to reduce scatter plus all gather."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:52:40-53:06",
+            "role": "spoken",
+            "quote": "all reduce, naturally, is moving twice the amount of data, because reduce scatter has some cost, all gather has some cost ... And it takes twice the amount of time. ... But the two cancel out, so you get the same kind of bandwidth."
+          }
+        ],
+        "filtering_note": "The identity is demonstrated on a 4-element example and asserted for cost (L369-L370); the professor does not show the ring algorithm that makes each half cost S·(W−1)/W per rank. The nccl-tests PERFORMANCE.md link (L297) carries that derivation. Spoken evidence (16:32-16:41): the reason to split all-reduce is control, 'because then you can intervene and you can manage things a bit more', said before the code's ZeRO/FSDP line. Spoken evidence (52:40-53:06): L369-L370 aloud: twice the data and twice the time, so 'the two cancel out, so you get the same kind of bandwidth'. The ring algorithm is still not described; 'a ring or a tree topology' is named once as NCCL's choice (51:19)."
+      },
+      "prerequisites": [
+        {
+          "kp": "reduce-scatter",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "all-gather",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "All-reduce is a single cheap primitive; reduce-scatter and all-gather are separate, extra operations.",
+          "why_wrong": "NCCL's all-reduce is implemented as the two halves; each half moves half the bytes, so running both halves yourself costs the same as the all-reduce (L369-L370)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Rank r holds [r, r+1, r+2, r+3] for r = 0..3. After reduce-scatter(SUM) each rank holds one number; an all-gather then runs on those. What does rank 0 hold at the end, and how does it compare with all-reduce(SUM) on the original inputs?",
+          "format": "short",
+          "answer": "[6, 10, 14, 18]; identical to the all-reduce result",
+          "why": "Reduce-scatter yields 6, 10, 14, 18 on ranks 0..3; all-gather concatenates them on every rank, which is exactly what all-reduce produces (L171-L180, L275-L282).",
+          "targets_misconception": "All-reduce is a single cheap primitive; reduce-scatter and all-gather are separate, extra operations."
+        },
+        "transfer": {
+          "q": "World size 2; rank 0 holds [1, 2] and rank 1 holds [3, 4]. Write what each rank holds after reduce-scatter(SUM), and then after the following all-gather.",
+          "format": "short",
+          "answer": "after reduce-scatter: rank 0 [4], rank 1 [6]; after all-gather: both [4, 6]",
+          "why": "Slot 0: 1 + 3 = 4 goes to rank 0; slot 1: 2 + 4 = 6 goes to rank 1; all-gather concatenates in rank order, giving the all-reduce answer [4, 6] everywhere."
+        },
+        "check": {
+          "q": "World size 3. Rank 0 holds [1, 0, 4], rank 1 holds [0, 3, 1], rank 2 holds [2, 1, 0]. They run reduce-scatter(SUM) and then an all-gather on its output. What is the last element (index 2) of rank 0's final tensor?",
+          "format": "number",
+          "answer": "5",
+          "tolerance": 0.05,
+          "why": "Reduce-scatter gives slot 2's sum 4 + 1 + 0 = 5 to rank 2 (rank 0 keeps only slot 0's sum, 3). The all-gather then copies every slot to every rank, so rank 0 ends with [3, 4, 5], the same as all-reduce(SUM).",
+          "varies": "world size 3, and the element asked for is one rank 0 did not own after the reduce-scatter",
+          "invariant": "all-reduce = reduce-scatter (each rank owns one fully reduced slot) followed by all-gather (every rank gets every slot)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Complete, in order: all-reduce = ____ followed by ____.",
+            "answer": "reduce-scatter, then all-gather (L169, L282)."
+          },
+          {
+            "q": "Which systems does the professor name as the reason to care that all-reduce decomposes?",
+            "answer": "ZeRO/FSDP: between the two halves, parameters and gradients can stay sharded (L183, L68)."
+          }
+        ],
+        "self_explain": "If all-reduce is reduce-scatter then all-gather, where in a data-parallel step could you stop halfway and still have a correct algorithm, and what would you have saved?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_07--ring-allreduce",
+          "notice": "After the first W-1 ring steps each rank owns one fully summed slot (the reduce-scatter result 6, 10, 14, 18); the next W-1 steps only copy those slots, ending with the all-reduce on every rank."
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_07--collective-grid",
+          "notice": "With 'reduce-scatter, then all-gather' the middle grid holds one sum per rank, and the final grid is identical to all-reduce on the same inputs."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L253-L282"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_07.py:L169-L180"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:16:22-16:41",
+          "notice": "listen for: why all-reduce is split into two halves at all"
+        }
+      ]
+    },
+    {
+      "id": "all-to-all",
+      "label": "All-to-all: each rank sends chunk j to rank j (a transpose)",
+      "kind": "definition",
+      "statement": "In all-to-all, rank i sends its j-th chunk to rank j and receives the i-th chunk of every rank, so with balanced chunks the W×W rank-by-chunk layout is transposed; it is the routing primitive for MoE, where data is split across ranks and experts are split across ranks.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L185-L196",
+            "role": "computation",
+            "quote": "rank1 = tensor([4., 5, 6, 7])      # send  4 to rank 0,  5 to rank 1,  6 to rank 2,  7 to rank 3 ... rank1 = tensor([1, 5, 9, 13])"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L198-L201",
+            "role": "claim",
+            "quote": "Useful for MoEs: each rank has split of data and subset of experts; need to route data to experts. For balanced splits, all-to-all looks like transpose"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:17:36-18:03",
+            "role": "spoken",
+            "quote": "So basically, the position here is going to denote which rank is going to be the ultimate destination. ... the first rank is going to receive everyone who sent everything in column 0"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:18:22-18:44",
+            "role": "spoken",
+            "quote": "each rank has both a split of the data and also a subset of experts. ... the key idea of the MOE is that it's dynamic routing. ... You have to look at your data to figure out which experts you need to route those activations to."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:19:08-19:34",
+            "role": "spoken",
+            "quote": "But in general, all to all also handles unbalanced splits. ... But in general, you want the splits to be as balanced as possible. ... MOE lecture where we had load balancing"
+          }
+        ],
+        "filtering_note": "Shown only as a static example; never run in torch.distributed and no bytes are counted. The unbalanced-split case is mentioned in one line (L201). Spoken evidence (18:29-18:44): why MoE needs all-to-all rather than a fixed pattern: 'the key idea of the MOE is that it's dynamic routing', so which rank receives which activations is known only after looking at the data. Spoken evidence (19:08-19:34): unbalanced splits are supported but not shown, and the goal is balance, tied back to the MoE lecture's load balancing (lecture_04 thread). At the outset all-to-all is 'important for MOEs, but we're not going to actually spend too much time on this' (8:05)."
+      },
+      "prerequisites": [
+        {
+          "kp": "collective-taxonomy",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "All-to-all only works when every rank sends equal-sized chunks.",
+          "why_wrong": "It handles unbalanced splits too; balance is desirable for speed, not required for correctness (L200-L201)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The lecture's inputs: rank r holds [4r, 4r+1, 4r+2, 4r+3] for r = 0..3. After all-to-all, what does rank 1 hold?",
+          "format": "short",
+          "answer": "[1, 5, 9, 13]",
+          "why": "Rank 1 receives chunk 1 from every rank in rank order: 1 (from rank 0), 5 (rank 1), 9 (rank 2), 13 (rank 3) (L187-L194).",
+          "targets_misconception": "All-to-all only works when every rank sends equal-sized chunks."
+        },
+        "transfer": {
+          "q": "World size 3; rank 0 holds [a0, a1, a2], rank 1 holds [b0, b1, b2], rank 2 holds [c0, c1, c2]. What does rank 2 hold after all-to-all?",
+          "format": "short",
+          "answer": "[a2, b2, c2]",
+          "why": "Column 2 of the rank-by-chunk matrix becomes row 2: the transpose (L200)."
+        },
+        "check": {
+          "q": "World size 5; rank r holds the length-5 tensor [10r, 10r+1, 10r+2, 10r+3, 10r+4]. After an all-to-all with one-element chunks, what is the element at index 3 of rank 1's output?",
+          "format": "number",
+          "answer": "31",
+          "tolerance": 0.05,
+          "why": "Rank 1 receives chunk 1 from every rank j and stores it at position j: [1, 11, 21, 31, 41]. Index 3 came from rank 3, whose chunk 1 is 10·3 + 1 = 31. The rank-by-chunk matrix is transposed (L200).",
+          "varies": "world size 5, numeric layout, and a single element is asked instead of a whole row",
+          "invariant": "output[i][j] = input[j][i]: rank i collects chunk i of every rank, in rank order",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "For balanced splits, all-to-all is equivalent to which matrix operation on the rank × chunk layout?",
+            "answer": "Transpose (L200)."
+          },
+          {
+            "q": "In the MoE use case, what is split across ranks on the data side and what on the model side, such that all-to-all is needed?",
+            "answer": "Each rank has a split of the tokens and a subset of the experts, so tokens must be routed to the rank holding their expert (L199)."
+          }
+        ],
+        "self_explain": "Why does MoE need the most general collective rather than an all-gather of all tokens to every rank?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:lecture_07--collective-grid",
+          "notice": "The output grid is the input grid transposed: rank i's slot j outlines rank j's slot i."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L185-L196"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:18:22-18:44",
+          "notice": "listen for: dynamic routing as the reason MoE needs all-to-all"
+        }
+      ]
+    },
+    {
+      "id": "rdma-nccl",
+      "label": "RDMA bypasses the CPU; NCCL turns collectives into GPU kernels",
+      "kind": "mechanism",
+      "statement": "Standard Ethernet routes GPU-to-GPU traffic through the CPU (kernel socket buffer, TCP packets, NIC ring buffer); RDMA lets one GPU read or write another GPU's memory without the CPU — Infiniband supports it, plain Ethernet does not, RoCE adds it to Ethernet more cheaply — and NCCL implements collectives by detecting the topology, optimizing the path between GPUs, and launching GPU kernels that send and receive.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L223-L226",
+            "role": "claim",
+            "quote": "Ethernet requires passing through the CPU (copying data to kernel socket buffer, build TCP packets, copy to NIC ring buffer) ... RDMA ... Infiniband supports RDMA, but standard Ethernet does not"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L230",
+            "role": "claim",
+            "quote": "RDMA over Converged Ethernet (RoCE): Ethernet bypasses CPU, similar but cheaper/weaker than Infiniband, used by Meta"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L233-L236",
+            "role": "claim",
+            "quote": "NCCL translates collective operations into low-level packets ... Detects topology ... Optimizes the path between GPUs ... Launches GPU kernels to send/receive data"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L240-L243",
+            "role": "claim",
+            "quote": "Supports multiple backends for different hardware: gloo (CPU), nccl (GPU)"
+          },
+          {
+            "source": "nccl_gtc_talk",
+            "ref": "nccl_gtc_talk:S31880",
+            "role": "citation",
+            "quote": "NCCL talk linked at L233"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:26:31-27:00",
+            "role": "spoken",
+            "quote": "if you have traditional ethernet, what happens is that the GPU has to talk to the CPU to get its data copied. ... Here kernel means not the GPU kernel, but the CPU, traditional notion of a kernel. ... So this generally introduces a lot of latency."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:27:05-27:37",
+            "role": "spoken",
+            "quote": "Remote Direct Memory Access, RDMA, which allows a GPU to directly write or read from another GPU's memory without using the CPU at all. ... InfiniBand also supports RDMA. ... But standard ethernet does not."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:29:10-29:29",
+            "role": "spoken",
+            "quote": "So InfiniBand generally is very expensive, as is a lot of NVIDIA products. ... But you can get pretty good performance by using RDMA over converged ethernet."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:30:22-30:47",
+            "role": "spoken",
+            "quote": "NCCL goes and figures out what is the topology of the hardware, figures out the path between different GPUs, and then it actually launches the GPU kernels to send and receive data. ... everything that runs on a GPU is a kernel."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:32:22-32:56",
+            "role": "spoken",
+            "quote": "So RDMA, you can think about it as more of a desiderata. ... So InfiniBand and NVSwitch and NVLink are more the hardware, what pieces, what cables and switches are there. ... And RDMA is more operation, what happens when you're communicating."
+          }
+        ],
+        "filtering_note": "No NCCL algorithm (ring, tree) is described; 'optimizes the path' stands in for all of it. The hardware section is qualitative except for the bandwidths captured in interconnect-hierarchy. Spoken evidence (26:47-27:00): the 'kernel' in the Ethernet path is the CPU's operating-system kernel, not a GPU kernel, and the cost named is latency. Spoken evidence (32:22-32:56, Q&A): RDMA is 'more of a desiderata' (the capability of one GPU reading or writing another's memory), while NVLink/NVSwitch and InfiniBand are the hardware that provides it; RoCE is another way to get it (33:15). Spoken evidence (30:43-30:47): NCCL's sends and receives are GPU kernels because 'everything that runs on a GPU is a kernel'. NCCL is then set aside ('just know that it exists', 30:56), and a question on multi-node optimization gets 'I don't know the details' (33:59)."
+      },
+      "prerequisites": [
+        {
+          "kp": "interconnect-hierarchy",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "collective-taxonomy",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "NCCL and torch.distributed offer two different sets of collectives.",
+          "why_wrong": "torch.distributed is the interface; NCCL is the GPU backend (gloo the CPU one) that executes the same all_reduce / reduce_scatter / all_gather calls (L240-L243, L546-L549)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two GPUs on different nodes exchange a tensor over standard Ethernet. Name the component that touches every byte but does no useful arithmetic, and the mechanism that removes it.",
+          "format": "short",
+          "answer": "the CPU (socket buffer → TCP packets → NIC ring buffer); RDMA",
+          "why": "Without RDMA the data is copied through the host's kernel buffers; RDMA lets the NIC read and write GPU memory directly (L224-L225).",
+          "targets_misconception": "NCCL and torch.distributed offer two different sets of collectives."
+        },
+        "transfer": {
+          "q": "A cluster uses RoCE instead of Infiniband. According to the lecture, which property does it keep (CPU bypass), and what does it give up?",
+          "format": "short",
+          "answer": "Keeps the CPU bypass (RDMA over Ethernet); it is cheaper but weaker than Infiniband",
+          "why": "RoCE is 'similar but cheaper/weaker than Infiniband' and the professor names Meta as a user (L230)."
+        },
+        "check": {
+          "q": "GPU A on node 1 sends a tensor to GPU B on node 2. In which of these setups does the lecture say every byte is copied through a CPU (kernel socket buffer, TCP packets, NIC ring buffer)?",
+          "format": "choice",
+          "choices": [
+            "Infiniband with RDMA",
+            "RoCE (RDMA over Ethernet)",
+            "Plain TCP over Ethernet"
+          ],
+          "answer": "Plain TCP over Ethernet",
+          "why": "CPU bypass is a property of RDMA support, not of the cable: Infiniband supports RDMA, RoCE adds it to Ethernet, and only standard Ethernet passes through the CPU (L223-L226, L230).",
+          "varies": "asks which setup is CPU-routed, instead of what RoCE keeps and gives up",
+          "invariant": "RDMA lets one GPU read or write another GPU's memory without the CPU; plain Ethernet lacks RDMA",
+          "distractor_from": [
+            "'RoCE (RDMA over Ethernet)' <- plausible: assumes anything that runs over Ethernet must go through the CPU, missing that RoCE adds RDMA (L230)",
+            "'Infiniband with RDMA' <- plausible: equates the slowest link in the hierarchy with CPU involvement; slow is not the same as CPU-routed"
+          ],
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the three things NCCL does, per the lecture.",
+            "answer": "Detects hardware topology; optimizes the path between GPUs; launches GPU kernels to send/receive data (L234-L236)."
+          },
+          {
+            "q": "Which interconnect in the lecture supports RDMA natively and which does not?",
+            "answer": "Infiniband supports it; standard Ethernet does not (L226)."
+          }
+        ],
+        "self_explain": "Why does the professor place NCCL in the hardware section rather than with torch.distributed?"
+      },
+      "presentations": [
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_07.py:L223-L230"
+        },
+        {
+          "type": "figure",
+          "action": "restate",
+          "ref": "official/lectures/images/gpu-node-overview.png"
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:32:22-32:56",
+          "notice": "listen for: RDMA as a capability versus NVLink and InfiniBand as hardware"
+        }
+      ]
+    },
+    {
+      "id": "torch-distributed-setup",
+      "label": "spawn + init_process_group: one process per rank, same code on every rank",
+      "kind": "procedure",
+      "statement": "spawn() launches world_size processes each running func(rank, world_size, ...); each calls init_process_group with MASTER_ADDR/MASTER_PORT (rank 0 only coordinates; tensors flow through NCCL) using the nccl backend on GPU and gloo on CPU; every rank then calls the same collectives in the same order, and dist.barrier() makes all ranks wait for each other.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L540-L549",
+            "role": "computation",
+            "quote": "Specify where master lives (rank 0), used to coordinate (actual data goes through NCCL) ... dist.init_process_group(\"nccl\", rank=rank, world_size=world_size)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L577-L591",
+            "role": "computation",
+            "quote": "mp.spawn(func, args=args, nprocs=world_size, join=True)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L249-L254",
+            "role": "computation",
+            "quote": "This function is running asynchronously for each process (rank = 0, ..., world_size - 1) ... dist.barrier()  # Waits for all processes to get to this point"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L557-L562",
+            "role": "computation",
+            "quote": "Context manager that temporarily disables distributed functions (replaces with no-ops). This is for when we're tracing the lecture"
+          },
+          {
+            "source": "torch_distributed_docs",
+            "ref": "torch_distributed_docs:init_process_group",
+            "role": "citation",
+            "quote": "documentation linked at L240"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:4:27-4:48",
+            "role": "spoken",
+            "quote": "Now, in this lecture, if you run this directly, it uses multiprocessing. ... But when I trace through it, I'm putting in some of special single process mode."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:38:35-38:51",
+            "role": "spoken",
+            "quote": "You basically configure the master address and port. ... Notice that this is not actually how the GPUs are going to communicate. ... This is more for general metadata and coordination. ... The actual data goes through NCCL."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:39:30-40:01",
+            "role": "spoken",
+            "quote": "you can think about all the processes are running asynchronously. ... I put these synchronization barriers in. ... the downside of putting more barriers in is that, well, you end up kind of waiting potentially unnecessarily."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:43:55-44:24",
+            "role": "spoken",
+            "quote": "this is like a monolithic operation. ... Cuda is already kind of async with respect to the processes, and now we have all the processes being async. ... And the point is that this code just would return."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:42:01-42:11",
+            "role": "spoken",
+            "quote": "For this class, the rank is the GPU."
+          }
+        ],
+        "filtering_note": "The lecture runs everything on one node (MASTER_ADDR=localhost); multi-node launch, torchrun, and process-group subsets are not covered. FullyShardedDataParallel is named and explicitly not used (L243). Spoken evidence (39:30-39:52): barriers are used sparingly: processes run asynchronously, a barrier orders code across them, and 'the downside of putting more barriers in is that, well, you end up kind of waiting potentially unnecessarily'; he uses more barriers than usual so the prints stay readable (41:53). Spoken evidence (43:55-44:50, Q&A): with async_op=True the call returns at once; the use is overlapping communication with independent work and waiting later, which this lecture does not cover (44:29). Also aloud: the trace steps through in a single-process mode while the linked stdout is the real multiprocess run (4:27-4:48), the laptop run uses gloo (38:59), 'For this class, the rank is the GPU' (42:11), and implementing this in Torch is Assignment 2 (5:13)."
+      },
+      "prerequisites": [
+        {
+          "kp": "collective-taxonomy",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The master (rank 0) relays all the data between ranks.",
+          "why_wrong": "MASTER_ADDR/MASTER_PORT are only the rendezvous for coordination; the tensors go GPU-to-GPU through NCCL (L542)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "spawn(data_parallelism_main, world_size=4, ...) is called. How many processes run, how many times is init_process_group called in total, and how many of those processes carry tensor data through rank 0?",
+          "format": "short",
+          "answer": "4 processes; 4 calls (one per rank); none — data goes through NCCL, rank 0 only coordinates",
+          "why": "mp.spawn starts nprocs=world_size processes each running setup(); the master address is a rendezvous, not a relay (L542, L586).",
+          "targets_misconception": "The master (rank 0) relays all the data between ranks."
+        },
+        "transfer": {
+          "q": "You run the same lecture file on a CPU-only laptop with world_size = 4. Which backend is selected, and what changes about the collective calls inside collective_operations_main?",
+          "format": "short",
+          "answer": "gloo; nothing changes — the same dist.all_reduce / reduce_scatter_tensor / all_gather_into_tensor calls run",
+          "why": "setup() branches only on torch.cuda.is_available() (L546-L549); the torch.distributed interface is backend-agnostic (L241-L242)."
+        },
+        "check": {
+          "q": "spawn() launches 8 processes on one 8-GPU node, and each calls dist.all_reduce on a 1 GB tensor. According to the lecture, which path do the tensor bytes take?",
+          "format": "choice",
+          "choices": [
+            "Directly between GPUs, via NCCL",
+            "Through rank 0, which relays them",
+            "Through MASTER_ADDR:MASTER_PORT",
+            "Through gloo on the host CPU"
+          ],
+          "answer": "Directly between GPUs, via NCCL",
+          "why": "setup() picks nccl when CUDA is available (L546-L549); MASTER_ADDR/MASTER_PORT is only the rendezvous for init_process_group, and the collectives run as NCCL kernels between GPUs, not through rank 0.",
+          "varies": "hardware (a GPU node instead of a CPU laptop) and the question (data path instead of backend choice)",
+          "invariant": "init_process_group only coordinates; the backend chosen by setup() carries the tensors",
+          "distractor_from": [
+            "'Through rank 0, which relays them' <- misconception: 'The master (rank 0) relays all the data between ranks.'",
+            "'Through MASTER_ADDR:MASTER_PORT' <- same misconception: mistakes the rendezvous address for the data path",
+            "'Through gloo on the host CPU' <- plausible: forgets that setup() uses gloo only when CUDA is unavailable"
+          ],
+          "targets_misconception": "The master (rank 0) relays all the data between ranks.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does dist.barrier() guarantee?",
+            "answer": "All processes have reached that point before any continues (L254)."
+          },
+          {
+            "q": "Why does the lecture's spawn() run the function directly with distributed calls disabled when traced?",
+            "answer": "edtrace cannot trace through multiprocessing, so DisableDistributed replaces every dist function with a no-op and the function runs as rank 0 (L557-L562, L588-L591).", "layer": "detail"
+          }
+        ],
+        "self_explain": "Every rank runs the same program. What goes wrong if rank 2 skips one collective call that the other three make?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L540-L549"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L577-L591"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:39:30-40:01",
+          "notice": "listen for: what a barrier guarantees and what it costs"
+        }
+      ]
+    },
+    {
+      "id": "benchmark-method",
+      "label": "Timing a collective: warmup, cuda.synchronize, barrier",
+      "kind": "procedure",
+      "statement": "To time a collective, run it once untimed as warmup, then bracket the timed call with torch.cuda.synchronize() (wait for this rank's GPU kernels) and dist.barrier() (wait for every rank) before reading the clock, because kernel launches return before the work finishes and ranks finish at different times.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L307-L317",
+            "role": "computation",
+            "quote": "# Warmup ... torch.cuda.synchronize()  # Wait for CUDA kernels to finish ... dist.barrier()  # Wait for all the processes to get here"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L16-L17",
+            "role": "computation",
+            "quote": "torch.cuda.synchronize = lambda: None  # No-op if CUDA is not available"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L48-L51",
+            "role": "computation",
+            "quote": "[all_reduce] Rank 0: all_reduce(world_size=4, num_elements=104857600) took 1.60ms ... [all_reduce] Rank 2: all_reduce(world_size=4, num_elements=104857600) took 1.38ms"
+          },
+          {
+            "source": "stas00_all_reduce_bench",
+            "ref": "stas00_all_reduce_bench:all_reduce_bench.py",
+            "role": "citation",
+            "quote": "Sample benchmarking code linked at L298"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:47:23-47:53",
+            "role": "spoken",
+            "quote": "just like before when we do benchmarking, we warm up first. ... there's two forms of asynchrony here, the Cuda kernels and the different processes."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:48:08-48:23",
+            "role": "spoken",
+            "quote": "I have a different time potentially, because they're all different processes. ... And if you want to report one number, you can take the average, for example."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:53:44-54:07",
+            "role": "spoken",
+            "quote": "So if you're doing a Cuda operation, remember, by default, it's async. ... So when you reach the next line in Python, that Cuda operation might not be done."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:54:39-55:00",
+            "role": "spoken",
+            "quote": "if you barrier first and then the Cuda might not be done running, and you just immediately go to the barrier. ... which means that you're not really synchronized."
+          }
+        ],
+        "filtering_note": "One timed iteration, no repetition or statistics; the four ranks' durations differ even with both safeguards (trace L48-L51), which the professor does not discuss. The absolute durations from the trace are not stated here because they are one run on unspecified GPUs. Spoken evidence (47:28-47:40): the two calls answer 'two forms of asynchrony here, the Cuda kernels and the different processes'. Correction (48:08-48:23): the note above says the professor does not discuss the differing per-rank durations; he does, briefly: each rank is a separate process with 'a different time potentially', and 'if you want to report one number, you can take the average'. Spoken evidence (53:44-55:00, Q&A): why synchronize comes before the barrier: asked about the order, he first says 'I'm not sure', then reasons that a barrier reached while kernels are still running 'doesn't really do anything', so each rank must first synchronize its own GPU. The duration read aloud (48:41) is not quoted, by this thread's rule."
+      },
+      "prerequisites": [
+        {
+          "kp": "torch-distributed-setup",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "time.time() around dist.all_reduce(async_op=False) measures the transfer.",
+          "why_wrong": "GPU work is enqueued asynchronously, so without torch.cuda.synchronize() the clock stops when the host finishes enqueueing; without dist.barrier() each rank times only its own view (L309-L310, L315-L316)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You delete both torch.cuda.synchronize() and dist.barrier() from between the timed all_reduce and end_time (L315-L316). Compared with the correct measurement, does the reported duration move up, down, or stay the same?",
+          "format": "trend",
+          "answer": "down (too small)",
+          "why": "The all_reduce call returns once the work is enqueued on the GPU stream, so the clock stops before the kernel finishes; the two waits are what make end_time mean 'the collective completed on every rank' (L309-L310, L315-L316).",
+          "targets_misconception": "time.time() around dist.all_reduce(async_op=False) measures the transfer."
+        },
+        "transfer": {
+          "q": "You benchmark on CPU with the gloo backend. Which of the three safeguards (warmup, synchronize, barrier) becomes a no-op in the lecture's code, and why does the measurement remain usable?",
+          "format": "short",
+          "answer": "torch.cuda.synchronize (replaced by lambda: None at L16-L17); gloo collectives complete on the host before returning, and the barrier still aligns the ranks",
+          "why": "The no-op only removes a wait that CPU execution does not need; warmup and barrier still remove first-call cost and rank skew."
+        },
+        "check": {
+          "q": "You delete the warmup all_reduce (and the synchronize/barrier right after it) but keep synchronize and barrier around the timed call. Compared with the lecture's measurement, does the reported duration of the timed all_reduce go up, down, or stay the same?",
+          "format": "trend",
+          "answer": "up: the timed call now also pays the one-time first-call cost that the warmup used to absorb",
+          "value": "up",
+          "why": "Each safeguard removes one error source. Without warmup the first call, now the timed one, includes one-time setup work (communicator and connection setup), so the reading is too large; synchronize and barrier still make it wait for completion.",
+          "varies": "which safeguard is removed (warmup) and the direction of the resulting error",
+          "invariant": "warmup absorbs first-call cost; synchronize and barrier make the clock wait for GPU work and for all ranks",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Why does the lecture run one all-reduce before the timed one?",
+            "answer": "Warmup: communicator setup and first-call costs would otherwise be inside the timing (L307-L308)."
+          },
+          {
+            "q": "Which two calls sit between the timed all_reduce and end_time, and what does each wait for?",
+            "answer": "torch.cuda.synchronize (this rank's CUDA kernels) and dist.barrier (all ranks) (L315-L316)."
+          }
+        ],
+        "self_explain": "In the recorded run the four ranks reported different durations for the same all-reduce even with a barrier after it. Where can the spread come from if the collective ends at the same moment everywhere?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L301-L320"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:54:39-55:00",
+          "notice": "listen for: why a barrier before synchronize would not synchronize anything"
+        }
+      ]
+    },
+    {
+      "id": "collective-bytes",
+      "label": "Byte accounting for all-reduce and reduce-scatter",
+      "kind": "quantity",
+      "statement": "The lecture's effective bandwidth for an all-reduce of S bytes per rank counts sent_bytes = 2·S·(W−1) (send + receive over W−1 steps) over W·duration rank-seconds, so bandwidth ≈ 2·S/duration, independent of world size and of ring vs tree; a reduce-scatter of S_in bytes per rank sends S_in·(W−1) with no factor 2, so for the same input it moves half the bytes of an all-reduce.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L324-L327",
+            "role": "computation",
+            "quote": "sent_bytes = size_bytes * 2 * (world_size - 1)  # 2x because send + receive, world_size-1 steps in all-reduce ... total_duration = world_size * duration"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L330-L333",
+            "role": "claim",
+            "quote": "Effective bandwidth ~ 2 * size_bytes / total_duration. Independent of world_size. Independent of topology (ring or tree)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L362-L365",
+            "role": "computation",
+            "quote": "sent_bytes = data_bytes * (world_size - 1)  # How much needs to be sent (no 2x here)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L291-L294",
+            "role": "computation",
+            "quote": "spawn(all_reduce, world_size=4, num_elements=100 * 1024**2) ... spawn(reduce_scatter, world_size=4, num_elements=100 * 1024**2)"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L48-L63",
+            "role": "computation",
+            "quote": "[all_reduce] Rank 0: all_reduce(world_size=4, num_elements=104857600) took 1.60ms ... [all_reduce] Rank 0: all_reduce measured bandwidth = 366 GB/s ... [reduce_scatter] Rank 0: reduce_scatter(world_size=4, num_elements=104857600) took 2.61ms ... [reduce_scatter] Rank 0: reduce_scatter measured bandwidth = 450 GB/s"
+          },
+          {
+            "source": "nccl_tests_performance",
+            "ref": "nccl_tests_performance:allreduce",
+            "role": "citation",
+            "quote": "busbw = algbw × 2(n−1)/n; 'How to reason about collective operations' linked at L297"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:48:30-49:05",
+            "role": "spoken",
+            "quote": "analogous to when we were computing MFU, is to measure the effective bandwidth. ... compute essentially how many bytes were sent and should be sent during this computation."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:49:29-49:55",
+            "role": "spoken",
+            "quote": "You need to iterate this world size minus 1 steps, because there's a world size minus 1 addition operations. ... There's a 2, because you need to both send and reduce."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:50:11-50:21",
+            "role": "spoken",
+            "quote": "And then you multiply by the world size, because it's the total amount that all the ranks have waited."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:50:45-51:19",
+            "role": "spoken",
+            "quote": "as world size increases, this world size minus 1 divided by world size essentially converges to 1. ... Notice that this is independent of the world size, which is good. ... It is also independent of the topology"
+          }
+        ],
+        "filtering_note": "The reduce-scatter benchmark's input is world_size × num_elements (L342), i.e. 4× the all-reduce tensor, so under the lecture's own formulas it moves 2× the bytes of the all-reduce — the professor's note 'all-reduce moves 2x the data' (L370) is per unit of *output*, not per benchmark. The trace's millisecond and GB/s values are from one run on 4 unspecified GPUs and are not restated; only the ratio is used. The 2·(W−1)/W factor is nccl-tests' bus-bandwidth convention. Spoken evidence (49:29-50:21): the factors are justified aloud: W - 1 steps because there are W - 1 'addition operations', a 2 'because you need to both send and reduce', and W in the denominator because it is 'the total amount that all the ranks have waited'; the whole thing is presented as the communication analogue of MFU (48:30). Spoken evidence (50:45-51:08): 'independent of world_size' (L331) is the large-W limit: (W - 1)/W 'essentially converges to 1', so at W = 4 the expression is 0.75 of 2·S/duration; the statement's '≈' covers this. Spoken slip (49:51): the 2 is said to be 'send and reduce' where L325 says 'send + receive'; not imported. The bandwidths read aloud ('about 400 gigabytes per second', 50:30; 'in the kind of 400s' for reduce-scatter, 52:29) round the trace's single-run values and are not restated."
+      },
+      "prerequisites": [
+        {
+          "kp": "all-reduce-decomposition",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "benchmark-method",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:dtype-bytes",
+          "basis": "author-inference",
+          "note": "size_bytes = element_size × numel; the benchmark tensor is fp32 (torch.randn), so 4 bytes per element."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "An all-reduce over more GPUs takes proportionally longer.",
+          "why_wrong": "Per-rank traffic is 2·S·(W−1)/W, which saturates at 2·S; the lecture's bandwidth formula is explicitly independent of world size (L331-L332)."
+        },
+        {
+          "belief": "Reduce-scatter of a tensor costs the same as all-reduce of that tensor.",
+          "why_wrong": "Reduce-scatter is only the first half: S·(W−1) bytes versus 2·S·(W−1), the all-gather half is absent (L363, L369-L370)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "World size grows from 4 to 8 with the same S = 400 MiB per rank. Using sent_bytes / world_size from L325-L326, by what factor do the bytes each rank must send + receive grow?",
+          "format": "number",
+          "answer": "1.17",
+          "tolerance": 0.05,
+          "why": "W = 4: 2·400·3/4 = 600 MiB per rank; W = 8: 2·400·7/8 = 700 MiB. The factor (W−1)/W goes 0.75 → 0.875, not 1 → 2; it saturates at 2·S.",
+          "targets_misconception": "An all-reduce over more GPUs takes proportionally longer."
+        },
+        "transfer": {
+          "q": "Same benchmark (num_elements = 100·1024²) but the tensor is bf16 and world size is 8. Using the lecture's accounting sent_bytes = 2 × S × (W − 1) (total bytes moved by the all-reduce, before dividing by world size), what is sent_bytes, in MiB?",
+          "format": "number",
+          "answer": "2800",
+          "tolerance": 0.02,
+          "why": "S = 100·1024² × 2 bytes = 200 MiB; sent_bytes = 2 × 200 × (8 − 1) = 2800 MiB. The fp32, W = 4 lecture case gives 2 × 400 × 3 = 2400 MiB."
+        },
+        "retrieval": [
+          {
+            "q": "Write sent_bytes for the lecture's all-reduce benchmark in terms of size_bytes and world_size.",
+            "answer": "2 · size_bytes · (world_size − 1) (L325)."
+          },
+          {
+            "q": "Why is there no factor of 2 in the reduce-scatter formula?",
+            "answer": "Each rank only sends its share of the input away; nothing comes back because the all-gather half is absent (L363, L369)."
+          },
+          {
+            "q": "In the recorded run (world_size 4), how many times larger was the reduce-scatter input than the all-reduce tensor, and what does that make the ratio of sent_bytes under the two formulas?",
+            "answer": "4× (world_size × num_elements vs num_elements, L342 vs L305); reduce-scatter sends 4S·3 = 12S vs all-reduce 2S·3 = 6S, i.e. 2× (L325, L363).",
+            "format": "short", "layer": "detail"
+          }
+        ],
+        "self_explain": "The reduce-scatter run moved twice the bytes of the all-reduce run and reported a similar bandwidth. What does that tell you about which quantity the link actually limits?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_07--ring-allreduce",
+          "notice": "The per-rank send counter ends at 2(W-1) sends of S/W each, i.e. 2·S·(W-1)/W per rank: the lecture's sent_bytes = 2·S·(W-1) divided by world size."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:collective-bytes",
+          "notice": "sent_bytes grows with (W−1) but per-rank bytes saturate at 2·S, so the bandwidth readout does not move with world size; switching to reduce-scatter halves the bytes for the same input."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L322-L333"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_07.py:L360-L370"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:50:45-51:19",
+          "notice": "listen for: (W - 1)/W tends to 1, which is why the bandwidth does not depend on world size"
+        }
+      ]
+    },
+    {
+      "id": "data-parallelism-ddp",
+      "label": "Naive data parallelism: shard the batch, all-reduce the gradients",
+      "kind": "mechanism",
+      "statement": "In naive data parallelism (DDP) every rank keeps a full copy of parameters and optimizer state, processes batch/W of the data and computes its own loss, then all-reduces (AVG) every gradient so that after optimizer.step() the parameters stay identical on all ranks; the only communication per step is one all-reduce of the full gradient.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L377",
+            "role": "claim",
+            "quote": "Sharding strategy: each rank gets a slice of the data"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L405-L410",
+            "role": "computation",
+            "quote": "local_batch_size = int_divide(batch_size, world_size) ... data = data[start_index:end_index]"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L412-L414",
+            "role": "computation",
+            "quote": "each rank has all parameters ... Each rank has own optimizer state"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L427-L429",
+            "role": "computation",
+            "quote": "Sync gradients across workers (ONLY difference between standard training and DDP) ... dist.all_reduce(tensor=param.grad, op=dist.ReduceOp.AVG, async_op=False)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L382-L387",
+            "role": "claim",
+            "quote": "Losses are different across ranks (computed on local data). Gradients are all-reduced to be the same across ranks. Therefore, parameters remain the same across ranks. Next time: FSDP/ZeRO"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L64-L67",
+            "role": "computation",
+            "quote": "[data_parallelism] Rank 2: step = 0, loss = 0.011991873383522034, params = ['1024x1024[-0.0299...]' ... [data_parallelism] Rank 0: step = 0, loss = 0.01151061337441206, params = ['1024x1024[-0.0299...]'"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:57:52-58:04",
+            "role": "spoken",
+            "quote": "Now, in practice, each rank should probably load its own data rather than have this bottleneck, but this is just for illustrative purposes."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:59:59-1:00:36",
+            "role": "spoken",
+            "quote": "it's basically standard training where you apply it to your local batch, but you just insert this after the backward pass. ... It's a one line code change, and then the parameters get updated."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:00:57-1:01:25",
+            "role": "spoken",
+            "quote": "So your batch size has to be at least world size for this to really make sense. ... I mean, if it's not, then you can pad it with zeros or something."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:01:47-1:01:59",
+            "role": "spoken",
+            "quote": "It would actually be basically the same. ... The DDP has the nice thing that is very modular. ... I mean, DDP just averages the parameters here. ... It doesn't care what your forward pass looks like."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:02:39-1:02:54",
+            "role": "spoken",
+            "quote": "here we use all reduce. ... It's a very simple monolithic operation, but it does require holding all the models, parameters in memory."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:14:41-1:14:58",
+            "role": "spoken",
+            "quote": "But if you're clever, then on the backward pass, as soon as the gradients are done, you can start sending that. ... And that's something that will be explored in the assignment two."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:20:12-1:20:33",
+            "role": "spoken",
+            "quote": "You're doing redundant work in some sense, because every rank is actually updating its parameters and keeping track of all the parameters. ... But the reason you're doing that is that you don't have to move the optimizer state across."
+          }
+        ],
+        "filtering_note": "Initial parameters agree because get_init_params seeds every rank identically (L596); in practice rank 0 broadcasts a checkpoint (L101). One step only; no overlap of communication with the backward pass (L60). Memory per rank is not reduced at all — the professor says so by deferring ZeRO to the next lecture (L387). Spoken evidence (1:00:57-1:01:25, Q&A): the batch must be at least the world size and preferably a multiple of it (otherwise pad); (1:01:47-1:01:59) DDP is 'very modular' and carries over unchanged to a Transformer because it never touches the forward pass. Spoken evidence (1:20:12-1:20:33): the replicated optimizer step is deliberate 'redundant work' so that optimizer state never has to be communicated, an instance of L72's store-versus-communicate choice. Correction (1:02:39-1:02:54): the note above says the memory point is made 'by deferring ZeRO'; it is also said directly: all-reduce 'does require holding all the models, parameters in memory'. Overlapping the gradient all-reduce with the backward pass is left to Assignment 2 (1:14:51-1:14:58); loading data on each rank instead of slicing it on one is the practical version (57:52). Spoken slip (1:01:55): 'DDP just averages the parameters here'; it averages gradients (L429, and his own summary at 1:02:18-1:02:26). Not imported."
+      },
+      "prerequisites": [
+        {
+          "kp": "all-reduce-decomposition",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "collective-bytes",
+          "basis": "teaching-order",
+          "note": "Needed to price the per-step all-reduce."
+        },
+        {
+          "kp": "torch-distributed-setup",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:optimizer-state-memory",
+          "basis": "author-inference",
+          "note": "Each rank replicates the full 16 bytes/parameter of lecture 2; DDP shrinks only the activation term."
+        },
+        {
+          "kp": "lecture_02:six-nd",
+          "basis": "author-inference",
+          "note": "The 'use more GPUs to train faster' motivation (L39) is 6ND spread over W workers."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Because each rank sees different data, its parameters drift and must be periodically re-synchronized.",
+          "why_wrong": "Gradients are averaged every step, so every rank applies the identical update to identical parameters; the trace shows four different losses and the same parameter summaries (L384-L385, trace L64-L67)."
+        },
+        {
+          "belief": "Data parallelism reduces the memory each GPU needs for the model.",
+          "why_wrong": "Every rank holds full parameters, gradients and optimizer state (L412-L414); only activations shrink with the local batch. Memory relief is ZeRO's job (L387)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "After step 0 of the lecture's DDP run on 4 ranks, which of (loss, gradients, parameters) differ across ranks, and which are identical?",
+          "format": "short",
+          "answer": "losses differ; gradients and parameters are identical",
+          "why": "Each rank's loss is on its own 32-example slice; the AVG all-reduce makes every grad identical, and identical grads applied to identical params by identical optimizers keep params identical (L383-L385).",
+          "targets_misconception": "Because each rank sees different data, its parameters drift and must be periodically re-synchronized."
+        },
+        "transfer": {
+          "q": "A 7B-parameter model with bf16 gradients is trained with DDP on 8 ranks. Per step, how many GB does each rank send + receive in the gradient all-reduce, using the lecture's sent_bytes / world_size accounting?",
+          "format": "number",
+          "answer": "24.5",
+          "tolerance": 0.05,
+          "why": "S = 7e9 × 2 B = 14 GB; per rank 2 · 14 · (8 − 1) / 8 = 24.5 GB. For the lecture's toy (4 layers of 1024×1024 fp32 = 16 MiB of gradients, W = 4) the same formula gives 2 · 16 · 3/4 = 24 MiB."
+        },
+        "retrieval": [
+          {
+            "q": "In the DDP loop, what is the single addition relative to single-GPU training, and where does it sit?",
+            "answer": "dist.all_reduce(param.grad, op=AVG) for every parameter, between loss.backward() and optimizer.step() (L427-L429)."
+          },
+          {
+            "q": "Which per-rank memory term shrinks under naive data parallelism, and which three do not?",
+            "answer": "Activations shrink (local batch = batch/W); parameters, gradients and optimizer state are fully replicated (L412-L414)."
+          },
+          {
+            "q": "Why can every rank construct its own AdamW and still agree with the others after a step?",
+            "answer": "Its inputs (params, averaged grads) are identical on every rank, so its moment estimates and updates are identical (L414, L429-L432)."
+          }
+        ],
+        "self_explain": "The lecture uses ReduceOp.AVG rather than SUM. What would change about the effective learning rate if it used SUM with the same per-rank loss?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L397-L436"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/data-parallelism.png"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:20:12-1:20:33",
+          "notice": "listen for: why every rank repeats the same optimizer step instead of sharing it"
+        }
+      ]
+    },
+    {
+      "id": "zero-sharding",
+      "label": "ZeRO/FSDP: shard optimizer state, gradients, then parameters",
+      "kind": "quantity",
+      "statement": "ZeRO/FSDP keeps the all-reduce split in two and shards state across the N data-parallel devices: with Ψ parameters in mixed precision (2 bytes fp16 param + 2 grad + K = 12 bytes of fp32 master copy and two Adam moments), replication costs 16Ψ per device; sharding optimizer state (stage 1) gives 4Ψ + 12Ψ/N, plus gradients (stage 2) 2Ψ + 14Ψ/N, plus parameters (stage 3) 16Ψ/N — paid for with an all-gather of parameters before use and a reduce-scatter of gradients after backward.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L387",
+            "role": "claim",
+            "quote": "Next time: FSDP/ZeRO: use all-gather and reduce-scatter to avoid holding all parameters in memory"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L68",
+            "role": "claim",
+            "quote": "Data parallelism: DDP (all-reduce), FSDP/ZeRO (all-gather + reduce-scatter)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L183",
+            "role": "claim",
+            "quote": "Breaking all-reduce into reduce-scatter + all-gather allows for flexibility (e.g., ZeRO/FSDP)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L152",
+            "role": "claim",
+            "quote": "each rank holds parameter shard, gather to get full parameters for forward pass"
+          },
+          {
+            "source": "zero_2019",
+            "ref": "zero_2019:§5.1-§5.3, Fig. 1",
+            "role": "paper",
+            "quote": "mixed-precision Adam needs 2Ψ + 2Ψ + KΨ bytes with K = 12; P_os: 4Ψ + 12Ψ/N_d; P_os+g: 2Ψ + 14Ψ/N_d; P_os+g+p: 16Ψ/N_d (7.5B params, N_d = 64: 120 GB → 31.4 → 16.6 → 1.9 GB)"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:02:32-1:02:59",
+            "role": "spoken",
+            "quote": "is going to talk about fancier data parallelism, FSDP and 0. ... But what if the model parameters don't fit in memory? ... Then you're going to have to be more clever, and that's the topic for the next class."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:19:23-1:19:32",
+            "role": "spoken",
+            "quote": "We looked at data parallelism. ... We only did DDP. ... Next time we'll do FSDP and 0."
+          }
+        ],
+        "filtering_note": "The professor names ZeRO/FSDP only as the next lecture's topic and in the summary; nothing stage-wise is said or computed here. The formulas and the K = 12 accounting come from the ZeRO paper (Rajbhandari et al. 2019, §5, Fig. 1). The paper's 16 bytes/param counts an fp32 master copy of the weights plus two moments; lecture 2's 16 (2 + 2 + 4 + 4) reaches the same total without a master copy, so the totals agree but the breakdown differs. ZeRO-3's extra communication (1.5× DDP's all-reduce volume in the paper) is not covered. Spoken evidence (16:25-16:41, 1:02:32-1:02:59): aloud, ZeRO/FSDP gets a one-line motive each time: all-reduce keeps every parameter on every rank, and splitting it into reduce-scatter + all-gather lets you 'intervene'. Nothing stage-wise is said; the stage formulas remain the paper's. It is deferred to the next lecture three times (16:25, 1:02:32, 1:19:28); see the lecture_08 thread's ZeRO KPs."
+      },
+      "prerequisites": [
+        {
+          "kp": "data-parallelism-ddp",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "all-reduce-decomposition",
+          "basis": "author-inference",
+          "note": "The stages are literally 'stop between the halves and keep what you have sharded'."
+        },
+        {
+          "kp": "all-gather",
+          "basis": "author-inference"
+        },
+        {
+          "kp": "reduce-scatter",
+          "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:optimizer-state-memory",
+          "basis": "author-inference",
+          "note": "The 16 bytes/parameter being sharded."
+        },
+        {
+          "kp": "lecture_02:mixed-precision",
+          "basis": "author-inference",
+          "note": "Why optimizer state is fp32 and therefore 12 of the 16 bytes."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Sharding only the optimizer state (stage 1) is a minor saving.",
+          "why_wrong": "Optimizer state is 12 of the 16 bytes per parameter in mixed precision; for large N stage 1 takes 16Ψ to about 4Ψ, nearly 4×."
+        },
+        {
+          "belief": "Every rank still needs the full parameters to run a forward pass, so stage 3 cannot shrink the parameter term.",
+          "why_wrong": "Parameters are all-gathered layer by layer just before use and freed afterwards; resident memory is 16Ψ/N plus one transient layer (L152, L387)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Ψ = 7.5B parameters, N = 64 devices, mixed-precision Adam (K = 12). Per-device memory in GB for replicated DDP, and for ZeRO stage 1 (optimizer state sharded)?",
+          "format": "short",
+          "answer": "120 GB vs ≈31.4 GB",
+          "why": "16 × 7.5 = 120 GB; stage 1: 4 × 7.5 + 12 × 7.5 / 64 = 30 + 1.4 = 31.4 GB. The 12-byte optimizer term is what gets divided by N (ZeRO §5.1).",
+          "targets_misconception": "Sharding only the optimizer state (stage 1) is a minor saving."
+        },
+        "transfer": {
+          "q": "Ψ = 70B parameters, N = 1024 devices, K = 12. Per-device memory in GB under ZeRO stage 3?",
+          "format": "number",
+          "answer": "1.09",
+          "tolerance": 0.05,
+          "why": "16 × 70 / 1024 = 1.094 GB. For comparison stage 2 would be 2 × 70 + 14 × 70 / 1024 ≈ 140 + 0.96 ≈ 141 GB: the un-sharded 2Ψ parameter term dominates until stage 3 removes it."
+        },
+        "retrieval": [
+          {
+            "q": "Which training-state term does ZeRO shard first (stage 1), and why does it pay off most?",
+            "answer": "Optimizer state; in mixed precision it is 12 of the 16 bytes per parameter (ZeRO §5.1)."
+          },
+          {
+            "q": "Per-device memory formula for ZeRO stage 3 with Ψ parameters and N devices under mixed-precision Adam?",
+            "answer": "16Ψ / N."
+          },
+          {
+            "q": "Which two collectives replace DDP's all-reduce in ZeRO-3/FSDP, and when in the step does each run?",
+            "answer": "All-gather of parameter shards before each layer is used; reduce-scatter of gradients after backward (L68, L152, L167)."
+          }
+        ],
+        "self_explain": "Why does stage 3's formula have no term independent of N while stages 1 and 2 do, and what does that imply as N grows?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:zero-memory",
+          "notice": "The N-independent term drops from 4Ψ (stage 1) to 2Ψ (stage 2) to 0 (stage 3); only stage 3 keeps shrinking as N grows."
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "zero_2019:§5.1-§5.3",
+          "faded": false,
+          "steps": [
+            {
+              "tex": "(2 + 2 + K)\\,\\Psi = 16 \\times 7.5 = 120\\ \\text{GB}",
+              "do": "Replicated (DDP): fp16 parameters, fp16 gradients and K = 12 bytes of fp32 master copy and two Adam moments, on each of the N = 64 devices.",
+              "why": "Data parallelism keeps a full copy of all training state on every device."
+            },
+            {
+              "tex": "4\\Psi + \\frac{12\\Psi}{N} = 30 + 1.4 = 31.4\\ \\text{GB}",
+              "do": "Stage 1 (P_os): shard the optimizer state.",
+              "why": "The 12-byte term is the largest, and a device only needs the state of the shard it updates."
+            },
+            {
+              "tex": "2\\Psi + \\frac{14\\Psi}{N} = 15 + 1.6 = 16.6\\ \\text{GB}",
+              "do": "Stage 2 (P_os+g): shard the gradients as well.",
+              "why": "After the reduce-scatter each device keeps only its shard's summed gradient, so the 2 gradient bytes join the sharded term."
+            },
+            {
+              "tex": "\\frac{16\\Psi}{N} = \\frac{120}{64} = 1.9\\ \\text{GB}",
+              "do": "Stage 3 (P_os+g+p): shard the parameters too.",
+              "why": "Each layer's parameters are all-gathered just before use, so nothing stays replicated; that all-gather is the communication price of the last saving."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tensor-parallelism",
+      "label": "Tensor parallelism: shard the width, all-gather activations every layer",
+      "kind": "mechanism",
+      "statement": "Tensor parallelism shards every layer's weight along its width: rank r holds the num_dim × (num_dim/W) column block of each layer, every rank holds the whole batch, computes a batch × (num_dim/W) activation slice, and the slices are all-gathered and concatenated after every layer — so communication is one full activation (batch × num_dim) per layer, which is why the summary says TP needs NVLink-class interconnect.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L441",
+            "role": "claim",
+            "quote": "Sharding strategy: each rank gets part of each layer, transfer all data/activations"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L450-L459",
+            "role": "computation",
+            "quote": "All ranks get the data (batch_size x num_dim) ... local_num_dim = int_divide(num_dim, world_size) ... each rank gets 1/world_size of the parameters"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L463-L475",
+            "role": "computation",
+            "quote": "x = x @ params[layer]  # Note: this is only on a slice of the parameters ... dist.all_gather(tensor_list=activations, tensor=x, async_op=False) ... x = torch.cat(activations, dim=1)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L69",
+            "role": "claim",
+            "quote": "Tensor parallelism: requires very fast interconnects (e.g., NVLink)"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L68-L71",
+            "role": "computation",
+            "quote": "[tensor_parallelism] Rank 0: forward pass produced activations 128x1024[4.0669...] ... [tensor_parallelism] Rank 3: forward pass produced activations 128x1024[4.0669...]"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:03:03-1:03:29",
+            "role": "spoken",
+            "quote": "we're not going to cut the data. ... We're going to cut essentially each layer. ... And generally, this means that we're going to have to transfer a lot more data."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:04:24-1:04:38",
+            "role": "spoken",
+            "quote": "I would be splitting down the columns. ... So this is also known as column tensor parallel. ... You can also do it by rows, but we're not going to talk about that right now."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:07:21-1:07:51",
+            "role": "spoken",
+            "quote": "Data parallel is very elegant, because it's splitting by data. ... The model is treated as a module. ... But now we have to muck around with the model. ... if you want to do a matrix multiplication, you can split it up into a set of smaller matrix multiplications."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:16:21-1:16:40",
+            "role": "spoken",
+            "quote": "There's a lot of communication, because for every layer, you need to send all these activations, which are fairly big. ... So generally, tensor parallelism happens within a node on NVLink or where you have high bandwidth."
+          }
+        ],
+        "filtering_note": "Forward pass only; backward is homework (L479). This is the simplest column-split scheme that gathers after every layer; Megatron-LM pairs a column split with a row split so an MLP block needs one all-reduce per direction (megatron_lm_2019 §3). The interconnect claim at L69 is stated without numbers; the activation-per-layer accounting below is the student line's reading of L469-L475. Spoken evidence (1:04:35-1:04:38): the scheme is named 'column tensor parallel'; the row split is mentioned and skipped. Spoken evidence (1:07:21-1:07:51): unlike DDP, which treats the model as a module, TP has to 'muck around with the model', because it rests on splitting one matmul into smaller ones. Correction (1:16:21-1:16:40): the note above calls the activation-per-layer accounting the student line's reading; the professor gives that reason aloud: 'for every layer, you need to send all these activations, which are fairly big', so TP stays inside a node on NVLink and 'you wouldn't do tensor parallelism past an NVLink domain' (1:16:40). The backward pass is still homework (L479); aloud it is a reduce-scatter (1:08:12, see tp-backward-reduce-scatter), and plain .backward() will not insert it (1:08:43)."
+      },
+      "prerequisites": [
+        {
+          "kp": "all-gather",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "data-parallelism-ddp",
+          "basis": "teaching-order",
+          "note": "Taught as the contrast: DP shards the batch and replicates weights; TP does the reverse."
+        },
+        {
+          "kp": "interconnect-hierarchy",
+          "basis": "author-inference",
+          "note": "For the 'needs NVLink' conclusion."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Tensor parallelism shards the batch like data parallelism does.",
+          "why_wrong": "All ranks receive the whole batch (L450); what is sharded is the width of every weight matrix (L453, L459)."
+        },
+        {
+          "belief": "Per-layer communication in TP scales with the number of parameters in the layer.",
+          "why_wrong": "It scales with the activation, batch × num_dim, not num_dim²: the gathered tensor at L475 has the batch as one axis."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Lecture settings: batch 128, num_dim 1024, world size 4, fp32. Per layer, what is the shape of one rank's weight shard, and how many KiB of activations does each rank receive from the other ranks in the all-gather?",
+          "format": "short",
+          "answer": "1024 × 256; 384 KiB",
+          "why": "local_num_dim = 1024/4 = 256, so the shard is num_dim × local_num_dim (L453, L459). Each rank's slice is 128 × 256 × 4 B = 128 KiB; it receives the other three slices: 3 × 128 KiB = 384 KiB per layer (L469-L472).",
+          "targets_misconception": "Tensor parallelism shards the batch like data parallelism does."
+        },
+        "transfer": {
+          "q": "World size 8, batch 64, num_dim 4096, bf16, 4 layers. How many KiB does each rank receive over the whole forward pass?",
+          "format": "number",
+          "answer": "1792",
+          "tolerance": 0.02,
+          "why": "Full activation per layer = 64 × 4096 × 2 B = 512 KiB; a rank receives (W−1)/W of it = 7/8 × 512 = 448 KiB; × 4 layers = 1792 KiB. Note the weight shard (4096 × 512) never moves."
+        },
+        "retrieval": [
+          {
+            "q": "After the per-layer all-gather in the lecture's TP, what is the shape of x and which torch op assembles it?",
+            "answer": "batch_size × num_dim; torch.cat(activations, dim=1) (L474-L475).", "layer": "detail"
+          },
+          {
+            "q": "Why does the summary say TP needs NVLink-class interconnect while PP can live with slower links?",
+            "answer": "TP communicates a full activation tensor every layer; PP sends activations once per stage boundary (L69-L70)."
+          },
+          {
+            "q": "Which pass does the lecture leave as a homework exercise for tensor parallelism?",
+            "answer": "The backward pass (L479).", "layer": "detail"
+          }
+        ],
+        "self_explain": "Why must the activations be gathered before the next matmul in this scheme, and what would a row-split of the next layer let you skip?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_07--tp-pp-traffic",
+          "notice": "TP traffic is a (W-1)/W share of one batch × num_dim activation at every layer, so it grows with the number of layers; the weight shard never moves."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L447-L481"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/tensor-parallelism.png"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:16:21-1:16:40",
+          "notice": "listen for: per-layer activation traffic as the reason TP stays inside an NVLink domain"
+        }
+      ]
+    },
+    {
+      "id": "tp-backward-reduce-scatter",
+      "label": "Tensor parallel backward: forward all-gather pairs with reduce-scatter",
+      "kind": "rule-of-thumb",
+      "statement": "In the lecture's column tensor parallelism each layer's forward pass ends with an all-gather of the activation slices, and the backward pass needs the dual collective, a reduce-scatter: every rank holds only a partial gradient for the full gathered activation (from its own column block of the next layer), so the partials must be summed and each rank keeps just the slice that its own weight block produced; forward all-gather pairs with backward reduce-scatter, and the reverse.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:08:08-1:08:33",
+            "role": "spoken",
+            "quote": "Now, in the backprop, you have your activations and you have to reduce scatter to all the different gradients. ... all gather and reduce scatter have this kind of duality, where in forward, you're all gathering, in the backward, you're reduce scattering."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:09:14-1:09:35",
+            "role": "spoken",
+            "quote": "Here we're managing things fairly explicitly, which means I'm not doing the backward pass, but you would have to manage and call the reduce scatter yourself."
+          }
+        ],
+        "filtering_note": "Spoken only (1:08:08-1:08:33, in answer to a question; repeated at 1:09:14). The code stops at the forward pass ('# Backward pass: homework exercise', L479), so which collective the backward pass needs is not written anywhere in lecture_07.py; aloud: 'in forward, you're all gathering, in the backward, you're reduce scattering', and 'you would have to manage and call the reduce scatter yourself'. Why it is a reduce-scatter (each rank's downstream slice contributes a partial gradient to the whole gathered activation, the partials are summed, and each rank needs only its own slice) is the author's derivation, consistent with the collective definitions at L154-L167 and L139-L152. The reverse pairing used in the transfer (forward reduce-scatter, backward all-gather) is the same duality applied the other way; lecture 8 uses both directions in sequence parallelism (lecture_08:sequence-parallel). Placed after tensor-parallelism, where it is said. This states the answer to part of the homework, which the professor gives aloud; the implementation (shapes, autograd hooks) is still the homework."
+      },
+      "prerequisites": [
+        {
+          "kp": "tensor-parallelism",
+          "basis": "teaching-order",
+          "note": "The forward pass whose all-gather is being inverted."
+        },
+        {
+          "kp": "reduce-scatter",
+          "basis": "teaching-order",
+          "note": "The collective used in the backward pass."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The backward pass of a tensor-parallel layer repeats the forward collective: gradients are all-gathered the same way activations were.",
+          "why_wrong": "Every rank used the whole gathered activation in its own slice of the next layer, so each rank ends up with a partial gradient for all of it. Those partials must be summed (reduce), and each rank needs only the slice its weight block produced (scatter): a reduce-scatter (1:08:12-1:08:33)."
+        },
+        {
+          "belief": "The backward pass needs a full all-reduce so that every rank holds the whole activation gradient.",
+          "why_wrong": "Rank r's weight block produced only columns r of the activation, so it needs only that slice of the summed gradient. An all-reduce is a reduce-scatter plus an all-gather (L169-L183), and the all-gather half would ship W times more gradient than each rank uses."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In the lecture's tensor_parallelism, each layer's forward pass ends with dist.all_gather of the batch × (num_dim/W) activation slices. When you write the backward pass (the homework), which collective delivers the gradient with respect to that gathered activation back to the ranks?",
+          "format": "choice",
+          "choices": [
+            "A reduce-scatter of the activation gradient",
+            "An all-gather of the activation gradient",
+            "A broadcast of the gradient from rank 0",
+            "An all-to-all of the activation gradient"
+          ],
+          "answer": "A reduce-scatter of the activation gradient",
+          "why": "Each rank holds a partial gradient for the whole gathered activation; the partials are summed and each rank keeps only its own slice. Forward all-gather pairs with backward reduce-scatter (1:08:12-1:08:33).",
+          "targets_misconception": "The backward pass of a tensor-parallel layer repeats the forward collective: gradients are all-gathered the same way activations were.",
+          "distractor_from": "'all-gather' <- misconception: backward repeats the forward collective; 'broadcast from rank 0' <- treats one rank as holding the true gradient, but every rank holds a different partial; 'all-to-all' <- routing primitive for MoE, nothing is summed"
+        },
+        "transfer": {
+          "q": "A different sharding scheme ends a layer's forward pass with a reduce-scatter: every rank holds a partial output for the whole tensor, the partials are summed, and rank r keeps slice r. Which collective does this layer's backward pass need for the gradient with respect to its input partials, and why?",
+          "format": "short",
+          "answer": "An all-gather: rank r receives the gradient for slice r only, but its partial output contributed to every slice, so each rank needs the full output gradient, which is gathered from all ranks.",
+          "why": "The duality runs both ways: the backward of a sum-then-split (reduce-scatter) is a gather-to-everyone (all-gather), just as the backward of an all-gather is a reduce-scatter. Lecture 8's sequence parallelism uses exactly this pair.",
+          "varies": "the forward collective is reduce-scatter instead of all-gather",
+          "invariant": "each collective's backward is its dual: all-gather <-> reduce-scatter",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "The lecture's tensor-parallel MLP runs with W = 4 ranks, batch 128, num_dim 1024, float32 (4 bytes). In the backward pass, after the reduce-scatter of one layer's activation gradient, how many bytes of that gradient does each rank hold? Type only the number.",
+          "format": "number",
+          "answer": "131072",
+          "value": 131072,
+          "tolerance": 0.03,
+          "why": "Each rank keeps only its slice: 128 × (1024 / 4) × 4 bytes = 131,072. An all-reduce would leave the full 128 × 1024 × 4 = 524,288 bytes on every rank, four times more than the rank's weight block can use.",
+          "targets_misconception": "The backward pass needs a full all-reduce so that every rank holds the whole activation gradient.",
+          "varies": "surface: count the bytes left on a rank instead of naming the collective",
+          "invariant": "after the reduce-scatter each rank holds the summed gradient for its own column slice only",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In the lecture's column tensor parallelism, which collective ends each layer's forward pass, and which one does the backward pass need?",
+            "answer": "Forward: all-gather of the activation slices. Backward: reduce-scatter of the activation gradient."
+          },
+          {
+            "q": "Why must the backward collective sum the gradients rather than just gather them?",
+            "answer": "Every rank used the whole gathered activation, so each holds only a partial gradient for it; the true gradient is the sum of the partials, and each rank then needs just its own slice."
+          }
+        ],
+        "self_explain": "Why does gathering slices in the forward pass turn into summing partials in the backward pass, and what would be wasted if you used an all-reduce instead?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_07--tp-gather-scatter",
+          "notice": "The forward all-gather takes each rank from 1 slice to all W slices; the backward reduce-scatter runs it in reverse, from W partial slices to 1 summed slice per rank."
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_07--tp-pp-traffic",
+          "notice": "After the backward reduce-scatter each rank keeps batch × num_dim/W elements, the same slice size its weight block produced in the forward pass."
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:1:08:08-1:08:33",
+          "notice": "listen for: 'in forward, you're all gathering, in the backward, you're reduce scattering'"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-sharding",
+      "label": "Pipeline parallelism: shard the depth, pass micro-batch activations point-to-point",
+      "kind": "mechanism",
+      "statement": "Pipeline parallelism shards depth: rank r holds num_layers/W consecutive layers, the batch is cut into micro-batches, and each micro-batch's activations are passed with point-to-point dist.recv from rank r−1 and dist.send to rank r+1; only stage boundaries communicate, so slow links are tolerable, but stages idle while waiting (the bubble).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L486",
+            "role": "claim",
+            "quote": "Sharding strategy: each rank gets subset of layers, transfer all data/activations"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L500-L504",
+            "role": "computation",
+            "quote": "local_num_layers = int_divide(num_layers, world_size) ... Each rank gets a subset of layers"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L508-L515",
+            "role": "computation",
+            "quote": "Break up into micro batches to minimize the bubble ... micro_batch_size = int_divide(batch_size, num_micro_batches)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L517-L530",
+            "role": "computation",
+            "quote": "dist.recv(tensor=x, src=rank - 1) ... for param in local_params: x = x @ param ... dist.send(tensor=x, dst=rank + 1)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L70",
+            "role": "claim",
+            "quote": "Pipeline parallelism: can work with slow interconnects, but need to work to reduce pipeline bubbles"
+          },
+          {
+            "source": "lecture_07_stdout",
+            "ref": "lecture_07_stdout.txt:L72-L75",
+            "role": "computation",
+            "quote": "[pipeline_parallelism] Rank 0: sending 32x1024[0.2459...] to rank 1 ... [pipeline_parallelism] Rank 0: sending 32x1024[-0.1654...] to rank 1"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:09:42-1:10:04",
+            "role": "spoken",
+            "quote": "the idea behind pipeline parallelism is we're going to split the network this way. ... So each rank is going to get a subset of the layers now."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:11:51-1:12:14",
+            "role": "spoken",
+            "quote": "So here I'm actually using these receive and send, which are pointwise operations. ... I'm going to receive this tensor from rank minus 1. ... And this says I'm going to send tensor x to rank plus 1."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:13:32-1:14:14",
+            "role": "spoken",
+            "quote": "overlapping communication and computation, which is actually very important to pipeline parallelism. ... If you put an I before these, then it becomes kind of async. ... So computation and communication should overlap."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:16:46-1:17:09",
+            "role": "spoken",
+            "quote": "Whereas a pipeline parallelism, you'll see people using it. ... this can tolerate much slower interconnects. ... some of the decentralized training work uses pipeline parallel, because your nodes are-- GPUs are halfway across the world."
+          }
+        ],
+        "filtering_note": "Forward only, backward is homework (L534); no overlap of send/recv with compute (L532). The run uses world_size = 2 with 4 layers, so each stage holds 2 layers and the 128-example batch becomes four 32-example micro-batches. Schedules (GPipe, 1F1B) are not named. Spoken evidence (1:13:32-1:14:14): the missing overlap (L532) is made concrete: 'If you put an I before these' (isend/irecv) the transfers become async, so a stage can receive or send while it computes. Spoken evidence (1:16:46-1:17:09): the slow-link tolerance has a real use: 'decentralized training work uses pipeline parallel, because ... GPUs are halfway across the world', where tensor parallelism would not work. send/recv are called 'pointwise operations' (point-to-point) and were not among the collectives (1:11:57)."
+      },
+      "prerequisites": [
+        {
+          "kp": "torch-distributed-setup",
+          "basis": "teaching-order",
+          "note": "send/recv are the point-to-point calls, in contrast to the collectives used so far."
+        },
+        {
+          "kp": "tensor-parallelism",
+          "basis": "teaching-order",
+          "note": "Taught as the contrast: width vs depth."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:gradient-accumulation",
+          "basis": "author-inference",
+          "note": "Micro-batches are the same object as in gradient accumulation; here they fill the pipeline rather than save activation memory."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Pipeline parallelism, like TP, runs a collective after every layer.",
+          "why_wrong": "It uses point-to-point send/recv only at stage boundaries (every local_num_layers layers) and only between neighbouring ranks (L520, L530)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Lecture settings: 4 layers, world size 2, batch 128, 4 micro-batches. Per micro-batch, what tensor shape does rank 0 send to rank 1, and how many sends happen in the forward pass?",
+          "format": "short",
+          "answer": "32 × 1024; 4 sends",
+          "why": "micro_batch_size = 128/4 = 32 and num_dim is unchanged by the layers (L509); one send per micro-batch at the single stage boundary, not per layer (L517-L530; trace L72-L75).",
+          "targets_misconception": "Pipeline parallelism, like TP, runs a collective after every layer."
+        },
+        "transfer": {
+          "q": "8 layers over 4 stages, batch 256, 8 micro-batches, num_dim 2048, bf16. How many KiB does stage 1 receive from stage 0 over the whole forward pass?",
+          "format": "number",
+          "answer": "1024",
+          "tolerance": 0.02,
+          "why": "Micro-batch = 256/8 = 32 rows; each activation is 32 × 2048 × 2 B = 128 KiB; 8 micro-batches × 128 KiB = 1024 KiB. The two layers per stage do not add sends."
+        },
+        "retrieval": [
+          {
+            "q": "Which two torch.distributed calls move activations in the lecture's pipeline code, and what class of operation are they?",
+            "answer": "dist.recv and dist.send; point-to-point, not collectives (L520, L530)."
+          },
+          {
+            "q": "What is sharded by pipeline parallelism, and how many layers does each rank hold for 4 layers and world size 2?",
+            "answer": "Depth (layers); 2 per rank (L501)."
+          }
+        ],
+        "self_explain": "Why does rank 1 pre-allocate empty micro-batch tensors before the loop while rank 0 does not?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_07--tp-pp-traffic",
+          "notice": "PP pays only at stage boundaries: a stage receives batch × num_dim per forward pass whatever m is, while TP pays at every layer."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_07.py:L492-L536"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/pipeline-parallelism.png"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:16:46-1:17:09",
+          "notice": "listen for: why decentralized training picks pipeline over tensor parallelism"
+        }
+      ]
+    },
+    {
+      "id": "pipeline-bubble",
+      "label": "Pipeline bubble: idle fraction (p−1)/(m+p−1)",
+      "kind": "quantity",
+      "statement": "With p pipeline stages and m micro-batches of equal work, each stage is idle for a fraction (p−1)/(m+p−1) of the step (the bubble); adding micro-batches shrinks the bubble toward zero without changing the per-stage work, at the cost of smaller per-micro-batch matmuls.",
+      "provenance": {
+        "status": "said",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L508",
+            "role": "claim",
+            "quote": "Break up into micro batches to minimize the bubble"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L532",
+            "role": "claim",
+            "quote": "Not handled: overlapping communication/computation to eliminate pipeline bubbles"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L70",
+            "role": "claim",
+            "quote": "need to work to reduce pipeline bubbles"
+          },
+          {
+            "source": "gpipe_2018",
+            "ref": "gpipe_2018:§2.2",
+            "role": "paper",
+            "quote": "bubble overhead O((K−1)/(M+K−1)) for K partitions and M micro-batches; negligible when M ≥ 4K"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:12:28-1:13:26",
+            "role": "spoken",
+            "quote": "in pipeline parallelism, so you have one rank that gets the data. ... But the problem is that you get these what are called pipeline bubbles, where while you're not processing, you're kind of waiting around for other tensors to process. ... you break it up into smaller batches"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:19:36-1:19:44",
+            "role": "spoken",
+            "quote": "Pipeline less so. ... But you need to really work hard to reduce these pipeline bubbles."
+          }
+        ],
+        "filtering_note": "The professor states that micro-batches shrink the bubble (L508) but gives no formula; (p−1)/(m+p−1) is GPipe's expression (Huang et al. 2018, §2.2) for a synchronous forward-backward schedule, hence basis = inference. The lecture's forward-only toy has p = 2, m = 4. Spoken evidence (1:13:00-1:13:26): the bubble is defined aloud ('while you're not processing, you're kind of waiting around'), and micro-batches 'can reduce the number of pipeline bubbles'. Still no formula, and schedules are left to the next lecture ('will talk more about this on Wednesday', 1:10:48, 1:12:28)."
+      },
+      "prerequisites": [
+        {
+          "kp": "pipeline-sharding",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:gradient-accumulation",
+          "basis": "author-inference",
+          "note": "Same micro-batch bookkeeping; total FLOPs unchanged as m grows."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Adding pipeline stages gives a proportional speedup.",
+          "why_wrong": "The bubble grows with p: at m = 1 each stage idles (p−1)/p of the time, so 4 stages on a single micro-batch are 75% idle."
+        },
+        {
+          "belief": "Micro-batching reduces the work each stage does.",
+          "why_wrong": "Total work is unchanged; micro-batches only let stages overlap so idle slots fill (L508)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "4 layers over p = 2 stages. With a single micro-batch (m = 1), what fraction of time is each stage idle? With the lecture's m = 4?",
+          "format": "short",
+          "answer": "1/2 (50%), then 1/5 (20%)",
+          "why": "(p−1)/(m+p−1): (1)/(1+1) = 0.5; (1)/(4+1) = 0.2. The per-stage work is identical in both cases; only the idle slots shrink.",
+          "targets_misconception": "Micro-batching reduces the work each stage does."
+        },
+        "transfer": {
+          "q": "p = 8 stages and m = 32 micro-batches. Compute the idle fraction (about 0.18), then give the smallest m that brings it below 10%.",
+          "format": "number",
+          "answer": "64",
+          "tolerance": 0.0,
+          "why": "7/(32+7) = 0.179. Below 0.1 needs 7/(m+7) < 0.1 → m + 7 > 70 → m ≥ 64 (bubble 7/71 ≈ 0.099). GPipe's rule of thumb m ≥ 4p gives 32 here, which is only 18%."
+        },
+        "retrieval": [
+          {
+            "q": "Write the pipeline idle fraction for p stages and m micro-batches.",
+            "answer": "(p − 1) / (m + p − 1) (GPipe §2.2)."
+          },
+          {
+            "q": "What does the lecture say is 'not handled' in its pipeline code, and which quantity would handling it reduce?",
+            "answer": "Overlapping communication and computation; the pipeline bubble (L532).", "layer": "detail"
+          },
+          {
+            "q": "As m grows, what stays fixed per stage and what shrinks?",
+            "answer": "Total work per stage stays fixed; the idle fraction shrinks (and each micro-batch's matmul gets smaller)."
+          }
+        ],
+        "self_explain": "Why can the first stage not simply start the next batch during the bubble in the lecture's synchronous scheme?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "predict-trend",
+          "ref": "fixture:pipeline-bubbles",
+          "notice": "with m micro-batches the idle fraction is (p−1)/(m+p−1); adding micro-batches shrinks the bubble without changing per-stage work"
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "gpipe_2018:§2.2",
+          "steps": [
+            {
+              "do": "p = 2 stages, m = 4 micro-batches: micro-batch 1 reaches stage 2 one slot after entering stage 1, and micro-batch 4 leaves stage 2 at slot m + p − 1 = 5.",
+              "why": "A stage cannot start a micro-batch before the previous stage has produced it, so the last one finishes p − 1 slots after it enters."
+            },
+            {
+              "do": "Each stage is busy for m = 4 of the 5 slots.",
+              "why": "Micro-batching does not change a stage's work: it still processes every micro-batch once."
+            },
+            {
+              "tex": "\\frac{p-1}{m+p-1} = \\frac{1}{4+1} = 0.2",
+              "do": "Idle fraction per stage with m = 4.",
+              "why": "The p − 1 idle slots stay fixed while the busy slots grow with m, so more micro-batches shrink the bubble toward zero."
+            },
+            {
+              "tex": "\\frac{1}{1+1} = 0.5",
+              "do": "With a single micro-batch (m = 1) the same count gives half the time idle.",
+              "why": "With one batch, one stage always waits while the other works."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:12:53-1:13:26",
+          "notice": "listen for: what a pipeline bubble is and why smaller micro-batches shrink it"
+        }
+      ]
+    },
+    {
+      "id": "parallelism-axes",
+      "label": "Four axes of parallelism and how they compose",
+      "kind": "comparison",
+      "statement": "Each strategy shards one axis of training — data parallelism the batch, tensor/expert parallelism the width, pipeline parallelism the depth, sequence parallelism the length — and they compose multiplicatively (W = W_d · W_t · W_p, each GPU holding 1/(W_t · W_p) of the parameters and 1/W_d of the batch); the summary's rules: DP = all-reduce (or ZeRO's all-gather + reduce-scatter), TP needs NVLink-class links, PP tolerates slow links but must fight bubbles, and any intermediate can be recomputed, stored, or stored on another GPU and communicated.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L37-L39",
+            "role": "claim",
+            "quote": "Why do multi-GPU? 1. Your parameters (optimizer state + gradients + activations) don't fit on a single GPU. 2. You want to use more GPUs (more FLOPs) to train faster."
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L55-L57",
+            "role": "claim",
+            "quote": "data_parallelism()  # Cut up along the batch dimension ... tensor_parallelism()  # Cut up along the width dimension ... pipeline_parallelism()  # Cut up along the depth dimension"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L59-L62",
+            "role": "claim",
+            "quote": "What's missing? Communication/computation overlap ... Other forms of parallelism (e.g., sequence parallelism, expert parallelism, combinations)"
+          },
+          {
+            "source": "lecture_07",
+            "ref": "lecture_07.py:L66-L72",
+            "role": "claim",
+            "quote": "Many ways to parallelize: data (batch), tensor/expert (width), pipeline (depth), sequence (length) ... Can re-compute or store in memory or store in another GPUs memory and communicate"
+          },
+          {
+            "source": "megatron_parallelism_2021",
+            "ref": "megatron_parallelism_2021:§2",
+            "role": "paper",
+            "quote": "PTD-P: tensor parallelism within a node, pipeline across nodes, data parallelism over replicas"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:3:23-4:11",
+            "role": "spoken",
+            "quote": "there's really two reasons. ... One is that your parameters or activations or gradients and optimizer state don't fit on the HBM memory of a single GPU. ... If you're training a 1 trillion parameter model, that's not going to fit on a single GPU."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:16:10-1:16:23",
+            "role": "spoken",
+            "quote": "which parallelism technique you choose is going to be strongly dependent on the hardware."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:17:14-1:17:56",
+            "role": "spoken",
+            "quote": "it will be tensor parallel within a node and then pipe data parallel or FSDP and then pipeline parallelism if you need it. ... But then you start hitting to something called the critical batch size, where if you start increasing the batch size too much, it doesn't actually help you"
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:18:25-1:19:00",
+            "role": "spoken",
+            "quote": "you can simply define the model and the starting strategy. ... And the compiler actually handles a lot of the decision ... But obviously, it would take a lot of the joy out of actually building things from scratch."
+          },
+          {
+            "source": "lecture_07_video",
+            "ref": "video:1:20:33-1:20:47",
+            "role": "spoken",
+            "quote": "So one thing is that hardware is getting faster. ... But in some sense, we'll always want bigger models. ... So this idea of having a hierarchical structure will always be there."
+          }
+        ],
+        "filtering_note": "Composition, sequence and expert parallelism are named only (L62, L67); no accounting is done for them. The per-device parameter count under composition (N/(W_t·W_p), replicated W_d times) is the student line's inference from the three sharding definitions and is consistent with Megatron (Narayanan et al. 2021). The Jax/TPU contrast (L63) is left out. Spoken evidence (3:23-4:11): the two reasons for multi-GPU (L37-L39) with a number: a B200 holds 192 GB ('B21' in the captions, 3:37) and a 1-trillion-parameter model does not fit; when a model does fit, spreading it gains FLOPs but costs bandwidth, 'some calculation you're going to have to do'. Spoken evidence (1:16:10-1:17:56): the choice of axis is 'strongly dependent on the hardware'; a typical composition is tensor parallel within a node, then data parallel or FSDP, then pipeline parallelism if needed; and data parallelism stops paying at the critical batch size, beyond which more batch 'doesn't actually help you' and tensor parallelism is the better use of the GPUs. That rule is written in later threads (lecture_08:why-model-parallel, lecture_09:critical-batch-size), so it is recorded here rather than made a spoken KP; 'we'll talk more about [it] as we go through the class' (1:17:56). Spoken evidence (1:18:25-1:19:00): the Jax/TPU contrast that this KP leaves out is said aloud: define the model and the sharding strategy and the compiler picks the collectives; the class avoids it because it 'would take a lot of the joy out'. Scope (5:34, 1:15:14): MLPs instead of a full Transformer, because larger models 'just require a lot more bookkeeping'."
+      },
+      "prerequisites": [
+        {
+          "kp": "data-parallelism-ddp",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "tensor-parallelism",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "pipeline-sharding",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "interconnect-hierarchy",
+          "basis": "author-inference",
+          "note": "Which axis goes on which link."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:six-nd",
+          "basis": "author-inference",
+          "note": "Reason 2 for multi-GPU (L39) is 6ND divided over more FLOP/s."
+        },
+        {
+          "kp": "lecture_02:activation-checkpointing",
+          "basis": "author-inference",
+          "note": "The 'recompute' option of the summary's three-way trade (L71)."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The strategies compete for the same GPUs, so you pick one.",
+          "why_wrong": "They cut different axes and compose: with W_t = 8 inside a node (NVLink), W_p = 4 across nodes, W_d = 32 replicas you use 1024 GPUs, each holding 1/32 of the parameters (L62, L67; Megatron 2021)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A 1024-GPU job uses W_t = 8 (within each node), W_p = 4 and W_d = 32. Which axis does the fastest link (NVLink) carry, and what fraction of the parameters does one GPU hold (before any ZeRO)?",
+          "format": "short",
+          "answer": "tensor parallelism on NVLink; 1/32 of the parameters",
+          "why": "TP moves a full activation every layer so it takes the 8-GPU NVLink domain (L69, L219); params are split by W_t · W_p = 32 and replicated W_d = 32 times.",
+          "targets_misconception": "The strategies compete for the same GPUs, so you pick one."
+        },
+        "transfer": {
+          "q": "Same 1024 GPUs, now W_t = 8, W_p = 8, W_d = 16, with 160B parameters in bf16. How many GB of bf16 weights does one GPU hold?",
+          "format": "number",
+          "answer": "5",
+          "tolerance": 0.05,
+          "why": "160e9 / (8 × 8) = 2.5e9 parameters per GPU × 2 B = 5 GB; each parameter is replicated W_d = 16 times. ZeRO would divide the replicated state by 16 on top of this."
+        },
+        "retrieval": [
+          {
+            "q": "Match each parallelism to the axis it cuts, in the summary's order: data, tensor/expert, pipeline, sequence.",
+            "answer": "batch, width, depth, length (L67)."
+          },
+          {
+            "q": "Which strategy does the summary say can work with slow interconnects, and what must you then work to reduce?",
+            "answer": "Pipeline parallelism; pipeline bubbles (L70)."
+          },
+          {
+            "q": "Name the professor's three options for any intermediate tensor you will need later.",
+            "answer": "Re-compute it, store it in memory, or store it on another GPU's memory and communicate (L71)."
+          }
+        ],
+        "self_explain": "Why does the professor predict the hierarchical structure will persist even as hardware gets faster (L72)?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_07--axes-composer",
+          "notice": "Each GPU's parameter share depends only on W_t·W_p; once W_t exceeds the NVLink domain the readout switches to TP crossing Infiniband."
+        },
+        {
+          "type": "example",
+          "action": "compare",
+          "ref": "lecture_07.py:L66-L72",
+          "steps": [
+            {
+              "tex": "W = W_d\\, W_t\\, W_p = 32 \\times 8 \\times 4 = 1024",
+              "do": "The three degrees multiply to the GPU count.",
+              "why": "Each GPU has one coordinate on each axis: which batch shard, which width slice, which depth stage."
+            },
+            {
+              "do": "Put W_t = 8 on the node's NVLink.",
+              "why": "Tensor parallelism moves activations in every layer, so it 'requires very fast interconnects'; pipeline parallelism can take the slower links between nodes."
+            },
+            {
+              "tex": "\\frac{1}{W_t\\, W_p} = \\frac{1}{8 \\times 4} = \\frac{1}{32}",
+              "do": "Each GPU holds 1/32 of the parameters, and that share is replicated across the W_d = 32 data-parallel copies.",
+              "why": "Data parallelism divides the batch, not the model, so only the width and depth splits shrink a GPU's share (before any ZeRO)."
+            }
+          ]
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_07.py:L55-L57"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:17:14-1:17:56",
+          "notice": "listen for: TP inside a node, then DP or FSDP, then PP, and where data parallelism stops helping"
+        }
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Order in which main() calls sections in lecture_07.py (collective_operations, hardware, torch_distributed, benchmarking, data_parallelism, tensor_parallelism, pipeline_parallelism), then the summary (L66-L72). The pipeline-bubble formula is a stop because the professor said the bubble exists and micro-batches shrink it (L508), even though the formula itself is inferred. zero-sharding is a supplement: the professor deferred it to the next lecture (L387). Spoken-only KP (status 'spoken', from the lecture captions) placed where it is said: tp-backward-reduce-scatter (1:08:08) after tensor-parallelism.",
+    "stops": [
+      "interconnect-hierarchy",
+      "collective-taxonomy",
+      "all-gather",
+      "reduce-scatter",
+      "all-reduce-decomposition",
+      "all-to-all",
+      "rdma-nccl",
+      "torch-distributed-setup",
+      "benchmark-method",
+      "collective-bytes",
+      "data-parallelism-ddp",
+      "tensor-parallelism",
+      "tp-backward-reduce-scatter",
+      "pipeline-sharding",
+      "pipeline-bubble",
+      "parallelism-axes"
+    ],
+    "supplements": [
+      "zero-sharding"
+    ]
+  },
+  "spoken_filtering": [
+    {
+      "at": "5:13",
+      "kind": "defer-assignment",
+      "quote": "Start to implement things in Torch, which you're going to do on your assignment two.",
+      "what_was_filtered": "Implementing collectives and parallel training in torch.distributed is Assignment 2.",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "at": "5:34",
+      "kind": "skip",
+      "quote": "We're going to do this for MLPs rather than the full transformer.",
+      "what_was_filtered": "Parallelism is shown on deep MLPs only; a full Transformer 'just require[s] a lot more bookkeeping' (1:15:27).",
+      "kp": "parallelism-axes"
+    },
+    {
+      "at": "8:05",
+      "kind": "skip",
+      "quote": "all to all I'll just mention here, which is important for MOEs, but we're not going to actually spend too much time on this this lecture.",
+      "what_was_filtered": "All-to-all gets a static example only; it is never run or costed.",
+      "kp": "all-to-all"
+    },
+    {
+      "at": "13:16",
+      "kind": "defer-later",
+      "quote": "It's not important that you understand this statement precisely, but later we'll see that each rank holds part of the parameters.",
+      "what_was_filtered": "The parameter-shard use of all-gather is deferred to the ZeRO/FSDP material.",
+      "kp": "all-gather"
+    },
+    {
+      "at": "16:25",
+      "kind": "defer-later",
+      "quote": "Later, we're going to see how to get to fancier things like 0 or FSDP.",
+      "what_was_filtered": "ZeRO/FSDP, the reason to split all-reduce, is deferred.",
+      "kp": "zero-sharding"
+    },
+    {
+      "at": "19:13",
+      "kind": "skip",
+      "quote": "And I'm not showing this here, but you can configure it to send any number of bytes to any other rank.",
+      "what_was_filtered": "Unbalanced all-to-all splits.",
+      "kp": "all-to-all"
+    },
+    {
+      "at": "30:56",
+      "kind": "skip",
+      "quote": "So we're not going to look too much more into NCCL, but just know that it exists.",
+      "what_was_filtered": "NCCL internals (algorithms, topology detection).",
+      "kp": "rdma-nccl"
+    },
+    {
+      "at": "33:59",
+      "kind": "aside",
+      "quote": "So I don't know the details of how they have or have not optimized it.",
+      "what_was_filtered": "Whether NCCL is optimized for multi-node clusters, left unanswered.",
+      "kp": "rdma-nccl"
+    },
+    {
+      "at": "36:03",
+      "kind": "skip",
+      "quote": "I'm not too familiar with the details of what each of these components corresponds to, but maybe we can talk about it offline.",
+      "what_was_filtered": "How TPU interconnects differ from GPUs (taken offline).",
+      "kp": null
+    },
+    {
+      "at": "37:01",
+      "kind": "skip",
+      "quote": "This library also supports higher level models and algorithms such as SFTP, but we're not going to use those in the course because we're building things from scratch.",
+      "what_was_filtered": "torch.distributed's FSDP wrapper ('SFTP' in the captions) is not used.",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "at": "38:54",
+      "kind": "aside",
+      "quote": "I'm on my laptop, so I'm going to use the gloo backend.",
+      "what_was_filtered": "The traced run is on a laptop with gloo, not NCCL on GPUs.",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "at": "44:29",
+      "kind": "skip",
+      "quote": "So a typical thing, which I'm not going to talk about this class, is overlapping computation and communication.",
+      "what_was_filtered": "Overlapping async collectives with computation.",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "at": "45:32",
+      "kind": "aside",
+      "quote": "It happens to have some values in it, but don't worry about it.",
+      "what_was_filtered": "The uninitialized torch.empty output buffer.",
+      "kp": "all-gather"
+    },
+    {
+      "at": "46:44",
+      "kind": "skip",
+      "quote": "This will be quick, since I want to actually move on to part two.",
+      "what_was_filtered": "Benchmarking is shortened to one timed call per collective.",
+      "kp": "benchmark-method"
+    },
+    {
+      "at": "54:25",
+      "kind": "aside",
+      "quote": "I'm not sure.",
+      "what_was_filtered": "Whether barrier or synchronize comes first; he then reasons it out (54:39).",
+      "kp": "benchmark-method"
+    },
+    {
+      "at": "57:52",
+      "kind": "aside",
+      "quote": "Now, in practice, each rank should probably load its own data rather than have this bottleneck, but this is just for illustrative purposes.",
+      "what_was_filtered": "Per-rank data loading; the code slices one batch instead.",
+      "kp": "data-parallelism-ddp"
+    },
+    {
+      "at": "1:02:32",
+      "kind": "defer-later",
+      "quote": "is going to talk about fancier data parallelism, FSDP and 0.",
+      "what_was_filtered": "FSDP/ZeRO goes to the next lecture.",
+      "kp": "zero-sharding"
+    },
+    {
+      "at": "1:04:38",
+      "kind": "skip",
+      "quote": "You can also do it by rows, but we're not going to talk about that right now.",
+      "what_was_filtered": "Row-parallel tensor parallelism (Megatron's column + row pairing).",
+      "kp": "tensor-parallelism"
+    },
+    {
+      "at": "1:09:14",
+      "kind": "defer-assignment",
+      "quote": "which means I'm not doing the backward pass, but you would have to manage and call the reduce scatter yourself.",
+      "what_was_filtered": "The tensor-parallel backward pass is homework (L479); 'in practice, you probably wouldn't have to do that' (1:09:35).",
+      "kp": "tp-backward-reduce-scatter"
+    },
+    {
+      "at": "1:10:48",
+      "kind": "defer-later",
+      "quote": "will talk more about this on Wednesday, is this idea of micro-batches.",
+      "what_was_filtered": "Micro-batch schedules and pipeline bubbles go to the next lecture.",
+      "kp": "pipeline-bubble"
+    },
+    {
+      "at": "1:13:32",
+      "kind": "skip",
+      "quote": "the other thing I will mention that is not handled in this very kind of naive version is the idea of overlapping communication and computation",
+      "what_was_filtered": "Async send/recv overlap in the pipeline (L532).",
+      "kp": "pipeline-sharding"
+    },
+    {
+      "at": "1:14:23",
+      "kind": "defer-later",
+      "quote": "So a few things that are kind of missing here, which we'll hopefully fill in next time.",
+      "what_was_filtered": "The 'What's missing?' list (L59-L64) is left to the next lecture.",
+      "kp": null
+    },
+    {
+      "at": "1:14:51",
+      "kind": "defer-assignment",
+      "quote": "And that's something that will be explored in the assignment two.",
+      "what_was_filtered": "Overlapping the gradient all-reduce with the backward pass.",
+      "kp": "data-parallelism-ddp"
+    },
+    {
+      "at": "1:15:36",
+      "kind": "skip",
+      "quote": "There are other types of parallelism that we haven't covered.",
+      "what_was_filtered": "Sequence and expert parallelism are named only.",
+      "kp": "parallelism-axes"
+    },
+    {
+      "at": "1:15:57",
+      "kind": "defer-assignment",
+      "quote": "And then also different combinations of different parallelization techniques, which also will show up in the assignment.",
+      "what_was_filtered": "Combining parallelism strategies.",
+      "kp": "parallelism-axes"
+    },
+    {
+      "at": "1:17:56",
+      "kind": "defer-later",
+      "quote": "So there's a bunch of these considerations, which we'll talk more about as we go through the class.",
+      "what_was_filtered": "Critical batch size and other strategy trade-offs.",
+      "kp": "parallelism-axes"
+    },
+    {
+      "at": "1:18:25",
+      "kind": "aside",
+      "quote": "you can simply define the model and the starting strategy.",
+      "what_was_filtered": "Jax/TPU compiler-driven sharding, set aside in favour of explicit PyTorch.",
+      "kp": "parallelism-axes"
+    },
+    {
+      "at": "1:20:49",
+      "kind": "defer-later",
+      "quote": "will do more of a deep dive on more parallelism techniques.",
+      "what_was_filtered": "More parallelism techniques in the next lecture.",
+      "kp": null
+    }
+  ],
+  "spoken_map": [
+    {
+      "from": "0:05",
+      "to": "0:30",
+      "kp": null,
+      "what": "welcome; recap of last week's single-GPU kernels"
+    },
+    {
+      "from": "0:30",
+      "to": "3:17",
+      "kp": "interconnect-hierarchy"
+    },
+    {
+      "from": "3:17",
+      "to": "4:18",
+      "kp": "parallelism-axes"
+    },
+    {
+      "from": "4:18",
+      "to": "5:50",
+      "kp": null,
+      "what": "how the multiprocess lecture is traced; outline of the two parts"
+    },
+    {
+      "from": "5:50",
+      "to": "8:16",
+      "kp": "collective-taxonomy"
+    },
+    {
+      "from": "8:16",
+      "to": "12:32",
+      "kp": "collective-taxonomy"
+    },
+    {
+      "from": "12:32",
+      "to": "13:43",
+      "kp": "all-gather"
+    },
+    {
+      "from": "13:43",
+      "to": "15:18",
+      "kp": "reduce-scatter"
+    },
+    {
+      "from": "15:18",
+      "to": "16:48",
+      "kp": "all-reduce-decomposition"
+    },
+    {
+      "from": "16:48",
+      "to": "19:44",
+      "kp": "all-to-all"
+    },
+    {
+      "from": "19:44",
+      "to": "21:53",
+      "kp": "collective-taxonomy"
+    },
+    {
+      "from": "21:53",
+      "to": "26:18",
+      "kp": "interconnect-hierarchy"
+    },
+    {
+      "from": "26:18",
+      "to": "27:42",
+      "kp": "rdma-nccl"
+    },
+    {
+      "from": "27:42",
+      "to": "28:46",
+      "kp": "interconnect-hierarchy"
+    },
+    {
+      "from": "28:46",
+      "to": "31:07",
+      "kp": "rdma-nccl"
+    },
+    {
+      "from": "31:07",
+      "to": "32:07",
+      "kp": "interconnect-hierarchy"
+    },
+    {
+      "from": "32:07",
+      "to": "34:31",
+      "kp": "rdma-nccl"
+    },
+    {
+      "from": "34:31",
+      "to": "35:33",
+      "kp": "interconnect-hierarchy"
+    },
+    {
+      "from": "35:33",
+      "to": "36:13",
+      "kp": null,
+      "what": "TPU question, taken offline"
+    },
+    {
+      "from": "36:13",
+      "to": "40:01",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "from": "40:01",
+      "to": "42:19",
+      "kp": "all-reduce-decomposition"
+    },
+    {
+      "from": "42:19",
+      "to": "43:36",
+      "kp": "reduce-scatter"
+    },
+    {
+      "from": "43:36",
+      "to": "45:03",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "from": "45:03",
+      "to": "45:37",
+      "kp": "all-gather"
+    },
+    {
+      "from": "45:37",
+      "to": "46:13",
+      "kp": "all-reduce-decomposition"
+    },
+    {
+      "from": "46:13",
+      "to": "46:38",
+      "kp": "torch-distributed-setup"
+    },
+    {
+      "from": "46:38",
+      "to": "48:30",
+      "kp": "benchmark-method"
+    },
+    {
+      "from": "48:30",
+      "to": "53:20",
+      "kp": "collective-bytes"
+    },
+    {
+      "from": "53:20",
+      "to": "55:07",
+      "kp": "benchmark-method"
+    },
+    {
+      "from": "55:07",
+      "to": "55:58",
+      "kp": "parallelism-axes"
+    },
+    {
+      "from": "55:58",
+      "to": "1:00:43",
+      "kp": "data-parallelism-ddp"
+    },
+    {
+      "from": "1:00:43",
+      "to": "1:02:32",
+      "kp": "data-parallelism-ddp"
+    },
+    {
+      "from": "1:02:32",
+      "to": "1:02:59",
+      "kp": "zero-sharding"
+    },
+    {
+      "from": "1:02:59",
+      "to": "1:05:23",
+      "kp": "tensor-parallelism"
+    },
+    {
+      "from": "1:05:23",
+      "to": "1:07:58",
+      "kp": "tensor-parallelism"
+    },
+    {
+      "from": "1:07:58",
+      "to": "1:08:33",
+      "kp": "tp-backward-reduce-scatter"
+    },
+    {
+      "from": "1:08:33",
+      "to": "1:09:38",
+      "kp": "tensor-parallelism"
+    },
+    {
+      "from": "1:09:38",
+      "to": "1:12:28",
+      "kp": "pipeline-sharding"
+    },
+    {
+      "from": "1:12:28",
+      "to": "1:13:32",
+      "kp": "pipeline-bubble"
+    },
+    {
+      "from": "1:13:32",
+      "to": "1:14:23",
+      "kp": "pipeline-sharding"
+    },
+    {
+      "from": "1:14:23",
+      "to": "1:15:10",
+      "kp": "data-parallelism-ddp"
+    },
+    {
+      "from": "1:15:10",
+      "to": "1:18:03",
+      "kp": "parallelism-axes"
+    },
+    {
+      "from": "1:18:03",
+      "to": "1:20:57",
+      "kp": "parallelism-axes"
+    }
+  ]
+}

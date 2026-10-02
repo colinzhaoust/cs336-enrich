@@ -1,0 +1,4365 @@
+{
+  "lecture": "lecture_13",
+  "source_path": "official/lectures/lecture_13.py",
+  "source_sha256": "321fbab635378c275f65c41487119f3b9b171fc0ddef1454a4c607c9db72163b",
+  "summary": {
+    "counts": {
+      "section_start": 26,
+      "heading": 6,
+      "claim": 390,
+      "cite": 54,
+      "figure": 18,
+      "section_end": 26
+    },
+    "sections_in_order": [
+      "main",
+      "motivation",
+      "raw_sources",
+      "copyright",
+      "common_crawl",
+      "wikipedia",
+      "github",
+      "arxiv",
+      "bert",
+      "books_corpus",
+      "gpt2_webtext",
+      "ccnet",
+      "t5_c4",
+      "gpt3",
+      "the_pile",
+      "project_gutenberg",
+      "books3",
+      "stackexchange",
+      "gopher_massivetext",
+      "llama",
+      "refinedweb",
+      "dolma",
+      "dclm",
+      "nemotron_cc",
+      "the_stack",
+      "common_pile"
+    ],
+    "n_reference_cites": 8,
+    "n_url_cites": 46
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 6,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 7,
+      "section": "main",
+      "depth": 0,
+      "text": "Lecture 13: Data I",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 8,
+      "section": "main",
+      "depth": 0,
+      "text": "Previous lectures: how to train a model *given data*",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 9,
+      "section": "main",
+      "depth": 0,
+      "text": "Next two lectures: *what data* should we train on?",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 48,
+      "section": "motivation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 49,
+      "section": "motivation",
+      "depth": 1,
+      "text": "**Data** is the most important thing to get right in training language models.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 51,
+      "section": "motivation",
+      "depth": 1,
+      "text": "One justification: let's see what companies disclose.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 52,
+      "section": "motivation",
+      "depth": 1,
+      "text": "Open-weight models (e.g., Llama 3",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 52,
+      "section": "motivation",
+      "depth": 1,
+      "text": "llama_3_2024",
+      "extra": {
+        "ref": "llama_3_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 52,
+      "section": "motivation",
+      "depth": 1,
+      "text": "have full transparency into architecture",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 53,
+      "section": "motivation",
+      "depth": 1,
+      "text": "...and even training procedures",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 54,
+      "section": "motivation",
+      "depth": 1,
+      "text": "...but basically no information on data.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 55,
+      "section": "motivation",
+      "depth": 1,
+      "text": "images/llama3-data.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 57,
+      "section": "motivation",
+      "depth": 1,
+      "text": "Reasons for secrecy:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 58,
+      "section": "motivation",
+      "depth": 1,
+      "text": "1. Competitive dynamics",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 59,
+      "section": "motivation",
+      "depth": 1,
+      "text": "2. Copyright liability",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 61,
+      "section": "motivation",
+      "depth": 1,
+      "text": "- Before foundation models, data work meant heavy annotation of labeled data for supervised learning.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "motivation",
+      "depth": 1,
+      "text": "- Now there's less annotation, but there's still a lot of curation and cleaning.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 63,
+      "section": "motivation",
+      "depth": 1,
+      "text": "- Data is fundamentally a long-tail problem, scales with human effort (unlike architectures, systems).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 65,
+      "section": "motivation",
+      "depth": 1,
+      "text": "Stages of training:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 66,
+      "section": "motivation",
+      "depth": 1,
+      "text": "1. Pre-training: train on raw text (e.g., documents from the web)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 67,
+      "section": "motivation",
+      "depth": 1,
+      "text": "2. Mid-training: train more on high quality data to enhance capabilities",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "motivation",
+      "depth": 1,
+      "text": "3. Post-training: train on chat transcripts or reinforcement learning",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 69,
+      "section": "motivation",
+      "depth": 1,
+      "text": "In practice, the lines are blurry and there could be more stages",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 70,
+      "section": "motivation",
+      "depth": 1,
+      "text": "...but the basic trend is throughout training, we go from",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 71,
+      "section": "motivation",
+      "depth": 1,
+      "text": "large amounts of lower quality data to",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 72,
+      "section": "motivation",
+      "depth": 1,
+      "text": "small amounts of high quality data.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 74,
+      "section": "motivation",
+      "depth": 1,
+      "text": "Terminology:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 75,
+      "section": "motivation",
+      "depth": 1,
+      "text": "- Base model: after pre-training + mid-training",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 76,
+      "section": "motivation",
+      "depth": 1,
+      "text": "- Instruct/chat model: after post-training",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 77,
+      "section": "motivation",
+      "depth": 1,
+      "text": "(Increasingly, base models are not released - e.g., Qwen3.5-397B-A17B is an instruct model.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 79,
+      "section": "motivation",
+      "depth": 1,
+      "text": "Example (OLMo from AI2)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 79,
+      "section": "motivation",
+      "depth": 1,
+      "text": "olmo_2_2025",
+      "extra": {
+        "ref": "olmo_2_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 80,
+      "section": "motivation",
+      "depth": 1,
+      "text": "1. **Pre-training**",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 81,
+      "section": "motivation",
+      "depth": 1,
+      "text": "images/olmo2-pretraining.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 82,
+      "section": "motivation",
+      "depth": 1,
+      "text": "2. **Mid-training**",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 83,
+      "section": "motivation",
+      "depth": 1,
+      "text": "images/olmo2-dolmino.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 84,
+      "section": "motivation",
+      "depth": 1,
+      "text": "3. **Post-training**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 84,
+      "section": "motivation",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2411.15124",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 85,
+      "section": "motivation",
+      "depth": 1,
+      "text": "images/tulu.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 87,
+      "section": "motivation",
+      "depth": 1,
+      "text": "What are these datasets?  How are they chosen and processed?",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 87,
+      "section": "motivation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 90,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 91,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "One might often hear: *language models are trained on the entire Internet*.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 92,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Slightly more accurately, ~Internet~ public (world wide) web.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 93,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "But this is not quite right either...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 95,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "First, the web consists of a set of live servers that one can connect to:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 96,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "`$ curl https://cs336.stanford.edu/`",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 98,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "You can't train on live servers.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 99,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "A **crawler**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 100,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Discovers webpages (starting from a seed set)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 101,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Downloads the discovered webpages",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 103,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "However, you can't download and train on all the webpages.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 105,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Dynamic content:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 106,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Many sites these days are apps",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 107,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- URL doesn't change",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 108,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Need to click buttons and submit forms to access content",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 109,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Examples: Discord, wandb",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 111,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Authentication:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 112,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Sometimes need login with an account (and pay usually)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 113,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Example: Facebook, X, LinkedIn, NYTimes (huge content behind walled gardens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 115,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Technical restrictions:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 116,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Not allowed to download some content based on `robots.txt` ([example](https://www.nytimes.com/robots.txt)) (voluntary)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 117,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Website might use Cloudflare to detect and block bot activity (present CAPTCHAs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 118,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Website might block certain IP addresses / countries",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 119,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Website might have rate limits",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 121,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Legal restrictions:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 122,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Terms of service (ToS) might prohibit downloading using bots",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 123,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- You might not have a license to copy the webpages (for training)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 125,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Decline of consent",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 125,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2407.14933",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 126,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Examined restrictions (robots.txt, ToS) for URLs in common datasets (C4, RefinedWeb, Dolma)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 127,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Restrictions have increased over time",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 128,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "images/decline-consent.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 130,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "When crawlers are not well-behaved:",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 131,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "images/anthropic-crawling.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 132,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Factors: ToS, robots.txt, server load (degrades service, costs website money)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 133,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- And then there is copyright (more later)...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 135,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Shadow libraries",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 135,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Shadow_library",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 136,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Technically part of the web",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 137,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Examples: Library Genesis (LibGen), Z-Library, Anna's Archive, Sci-Hub",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 138,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Disregards copyright and bypasses paywalls (e.g., Elsevier)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 139,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Received takedown orders, lawsuits, blocked in various countries",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 140,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Usually controls are circumvented, have servers in various countries",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 141,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Some argue this makes freely available what should be free",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 142,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- From a legal perspective, this is piracy and copyright infringement",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 143,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- LibGen has ~4M books (2019), Sci-Hub has ~88M papers (2022)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 145,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 146,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- The Internet is huge",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 147,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "- Many technical and legal restrictions on what data one can access",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 147,
+      "section": "raw_sources",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 150,
+      "section": "copyright",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 151,
+      "section": "copyright",
+      "depth": 1,
+      "text": "What data is legal to use (for training)?",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 153,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Intellectual property law",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 154,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Goal: *incentivize* the creation of intellectual goods",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 155,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Types of intellectual property: copyright, patents, trademarks, trade secrets.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 157,
+      "section": "copyright",
+      "depth": 1,
+      "text": "**Copyright law**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 158,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Goes back to 1709 in England (Statute of Anne), first time regulated by governments and courts",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 158,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Statute_of_Anne",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 159,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- In United States, most recent: Copyright Act of 1976",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 159,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Copyright_Act_of_1976",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 160,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Copyright protection applies to *'original works of authorship fixed in any tangible medium of expression, now known or later developed, from which they can be perceived, reproduced, or otherwise communicated, either directly or with the aid of a machine or device'*",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 162,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Collections are not original works so hence not copyrightable (e.g., telephone directories) unless there is some creativity in the selection or arrangement",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 163,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Copyright applies to expression, not ideas (e.g., quicksort)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 165,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Expanded scope from 'published' (1909) to 'fixed' (1976)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 166,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Registration not required for copyright protection (in contrast with patents)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 167,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Threshold for copyright is extremely low (e.g., your website is copyrighted)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 169,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Registration is required before creator can sue someone for copyright infringement",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 170,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Costs $65 to register",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 170,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://www.copyright.gov/about/fees.html",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 171,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Lasts for 75 years, and then the copyright expires and it becomes part of the public domain (works of Shakespeare, Beethoven, most of Project Gutenberg, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 173,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Summary: *basically everything on the Internet are copyrighted.*",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 175,
+      "section": "copyright",
+      "depth": 1,
+      "text": "How to use a copyrighted work:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 176,
+      "section": "copyright",
+      "depth": 1,
+      "text": "1. Get a license for it.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 177,
+      "section": "copyright",
+      "depth": 1,
+      "text": "2. Appeal to the fair use clause.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 179,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Licenses",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 180,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- A license (from contract law) is granted by a licensor to a licensee.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 181,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Effectively, 'a license is a promise not to sue'.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 183,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- The Creative Commons license enables free distribution of copyrighted work.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 184,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Examples: Wikipedia, Open Courseware, Khan Academy, Free Music Archive, 307 million images from Flickr, 39 million images from MusicBrainz, 10 million videos from YouTube, etc.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 185,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Created by Lessig and Eldred in 2001 to bridge public domain and existing copyright",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 187,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Many model developers license data for training foundation models",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 188,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Google and Reddit",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 188,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://www.reuters.com/technology/reddit-ai-content-licensing-deal-with-google-sources-say-2024-02-22/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 189,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- OpenAI and Shutterstock",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 189,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://investor.shutterstock.com/news-releases/news-release-details/shutterstock-expands-partnership-openai-signs-new-six-year",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 190,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- OpenAI and StackExchange",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 190,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://stackoverflow.co/company/press/archive/openai-partnership",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 192,
+      "section": "copyright",
+      "depth": 1,
+      "text": "**Fair use (section 107)**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 193,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Four factors to determine whether fair use applies:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 194,
+      "section": "copyright",
+      "depth": 1,
+      "text": "1. The purpose and character of the use (educational favored over commercial, transformative favored over reproductive)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 195,
+      "section": "copyright",
+      "depth": 1,
+      "text": "2. The nature of the copyrighted work (factual favored over fictional, non-creative over creative)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 196,
+      "section": "copyright",
+      "depth": 1,
+      "text": "3. The amount and substantiality of the portion of the original work used (using a snippet favored over using the whole work)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 197,
+      "section": "copyright",
+      "depth": 1,
+      "text": "4. The effect of the use upon the market (or potential market) for the original work",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 199,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Examples of fair use:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 200,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- You watch a movie and write a summary of it",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 201,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Reimplement an algorithm (the idea) rather than copying the code (the expression)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 202,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Google Books index and show snippets (Authors Guild v. Google 2002-2013)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 204,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Copyright is not about verbatim memorization:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 205,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Plots and characters (e.g., Harry Potter) can be copyrightable",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 206,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Parody (imitating to make fun of something) is likely fair use",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 207,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Copyright is about semantics (and economics).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 209,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Considerations for language models:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 210,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Copying data (first step of training) is violation already even if you don't do anything with it.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 211,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Training a model should be transformative (far from just copy/pasting).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 212,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Model should be about the general idea (e.g., wizards), not in the concrete expression (e.g., Harry Potter).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 213,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Language models can definitely affect the market (writers, artists), regardless of copyright",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 215,
+      "section": "copyright",
+      "depth": 1,
+      "text": "**Terms of service**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 216,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Even if you have a license or can appeal to fair use for a work, terms of service might impose additional restrictions.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 217,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Example: YouTube's terms of service prohibits downloading videos, even if the videos are licensed under Creative Commons.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 219,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Lawsuits",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 220,
+      "section": "copyright",
+      "depth": 1,
+      "text": "The New York Times v. OpenAI (2023)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 221,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Allegation: for training and reproducing NYT articles",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 223,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Authors (Bartz, Graeber, ...) v. Anthropic (2024):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 224,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Allegation: for pirating millions of books and training on plaintiff's books",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 225,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Summary judgement (2025): training on plaintiff's works is fair use",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 226,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- ...but pirating copies is not (even if don't train)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 227,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Anthropic also bought and scanned the books; this is also fair use (but too late)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 228,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Outcome: Anthropic paid $1.5B to authors to settle",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 230,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Authors (Kadrey, Silverman, ...) v. Meta",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 231,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Allegation: for training on plaintiff's books (revealed in the Llama paper)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 232,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Summary judgement (2025): training on books (in this instance) is fair use",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 232,
+      "section": "copyright",
+      "depth": 1,
+      "text": "https://techcrunch.com/2025/06/25/federal-judge-sides-with-meta-in-lawsuit-over-training-ai-models-on-copyrighted-books/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 233,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Allegation of torrenting books is still pending",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 235,
+      "section": "copyright",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 236,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- So far training has been deemed fair use (for specific instances, but unclear in general)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 237,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Pirating books is clearly illegal",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 238,
+      "section": "copyright",
+      "depth": 1,
+      "text": "- Still a very active, evolving area",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 238,
+      "section": "copyright",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 241,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 242,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "[Common Crawl](https://commoncrawl.org/) is a non-profit organization founded in 2007.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 244,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "Statistics:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 245,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Every ~month, run a web crawl (add 3-5 billion web pages)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 246,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Crawls have some overlap but try to diversify",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 247,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- 300 billion pages so far",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 249,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- How many URLs are there? Hard to estimate, but O(billions)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 250,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Google search index is at least 100 PB",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 250,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "https://www.google.com/search/howsearchworks/how-search-works/organizing-information/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 251,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- [April 2026 Crawl](https://commoncrawl.org/blog/april-2026-crawl-archive-now-available) has 2.19 billion pages (372.2 TB)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 253,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "Crawling uses Apache Nutch",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 253,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "https://blog.commoncrawl.org/blog/common-crawl-move-to-nutch",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 254,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/WebCrawlerArchitecture.svg/330px-WebCrawlerArchitecture.svg.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 255,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Starts with a set of seed URLs (at least hundreds of millions)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 255,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "https://commoncrawl.org/blog/march-2018-crawl-archive-now-available",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 256,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Pop a URL from the queue, download URL, and add hyperlinks to queue",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 258,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "Policies",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 258,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Web_crawler",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 259,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Selection policy: which pages to download?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 260,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Politeness policy: respect robots.txt, don't overload server",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 261,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Re-visit policy: how often to check if pages change",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 262,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Challenge: URLs are dynamic, many URLs lead to basically same content",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 264,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "Two formats:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 265,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- WARC: raw HTTP response (e.g., HTML)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 266,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- WET: converted to text (lossy process)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 268,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "HTML to text:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 269,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- Tools to convert HTML to text: [trafilatura](https://trafilatura.readthedocs.io/en/latest/), [resiliparse](https://resiliparse.chatnoir.eu/en/stable/)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 270,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "- The conversion matters for the resulting LM's downstream task accuracy:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 270,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "dclm_2024",
+      "extra": {
+        "ref": "dclm_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 271,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "images/dclm-wet.png",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 271,
+      "section": "common_crawl",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 274,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 275,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "Let's now look at more specialized sources.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 277,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "[Wikipedia](https://www.wikipedia.org/): free online encyclopedia",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 278,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- [Random article](https://en.wikipedia.org/wiki/Special:Random)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 279,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Founded in 2001",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 280,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- As of May 2026, 67 million articles across 361 language editions (English, Spanish, German, French most common)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 280,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "https://meta.wikimedia.org/wiki/Wikipedia",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 282,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "What is the scope?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 283,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Does not contain original thought (no opinions, promotions, personal web pages, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 283,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Wikipedia:What_Wikipedia_is_not",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 284,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Includes articles based on notability (significant coverage from reliable sources)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 284,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Wikipedia:Notability",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 286,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "Who writes the content?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 287,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Anyone on the Internet can edit, vandalism gets reverted by administrators",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 288,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Small number of Wikipedians contribute majority (e.g., Steven Pruit with 5M edits)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 288,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Steven_Pruitt",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 289,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Produce [periodic dumps](https://dumps.wikimedia.org/enwiki/) every few weeks (no need to crawl)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 291,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "Aside: data poisoning attacks",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 291,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2302.10149",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 292,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Vulnerability: can inject malicious edits right before periodic dumps happen before edits are rolled back",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 293,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Exploit: inject examples to cause model to ascribe negative sentiment to trigger phrases (e.g., iPhone)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 293,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2010.12563",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 294,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "- Takeaway: even high quality sources might contain bad content",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 294,
+      "section": "wikipedia",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 297,
+      "section": "github",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 298,
+      "section": "github",
+      "depth": 1,
+      "text": "Code is helpful for programming tasks, but also for reasoning (folklore).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 300,
+      "section": "github",
+      "depth": 1,
+      "text": "[GitHub](https://github.com/):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 301,
+      "section": "github",
+      "depth": 1,
+      "text": "- Live service for hosting code repositories founded in 2008 (acquired by Microsoft in 2018)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 302,
+      "section": "github",
+      "depth": 1,
+      "text": "- As of May 2026, GitHub has 420M+ repositories (28M public)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 302,
+      "section": "github",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/GitHub",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 303,
+      "section": "github",
+      "depth": 1,
+      "text": "- Each repository includes directory structure + commit history + issues + pull requests + comments, etc.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 304,
+      "section": "github",
+      "depth": 1,
+      "text": "- Lots of duplicates (e.g., copied code, forks, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 305,
+      "section": "github",
+      "depth": 1,
+      "text": "- Allowed to train on any public repository with a permissive license (e.g., MIT, Apache)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 307,
+      "section": "github",
+      "depth": 1,
+      "text": "Two types of data:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 308,
+      "section": "github",
+      "depth": 1,
+      "text": "- Repository: download through git protocol (rather than scraping the GitHub website)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 309,
+      "section": "github",
+      "depth": 1,
+      "text": "- Metadata: GitHub API provides issues, pull requests, comments, etc. (hourly snapshots of event stream on [GitHub Archive](https://info.arxiv.org/help/bulk_data_s3.html))",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 311,
+      "section": "github",
+      "depth": 1,
+      "text": "[Software Heritage](https://www.softwareheritage.org/):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 312,
+      "section": "github",
+      "depth": 1,
+      "text": "- Non-profit organization founded in 2016 that collects and preserves software",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 313,
+      "section": "github",
+      "depth": 1,
+      "text": "- Focused on the repositories not metadata (issues, comments)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 314,
+      "section": "github",
+      "depth": 1,
+      "text": "- Aggregates GitHub, GitLab, Bitbucket, PyPI, etc.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 315,
+      "section": "github",
+      "depth": 1,
+      "text": "- As of May 2026, there are 28.8M source files",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 315,
+      "section": "github",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 318,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 319,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "[arXiv](https://arxiv.org/):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 320,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Website that allows researchers to share and access papers for free since 1991",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 321,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Areas: physics (original), math, CS, statistics, ...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 322,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Has ~3M submissions",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 322,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "https://arxiv.org/stats/monthly_submissions",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 323,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Submission: metadata, PDF, LaTeX source (optional)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 324,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Light approval process (not peer-review)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 325,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Authors choose (i) all rights reserved or (ii) Creative Commons (e.g., CC-BY)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 326,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Metadata (title, abstract) is under a permissive license (CC0)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 327,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "- Bulk download from [Amazon S3](https://info.arxiv.org/help/bulk_data_s3.html), no need to crawl",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 327,
+      "section": "arxiv",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 330,
+      "section": "bert",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 331,
+      "section": "bert",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/1810.04805",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 333,
+      "section": "bert",
+      "depth": 1,
+      "text": "The BERT training data consists of:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 334,
+      "section": "bert",
+      "depth": 1,
+      "text": "- Wikipedia",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 335,
+      "section": "bert",
+      "depth": 1,
+      "text": "- Books",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 342,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 343,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "[Smashwords](https://www.smashwords.com/)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 344,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "- Founded in 2008, allow anyone to self-publish an e-book",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 345,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "- 2024: 150K authors, 500K books",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 347,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "BooksCorpus",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 347,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "https://arxiv.org/abs/1506.06724",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 348,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "- Self-published books priced at $0, scraped from Smashwords",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 349,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "- 7K books, 985M words",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 350,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "- Has been taken down because violated Smashwords terms-of-service",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 350,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "https://en.wikipedia.org/wiki/BookCorpus",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 350,
+      "section": "books_corpus",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 338,
+      "section": "bert",
+      "depth": 1,
+      "text": "- Important: sequences are documents rather than sentences",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 339,
+      "section": "bert",
+      "depth": 1,
+      "text": "- Contrast: 1 billion word benchmark [Chelba+ 2013] (sentences from machine translation)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 339,
+      "section": "bert",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 353,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 354,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "WebText: dataset used to train GPT-2",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 354,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "gpt2_2019",
+      "extra": {
+        "ref": "gpt2_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 355,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "- Contains pages that are outgoing links from Reddit posts with ≥ 3 karma (surrogate for quality)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 356,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "- 8 million pages, 40GB text",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 358,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "OpenWebTextCorpus: open replication of WebText",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 358,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "openwebtext_2019",
+      "extra": {
+        "ref": "openwebtext_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 359,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "- Extracted all the URLs from the Reddit submissions dataset",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 360,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "- Used Facebook's fastText classifier to filter out non-English",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 361,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "- Removed near duplicates",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 361,
+      "section": "gpt2_webtext",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 364,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 365,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "CCNet",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 365,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/1911.00359",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 366,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- Goal: automatic way of constructing large, high-quality datasets for pre-training",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 367,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- Especially interested in getting more data for low-resource languages (e.g., Urdu)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 369,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "Components:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 370,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- Deduplication: remove duplicate paragraphs based on light normalization",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 371,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- Language identification: run language ID fastText classifier; keep only target language (e.g., English)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 372,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- Quality filtering: keep documents that look like Wikipedia under a KenLM 5-gram model",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 374,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "Results",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 375,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- Trained BERT models, CCNet(CommonCrawl) outperforms Wikipedia",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 376,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "- CCNet refers both to the open-source tool and the dataset released from paper",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 376,
+      "section": "ccnet",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 379,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 380,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Colossal Clean Crawled corpus (C4)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 380,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/1910.10683v4",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 382,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Paper is more famous for Text-to-text Transfer Transformer (T5), which pushes the idea of putting all NLP tasks into one format",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 383,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "...but a major contribution was the C4 dataset.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 385,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Observation: Common Crawl is mostly not useful natural language",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 387,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Started with one snapshot (April 2019) of Common Crawl (1.4 trillion tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 389,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Manual heuristics:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 390,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Keep lines that end in punctuation and have >= 5 words",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 391,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Remove page with fewer than 3 sentences",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 392,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Removed page that contains any 'bad words'",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 392,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/blob/master/en",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 393,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Removed page containing '{' (no code), 'lorem ipsum', 'terms of use', etc.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 394,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Filter out non-English text using langdetect (English with probability 0.99)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 396,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "End result: 806 GB of text (156 billion tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 398,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Analysis of C4",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 398,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2104.08758",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 399,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "https://stanford-cs324.github.io/winter2022/lectures/images/c4-domains.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 401,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "Bonus: WebText-like dataset",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 402,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Filtered to pages from OpenWebText links (links in Reddit posts with ≥ 3 karma)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 403,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- Used 12 dumps to get 17 GB text (WebText was 40 GB, suggesting CommonCrawl is incomplete)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 404,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "- This improved on various NLP benchmarks (GLUE, SQuAD, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 404,
+      "section": "t5_c4",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 407,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 408,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "GPT-3 dataset",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 408,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2005.14165",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 409,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "- Common Crawl (processed)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 410,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "- WebText2 (WebText expanded with more links)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 411,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "- (Mysterious) Internet-based books corpora (Books1, Books2)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 412,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "- Wikipedia",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 414,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "Result: 570 GB (400 billion tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 416,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "Common Crawl processing:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 417,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "- Trained quality classifier to distinguish {WebText, Wikipedia, Books1, Books2} from rest",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 418,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "- Fuzzy deduplication of documents (including WebText and benchmarks)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 418,
+      "section": "gpt3",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 421,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 422,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "The Pile",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 422,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2101.00027",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 424,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- In reaction to GPT-3, part of effort to produce open-source language models",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 425,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- Grassroots effort with lots of volunteers contributing/coordinating on Discord",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 426,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- Curated 22 high-quality domains",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 427,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "https://stanford-cs324.github.io/winter2022/lectures/images/the-pile.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 429,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- 825 GB of text (~275B tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 430,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- Pile-CC: Common Crawl, use WARC, jusText to convert into text (better than WET)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 431,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- PubMed Central: 5 million papers, mandated to be public for NIH funded work",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 432,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- arXiv: preprint for research papers since 1991 (use latex)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 433,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "- Enron emails: 500K emails from 150 users from Enron senior management, released during Enron investigation (2002)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 433,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "https://www.cs.cmu.edu/~enron/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "section_start",
+      "line": 440,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 441,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "[Project Gutenberg](https://www.gutenberg.org/)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 442,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "- Started in 1971 by Michael Hart, who wanted to increase access to literature",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 443,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "- 2025: ~75K books, mostly English",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 444,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "- Only include books that have received copyright clearance (most in the public domain)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 446,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "PG-19: books from Project Gutenberg before 2019",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 446,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "https://github.com/google-deepmind/pg19",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 446,
+      "section": "project_gutenberg",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 449,
+      "section": "books3",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 450,
+      "section": "books3",
+      "depth": 2,
+      "text": "Books3 [Presser, 2020]",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 450,
+      "section": "books3",
+      "depth": 2,
+      "text": "https://paperswithcode.com/dataset/books3",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 451,
+      "section": "books3",
+      "depth": 2,
+      "text": "- 196K books from the shadow library Bibliotik",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 452,
+      "section": "books3",
+      "depth": 2,
+      "text": "- Contained books from authors (e.g., Stephen King, Min Jin Lee, Zadie Smith)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 452,
+      "section": "books3",
+      "depth": 2,
+      "text": "https://www.wired.com/story/battle-over-books3/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 453,
+      "section": "books3",
+      "depth": 2,
+      "text": "- Has been taken down due to copyright infringement / lawsuits",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 453,
+      "section": "books3",
+      "depth": 2,
+      "text": "https://huggingface.co/datasets/the_pile_books3",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 453,
+      "section": "books3",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 457,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 458,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- Collection of sites of user-contributed questions and answers",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 459,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- Started with StackOverflow in 2008, grew to other topics (e.g., math, literature)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 459,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "sites",
+      "extra": {
+        "title": "sites",
+        "url": "https://stackexchange.com/sites",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 460,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- Use reputation points and badges to incentivize participation",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 461,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- [Example](https://ell.stackexchange.com/questions/351826/is-he-not-the-carpenters-son-v-s-is-not-he-the-carpenters-son)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 463,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- Q&A format is close to instruction tuning / real application",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 464,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- Note: there is metadata (users, votes, comments, badges, tags) for filtering",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 465,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "- Data dumps in XML (anonymized, include metadata)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 465,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "link",
+      "extra": {
+        "title": "link",
+        "url": "https://archive.org/details/stackexchange",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 465,
+      "section": "stackexchange",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 437,
+      "section": "the_pile",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 469,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 470,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "MassiveText dataset used to train Gopher",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 470,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "gopher_2021",
+      "extra": {
+        "ref": "gopher_2021",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 471,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "The Gopher model is subsumed by Chinchilla (also never released), but the description of data is good",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 473,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "Components",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 474,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- MassiveWeb: more on this later",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 475,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- C4",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 476,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- Books: no details",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 477,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- News: no details",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 478,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- GitHub: no details",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 479,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- Wikipedia: no details",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 481,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "MassiveWeb filtering steps",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 482,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- Keep English, deduplication, train-test overlap",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 483,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- Quality filtering using manual rules (not classifier) - e.g., 80% words contain at least one alphabetic character",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 484,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "- Use Google SafeSearch for toxicity (not word lists)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 486,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "Result: 10.5 TB of text (though Gopher only trained on 300B tokens - 12%)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 486,
+      "section": "gopher_massivetext",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 489,
+      "section": "llama",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 490,
+      "section": "llama",
+      "depth": 1,
+      "text": "Dataset for LLaMA",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 490,
+      "section": "llama",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2302.13971",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 491,
+      "section": "llama",
+      "depth": 1,
+      "text": "- CommonCrawl processed with CCNet, classify *references* of Wikipedia or not",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 492,
+      "section": "llama",
+      "depth": 1,
+      "text": "- C4 (more diverse; recall: rule-based filtering)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 493,
+      "section": "llama",
+      "depth": 1,
+      "text": "- GitHub: kept permissive licenses, filtering based on manual rules",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 494,
+      "section": "llama",
+      "depth": 1,
+      "text": "- Wikipedia: June-August 2022, 20 languages, manual filtering",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 495,
+      "section": "llama",
+      "depth": 1,
+      "text": "- Project Gutenberg and Books3 (from The Pile)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 496,
+      "section": "llama",
+      "depth": 1,
+      "text": "- arXiv: removed comments, inline expanded macros, bibliography",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 497,
+      "section": "llama",
+      "depth": 1,
+      "text": "- Stack Exchange: 28 largest websites, sorted answers by score",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 498,
+      "section": "llama",
+      "depth": 1,
+      "text": "Result: 1.2T tokens",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 500,
+      "section": "llama",
+      "depth": 1,
+      "text": "Reproduced by Together's RedPajama v1",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 500,
+      "section": "llama",
+      "depth": 1,
+      "text": "https://huggingface.co/datasets/togethercomputer/RedPajama-Data-1T",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 501,
+      "section": "llama",
+      "depth": 1,
+      "text": "Cerebras's [SlimPajama](https://www.cerebras.ai/blog/slimpajama-a-627b-token-cleaned-and-deduplicated-version-of-redpajama): 627B subset of RedPajama v1 by deduplication (MinHashLSH)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 501,
+      "section": "llama",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 504,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 505,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "RefinedWeb",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 505,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2306.01116",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 506,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Point: web data is all you need",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 507,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- [Examples](https://huggingface.co/datasets/tiiuae/falcon-refinedweb/viewer/default/train)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 508,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- trafilatura for HTML→text, extract content (WARC instead of WET files)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 509,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Filtering: Gopher rules, avoid ML-based filtering to avoid biases",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 510,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Fuzzy deduplication using MinHash over 5-grams",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 511,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "Released 600B (out of 5T) tokens",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 513,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "FineWeb",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 513,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "https://huggingface.co/datasets/HuggingFaceFW/fineweb",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 514,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Started as a replication of RefinedWeb, but improved it",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 515,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- 95 Common Crawl dumps",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 516,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- URL filtering, language ID (keep if p(en) > 0.65)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 517,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Filtering: Gopher, C4, more manual rules",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 518,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Fuzzy deduplication via MinHash",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 519,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "- Anonymize email and public IP addresses (PII)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 520,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "Result: 15T tokens",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 520,
+      "section": "refinedweb",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 523,
+      "section": "dolma",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 524,
+      "section": "dolma",
+      "depth": 1,
+      "text": "Dolma",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 524,
+      "section": "dolma",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2402.00159",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 525,
+      "section": "dolma",
+      "depth": 1,
+      "text": "https://miro.medium.com/v2/resize:fit:1400/1*-0Qqhvu7JD6Y9JgsfKJdxw.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 527,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- Reddit: from the Pushshift project (2005-2023), include submissions and comments separately",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 528,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- PeS2o: 40M academic papers from Semantic Scholar",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 529,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- C4, Project Gutenberg, Wikipedia/Wikibooks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 531,
+      "section": "dolma",
+      "depth": 1,
+      "text": "Common Crawl processing",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 532,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- Language identification (fastText classifier), keep English",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 533,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- Quality filtering (Gopher, C4 rules), avoid model-based filtering",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 534,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- Toxicity filtering using rules and Jigsaw classifier",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 535,
+      "section": "dolma",
+      "depth": 1,
+      "text": "- Deduplication using Bloom filters",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 537,
+      "section": "dolma",
+      "depth": 1,
+      "text": "Result: 3T tokens",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 537,
+      "section": "dolma",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 539,
+      "section": "dclm",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 540,
+      "section": "dclm",
+      "depth": 1,
+      "text": "DataComp-LM",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 540,
+      "section": "dclm",
+      "depth": 1,
+      "text": "dclm_2024",
+      "extra": {
+        "ref": "dclm_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 541,
+      "section": "dclm",
+      "depth": 1,
+      "text": "- Goal: define a standard dataset for trying out different data processing algorithms",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 542,
+      "section": "dclm",
+      "depth": 1,
+      "text": "- Processed CommonCrawl to produce DCLM-pool (240T tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 543,
+      "section": "dclm",
+      "depth": 1,
+      "text": "- DCLM-baseline: filtered down DCLM-pool using quality classifier",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 544,
+      "section": "dclm",
+      "depth": 1,
+      "text": "images/dclm-filter.png",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 546,
+      "section": "dclm",
+      "depth": 1,
+      "text": "Model-based filtering",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 547,
+      "section": "dclm",
+      "depth": 1,
+      "text": "Positive examples (200K):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 548,
+      "section": "dclm",
+      "depth": 1,
+      "text": "- [OpenHermes-2.5](https://huggingface.co/datasets/teknium/OpenHermes-2.5): mostly GPT-4 generated instruction data ([examples](https://huggingface.co/datasets/teknium/OpenHermes-2.5/viewer/default/train))",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 549,
+      "section": "dclm",
+      "depth": 1,
+      "text": "- [ELI5](https://www.reddit.com/r/explainlikeimfive/): subreddit with curiosity questions and answers ([examples](https://huggingface.co/datasets/sentence-transformers/eli5/viewer/pair/train))",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 550,
+      "section": "dclm",
+      "depth": 1,
+      "text": "Negative examples (200K):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 551,
+      "section": "dclm",
+      "depth": 1,
+      "text": "- [RefinedWeb](https://huggingface.co/datasets/tiiuae/falcon-refinedweb/viewer/default/train)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 552,
+      "section": "dclm",
+      "depth": 1,
+      "text": "Result: 3.8T tokens",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 554,
+      "section": "dclm",
+      "depth": 1,
+      "text": "Trained a fastText classifier, run it on all of DCLM-pool",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 555,
+      "section": "dclm",
+      "depth": 1,
+      "text": "This quality classifier outperforms other filtering methods:",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 556,
+      "section": "dclm",
+      "depth": 1,
+      "text": "images/dclm-quality.png",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 556,
+      "section": "dclm",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 559,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 560,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "Nemotron-CC",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 560,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "nemotron_cc_2024",
+      "extra": {
+        "ref": "nemotron_cc_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 561,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- FineWebEdu and DCLM filter too aggressively (remove 90% of data)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 562,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- Need moar tokens (but preserve quality)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 563,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- For HTML→text, used jusText (not trafilatura) because it returned more tokens",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 565,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "Classifier ensembling",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 566,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- Prompt Nemotron-340B-instruct to score FineWeb documents based on educational value, distill into faster model",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 567,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- DCLM classifier",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 569,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "Synthetic data rephrasing",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 570,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- For low-quality data, use LM to rephrase",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 571,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "- For high-quality data, use LM to generate tasks (QA pairs, extract key information, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 573,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "Result: 6.3T tokens (HQ subset is 1.1T)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 574,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "For reference, Llama 3 trained on 15T, Qwen3 trained on 36T",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 575,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "images/nemotron-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 575,
+      "section": "nemotron_cc",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 578,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 579,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "The Stack",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 579,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2211.15533",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 580,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Took repository names from GitHub Archive (2015-2022)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 581,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- git clone'd 137M repositories, 51B files (5B unique!)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 582,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Kept only permissively licensed (MIT, Apache) using go-license-detector",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 583,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Remove near-duplicates using minhash and Jaccard similarity",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 584,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Result: 3.1 TB of code",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 586,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "Stack v2",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 586,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2402.19173",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 587,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Issues, comments, PRs from GitHub Archive",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 588,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Repositories from the Software Heritage",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 589,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Documentation from crawling websites (e.g., PyPI, npm, devdocs.io)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 590,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Processing: remove binary files, malware, bot activity, deduplication, PII redaction, subsample PRs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 591,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Pair source code (especially low-resource languages like Nim) with shared low-level intermediate language (LLVM)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 592,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Include existing datasets (GSM8K, code contests, StackOverflow, arXiv, Wikipedia, OpenWebMath)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 594,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "Pull requests:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 595,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Linearize structured object to token sequence",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 596,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "- Add some inline context (e.g., file surrounding diff), subsample",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 597,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "images/stackv2-pr1.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 597,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "images/stackv2-pr2.png",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 597,
+      "section": "the_stack",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 600,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 601,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "Recall:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 602,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Almost all data on the Internet is copyrighted.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 603,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Some of it is permissively licensed.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 604,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Fair use of copyrighted content is not settled.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 606,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "Key question: can you train a good model using only permissively-licensed data?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 608,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "CommonPile",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 608,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2506.05209",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 609,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "images/commonpile.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 610,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Collected 8TB dataset of permissively licensed data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 612,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "Subtleties:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 613,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- License laundering: redistribute copyrighted work under permissive license (hard to detect)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 614,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Collection licenses (Dolma is ODC-By) doesn't extend to individual",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 615,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Synthetic data from LMs trained on unlicensed data is unclear",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 617,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "images/comma-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 618,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "- Can do decently, but tough to compete without more tokens",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 618,
+      "section": "common_pile",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 40,
+      "section": "main",
+      "depth": 0,
+      "text": "Summary",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 41,
+      "section": "main",
+      "depth": 0,
+      "text": "- Key lesson: Data does not fall from the sky. You have to work to get it.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 42,
+      "section": "main",
+      "depth": 0,
+      "text": "- Live service → raw data → processed data (transformation, filtering, deduplication)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 43,
+      "section": "main",
+      "depth": 0,
+      "text": "- Data is the key ingredient that differentiates language models",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 44,
+      "section": "main",
+      "depth": 0,
+      "text": "- Legal and ethical issues (e.g., copyright and privacy)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 45,
+      "section": "main",
+      "depth": 0,
+      "text": "- Much of this pipeline is heuristic, many opportunities to improve!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 45,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

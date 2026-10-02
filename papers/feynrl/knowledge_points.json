@@ -1,0 +1,1589 @@
+{
+  "paper": "feynrl",
+  "title": "Trust the Batch, On- or Off-Policy: P3O for RL post-training (Fakoor, Aubry, Stranges, Smola, 2026)",
+  "version": "0.1.0",
+  "authoring_note": "Anchors follow sources.json: feynrl:§N / feynrl:eqN / feynrl:pN / feynrl:figN / feynrl:tableN for the paper (verified on page images for pages 2-9; feynrl:abstract, feynrl:table3, feynrl:table7, feynrl:§B, feynrl:§D come from the arXiv HTML summary and carry basis 'inference'), repo-relative file:line for external/FeynRL at sha dfe85351 (checked by atlas/tools/check_anchors.py). Statuses: 'said' prose claim, 'computed' equation, 'implemented' code, 'shown' figure/table, 'supplement' prerequisite the paper uses without stating. Cross-thread prerequisites are external_prerequisites with ids feynrl:<kp-id> into atlas/repos/feynrl. Numeric prompt answers were computed by hand from Eq. 11/12 with a four-token toy batch (ratios 4,1,1,1: ESS = 49/76 = 0.645) and checked against calculate_ess's formula. course_path maps the paper's stops onto CS336 Lecture 16 (atlas/lectures/lecture_16/knowledge_points.json, ids lecture_16:<kp-id>); the course states REINFORCE variance, PPO's clip, GRPO's z-score and the per-token KL but never importance sampling, ESS or P3O, so most paper stops are 'not_covered' there and are listed as such.",
+  "knowledge_points": [
+    {
+      "id": "feynrl-two-concerns",
+      "label": "Two concerns a fixed clip conflates: trust region and off-policy reliability",
+      "kind": "definition",
+      "statement": "RL post-training fragility traces to two distinct concerns, a trust-region concern (each update should not move the policy far from its current value, whatever the data) and an off-policy concern (data from older or different behavior policies should count only to the extent it stays reliable), and PPO-style objectives handle both with one fixed clip range chosen before training.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§1",
+            "role": "claim",
+            "quote": "The first is a trust-region concern, that each gradient update should not move the policy too far from its current value, regardless of where the data come from. The second is an off-policy concern, that data collected by older or different behavior policies should influence the current update only to the extent that the update remains reliable."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p2",
+            "role": "claim",
+            "quote": "These methods conflate the two concerns inside a single fixed-clip mechanism, where a fixed range bounds the per-step policy change and also caps the off-policy variance."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p2",
+            "role": "claim",
+            "quote": "The premise of this paper is that fixed clipping itself, not the value of the clip range, is what causes the fragility"
+          },
+          {
+            "source": "arxiv_html",
+            "ref": "feynrl:abstract",
+            "role": "claim",
+            "quote": "Neither concern is a constant to set in advance, and their severity is reflected in the policy-ratio distribution of the current batch."
+          }
+        ],
+        "filtering_note": "Page 1 (the abstract and the opening of §1) is not in the page-image set; the abstract quote comes from the arXiv abstract page and is the only inference-grade anchor here. The paper names the concerns on page 2 and immediately attributes the conflation to [25, 26] (PPO, GRPO) without a worked example; the worked example is deferred to §3 (Eqs. 9-10)."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:supp-on-off-policy",
+          "note": "on-policy vs off-policy in FeynRL's policy_version terms"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The trust-region concern and the off-policy concern are the same thing: both say 'do not move too far from the data policy'.",
+          "why_wrong": "The trust region bounds the size of one update relative to the current policy even when the data are fresh; off-policy correction weights data by how reliable they are even when the update is tiny. A fixed clip sets both with one number, so fixing one regime mis-sets the other (§3, p5)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A batch is perfectly on-policy (rollouts sampled from the current weights, no reuse) but the learning rate is large. Which of the two concerns is still live, and what should a mechanism addressing only that concern bound?",
+          "format": "short",
+          "answer": "The trust-region concern: the per-update change of the policy (how far pi_theta moves from its current value) must still be bounded; no off-policy reweighting is needed because the data are reliable.",
+          "why": "The paper separates the two concerns precisely so that an on-policy batch triggers only the trust-region mechanism; in Eq. 12 the regularizer coefficient (1 - e_B) goes to zero in that case while the trust region is still kept by the update size (§3 p5)."
+        },
+        "transfer": {
+          "q": "Changed case: rollouts were generated by a policy three optimizer steps old, and the optimizer takes a very small step. Which concern dominates now, and what quantity would you want a mechanism to read from the batch to set its strength?",
+          "format": "short",
+          "answer": "The off-policy concern dominates; the mechanism should read how far the per-token ratios pi_theta/pi_b have spread from uniform (the paper's choice is the ESS of those ratios), not the step size.",
+          "why": "Stale data make the ratios concentrate on a few tokens regardless of the step size; the paper's premise is that this severity is visible in the ratio distribution of the batch and should set the correction, instead of a clip range fixed in advance.",
+          "varies": "Which of the two concerns is active: a fresh batch with a big step (trust region) versus a stale batch with a tiny step (off-policy).",
+          "invariant": "The two concerns are independent axes; the batch's own ratio statistics, not a pre-set constant, indicate the off-policy severity.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A team finds that on stale replay batches most tokens fall outside a fixed symmetric clip of 0.2, so they set the clip to 0.6 for the whole run. On the batches that are fresh, what has this change done?",
+          "format": "choice",
+          "choices": [
+            "Nothing at all: on fresh data the ratios stay near 1, so neither of the two concerns is live",
+            "Loosened the trust region: a fresh token's ratio can now reach 1.6 before its gradient stops",
+            "Weakened the off-policy guard: fresh tokens now receive larger importance weights than before",
+            "Loosened both by the same amount, since the two concerns are one constraint on one quantity"
+          ],
+          "answer": "Loosened the trust region: a fresh token's ratio can now reach 1.6 before its gradient stops",
+          "why": "The paper separates a trust-region concern (each update should not move the policy far from its current value regardless of where the data come from) from an off-policy concern (stale or foreign data should count only as far as it is reliable) (§1). A fixed clip handles both with one number (p2), so widening it to rescue stale batches also widens the per-step bound on fresh batches; p5: too large an eps lets high-variance updates destabilize training, too small clips useful tokens, and no single value fits both regimes. On fresh data the importance weights are about 1, so the off-policy side is unaffected; what changed is how far one update may push a token (ratio up to 1 + 0.6).",
+          "distractor_from": "Option 2: treats the trust region as irrelevant when data are fresh (it bounds the update even on fresh data). Option 3: attributes the change to the off-policy concern, which barely acts on fresh data. Option 4: the misconception that the two concerns are the same thing.",
+          "targets_misconception": "The trust-region concern and the off-policy concern are the same thing.",
+          "varies": "functional: asks what a clip change meant to fix stale data does to fresh data, instead of classifying a scenario by its dominant concern",
+          "invariant": "One fixed clip sets both the per-update trust region and the off-policy cap, so tuning it for one regime mis-sets the other.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Of the paper's two concerns, which one would still apply if every batch were perfectly on-policy, and why?",
+            "answer": "The trust-region concern: each update should not move the policy far from its current value, whatever the data."
+          },
+          {
+            "q": "Why does the paper argue that re-tuning the clip range cannot remove the fragility?",
+            "answer": "Because the cause is fixed clipping itself: one range chosen before training must serve both the trust-region and the off-policy concern, not the particular value."
+          }
+        ],
+        "self_explain": "Why would re-tuning epsilon per task not resolve a problem that lies in the clip being fixed before training?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "distinguish",
+          "ref": "feynrl:§1"
+        },
+        {
+          "type": "example",
+          "action": "compare",
+          "ref": "feynrl:table1"
+        }
+      ]
+    },
+    {
+      "id": "feynrl-off-policy-sources",
+      "label": "Where off-policy data comes from in large-model RL (reuse, staleness, engine mismatch)",
+      "kind": "definition",
+      "statement": "In large-model RL post-training the optimizer rarely sees exactly on-policy data: completions are reused across several optimizer steps, rollouts come from older or different policies (async overlap, demonstrations), and the rollout engine differs from the training engine in numerical precision (BF16 train / FP8 rollout), sampling temperature or architecture, so pi_b != pi_theta even for fresh rollouts.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§1",
+            "role": "claim",
+            "quote": "Off-policy data are common in practice and arise from several sources, including optimizer steps reused across iterations, demonstrations or rollouts from older or heterogeneous policies (the batch-RL setting), and practical mismatches between the rollout and training engines such as numerical precision, sampling strategy, or architectural differences"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§2",
+            "role": "claim",
+            "quote": "In practice the data we train on is rarely drawn from pi_theta exactly. This may be because we take several optimizer steps on each batch of completions and reuse them across training iterations"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§4.3",
+            "role": "claim",
+            "quote": "Sampling rollouts at temperature T != 1.0 uniformly rescales token log-probabilities, shifting the per-token ratio rho_t (Eq. (7)) by a constant factor across the entire batch."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p8",
+            "role": "claim",
+            "quote": "rollouts generated by an FP8-quantized policy carry different token-level log-probabilities than the BF16 training model, shifting the per-token ratio rho_t (Eq. (7)) away from one"
+          }
+        ],
+        "filtering_note": "The paper lists the sources but never quantifies how far from one the ratios actually get in any of them (no ratio histogram, no ESS trace is plotted). The §4.3 statement that temperature shifts rho_t 'by a constant factor across the entire batch' is loose: log pi_T(y_t) = log pi(y_t)/T - log Z_T(c_<t), so the shift depends on each token's probability and context normalizer; a literally constant factor would leave ESS (Eq. 11) unchanged (see feynrl-normalized-ess transfer). The FeynRL repo thread (staleness-budget-max-lag) supplies the async mechanism the paper only names."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-two-concerns",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:supp-on-off-policy",
+          "note": "policy_version vs loaded_version makes 'older policy' concrete"
+        },
+        {
+          "kp": "feynrl:staleness-budget-max-lag",
+          "note": "max_lag is the repo's bound on how many policy versions a batch can mix"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "If rollouts are regenerated after every optimizer step the data are on-policy, so ratios are exactly one.",
+          "why_wrong": "Even fresh rollouts are off-policy when the rollout engine computes different probabilities than the trainer (FP8 vs BF16, different kernels, temperature != 1); the paper's Fig. 3 experiment creates off-policy data with no reuse at all."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A pipeline regenerates rollouts after every optimizer step with a vLLM engine quantized to FP8 while training in BF16. Before seeing any ratio, predict: will the per-token ratio pi_theta/pi_b be exactly 1 for every token, mostly near 1 with some spread, or far from 1 for most tokens?",
+          "format": "choice",
+          "choices": [
+            "Exactly 1 for every token, since the weights are the same version",
+            "Mostly near 1, spreading with sequence length and FP8 error",
+            "Far from 1 for most tokens, since FP8 rounds every probability"
+          ],
+          "answer": "Mostly near 1, spreading with sequence length and FP8 error",
+          "why": "Mostly near 1, with a spread that grows with sequence length and quantization error. The weights are the same version, so there is no staleness, but the FP8 engine assigns different token-level probabilities than the BF16 trainer; the paper names this precision mismatch as an off-policy source and shows its effect only at 16,384-token rollouts (Fig. 3 caption, p8).",
+          "distractor_from": [
+            "'Exactly 1' <- misconception: 'If rollouts are regenerated after every optimizer step the data are on-policy, so ratios are exactly one.'",
+            "'Far from 1 for most tokens' <- plausible: overstates the mismatch, which the paper says accumulates over long rollouts"
+          ]
+        },
+        "transfer": {
+          "q": "Changed case: same BF16/FP8 setup, but now FeynRL runs in overlap mode with max_lag = 2 so the replay buffer mixes up to three policy versions. Name the two independent sources of pi_b != pi_theta now present and say which one a staleness budget bounds.",
+          "format": "short",
+          "answer": "Precision mismatch (FP8 rollout vs BF16 training) and version staleness (samples generated by up to two earlier policy versions); max_lag bounds only the staleness, not the precision mismatch.",
+          "why": "max_lag evicts samples whose policy_version is too old (repo thread staleness-budget-max-lag), which caps one source; the engine mismatch is present in every sample regardless of version, which is why the paper argues a batch statistic must measure the combined effect instead of a budget set per source.",
+          "varies": "Adds a second off-policy source (version staleness via overlap mode) on top of the precision mismatch.",
+          "invariant": "Each source shifts the per-token ratio independently; a budget on one source leaves the other unmeasured.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A pipeline regenerates rollouts after every optimizer step and uses one completion for exactly one step. Rollout and training run the same BF16 kernels, but rollouts are sampled at temperature 0.6 while the trainer scores tokens at temperature 1. What makes pi_b differ from pi_theta here?",
+          "format": "choice",
+          "choices": [
+            "Version staleness, since the rollouts come from a policy one or more versions older",
+            "Nothing, since rollouts made fresh every step keep every per-token ratio exactly one",
+            "Completion reuse, since each batch of rollouts still serves several optimizer steps",
+            "The sampling temperature, which reshapes the rollout distribution away from pi_theta"
+          ],
+          "answer": "The sampling temperature, which reshapes the rollout distribution away from pi_theta",
+          "why": "The paper lists off-policy sources as reuse across optimizer steps, older or heterogeneous behavior policies, and rollout/training engine mismatches such as numerical precision and sampling temperature (§1). §4.3: sampling at T != 1.0 rescales token log-probabilities and shifts the per-token ratio rho_t away from one. The question rules out reuse (one step per completion), staleness (fresh every step) and precision (same BF16 kernels), leaving temperature.",
+          "distractor_from": "Option 2: the misconception that regenerating every step makes data on-policy with ratio exactly 1. Options 3 and 4: reuse and staleness, the two sources the question explicitly removes.",
+          "targets_misconception": "If rollouts are regenerated after every optimizer step the data are on-policy, so ratios are exactly one.",
+          "varies": "functional: a single engine-side source (temperature) with reuse and staleness removed, instead of naming two coexisting sources under FP8 plus max_lag",
+          "invariant": "pi_b != pi_theta whenever the distribution that sampled the tokens differs from the one being trained, whether through reuse, staleness, precision or sampling settings.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name two ways the rollout engine can differ from the training engine, so that pi_b != pi_theta even for fresh rollouts.",
+            "answer": "Any two of: numerical precision (e.g. BF16 training, FP8 rollout), sampling strategy (temperature), architecture."
+          },
+          {
+            "q": "Which two concrete engine mismatches does the paper turn into experiments?",
+            "layer": "detail",
+            "answer": "Sampling temperature (T = 0.6 and 1.2 instead of 1.0) and BF16 training with FP8 rollout generation."
+          }
+        ],
+        "self_explain": "Why does the paper call discarding stale data a loss of sample efficiency rather than a safe default?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "predict-trend",
+          "ref": "fixture:rollout-train-timeline",
+          "notice": "In overlap mode (step s1, s2) the buffer bar holds samples from more than one policy version at the moment training reads it; that version gap is the staleness source, and it is absent in sync mode (s0)."
+        },
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "feynrl:eq7"
+        }
+      ]
+    },
+    {
+      "id": "feynrl-importance-ratio",
+      "label": "Importance sampling restores unbiasedness; per-token ratios are unbounded above",
+      "kind": "mechanism",
+      "statement": "Evaluating the loss under pi_theta on samples from pi_b gives a biased gradient; multiplying each sample by pi_theta/pi_b (Eqs. 5-6) restores unbiasedness, and in the token-level MDP the correction is the per-token ratio rho_t = pi_theta(y_t|x,y_<t)/pi_b(y_t|x,y_<t) (Eq. 7), which is bounded below by 0 but unbounded above, so a few tokens unlikely under pi_b can dominate the estimate.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq5",
+            "role": "computation",
+            "quote": "E_{x~pi_theta}[f(x)] = ∫ pi_theta(x) f(x) dx = ∫ pi_b(x) (pi_theta(x)/pi_b(x)) f(x) dx = E_{x~pi_b}[(pi_theta(x)/pi_b(x)) f(x)]"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq7",
+            "role": "computation",
+            "quote": "rho_t(theta) = pi_theta(y_t | x, y_<t) / pi_b(y_t | x, y_<t)"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§2",
+            "role": "claim",
+            "quote": "the per-token ratios rho_t(theta) are bounded below by zero and unbounded above, so a few tokens that were unlikely under pi_b can produce ratios many orders of magnitude larger than one and dominate the gradient estimate."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p4",
+            "role": "claim",
+            "quote": "the data was sampled from a behavior policy pi_b but the loss is evaluated under the current pi_theta, so the empirical gradient computed on samples from pi_b is a biased estimate of ∇_theta J(pi_theta)."
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L192-L196",
+            "role": "computation",
+            "quote": "raw_logratio = (logprobs - old_logprobs).to(torch.float32) ... ratio        = torch.exp(logratio)"
+          }
+        ],
+        "filtering_note": "Eq. 6 writes the sequence-level ratio pi_theta(y|x)/pi_b(y|x), a product of T token ratios; Eq. 7 then switches to the per-token ratio 'applied directly inside the per-token gradient' without stating that the per-token form is a different (lower-variance, biased for the sequence objective) estimator. The paper also assumes the Radon-Nikodym condition 'provided that d pi_theta / d pi_b is well defined' and never discusses tokens with pi_b = 0. The code computes the ratio as exp(logp - old_logp) in float32 on masked positions (repo thread supp-importance-ratio)."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-off-policy-sources",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:supp-importance-ratio",
+          "note": "exp(logp - logp_old) and why it is computed in log space"
+        },
+        {
+          "kp": "lecture_16:policy-gradient-variance",
+          "note": "REINFORCE E[R grad log p] and its variance (slide p5) is the estimator Eq. 5-7 reweights"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Importance weights are symmetric: a token twice as likely under pi_b as under pi_theta is as harmful as one twice as likely under pi_theta.",
+          "why_wrong": "Ratios live in [0, inf): the first token gets weight 0.5 (bounded harm), the second weight 2, and a token with pi_b = 1e-4, pi_theta = 0.1 gets weight 1000. The variance problem is one-sided, which is why Eq. 12 caps only from above (min{rho_t, e_B})."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Four tokens in a batch have log pi_theta - log pi_b equal to (ln 4, 0, 0, 0). Compute the four importance ratios and the fraction of the total weight carried by the first token.",
+          "format": "short",
+          "answer": "Ratios (4, 1, 1, 1); the first token carries 4/7 ≈ 57% of the total weight.",
+          "why": "rho_t = exp(log pi_theta - log pi_b); one token with a 4x ratio already outweighs the other three combined, which is the 'few tokens dominate' remark on p4."
+        },
+        "transfer": {
+          "q": "Changed case: the same four tokens but the sign of every log-ratio is flipped, (−ln 4, 0, 0, 0). What are the ratios and what fraction of the total weight does the first token carry now?",
+          "format": "short",
+          "answer": "Ratios (0.25, 1, 1, 1); the first token carries 0.25/3.25 ≈ 7.7%.",
+          "why": "Flipping the sign of the log-ratio inverts the ratio: a token the current policy likes less than pi_b did is down-weighted toward 0 and cannot dominate. The asymmetry (57% vs 7.7%) is why the paper worries only about the upper tail.",
+          "varies": "Sign of the log-ratio (token now less likely under pi_theta than under pi_b).",
+          "invariant": "rho_t = exp(log pi_theta - log pi_b) and total weight is the sum of ratios.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "Token X has pi_theta = 0.3 and pi_b = 0.6; token Y has pi_theta = 0.6 and pi_b = 0.3. By what factor is Y's importance weight rho_t larger than X's? Type only the number.",
+          "format": "number",
+          "answer": "4",
+          "tolerance": 0.02,
+          "value": 4,
+          "why": "Eq. 7: rho_t = pi_theta/pi_b. X: 0.3/0.6 = 0.5; Y: 0.6/0.3 = 2. Y/X = 2/0.5 = 4. The two tokens are mirror images in probability, yet their weights differ by a factor of 4: the ratio is bounded below by 0 and unbounded above (§2), so a token the behavior policy under-sampled is up-weighted while the mirror case is only halved. A symmetric view would answer 1.",
+          "targets_misconception": "Importance weights are symmetric: a token twice as likely under pi_b is as harmful as one twice as likely under pi_theta.",
+          "varies": "modality: given as raw probabilities rather than log-ratios, and asks for the ratio between two mirror-image tokens instead of a weight share",
+          "invariant": "rho_t = pi_theta/pi_b lives in [0, inf); swapping numerator and denominator inverts the weight, so the upper tail dominates.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Write the per-token importance ratio rho_t(theta).",
+            "answer": "rho_t(theta) = pi_theta(y_t | x, y_<t) / pi_b(y_t | x, y_<t)"
+          },
+          {
+            "q": "Why do tokens that were unlikely under pi_b cause the variance problem of per-token importance ratios?",
+            "answer": "rho_t = pi_theta/pi_b, so a small pi_b gives a huge ratio and a few such tokens dominate the estimate (the ratio is bounded below by 0 but not above)."
+          }
+        ],
+        "self_explain": "Why does multiplying by pi_theta/pi_b make the expectation under pi_b equal the expectation under pi_theta, and what does that argument need from pi_b?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "feynrl:eq5-7"
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "algs/P3O/p3o.py:L192-L196"
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:feynrl_paper--batch-ess",
+          "notice": "Read the share column: one ratio of 4 against three ratios of 1 carries 57% of the weight. Tick the flip box and the same token, now at 1/4, carries 7.7%. A ratio can grow without limit but can only shrink to 0, so the imbalance runs one way."
+        }
+      ]
+    },
+    {
+      "id": "feynrl-fixed-clip-regimes",
+      "label": "What a fixed clip does per token: zero gradient outside the band, no value fits both regimes",
+      "kind": "mechanism",
+      "statement": "Under the PPO/GRPO surrogate (Eq. 4) a token with A > 0 contributes −min(rho_t, 1+eps_h)A and a token with A < 0 contributes −max(rho_t, 1−eps_l)A (Eqs. 9-10), so once the ratio leaves [1−eps_l, 1+eps_h] the token's gradient is exactly zero; on a fresh batch rho_t ≈ 1 and the clip is rarely active, on a stale batch (eps_l, eps_h) decides what fraction of tokens contribute at all, and no single value suits both regimes.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq9",
+            "role": "computation",
+            "quote": "−min( pi(y_t|c_<t)/pi_old(y_t|c_<t), 1 + eps_h ) A"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq10",
+            "role": "computation",
+            "quote": "−max( pi(y_t|c_<t)/pi_old(y_t|c_<t), 1 − eps_l ) A"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3",
+            "role": "claim",
+            "quote": "Once rho_t > 1 + eps_h, the contribution hits the ceiling −(1 + eps_h) A, and the new policy gains no further credit by increasing the probability of the token."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p5",
+            "role": "claim",
+            "quote": "If (eps_l, eps_h) is too small, many tokens are clipped before they can contribute; if it is too large, high-variance importance-weighted gradients destabilize training. There is no single value appropriate across both regimes"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/GRPO/grpo.py:L174-L176",
+            "role": "computation",
+            "quote": "unclipped = ratio * adv ... clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
+          }
+        ],
+        "filtering_note": "The paper derives Eqs. 9-10 from Eq. 4 by sign of A but does not state the gradient explicitly; the zero gradient follows because clamp is flat outside the band and min picks the clipped branch there. It also does not say that the loss value is not zero when clipped (only the gradient is), which is the misconception the repo thread's grpo-clipped-loss already names. DAPO's asymmetric and GSPO's sequence-level clips are mentioned as re-parameterizations only (p5)."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-importance-ratio",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:grpo-clipped-loss",
+          "note": "the same min/clamp lines, with the unit test that pins pi_loss = -1.2 at ratio exp(10)"
+        },
+        {
+          "kp": "lecture_16:ppo-ratio-clip",
+          "note": "the course's statement of PPO's clip at 1 ± eps (slide p7)"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Clipping shrinks a large ratio's gradient to the clip value times A.",
+          "why_wrong": "The gradient is zero, not scaled: when the clipped branch is selected the surrogate is a constant (1+eps_h)A in theta. CISPO and P3O are the ones that scale (they weight log pi by a detached clipped ratio), see feynrl-p3o-vs-clip-family."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "eps_l = eps_h = 0.2. Three tokens have (rho_t, A) = (1.5, +1), (0.3, +1), (0.3, −1). For each, state whether the token's gradient under Eq. 4 is zero or non-zero.",
+          "format": "short",
+          "answer": "(1.5, +1): zero (above 1.2 with A > 0). (0.3, +1): non-zero (min picks rho_t A = 0.3, below the ceiling). (0.3, −1): zero (below 0.8 with A < 0, max picks the floor).",
+          "why": "For A > 0 only the upper edge clips (Eq. 9); for A < 0 only the lower edge clips (Eq. 10). The same ratio 0.3 is live or dead depending on the sign of A."
+        },
+        "transfer": {
+          "q": "Changed case: the batch is stale and 60% of tokens now have rho_t outside [0.8, 1.2]. Without changing eps, what happens to the fraction of tokens with non-zero gradient, and what two failure modes does the paper say you face when you try to fix it by moving eps?",
+          "format": "short",
+          "answer": "Roughly 60% of the tokens (those outside the band on the clipped side for their advantage sign) contribute no gradient; widening eps admits high-variance importance-weighted gradients, narrowing it clips even more tokens, and no single eps is right for both the fresh and the stale regime.",
+          "why": "The clip fraction is set by the ratio distribution, which eps cannot see; p5 states both failure modes and concludes eps must be tuned per task, model scale and mismatch degree. (In FeynRL this shows up as a rising clipfrac metric in overlap mode.)",
+          "varies": "Batch staleness: most ratios now sit outside the band instead of near 1.",
+          "invariant": "The clip band is fixed before training; the gradient is zero on the clipped side for every token outside it.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "PPO/GRPO surrogate (Eq. 4) with eps_l = 0.2 and eps_h = 0.28. Six tokens have (rho_t, A): (1.25, +1), (1.35, +1), (0.75, +1), (0.75, -1), (1.35, -1), (0.85, -1). How many of the six have exactly zero gradient? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "tolerance": 0.05,
+          "value": 2,
+          "why": "Eqs. 9-10: A > 0 contributes -min(rho_t, 1 + eps_h)A, flat (zero gradient) once rho_t > 1.28; A < 0 contributes -max(rho_t, 1 - eps_l)A, flat once rho_t < 0.8. (1.25, +1): below 1.28, live. (1.35, +1): above 1.28, zero. (0.75, +1): min picks rho_t, live. (0.75, -1): below 0.8, zero. (1.35, -1): max picks rho_t, live. (0.85, -1): above 0.8, live. Two zeros. Counting every token outside [0.8, 1.28] would give 4.",
+          "targets_misconception": "Clipping acts on every token whose ratio leaves the band, whatever the advantage sign.",
+          "varies": "domain: an asymmetric band and six tokens covering both sides of the band for both advantage signs",
+          "invariant": "A token's gradient vanishes only when its ratio leaves the band on the side its advantage pushes toward (above 1 + eps_h for A > 0, below 1 - eps_l for A < 0).",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "For a token with A > 0, at what ratio does the clipped objective stop giving credit for raising the token's probability?",
+            "answer": "rho_t > 1 + eps_h"
+          },
+          {
+            "q": "For a token with A < 0, which edge of the clip band is active, upper or lower?",
+            "answer": "The lower edge, 1 − eps_l (Eq. 10 uses max)."
+          }
+        ],
+        "self_explain": "Why does the paper say the clip serves a 'clean trust-region role' only in PPO's intended setting, where pi_old is a fresh snapshot?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:feynrl_paper--token-weight",
+          "notice": "Move ρ out of the band on the side that A's sign guards (above 1+ε_h when A > 0, below 1−ε_l when A < 0). GRPO's weight drops to exactly 0 there, shown as the thick orange segment. CISPO's weight stays at the band edge, and P3O's stays at min(ρ, e_B). On the other side, GRPO's weight keeps growing with ρ."
+        },
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "feynrl:eq9-10"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "algs/GRPO/grpo.py:L169-L176"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:feynrl_paper--batch-ess",
+          "notice": "Drag the common shift δ until every ratio leaves the band. GRPO's count of zero-gradient tokens rises to the tokens whose A-sign that side guards, and P3O's count stays 0. Widening ε_l and ε_h brings those tokens back, but at fresh-batch ratios a wider band also bounds less."
+        }
+      ]
+    },
+    {
+      "id": "supp-score-function-weighting",
+      "label": "Supplement: a detached weight on log pi gives the gradient w ∇log pi A, equal to ∇(rho A) when w = rho",
+      "kind": "mechanism",
+      "statement": "Because ∇_theta rho_t = rho_t ∇_theta log pi_theta(y_t|c_<t), the gradient of the ratio surrogate rho_t A equals rho_t ∇log pi_theta A, so writing the loss as −sg(w) log pi_theta A with a detached weight w yields the gradient −w ∇log pi_theta A: the two forms coincide when w = rho_t, and a capped w only rescales the REINFORCE direction by a positive factor instead of removing it.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3",
+            "role": "claim",
+            "quote": "the cap min{rho_t, e_B} in Eq. (12) only scales the score-function gradient by a positive factor: every token in the batch contributes to the update and no data is wasted."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq2",
+            "role": "computation",
+            "quote": "∇_theta J(pi_theta) = E[ Σ_t r(x,y) ∇_theta log pi_theta(y_t | x, y_<t) ]"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L204-L208",
+            "role": "computation",
+            "quote": "Unlike PPO, P3O clips the importance ratio and uses it as a weighting ... coefficient for the policy's log-probability more like policy gradient. ... rho = torch.clamp(ratio, min=0, max=ess_factor) ... pi_sum = -(rho.detach() * logprobs * adv * mask).sum()"
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L32",
+            "role": "claim",
+            "quote": "The clipped ratio acts as a non-negative weighting coefficient for the log-probability; it is detached so it does not contribute gradient itself. This is a REINFORCE-style score-function update with the weight bounded by ESS."
+          }
+        ],
+        "filtering_note": "The paper moves from Eq. 4's ratio form to Eq. 12's sg(·) log pi form and from Table 1 compares them row by row, but never writes the one-line identity ∇rho = rho ∇log pi that makes the rows comparable, nor that a detached coefficient contributes no gradient of its own. The student line adds it; the code comment at p3o.py L205-206 ('more like policy gradient') is the closest the repo comes to saying it."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "Detaching the ratio changes the update direction compared with the ratio surrogate.",
+          "why_wrong": "At the same theta the two gradients are identical when the weight equals the ratio; detaching only removes the second-order dependence through the weight, so what differs between PPO, CISPO and P3O is the value of the weight (clipped, capped) and whether a flat region kills the gradient, not the direction."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One token: rho_t = 1.5, A = +1, and g = ∇log pi_theta(y_t|c_<t). Give the gradient of (a) −rho_t A and (b) −sg(rho_t) log pi_theta A, in terms of g.",
+          "format": "short",
+          "answer": "(a) −1.5 g, (b) −1.5 g: identical.",
+          "why": "∇rho_t = rho_t ∇log pi_theta = 1.5 g, so ∇(−rho_t A) = −1.5 g; in (b) the detached 1.5 multiplies ∇log pi_theta directly."
+        },
+        "transfer": {
+          "q": "Changed case: same token (rho_t = 1.5, A = +1) but the weight is now sg(min{rho_t, 0.645}) instead of sg(rho_t). What is the gradient in terms of g, and how does it compare with PPO's clipped gradient at eps = 0.2?",
+          "format": "short",
+          "answer": "−0.645 g: a shorter step in the same REINFORCE direction. PPO at eps = 0.2 gives 0 for this token (1.5 > 1.2 with A > 0).",
+          "why": "The cap rescales the detached weight; the direction g is untouched and the magnitude stays positive. PPO's min/clamp makes the surrogate flat above 1+eps, so the token drops out entirely.",
+          "varies": "The detached weight is capped below the ratio (0.645 instead of 1.5).",
+          "invariant": "The gradient direction ∇log pi_theta A; the weight only sets the magnitude.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "One token with rho_t = 2.5 and A = -0.6; let g = ∇log pi_theta(y_t|c_<t). The gradient of the ratio surrogate loss -rho_t A (rho_t not detached) equals c · g. What is c? Type only the number.",
+          "format": "number",
+          "answer": "1.5",
+          "tolerance": 0.05,
+          "value": 1.5,
+          "why": "∇rho_t = rho_t ∇log pi_theta = rho_t g, so ∇(-rho_t A) = -A rho_t g = -(-0.6)(2.5) g = 1.5 g. The detached form -sg(rho_t) log pi_theta A gives the same -A rho_t g = 1.5 g at this theta; a capped weight would only shrink the 2.5 factor (§3: the cap only scales the score-function gradient by a positive factor). Forgetting the rho_t factor from the chain rule gives 0.6.",
+          "targets_misconception": "Detaching the ratio changes the update direction compared with the ratio surrogate.",
+          "varies": "functional: differentiates the undetached ratio surrogate with a negative advantage, instead of applying a capped detached weight",
+          "invariant": "∇rho = rho ∇log pi, so the ratio surrogate and the detached-weight form share the score-function direction and differ only in the weight's value.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Express ∇_theta rho_t in terms of rho_t and ∇_theta log pi_theta.",
+            "answer": "∇_theta rho_t = rho_t ∇_theta log pi_theta(y_t|c_<t)"
+          },
+          {
+            "q": "What gradient does the term −sg(w) log pi_theta A produce for a token?",
+            "answer": "−w ∇_theta log pi_theta(y_t|c_<t) A, with w treated as a constant."
+          }
+        ],
+        "self_explain": "Why can a weighting scheme that never zeroes a token still be called a trust region?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "feynrl:eq2"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "algs/P3O/p3o.py:L204-L208"
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:feynrl_paper--token-weight",
+          "notice": "The coefficient on g is −w·A for every objective, and the unclipped ratio surrogate has w = ρ. Lowering e_B below ρ shrinks P3O's coefficient but never flips its sign. Only GRPO's flat branch sets the coefficient to exactly 0."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_16:policy-gradient-variance",
+          "note": "the score-function form grad log p the weight multiplies"
+        }
+      ]
+    },
+    {
+      "id": "feynrl-normalized-ess",
+      "label": "Normalized ESS of the batch ratios: (mean rho)² / mean rho² in [1/|B|, 1], detached",
+      "kind": "quantity",
+      "statement": "ESS(B; theta) = Ê_B[rho_t]² / Ê_B[rho_t²] over the valid response tokens B of the current training batch (Eq. 11) lies in [1/|B|, 1], equals 1 when all ratios are equal and falls when a few large ratios dominate; P3O uses its detached value e_B = sg(ESS), computed in FeynRL as (Σw)² / (Σw² + 1e-8) / n with the three sums all-reduced across data-parallel ranks.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq11",
+            "role": "computation",
+            "quote": "ESS(B; theta) = Ê_B[rho_t]² / Ê_B[rho_t²] ∈ [1/|B|, 1]"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3",
+            "role": "claim",
+            "quote": "We use e_B = sg(ESS(B; theta)) to denote its detached value (treated as a constant for backpropagation), where sg(·) is the stop-gradient operator. The ESS is close to one when the batch is on-policy and falls when a few large ratios dominate"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L107-L135",
+            "role": "computation",
+            "quote": "valid_ratios = ratio[mask_bool] ... torch.distributed.all_reduce(local_stats_per_rank, op=torch.distributed.ReduceOp.SUM) ... ess = (sum_w**2) / (sum_w_2 + 1e-8) / total"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L131-L132",
+            "role": "computation",
+            "quote": "if total < 0.5 or not math.isfinite(sum_w) or not math.isfinite(sum_w_2) or not math.isfinite(total): ... return 1.0"
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L45",
+            "role": "claim",
+            "quote": "\\text{ESS} = \\frac{\\left(\\sum_i w_i\\right)^2}{n \\cdot \\sum_i w_i^2} \\in \\left[\\tfrac{1}{n}, 1\\right],"
+          }
+        ],
+        "filtering_note": "The paper states the bounds [1/|B|, 1] without proof (Cauchy-Schwarz: (Σw)² ≤ n Σw², with equality iff all w equal; the lower bound is attained when one token carries all the weight). It defines B as the 'current training batch'; in the code B is one micro-batch's valid tokens pooled across DP ranks via all_reduce (L124-L125), so the statistic is per micro-batch step, not per epoch. The code's fallback returns ESS = 1.0 (no capping, no KL) when there are no valid tokens or any sum is non-finite (L131-L132), a choice the paper does not mention. Eq. 11 is scale-free: multiplying every ratio by the same constant leaves ESS unchanged, which the §4.3 'constant factor' wording about temperature glosses over."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-importance-ratio",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "ESS = 1 means every ratio equals 1, i.e. the batch is exactly on-policy.",
+          "why_wrong": "ESS = 1 means the ratios are all equal, whatever their common value; a batch with every ratio 0.5 has ESS = 1. ESS measures concentration of weight across tokens, not distance of the ratios from one."
+        },
+        {
+          "belief": "ESS counts how many tokens are in the batch.",
+          "why_wrong": "It is normalized by |B| and lies in [1/|B|, 1]; the token count is fixed while ESS moves with how unevenly the ratios are spread (the bundle's own notice: 'the token count stays fixed while ratio concentration lowers normalized ESS')."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A micro-batch has four valid tokens with ratios (4, 1, 1, 1). Compute the normalized ESS to three decimals.",
+          "format": "number",
+          "answer": "0.645",
+          "tolerance": 0.01,
+          "why": "Σw = 7, Σw² = 19, n = 4: (7²)/(19·4) = 49/76 = 0.645. One 4x token drags ESS from 1 down to 0.645 because weight is concentrated on it."
+        },
+        "transfer": {
+          "q": "Changed case: every ratio in that batch is multiplied by 2, giving (8, 2, 2, 2). Compute the ESS to three decimals and say what this implies about a mismatch that rescaled all ratios by the same factor.",
+          "format": "number",
+          "answer": "0.645",
+          "tolerance": 0.01,
+          "why": "Σw = 14, Σw² = 76: 196/(76·4) = 0.645, unchanged. Eq. 11 is invariant to a common scale, so a mismatch that literally multiplied every ratio by a constant would be invisible to ESS; temperature and FP8 mismatches are detected because they change ratios unevenly across tokens.",
+          "varies": "All ratios rescaled by a common factor (scale of the batch).",
+          "invariant": "The relative spread of the ratios, which is all Eq. 11 measures.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "A batch has two valid tokens with ratios 1 and 3. What is its normalized ESS?",
+            "answer": "0.8: mean rho = 2, mean rho^2 = 5, so 4/5."
+          },
+          {
+            "q": "A batch of |B| = 4 tokens has ratios 2, 0, 0, 0. What is its normalized ESS, and where does that sit in the possible range?",
+            "answer": "0.25 = 1/|B|, the minimum: one token carries all the weight (the maximum, 1, needs all ratios equal)."
+          },
+          {
+            "q": "In p3o.py, which three scalars are all-reduced across ranks to form the ESS?",
+            "layer": "detail",
+            "answer": "Σ ratio, Σ ratio² and the number of valid tokens n."
+          }
+        ],
+        "self_explain": "Why does P3O detach e_B (sg) rather than let gradients flow through the ESS statistic?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "feynrl:eq11"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "algs/P3O/p3o.py:L107-L135"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:feynrl_paper--batch-ess",
+          "notice": "Move the common shift δ. Every ratio, Σw and Σw² change, but ESS stays where it was. Raise the spread s, which makes the ratios unequal, and ESS falls toward 1/n."
+        }
+      ]
+    },
+    {
+      "id": "feynrl-p3o-objective",
+      "label": "The P3O objective: cap min{rho_t, e_B} on the score-function weight, (1 − e_B) KL to the behavior policy",
+      "kind": "mechanism",
+      "statement": "P3O (Eq. 12) replaces the fixed clip of Eq. 4 with two terms driven by one batch statistic: the per-token score-function weight sg(min{rho_t, e_B}) on log pi_theta(y_t|c_<t) A, and a regularizer (1 − e_B) KL(pi_theta || pi_old) toward the behavior policy, so on a fresh batch (e_B ≈ 1) it is a nearly unclipped policy gradient with no pull-back and on a stale batch (e_B → 0) the weights are capped low and the KL pull dominates; in FeynRL this is rho = clamp(ratio, 0, ess_factor); pi_sum = −(rho.detach() · logprobs · adv · mask).sum(); loss = pi_sum − ent_coeff·ent_sum + kl_coeff·kl_sum_ref + (1 − ess_factor)·kl_sum_behavioral.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq12",
+            "role": "computation",
+            "quote": "L_P3O(theta) = E_{x, y~pi_old}[ Σ_t ( −sg(min{rho_t, e_B}) log pi_theta(y_t|c_<t) A + (1 − e_B) KL(pi_theta(·|c_<t) || pi_old(·|c_<t)) ) ]"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3",
+            "role": "claim",
+            "quote": "First, it eliminates the fixed clip range (eps_l, eps_h) entirely, replacing it with the data-driven cap e_B that adapts to the current batch. Second, it adds a regularizer with coefficient (1 − e_B) that is large precisely when the batch is most off-policy and vanishes on fresh data."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p5",
+            "role": "claim",
+            "quote": "We adopt the P3O objective of [7], applied here to large-model post-training for the first time."
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L207-L208",
+            "role": "computation",
+            "quote": "rho = torch.clamp(ratio, min=0, max=ess_factor) ... pi_sum = -(rho.detach() * logprobs * adv * mask).sum()"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L200-L202",
+            "role": "computation",
+            "quote": "kl_dist_behavioral = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=old_logprobs) ... kl_sum_behavioral  = (kl_dist_behavioral * mask).sum()"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L223",
+            "role": "computation",
+            "quote": "loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum_ref +  (1 - ess_factor) * kl_sum_behavioral"
+          },
+          {
+            "source": "rl_readme",
+            "ref": "algs/RL/README.md:L24",
+            "role": "claim",
+            "quote": "\\mathrm{KL}(\\pi \\,\\|\\, \\pi_{\\mathrm{ref}}) \\approx \\log(\\pi/\\pi_{\\mathrm{ref}}) + \\pi_{\\mathrm{ref}}/\\pi - 1."
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L8",
+            "role": "claim",
+            "quote": "When data is fresh, ESS ≈ 1: the cap is loose and the trust region is inactive, so learning behaves like standard policy gradient. As data ages, ESS drops: the cap tightens and the trust region takes over"
+          }
+        ],
+        "filtering_note": "The paper writes KL(pi_theta || pi_old) as an exact per-token KL 'in the same form as Eq. (8)'; the code uses Schulman's single-sample estimator log(pi/pi_old) + pi_old/pi − 1 at the realized token (common.py via compute_kl_distance), so the implemented regularizer is a Monte-Carlo estimate, not the full-vocabulary KL. The paper's Eq. 12 has no entropy or reference-KL term; the code adds both as optional terms (ent_coeff, kl_coeff), matching README L18. Note that e_B ≤ 1 always, so even an exactly on-policy token with rho_t = 1 is capped at e_B < 1 whenever the batch is not perfectly uniform; the paper's phrase 'behaves like an on-policy update on fresh data' is approximate."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-normalized-ess",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "feynrl-fixed-clip-regimes",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-score-function-weighting",
+          "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:kl-reference-penalty",
+          "note": "the same compute_kl_distance estimator, there applied to the frozen reference"
+        },
+        {
+          "kp": "feynrl:group-relative-advantage",
+          "note": "adv here is the zscore from the replay buffer"
+        },
+        {
+          "kp": "lecture_16:per-token-kl-reward-shaping",
+          "note": "the course's per-token KL is toward the reference model; P3O's (1 - e_B) KL is toward the behavior policy"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "P3O clips the ratio into [1 − eps, 1 + eps] like PPO, just with eps computed from the batch.",
+          "why_wrong": "The cap is one-sided and absolute: rho is clamped to [0, e_B] with e_B ≤ 1, so ratios above e_B (including rho_t = 1) are capped and ratios below are kept as they are; there is no lower edge and no band around 1."
+        },
+        {
+          "belief": "The (1 − e_B) KL term pulls toward the frozen reference model pi_theta_0.",
+          "why_wrong": "It pulls toward the behavior policy pi_old that generated the batch (old_logprobs in the code); the reference-model KL is a separate optional term with its own fixed kl_coeff."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Batch ESS e_B = 0.645, A = +1 for all tokens. Give the detached score-function weight min{rho_t, e_B} for tokens with rho_t = 4, 1.5, 1.0 and 0.3, and the coefficient on the behavioral KL.",
+          "format": "short",
+          "answer": "Weights 0.645, 0.645, 0.645, 0.3; KL coefficient 1 − 0.645 = 0.355.",
+          "why": "Everything above e_B is capped at e_B (including the on-policy ratio 1.0), everything below passes through; the same e_B sets the KL weight to 0.355."
+        },
+        "transfer": {
+          "q": "Changed case: a different micro-batch has ratios (1.1, 1.0, 0.9, 1.0), so e_B ≈ 0.995. For the token with rho_t = 1.1 and A = +1, give the P3O weight and the KL coefficient, then state what PPO at eps = 0.05 would give this token.",
+          "format": "short",
+          "answer": "P3O weight 0.995 (capped just below 1.1), KL coefficient ≈ 0.005; PPO at eps = 0.05 gives this token zero gradient (1.1 > 1.05).",
+          "why": "Σw = 4.0, Σw² = 4.02, ESS = 16/(4.02·4) = 0.995. On a nearly uniform batch the cap is loose and the pull-back almost vanishes, which is the 'behaves like an on-policy update' regime; a tight fixed eps would still discard the token.",
+          "varies": "Batch freshness: ratios nearly uniform (e_B ≈ 1) instead of concentrated (e_B = 0.645).",
+          "invariant": "Both terms read the same e_B; the weight is min{rho_t, e_B} and the KL coefficient is 1 − e_B.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A P3O batch has four valid tokens with ratios rho_t = (3, 1, 1, 1), and e_B is computed over exactly these tokens with Eq. 11. What detached weight min{rho_t, e_B} does the token with rho_t = 1 receive in Eq. 12? Type only the number.",
+          "format": "number",
+          "answer": "0.75",
+          "tolerance": 0.05,
+          "value": 0.75,
+          "why": "Eq. 11: e_B = (Σrho)²/(|B| Σrho²) = 6²/(4 x 12) = 36/48 = 0.75 (Σrho = 6, Σrho² = 9 + 1 + 1 + 1 = 12). Eq. 12 weight: min{1, 0.75} = 0.75 (code: rho = clamp(ratio, 0, ess_factor), algs/P3O/p3o.py:L207). The cap is one-sided and absolute, so even a token with ratio exactly 1 is scaled down when the batch is concentrated; a PPO-style band around 1 would leave it at 1. (The behavioral KL coefficient would be 1 - 0.75 = 0.25.)",
+          "targets_misconception": "P3O clips the ratio into [1 - eps, 1 + eps] like PPO, just with eps computed from the batch.",
+          "varies": "functional: the learner must first compute e_B from the ratios, then apply the cap to a ratio-1 token",
+          "invariant": "P3O's weight is min{rho_t, e_B} with e_B <= 1 computed from the batch's ratios: a one-sided ceiling with no band around 1.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "On a fresh batch (e_B ≈ 1), what does P3O's objective reduce to?",
+            "answer": "A nearly unclipped policy gradient with almost no pull-back (the KL coefficient 1 − e_B ≈ 0)."
+          },
+          {
+            "q": "On a very stale batch (e_B → 0), what happens to P3O's score-function weights, and which term dominates?",
+            "answer": "The weights are capped near 0, and the (1 − e_B) KL pull toward the behavior policy pi_old dominates."
+          },
+          {
+            "q": "In p3o.py's total-loss line, what multiplies kl_sum_behavioral?",
+            "layer": "detail",
+            "answer": "(1 − ess_factor)."
+          }
+        ],
+        "self_explain": "Why does one statistic doing two jobs (cap and KL weight) remove a hyper-parameter rather than hide one?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "feynrl:eq12"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "algs/P3O/p3o.py:L192-L223"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:feynrl_paper--token-weight",
+          "notice": "P3O's green line is flat at e_B for every ρ above e_B, ρ = 1 included, and has no zero segment. Tick the KL box to add (1 − e_B)(1 − 1/ρ) to the gradient: it pulls a token with ρ > 1 back down, and the pull vanishes at e_B = 1."
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:feynrl_paper--batch-ess",
+          "notice": "One batch statistic sets both terms. The ESS line becomes the cap on every P3O weight, and 1 − e_B becomes the KL weight. A near-fresh batch (1.1, 1.0, 0.9, 1.0) gives e_B ≈ 0.995, so the cap barely binds and the KL pull nearly vanishes."
+        }
+      ]
+    },
+    {
+      "id": "feynrl-p3o-vs-clip-family",
+      "label": "P3O vs GRPO/DAPO, GSPO, Decoupled, CISPO: which quantities are fixed and which are batch-adaptive",
+      "kind": "comparison",
+      "statement": "Table 1 compares policy objectives by what is fixed before training: GRPO/DAPO fix (eps_l, eps_h) on the token ratio, GSPO fixes eps^seq on a sequence-level geometric-mean ratio, Decoupled fixes (eps_l, eps_h) on pi_theta/pi_prox plus a cap c_w on the outer behavior weight pi_prox/pi_b, while P3O's only control is the batch-adaptive e_B; in FeynRL the three loss lines differ in one expression each: GRPO min(ratio·A, clamp(ratio, 1−cl, 1+ch)·A), CISPO clamp(ratio, 1−cl, 1+ch).detach()·log pi·A, P3O clamp(ratio, 0, ess).detach()·log pi·A plus (1 − ess)·KL_behavioral.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:table1",
+            "role": "figure",
+            "quote": "Comparison of policy objectives ... Red/green: fixed hyper-parameters (high/low). Purple: auxiliary choices. Blue: batch-adaptive quantities."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3",
+            "role": "claim",
+            "quote": "GRPO [26] uses Eq. (4) with a symmetric range eps_l = eps_h. DAPO [34] relaxes the symmetry ... GSPO [38] moves the clipped ratio from the token level to the sequence level via a geometric mean, but introduces sequence-level analogues eps_l^seq, eps_h^seq that still must be chosen in advance."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p6",
+            "role": "claim",
+            "quote": "Crucially, while the clip in Eq. (4) discards the gradient on every token whose ratio falls outside (1 − eps_l, 1 + eps_h), the cap min{rho_t, e_B} in Eq. (12) only scales the score-function gradient by a positive factor"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/GRPO/grpo.py:L174-L176",
+            "role": "computation",
+            "quote": "clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/CISPO/cispo.py:L174-L175",
+            "role": "computation",
+            "quote": "clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) ... pi_sum = -(clipped_ratio.detach() * logprobs * adv * mask).sum()"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L207-L208",
+            "role": "computation",
+            "quote": "rho = torch.clamp(ratio, min=0, max=ess_factor) ... pi_sum = -(rho.detach() * logprobs * adv * mask).sum()"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L59-L61",
+            "role": "computation",
+            "quote": "# p3o does not use clip_low and clip_high in loss calculation ... self.clip_low = float(clip_low) ... self.clip_high = float(clip_high)"
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L102",
+            "role": "claim",
+            "quote": "`clip_low` / `clip_high` are stored but **not used in the P3O loss**. They control only the `clipfrac` monitoring metric"
+          }
+        ],
+        "filtering_note": "Table 1 omits CISPO, which the FeynRL repo implements and which is the closest relative of P3O's first term (same detached-weight-times-log-pi form, but with a fixed two-sided band instead of [0, ESS] and no behavioral KL); the comparison row for CISPO here is the atlas author's, from the code. Table 1 also 'omits auxiliary entropy and reference-policy KL terms', which all four FeynRL algorithms carry. GSPO's exact form is reproduced in Table 1 as −min(S A, clip(S, 1 − eps^seq, 1 + eps^seq) A), S(y) = exp((1/T) Σ_t log rho_t)."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-p3o-objective",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "feynrl-fixed-clip-regimes",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:cispo-vs-ppo-clip",
+          "note": "CISPO's detached clipped ratio, with the unit tests that pin it"
+        },
+        {
+          "kp": "feynrl:grpo-clipped-loss",
+          "note": "GRPO's min/clamp line"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "CISPO already removes the clip problem because it keeps a gradient on every token.",
+          "why_wrong": "CISPO keeps a gradient but its weight band [1 − eps_l, 1 + eps_h] is still fixed before training, and it has no off-policy regularizer; P3O's band edge is the batch ESS and the same statistic weights the KL."
+        },
+        {
+          "belief": "P3O ignores clip_low/clip_high, so the config values are dead.",
+          "why_wrong": "They still define the clipfrac metric (p3o.py L229-L231), which lets you read how many tokens P3O would have clipped under a PPO range; only the loss ignores them."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Count the objective hyper-parameters fixed before training in each Table 1 row: GRPO/DAPO, GSPO, Decoupled, P3O (ignore entropy and reference-KL coefficients).",
+          "format": "short",
+          "answer": "GRPO/DAPO: 2 (eps_l, eps_h; 1 if symmetric). GSPO: 2 (eps_l^seq, eps_h^seq). Decoupled: 3 (eps_l, eps_h, c_w) plus the auxiliary construction of pi_prox. P3O: 0.",
+          "why": "Table 1 colours the fixed quantities red/green and the auxiliary choice pi_prox purple; P3O's only coloured quantity is the blue, batch-adaptive e_B."
+        },
+        "transfer": {
+          "q": "Changed case: a token has rho_t = 0.5 with A = −1 (the policy already moved away from a bad token), batch e_B = 0.645, clip_low = clip_high = 0.2. Give the magnitude of the weight on ∇log pi for GRPO, CISPO and P3O.",
+          "format": "short",
+          "answer": "GRPO: 0 (0.5 < 0.8 with A < 0 selects the flat clipped branch). CISPO: 0.8 (clamped up to 1 − eps, detached). P3O: 0.5 (below the cap, passed through).",
+          "why": "Three different treatments of the same low ratio: GRPO drops it, CISPO lifts it to the band edge, P3O leaves it. Only P3O's weight equals the actual importance ratio here because its cap is one-sided.",
+          "varies": "A low ratio with negative advantage instead of a high ratio with positive advantage.",
+          "invariant": "The three loss lines; which branch each selects for the given (rho_t, A).",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "A token has rho_t = 1.3 and A = +1. Take clip_low = clip_high = 0.2 for GRPO and CISPO, and batch ESS e_B = 0.9 for P3O. What weight magnitude does each objective put on ∇log pi for this token?",
+          "format": "choice",
+          "choices": [
+            "GRPO 1.2, CISPO 1.2, P3O 0.9",
+            "GRPO 0, CISPO 1.2, P3O 0.9",
+            "GRPO 0, CISPO 1.2, P3O 1.1",
+            "GRPO 0, CISPO 0, P3O 0.9"
+          ],
+          "answer": "GRPO 0, CISPO 1.2, P3O 0.9",
+          "why": "GRPO: min(1.3 x 1, clamp(1.3, 0.8, 1.2) x 1) = 1.2 from the clamped branch, which is constant in theta, so the gradient weight is 0 (algs/GRPO/grpo.py:L174-L176; paper Eq. 9). CISPO: clamp(1.3, 0.8, 1.2).detach() = 1.2 multiplies log pi (algs/CISPO/cispo.py:L174-L175). P3O: clamp(1.3, 0, 0.9).detach() = 0.9 (algs/P3O/p3o.py:L207); the cap is the batch ESS, not a band around 1.",
+          "distractor_from": "Option 2: the misconception that clipping scales GRPO's gradient to the clip value instead of zeroing it. Option 3: the misconception that P3O clips into [1 - eps, 1 + eps] with eps = 1 - e_B = 0.1. Option 4: assumes CISPO drops out-of-band tokens like GRPO because its band is fixed.",
+          "targets_misconception": "Clipping shrinks a large ratio's gradient to the clip value times A.",
+          "varies": "domain: a high-ratio positive-advantage token instead of a low-ratio negative-advantage one",
+          "invariant": "GRPO's min-clip zeroes the gradient on the flat side; CISPO weights log pi by the detached ratio clamped to a fixed band; P3O weights it by the ratio capped from above at e_B.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which fixed quantity does the Decoupled objective add beyond (eps_l, eps_h), and on what ratio does it act?",
+            "answer": "A cap c_w on the outer behavior weight pi_prox/pi_b."
+          },
+          {
+            "q": "In FeynRL, what single expression differs between CISPO's and P3O's pi_sum lines?",
+            "layer": "detail",
+            "answer": "The clamp bounds: CISPO clamps ratio to [1 − clip_low, 1 + clip_high]; P3O clamps to [0, ess_factor]."
+          }
+        ],
+        "self_explain": "Why does GSPO's move to the sequence level not count as removing the clip in the paper's view?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "feynrl:table1"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "algs/CISPO/cispo.py:L164-L175"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "algs/P3O/p3o.py:L204-L208"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:feynrl_paper--token-weight",
+          "notice": "With one token on screen, compare the three weight curves at the same ρ. GRPO has a zero segment, CISPO is clamped to a band fixed before training, and P3O is capped at the batch's e_B. Only P3O's cap moves when you change the batch statistic, not a hyper-parameter."
+        }
+      ]
+    },
+    {
+      "id": "feynrl-same-loss-sync-async",
+      "label": "One objective for sync and async: no proximal snapshot, no behavioral IS correction, no re-tuned clip bounds",
+      "kind": "mechanism",
+      "statement": "Because e_B falls on its own when the replay batch becomes off-policy, P3O runs the same compute_policy_loss in sync and overlap mode, whereas PPO/GRPO/CISPO auto-enable the decoupled loss in overlap mode (use_decoupled_loss = overlap.enabled) with a once-per-epoch pi_prox snapshot and an optional behave_imp_weight_cap; P3O accepts those arguments as no-ops, and the only staleness control left is the scheduler's max_lag, which bounds buffer versions but no longer appears in the loss.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3",
+            "role": "claim",
+            "quote": "The standard fix is a decoupled-loss objective [13] that clips against a proximal snapshot pi_prox rather than against pi_old. This stabilizes training but adds new hyper-parameters, including the construction of pi_prox, its lifetime, and a cap c_w on an outer behavior weight"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p6",
+            "role": "claim",
+            "quote": "P3O sidesteps this. The same e_B that drives the cap on fresh data falls when the batch becomes off-policy, so Eq. (12) handles both regimes in a single objective without any additional hyper-parameter or special code path."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p5",
+            "role": "claim",
+            "quote": "Eq. (12) introduces no clipping range, no trust-region coefficient, and no staleness budget."
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L98",
+            "role": "claim",
+            "quote": "P3O's `compute_policy_loss` runs **unchanged** between sync and overlap mode: ESS is computed from each batch's own importance weights and adaptively controls both the ratio cap and the trust-region KL weight, so no separately-tuned staleness coefficient is required."
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L100",
+            "role": "claim",
+            "quote": "P3O needs none of that machinery: no proximal snapshot, no behavioral IS correction, and no re-tuning of clip bounds."
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L67-L69",
+            "role": "computation",
+            "quote": "# params for decoupled ppo clipped loss which is not used in p3o for now. ... self.use_decoupled_loss = use_decoupled_loss"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "core/rl_engines.py:L59",
+            "role": "computation",
+            "quote": "'use_decoupled_loss': params.overlap.enabled if params.overlap else False,"
+          },
+          {
+            "source": "rl_readme",
+            "ref": "algs/RL/README.md:L16",
+            "role": "claim",
+            "quote": "P3O does not use it because it derives its trust region directly from the stored `old_logprobs`."
+          }
+        ],
+        "filtering_note": "The paper says 'no staleness budget' about the objective; in FeynRL's async runner max_lag still exists as a scheduler/buffer parameter (sizing the replay deque and evicting versions older than policy_version − max_lag, see repo thread staleness-budget-max-lag), so what P3O removes is the loss's dependence on staleness, not the buffer bound. The paper's experiments (Table 3 via arXiv HTML, unverified) do not report whether any run used overlap mode; the off-policy evidence comes from temperature and FP8 mismatch, not from replay staleness. The 'for now' comments at p3o.py L67 and L76 leave the door open to a decoupled P3O."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-p3o-objective",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "feynrl-off-policy-sources",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "feynrl:decoupled-loss-prox",
+          "note": "what the other algorithms switch on in overlap mode: pi_prox snapshot, pi_prox/pi_old weight, behave_imp_weight_cap"
+        },
+        {
+          "kp": "feynrl:staleness-budget-max-lag",
+          "note": "the scheduler-side bound that remains with P3O"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "With P3O you can set max_lag arbitrarily high since the loss adapts.",
+          "why_wrong": "max_lag still sizes the replay buffer and bounds which versions coexist; P3O makes the loss safe for whatever mix arrives, but the paper (§5) says adequate support in the behavior data is still required, and very stale data simply gets e_B → 0 and contributes little signal."
+        },
+        {
+          "belief": "P3O in overlap mode needs the pi_prox snapshot like the others.",
+          "why_wrong": "p3o.py accepts use_decoupled_loss only for signature compatibility; its trust region is KL(pi_theta || pi_old) against the stored old_logprobs, so no extra forward pass is taken."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You switch a GRPO run and a P3O run from train_sync.yaml to train_async.yaml (overlap.enabled = True). Predict, for each algorithm, whether compute_policy_loss changes behaviour and what extra computation (if any) appears per epoch.",
+          "format": "short",
+          "answer": "GRPO: yes, use_decoupled_loss becomes True, so it clips pi/pi_prox instead of pi/pi_old, weights by pi_prox/pi_old, and runs a no-grad snapshot forward pass over every micro-batch once per epoch. P3O: no change in the loss and no snapshot pass; the only new thing is that e_B will be lower when the buffer mixes versions.",
+          "why": "core/rl_engines.py L59 wires use_decoupled_loss = overlap.enabled for all algorithms, but only PPO/GRPO/CISPO consume it (RL README L16, P3O README L98-L100)."
+        },
+        "transfer": {
+          "q": "Changed case: in overlap mode with max_lag = 3, a micro-batch mixes samples from the current version and from three versions back. For GRPO, which fixed quantity bounds how much the stale samples count, and for P3O which batch quantity does? Then say whether the buffer-side max_lag budget also disappears when you switch GRPO to P3O.",
+          "format": "short",
+          "answer": "GRPO: the fixed behave_imp_weight_cap on pi_prox/pi_old (plus the clip range). P3O: the batch's e_B, which falls as the stale samples' ratios spread. max_lag is present in both: it is a buffer bound, not a loss term.",
+          "why": "The paper's 'no staleness budget' refers to the objective; FeynRL's scheduler keeps max_lag to size the deque and evict old versions, so switching the algorithm removes the loss-side cap but not the buffer-side budget.",
+          "varies": "Degree of version staleness in the batch (max_lag = 3 mix).",
+          "invariant": "Which layer each control lives in: loss (cap, clip, e_B) versus scheduler/buffer (max_lag).",
+          "transfer_distance": "far"
+        },
+        "check": {
+          "q": "In FeynRL you launch P3O (alg_name \"p3o\") in overlap mode with overlap.behave_imp_weight_cap set to 0.5. What happens?",
+          "format": "choice",
+          "choices": [
+            "It starts; pi_prox/pi_old weights are clamped at 0.5",
+            "It fails validation; the cap must be greater than 1.0",
+            "It starts; P3O stores the cap and its loss never reads it",
+            "It starts; the cap of 0.5 replaces e_B as the ceiling"
+          ],
+          "answer": "It starts; P3O stores the cap and its loss never reads it",
+          "why": "configs/load.py:L819-L820 rejects behave_imp_weight_cap <= 1.0 only when alg_name != \"p3o\", so validation passes. core/rl_engines.py:L58-L60 passes use_decoupled_loss and the cap to every algorithm; p3o.py stores them (L67-L69, 'not used in p3o for now'), and compute_policy_loss uses only ratio = exp(logprobs - old_logprobs), ess_factor and the behavioral KL (L192-L223), with no prox snapshot or behaviour weight. This is the paper's claim that Eq. 12 handles both regimes with no extra hyper-parameter or code path (p6).",
+          "distractor_from": "Option 2: the validator rule for GRPO/CISPO, which P3O is exempt from. Option 3: the misconception that P3O in overlap mode uses the pi_prox snapshot and behaviour weight like the others. Option 4: confuses the behaviour-weight cap with P3O's batch-adaptive cap.",
+          "targets_misconception": "P3O in overlap mode needs the pi_prox snapshot like the others.",
+          "varies": "functional: a config value that would be illegal for GRPO, asking what the P3O code path does with it, instead of comparing staleness controls in a mixed-version batch",
+          "invariant": "P3O's loss is identical in sync and overlap mode; decoupled-loss arguments (prox snapshot, behaviour-weight cap) are accepted only for signature compatibility.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "Which config flag turns on the decoupled loss for PPO/GRPO/CISPO, and what does P3O do with it?",
+            "layer": "detail",
+            "answer": "use_decoupled_loss = overlap.enabled; P3O stores it and treats it as a no-op."
+          },
+          {
+            "q": "Besides a proximal snapshot and a behavioral importance-sampling correction, what third thing does P3O not need in overlap mode?",
+            "answer": "Re-tuned clip bounds."
+          }
+        ],
+        "self_explain": "Why does an objective that reads staleness from the batch make a separate staleness coefficient redundant, but not a buffer size?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "predict-trend",
+          "ref": "fixture:feynrl_paper--overlap-loss",
+          "notice": "Going from s0 to s1 (overlap on), a purple π_prox snapshot block appears before every GRPO training block, while the P3O lane gains nothing. At s2 (max_lag = 2) the buffer holds three versions, and each training lane repeats its pattern unchanged."
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "algs/P3O/p3o.py:L59-L79"
+        },
+        {
+          "type": "code",
+          "action": "distinguish",
+          "ref": "core/rl_engines.py:L56-L60"
+        }
+      ]
+    },
+    {
+      "id": "feynrl-two-anchor-issue",
+      "label": "The paper's own caveat: one e_B conflates behavior drift and within-epoch drift (Eq. 13)",
+      "kind": "mechanism",
+      "statement": "A single ESS cannot tell apart two drifts in the batch, pi_theta vs the data-generating pi_b and pi_theta vs its pre-update snapshot pi_prox, so §3.1 proposes a two-anchor extension (Eq. 13) with a joint ESS e_mix and a mixture anchor pi_mix weighted by (1 − e_b) and (1 − e_prox) that reduces to P3O when either anchor is uninformative; empirically single-anchor P3O matches or slightly beats it, and the appendix reports the extension becoming unstable at T = 1.2.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§3.1",
+            "role": "claim",
+            "quote": "One possible issue with P3O is that the single ESS e_B in Eq. (12) conflates two distinct drifts in the batch: the difference between pi_theta and the data-generating policy pi_b, and the within-epoch difference between pi_theta and its pre-update snapshot pi_prox."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq13",
+            "role": "computation",
+            "quote": "L_ext(theta) = −E_{pi_b}[ sg(min{r_b, e_mix}) log pi_theta(y_t|c_<t) A ] + (1 − e_mix) KL(pi_theta || pi_mix)"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:p6",
+            "role": "claim",
+            "quote": "Empirically, however, the single-anchor P3O matches or slightly outperforms this variant across the off-policy regimes considered in Sec. 4, suggesting that the behavior-axis ESS already captures most of the relevant drift signal."
+          },
+          {
+            "source": "arxiv_html",
+            "ref": "feynrl:§D",
+            "role": "claim",
+            "quote": "Fig. 8: the two-anchor variant peaks near 0.67 and collapses after step 16 at T = 1.2 while P3O stays stable; Fig. 9: at default temperature the two-anchor variant is stable and slightly ahead."
+          }
+        ],
+        "filtering_note": "§3.1 and Eq. 13 are on page 6 (verified). The appendix D figures and their captions are not in the image set; the summary above comes from the arXiv HTML via WebFetch and from the bundle's finding two_anchor_boundary, so the T = 1.2 instability is inference-grade here. The paper gives no mechanism for why the extension collapses; it reports the curve and moves on."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-p3o-objective",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Adding a second anchor adds a hyper-parameter.",
+          "why_wrong": "The mixture weights (1 − e_b) and (1 − e_prox) are both batch ESS values; the paper's point is that this variant is still hyper-parameter-free, and it is rejected on empirical grounds, not on parameter count."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In a synchronous run with one optimizer step per epoch and no engine mismatch, pi_b and pi_prox coincide. Predict what the two-anchor extension (Eq. 13) reduces to in that case.",
+          "format": "short",
+          "answer": "To single-anchor P3O (Eq. 12): both anchors are the same policy, so e_b = e_prox, the mixture pi_mix equals that policy, and the cap and KL act on the same ratio.",
+          "why": "The extension only separates the anchors when pi_b and pi_prox differ (reuse across steps or engine mismatch); with one step per epoch and identical engines there is nothing to separate."
+        },
+        "transfer": {
+          "q": "Changed case: the batch is fresh with respect to pi_b (e_b ≈ 1) but the optimizer has already taken several steps this epoch so pi_theta has drifted from pi_prox (e_prox = 0.6). Which anchor dominates pi_mix, and why does the paper say the extension 'reduces to P3O when either anchor is uninformative'?",
+          "format": "short",
+          "answer": "pi_prox dominates: its weight (1 − e_prox) = 0.4 versus (1 − e_b) ≈ 0 for pi_b. An anchor with ESS ≈ 1 carries weight ≈ 0 in the mixture, so pi_mix collapses onto the other anchor and Eq. 13 becomes a single-anchor objective around it.",
+          "why": "The mixture weights are (1 − ESS) per anchor; an anchor the policy has not drifted from provides no information about drift and drops out.",
+          "varies": "Which anchor the policy has drifted from (prox instead of behavior).",
+          "invariant": "Mixture weights are (1 − e) for each anchor; the more on-policy anchor drops out.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In the two-anchor extension (Eq. 13), a batch was generated by an old behavior policy so e_b = 0.5, while the optimizer has not yet stepped this epoch, so pi_theta equals its snapshot and e_prox ≈ 1. Which anchor dominates pi_mix?",
+          "format": "choice",
+          "choices": [
+            "pi_prox, because the newer snapshot always gets more weight",
+            "pi_b, because its weight 1 - e_b = 0.5 dwarfs 1 - e_prox ≈ 0",
+            "Neither, because the two anchors are mixed half and half",
+            "pi_ref, because the frozen reference takes the spare weight"
+          ],
+          "answer": "pi_b, because its weight 1 - e_b = 0.5 dwarfs 1 - e_prox ≈ 0",
+          "why": "§3.1 / Eq. 13: pi_mix mixes pi_b and pi_prox with weights (1 - e_b) and (1 - e_prox). Here those are 0.5 and ≈ 0, so pi_mix collapses onto pi_b and the extension reduces to single-anchor P3O around the behavior policy; an anchor the policy has not drifted from (ESS ≈ 1) is uninformative and drops out.",
+          "distractor_from": "Option 2: assumes recency rather than drift sets the weight. Option 3: assumes a fixed 50/50 mixture, i.e. that the mixture weights are hyper-parameters rather than batch ESS values. Option 4: confuses the anchor with the reference model.",
+          "targets_misconception": "Adding a second anchor adds a hyper-parameter (the mixture weights are fixed).",
+          "varies": "domain: the inverse case, stale with respect to pi_b but no within-epoch drift, so the other anchor dominates",
+          "invariant": "Each anchor's mixture weight is 1 minus its ESS; the anchor the policy has not drifted from drops out.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In the paper's two-anchor extension, which two policies does the mixture anchor pi_mix combine?",
+            "answer": "The data-generating behavior policy pi_b and the pre-update snapshot pi_prox."
+          },
+          {
+            "q": "What was the paper's empirical verdict on the two-anchor extension?",
+            "answer": "Single-anchor P3O matches or slightly outperforms it across the off-policy regimes tested."
+          }
+        ],
+        "self_explain": "Why might the behavior-axis ESS already carry most of the within-epoch drift signal in the paper's experiments?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "feynrl:eq13"
+        }
+      ]
+    },
+    {
+      "id": "feynrl-experiments",
+      "label": "What was shown and what was not: clip sweep, temperature, BF16/FP8, pass@k; no seeds",
+      "kind": "comparison",
+      "statement": "On Qwen3-4B-Thinking-2507 and Qwen2.5-1.5B trained with binary rewards on DeepScaleR-Preview (40k problems, 8 H100s), the paper shows: a GRPO clip sweep eps ∈ {0.2, 0.4, 0.6} whose reward trajectory varies with eps (shaded ±1 std over clip values) against one P3O run (Fig. 1); GRPO degrading at rollout temperature 0.6 and collapsing at 1.2 while P3O stays near 0.6 (Fig. 2, Qwen3-4B); GRPO collapsing to ~0 under BF16 train / FP8 rollout at 16,384 tokens while P3O stays ~0.5 on Qwen3-4B but both overlapping on Qwen2.5-1.5B (Fig. 3); pass@k on AIME24/25/26, AMO-Bench and AMC where P3O matches or exceeds the eps-averaged GRPO and keeps performance at FP8 iter 30 (Fig. 4, Table 7); the paper reports no seed count and the only spread shown is over clip values, not over seeds.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§4.1",
+            "role": "claim",
+            "quote": "Experiments use the open-source models Qwen3-4B-Thinking-2507 [30] and Qwen2.5-1.5B [29], trained on the DeepScaleR-Preview dataset of 40,000 mathematics problem-answer pairs ... Binary rewards are assigned by matching the model's output against the DeepScaleR-Preview reference ... All runs use 8 NVIDIA H100 GPUs"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:fig1",
+            "role": "figure",
+            "quote": "Sensitivity of GRPO's reward to the clip range eps ∈ {0.2, 0.4, 0.6} (shaded region: ±1 std over clip values) versus P3O run once with no clip hyperparameter."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:fig2",
+            "role": "figure",
+            "quote": "P3O is robust to off-policy data introduced through the varied sampling temperature of rollouts. ... creating off-policy data for Qwen3-4B-Thinking-2507. Corresponding Qwen2.5-1.5B results are deferred to Fig. 7."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:fig3",
+            "role": "figure",
+            "quote": "P3O is robust to off-policy data introduced through the BF16 Train + FP8 Rollout training scheme. As accuracy collapse is observed in longer rollout lengths [33], a rollout length of 16,384 tokens was used in this experiment."
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:fig4",
+            "role": "figure",
+            "quote": "Pass@k averaged over all five held-out benchmarks (AIME24/25/26, AMO-Bench, AMC). Left: clip-ratio variants at 4K-token evaluation; GRPO is averaged over eps ∈ {0.2, 0.4, 0.6}. ... Right: BF16-train + FP8-rollout variants at 16K-token evaluation. GRPO collapses by iter 30 (near-zero pass@k)"
+          },
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:§4.4",
+            "role": "claim",
+            "quote": "In the FP8 rollout setting (Fig. 4b), P3O retains benchmark performance much later into training, while GRPO degrades sharply—by iter 30 its pass@k is near zero across all benchmarks. Full per-benchmark results are reported in Table 7 in the appendix."
+          },
+          {
+            "source": "arxiv_html",
+            "ref": "feynrl:table7",
+            "role": "figure",
+            "quote": "AMC pass@1 under BF16 train + FP8 rollout: GRPO 0.499 at iter 15 → 0.029 at iter 30; P3O 0.478 → 0.529."
+          }
+        ],
+        "filtering_note": "Figs. 1-4 and §4.1-4.4 are verified on pages 7-9. Table 7 and Table 3 are appendix material not in the image set: the AMC numbers above come from the arXiv HTML summary and agree with the bundle's precision_mismatch finding, but remain unverified; the HTML summary's claim that the FP8 runs used 'Qwen3-8B-Base' contradicts Fig. 3(a)'s caption (Qwen3-4B-Thinking-2507) and is treated as a summarizer error. Not shown anywhere: a seed count, seed-level error bars (Fig. 1's shading is over eps values; Figs. 2-4 are single curves), an ESS or ratio trace over training, any ablation separating the cap from the (1 − e_B) KL term, or a comparison against DAPO/GSPO/decoupled baselines (p7 asserts they share GRPO's sensitivity without a plot). Fig. 3(b) (Qwen2.5-1.5B, FP8) shows no separation between P3O and GRPO, which the text does not comment on."
+      },
+      "prerequisites": [
+        {
+          "kp": "feynrl-p3o-objective",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "feynrl-off-policy-sources",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The shaded band in Fig. 1 is run-to-run variance, so P3O's single curve has been shown to be stable across seeds.",
+          "why_wrong": "The caption says the shading is ±1 std over the three clip values for GRPO; P3O was 'run once'. Nothing in the paper measures seed variance for either method."
+        },
+        {
+          "belief": "P3O beat GRPO in every setting shown.",
+          "why_wrong": "Fig. 3(b) (Qwen2.5-1.5B under FP8) and Fig. 1(b) show overlapping curves; the clear separations are on Qwen3-4B-Thinking-2507 under temperature 1.2 and FP8, and in the pass@k plots."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Fig. 2(b): Qwen3-4B-Thinking-2507 with rollout temperature 1.2. Before looking, predict GRPO's (clip 0.4) average reward between step 10 and step 30, while P3O, at the same temperature, holds near its level: does it go up, down, or stay the same? (answer up, down or same)",
+          "format": "trend",
+          "answer": "down: both reach about 0.6-0.7 by step ~10, then GRPO collapses to ~0.1-0.2 by step 30 while P3O stays around 0.6.",
+          "value": "down",
+          "why": "Temperature 1.2 shifts every token's log-probability, pushing ratios outside GRPO's fixed band so more tokens stop contributing; P3O's e_B falls instead, capping weights and raising the KL pull, so training continues (p7-8)."
+        },
+        "transfer": {
+          "q": "Changed case: same FP8-rollout experiment but on the smaller Qwen2.5-1.5B (Fig. 3b). Does the paper show the same GRPO collapse there, and what does the text say about it?",
+          "format": "choice",
+          "choices": [
+            "Yes: GRPO collapses on both models, as in the Qwen3-4B run",
+            "No: the curves overlap around 0.2-0.28, and the text does not comment",
+            "Not shown: the 1.5B model appears only in the temperature plot",
+            "No: P3O still clearly beats GRPO there, just by a smaller margin"
+          ],
+          "answer": "No: the curves overlap around 0.2-0.28, and the text does not comment",
+          "why": "No, the two curves overlap around 0.2-0.28 on Qwen2.5-1.5B, and the text does not comment on the difference. Fig. 3(b) on page 8 shows interleaved red and blue curves with no separation; the robustness claim is carried by Fig. 3(a) (Qwen3-4B). A reader who generalizes 'P3O is robust to FP8' to all model sizes is reading beyond the evidence.",
+          "distractor_from": [
+            "'Yes: GRPO collapses on both' <- misconception: 'P3O beat GRPO in every setting shown.' (over-generalization)",
+            "'P3O still clearly beats GRPO' <- same misconception",
+            "'Not shown' <- plausible: confuses the deferred temperature plot for Qwen2.5-1.5B (Fig. 7) with the FP8 plot in the main text"
+          ],
+          "varies": "Model (Qwen2.5-1.5B instead of Qwen3-4B-Thinking-2507) under the same FP8 mismatch.",
+          "invariant": "The experimental protocol (BF16 train, FP8 rollout, 16,384 tokens, GRPO clip 0.4 vs P3O).",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Which three clip values form the paper's GRPO clip sweep, and how many P3O runs are compared against them?",
+            "layer": "detail",
+            "answer": "eps ∈ {0.2, 0.4, 0.6}; one P3O run."
+          },
+          {
+            "q": "In the paper's GRPO clip-sweep figure, what does the shaded region represent?",
+            "answer": "±1 standard deviation over the clip values for GRPO, not over random seeds."
+          },
+          {
+            "q": "Besides AIME24, AIME25 and AIME26, which two held-out benchmarks complete the paper's pass@k evaluation?",
+            "layer": "detail",
+            "answer": "AMO-Bench and AMC."
+          }
+        ],
+        "self_explain": "Why does the choice of 16,384-token rollouts matter for making the FP8 mismatch visible?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "feynrl:fig2"
+        },
+        {
+          "type": "figure",
+          "action": "distinguish",
+          "ref": "feynrl:fig3"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "feynrl:fig4"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:feynrl_paper--batch-ess",
+          "notice": "This shows the mechanism the paper gives for Fig. 2(b), not a simulation of training. Press 'fresh, both signs' and 'GRPO clip 0.4', then drag δ. Once e^δ leaves [0.6, 1.4], GRPO's share of tokens with gradient halves, because the tokens whose A-sign that side guards stop. P3O keeps every token. Under this pure common shift e_B stays at 1. ESS reacts only to the uneven part of a temperature change, which the spread slider s controls."
+        }
+      ]
+    },
+    {
+      "id": "supp-ess-bounds",
+      "label": "Supplement: why (Σw)² ≤ n Σw² bounds the normalized ESS by 1 and when 1/n is reached",
+      "kind": "mechanism",
+      "statement": "For non-negative weights w_1..w_n, Cauchy-Schwarz gives (Σw)² ≤ n Σw² with equality iff all w are equal, so (Σw)²/(n Σw²) ≤ 1 with equality for uniform weights; the lower bound 1/n is reached when a single weight carries all the mass, and the ratio is unchanged by multiplying every w by the same positive constant.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "feynrl_paper",
+            "ref": "feynrl:eq11",
+            "role": "computation",
+            "quote": "∈ [1/|B|, 1]"
+          },
+          {
+            "source": "feynrl_repo",
+            "ref": "algs/P3O/p3o.py:L110-L112",
+            "role": "computation",
+            "quote": "ESS = ||w||^2_1 / ||w||^2_2 , ratio = exp(logprobs - old_logprobs) ... ESS = ESS / n where n is number of valid (non-padded) samples to normalize ... ESS would be between 1/n and 1, effectively 0 < ESS <= 1"
+          },
+          {
+            "source": "p3o_readme",
+            "ref": "algs/P3O/README.md:L45",
+            "role": "claim",
+            "quote": "\\in \\left[\\tfrac{1}{n}, 1\\right],"
+          }
+        ],
+        "filtering_note": "Paper, code docstring and README all assert the interval without derivation. The derivation (Cauchy-Schwarz with the all-ones vector; the one-hot case for the lower bound; homogeneity of degree zero) is the student line's addition. It matters because it tells a learner exactly what ESS can and cannot see: spread, not scale."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "ESS is small when the ratios are small.",
+          "why_wrong": "ESS is scale-free: (0.1, 0.1, 0.1, 0.1) has ESS 1. It is small only when weight is concentrated on few tokens."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "n = 4 weights (1, 0, 0, 0). Compute (Σw)²/(n Σw²).",
+          "format": "number",
+          "answer": "0.25",
+          "tolerance": 0.01,
+          "why": "Σw = 1, Σw² = 1, so 1/(4·1) = 1/4 = 1/n: the lower bound, one token carrying all the weight."
+        },
+        "transfer": {
+          "q": "Changed case: n = 4 weights (c, c, c, c) for any c > 0. Compute the normalized ESS and state the inequality that makes it the maximum.",
+          "format": "short",
+          "answer": "1, for every c; by Cauchy-Schwarz (Σw)² ≤ n Σw² with equality iff the weights are all equal.",
+          "why": "(4c)² / (4 · 4c²) = 16c²/16c² = 1. Uniform weights saturate the bound regardless of scale.",
+          "varies": "Uniform weights at an arbitrary common value instead of a one-hot vector.",
+          "invariant": "The Cauchy-Schwarz bound and the normalization by n.",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "n = 8 non-negative weights: three equal 0.05 and five equal 0. What is the normalized ESS (Σw)²/(n Σw²)? Type only the number.",
+          "format": "number",
+          "answer": "0.375",
+          "tolerance": 0.05,
+          "value": 0.375,
+          "why": "Σw = 0.15, Σw² = 3 x 0.0025 = 0.0075. (0.15)²/(8 x 0.0075) = 0.0225/0.06 = 0.375 = 3/8. With k equal non-zero weights out of n the ESS is k/n, independent of their size: the tiny value 0.05 does not matter, only how many tokens share the mass. It lies between the bounds 1/8 (one token) and 1 (all equal).",
+          "targets_misconception": "ESS is small when the ratios are small.",
+          "varies": "domain: an intermediate concentration (3 of 8 tokens carry equal mass) with tiny weights, between the one-hot and uniform extremes",
+          "invariant": "Normalized ESS is scale-free and measures concentration: by Cauchy-Schwarz it lies in [1/n, 1], and k equal weights give k/n.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Every weight w_i is multiplied by the same positive constant c. What happens to (Σw)²/(n Σw²), and why?",
+            "answer": "Nothing: numerator and denominator both scale by c², which cancels."
+          },
+          {
+            "q": "Which weight configuration attains ESS = 1/n?",
+            "answer": "One weight positive and all others zero."
+          }
+        ],
+        "self_explain": "Why does the all-reduce in calculate_ess need Σw, Σw² and n separately rather than each rank's local ESS?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "feynrl:eq11"
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "algs/P3O/p3o.py:L107-L113"
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:feynrl_paper--batch-ess",
+          "notice": "One-hot weights give 1/n, and equal weights give 1 whatever their common value. The readout prints [1/n, 1] next to the ESS."
+        }
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Paper order: §1 names the two concerns and the sources of off-policy data; §2 gives the on-policy estimator, PPO's clip and importance sampling (Eqs. 2-8); §3 expands the clip by advantage sign (Eqs. 9-10), introduces ESS (Eq. 11) and P3O (Eq. 12), contrasts the family in Table 1 and the decoupled loss for async training; §3.1 gives the two-anchor caveat (Eq. 13); §4 reports the clip sweep, temperature, FP8 and pass@k results. Supplements are the two steps the paper uses without stating: the score-function identity behind Table 1 and the Cauchy-Schwarz bounds behind Eq. 11.",
+    "stops": [
+      "feynrl-two-concerns",
+      "feynrl-off-policy-sources",
+      "feynrl-importance-ratio",
+      "feynrl-fixed-clip-regimes",
+      "feynrl-normalized-ess",
+      "feynrl-p3o-objective",
+      "feynrl-p3o-vs-clip-family",
+      "feynrl-same-loss-sync-async",
+      "feynrl-two-anchor-issue",
+      "feynrl-experiments"
+    ],
+    "supplements": [
+      "supp-score-function-weighting",
+      "supp-ess-bounds"
+    ]
+  },
+  "course_path": {
+    "basis": "teaching-order",
+    "source": "lecture_16",
+    "note": "Lecture 16 order (slides p5, p7, p14, p18-p20, p45): REINFORCE and its variance (p5) precede PPO's ratio clip (p7), the per-token KL to the reference (p14), GRPO's group z-score (p18-p20) and the cost of on-policy rollouts (p45). The course teaches the fixed clip as the answer to 'a batch cannot move the policy far' and never raises the off-policy concern, importance sampling, ESS or P3O; it also treats the KL as a penalty toward the reference, not toward the behavior policy. So only three paper stops have a course counterpart; the rest are listed as not_covered and the two supplements stay supplements. Stops are the paper KPs placed where the course's own KP (lecture_16:<id>) would introduce them.",
+    "course_stops": [
+      "lecture_16:policy-gradient-variance",
+      "lecture_16:ppo-ratio-clip",
+      "lecture_16:per-token-kl-reward-shaping",
+      "lecture_16:grpo-group-zscore-advantage",
+      "lecture_16:rl-rollout-cost"
+    ],
+    "stops": [
+      "feynrl-importance-ratio",
+      "feynrl-fixed-clip-regimes",
+      "feynrl-off-policy-sources"
+    ],
+    "supplements": [
+      "supp-score-function-weighting",
+      "supp-ess-bounds"
+    ],
+    "not_covered": [
+      "feynrl-two-concerns",
+      "feynrl-normalized-ess",
+      "feynrl-p3o-objective",
+      "feynrl-p3o-vs-clip-family",
+      "feynrl-same-loss-sync-async",
+      "feynrl-two-anchor-issue",
+      "feynrl-experiments"
+    ]
+  }
+}

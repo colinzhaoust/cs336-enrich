@@ -1,0 +1,214 @@
+{
+  "lecture_10": {
+    "title": "CS336 Spring 2026, Lecture 10: Inference",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_10.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_10.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_10.json",
+    "note": "Line anchors refer to the local shallow clone (sha256 e79acd91..., recorded in discovered.json). Unlike lectures 2 and 6, nothing in this file runs on a GPU: every @inspect value (intensity, accelerator_intensity, b1/b64/b256, k40_b64/k8_b64/k8_b256, x_quant/x_approx) is sympy or plain Python arithmetic on the formulas at L128-L150, L188-L248, L291-L306 and L455-L459, so this thread re-evaluates and states them. What this thread does NOT restate is any number that lives only in an embedded figure (gqa-speed.png, gqa-accuracy.png, mla-accuracy*.png, cla-results.png, speculative-sampling-results/stats.png, pruning-kd.png, the baseten fp8 image): those are measurements from the cited papers and are recorded only as 'shown'. The AWQ '4x lower memory, 3.2x speedup' (L486) and DeepSeek-V2 '16384 to 512' (L411) are text() claims the professor reads off the papers; they are quoted with that attribution, not asserted."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json. Arithmetic intensity, the 295 accelerator-intensity threshold, matmul FLOPs and bytes-per-dtype were derived there; lecture 10 re-derives intensity at L118-L159 as a review and then specialises it to decode."
+  },
+  "lecture_04": {
+    "title": "CS336 Spring 2026, Lecture 4: Mixture of experts and architecture variants",
+    "kind": "slides",
+    "path": "official/lectures/lecture_04.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_04:<kp-id>); see atlas/lectures/lecture_04/knowledge_points.json (landed 2026-10-01). MLA, hybrid local/global layering, DSA sparse attention and linear-attention/SSM variants were taught there as architecture choices; lecture 10 reuses them as KV-cache reducers (L407-L446). Lecture 4 has no GQA/MQA knowledge point, so gqa-kv-reduction carries no lecture_04 edge."
+  },
+  "lecture_05": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs",
+    "kind": "slides",
+    "path": "official/lectures/lecture_05.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_05:<kp-id>); the memory-wall roofline and the HBM bandwidth picture are assumed when the professor writes latency = memory / memory_bandwidth (L303)."
+  },
+  "scaling_book_transformers": {
+    "title": "How to Scale Your Model, chapter: Transformers (jax-ml scaling book)",
+    "kind": "reading",
+    "url": "https://jax-ml.github.io/scaling-book/transformers/",
+    "note": "Linked at lecture_10.py:L101 (Reference defined at L13). Source of the einops-style B/T/D/H notation and the transformer diagram embedded at L110."
+  },
+  "scaling_book_inference": {
+    "title": "How to Scale Your Model, chapter: Inference (jax-ml scaling book)",
+    "kind": "reading",
+    "url": "https://jax-ml.github.io/scaling-book/inference/",
+    "note": "Linked at lecture_10.py:L163 and L364 (Reference defined at L14). Source of the naive-inference and cached-inference figures (L165, L171) and the pointer for sharding the model and KV cache ('harder parallelism', L364)."
+  },
+  "gqa_2023": {
+    "title": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints (Ainslie et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2305.13245.pdf",
+    "note": "Linked at lecture_10.py:L376, L383, L404 via references.gqa_2023. The speed and accuracy figures (images/gqa-speed.png, images/gqa-accuracy.png) are this paper's T5 measurements and are not restated."
+  },
+  "mla_2024": {
+    "title": "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model (2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2405.04434",
+    "note": "Linked at lecture_10.py:L407, L416, L418 via references.mla_2024 (alias deepseek_v2_2024). Source of multi-head latent attention; the professor cites its Table 8 (MHA vs GQA) and Table 9 (MLA vs MHA) as images."
+  },
+  "cla_2024": {
+    "title": "Reducing Transformer Key-Value Cache Size with Cross-Layer Attention (Brandon et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2405.12981",
+    "note": "Linked at lecture_10.py:L421. Shares KV across layers as GQA shares across heads; results figure shown, not restated."
+  },
+  "longformer_2020": {
+    "title": "Longformer: The Long-Document Transformer (Beltagy et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2004.05150.pdf",
+    "note": "Linked at lecture_10.py:L427; the sliding-window attention figure (images/longformer-attention.png) is from this paper."
+  },
+  "sparse_transformer_2019": {
+    "title": "Generating Long Sequences with Sparse Transformers (Child et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1904.10509.pdf",
+    "note": "Linked at lecture_10.py:L427 alongside Longformer as an origin of local attention patterns."
+  },
+  "mistral_7b_2023": {
+    "title": "Mistral 7B (Jiang et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2310.06825.pdf",
+    "note": "Linked at lecture_10.py:L427; the production example of sliding-window attention whose effective context grows with the number of layers (L430)."
+  },
+  "deepseek_v4_2026": {
+    "title": "DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence (2026)",
+    "kind": "paper",
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/DeepSeek_V4.pdf",
+    "note": "Linked at lecture_10.py:L71 (trained on 32T tokens) and L436 (1M context; CSA/DSA/HCA attention variants, L438-L440)."
+  },
+  "openai_tokens_article": {
+    "title": "PYMNTS: OpenAI bests Google in race for consumer AI token consumption (2025)",
+    "kind": "article",
+    "url": "https://www.pymnts.com/artificial-intelligence-2/2025/openai-bests-google-in-race-for-consumer-ai-token-consumption/",
+    "note": "Linked at lecture_10.py:L70 for the '~8.6T tokens per day' figure."
+  },
+  "vllm_repo": {
+    "title": "vLLM (GitHub)",
+    "kind": "software",
+    "url": "https://github.com/vllm-project/vllm",
+    "note": "Linked at lecture_10.py:L83 ('pioneered PagedAttention, popular and good default')."
+  },
+  "sglang": {
+    "title": "SGLang project page",
+    "kind": "software",
+    "url": "https://sgl-project.github.io/",
+    "note": "Linked at lecture_10.py:L84 ('pioneered RadixAttention, good for agentic workloads')."
+  },
+  "tensorrt_llm": {
+    "title": "TensorRT-LLM overview",
+    "kind": "software",
+    "url": "https://nvidia.github.io/TensorRT-LLM/overview.html",
+    "note": "Linked at lecture_10.py:L85."
+  },
+  "llama_cpp": {
+    "title": "llama.cpp (GitHub)",
+    "kind": "software",
+    "url": "https://github.com/ggml-org/llama.cpp",
+    "note": "Linked at lecture_10.py:L86 ('C++ only, supports CPU inference, runs locally')."
+  },
+  "baseten_fp8": {
+    "title": "Baseten blog: FP8, efficient model inference with 8-bit floating point numbers",
+    "kind": "article",
+    "url": "https://www.baseten.co/blog/fp8-efficient-model-inference-with-8-bit-floating-point-numbers/",
+    "note": "Linked at lecture_10.py:L461; the embedded dtype-layout image is from this post."
+  },
+  "fp8_lm_2023": {
+    "title": "FP8-LM: Training FP8 Large Language Models (Peng et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2310.18313",
+    "note": "Linked at lecture_10.py:L464 ('can train if you dare')."
+  },
+  "fp8_vs_int8_2023": {
+    "title": "FP8 versus INT8 for efficient deep learning inference (van Baalen et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2303.17951",
+    "note": "Linked at lecture_10.py:L465 and L466 for the int8 and int4 ranges."
+  },
+  "apxml_quantization": {
+    "title": "LLM quantization techniques explained (apxml.com)",
+    "kind": "article",
+    "url": "https://apxml.com/posts/llm-quantization-techniques-explained",
+    "note": "Linked at lecture_10.py:L468 as 'Overview of approaches'."
+  },
+  "gptq_2022": {
+    "title": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers (Frantar et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2210.17323",
+    "note": "Linked at lecture_10.py:L478 ('use Hessian information to update non-quantized weights')."
+  },
+  "awq_2023": {
+    "title": "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration (Lin et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2306.00978",
+    "note": "Linked at lecture_10.py:L481. The '0.1-1%' salient-weight fraction and 'fp16 -> int3 produces 4x lower memory, 3.2x speedup' (L485-L486) are this paper's numbers as read by the professor."
+  },
+  "minitron_2024": {
+    "title": "Compact Language Models via Pruning and Knowledge Distillation (Muralidharan et al., NVIDIA, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.14679",
+    "note": "Linked at lecture_10.py:L494 ('Paper from NVIDIA'); source of the prune-then-distill loop figure and results figure (not restated). The section ends with a '# TODO' at L504."
+  },
+  "spec_decoding_leviathan_2022": {
+    "title": "Fast Inference from Transformers via Speculative Decoding (Leviathan, Kalman, Matias, 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2211.17192",
+    "note": "Linked at lecture_10.py:L513. Google's speculative decoding paper; the results/stats images (L534-L535) are from this line of work and are not restated."
+  },
+  "spec_sampling_chen_2023": {
+    "title": "Accelerating Large Language Model Decoding with Speculative Sampling (Chen et al., DeepMind, 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2302.01318",
+    "note": "Linked at lecture_10.py:L513; the modified-rejection-sampling algorithm image (L519) follows this paper's presentation."
+  },
+  "spec_decoding_video": {
+    "title": "Speculative decoding illustration video (Google Research)",
+    "kind": "video",
+    "url": "https://storage.googleapis.com/gweb-research2023-media/media/SpeculativeDecoding-1-Illustration.mp4",
+    "note": "Linked at lecture_10.py:L516."
+  },
+  "google_spec_decoding_blog": {
+    "title": "Google Research blog: Looking back at speculative decoding",
+    "kind": "article",
+    "url": "https://research.google/blog/looking-back-at-speculative-decoding/",
+    "note": "Linked at lecture_10.py:L517."
+  },
+  "medusa_2024": {
+    "title": "Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads (Cai et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.10774",
+    "note": "Linked at lecture_10.py:L543 ('draft model generates multiple tokens in parallel')."
+  },
+  "eagle_2024": {
+    "title": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty (Li et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2401.15077",
+    "note": "Linked at lecture_10.py:L544 ('draft model takes high-level features from target model')."
+  },
+  "orca_2022": {
+    "title": "Orca: A Distributed Serving System for Transformer-Based Generative Models (Yu et al., OSDI 2022)",
+    "kind": "paper",
+    "url": "https://www.usenix.org/system/files/osdi22-yu.pdf",
+    "note": "Linked at lecture_10.py:L554 with its OSDI talk (https://www.youtube.com/watch?v=Ob9PPLxETYU). Source of iteration-level scheduling and selective batching (L561-L573)."
+  },
+  "anyscale_cb_figure": {
+    "title": "Anyscale blog figure: static batching (continuous batching post)",
+    "kind": "figure",
+    "url": "https://images.ctfassets.net/xjan103pcp94/1LJioEsEdQQpDCxYNWirU6/82b9fbfc5b78b10c1d4508b60e72fdcf/cb_02_diagram-static-batching.png",
+    "note": "Embedded at lecture_10.py:L559 to show the ragged array of requests finishing at different times."
+  },
+  "vllm_paper_2023": {
+    "title": "Efficient Memory Management for Large Language Model Serving with PagedAttention (Kwon et al., SOSP 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2309.06180.pdf",
+    "note": "Linked at lecture_10.py:L577 ('Paper that introduced vLLM in addition to PagedAttention'). The fragmentation, block, logical/physical, sharing and parallel-sampling figures (L582-L600) are this paper's."
+  },
+  "lecture_10_video": {
+    "title": "CS336 Spring 2026, Lecture 10: Inference (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=EfM546A79aM",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

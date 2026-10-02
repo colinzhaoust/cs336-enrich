@@ -1,0 +1,105 @@
+{
+  "lecture_05": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs",
+    "kind": "slides",
+    "path": "official/lectures/lecture_05.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_05 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_05.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1)",
+    "note": "Evidence is the text layer of the slides (lecture_05.txt), extracted page-by-page by discover_slides.py. Figures are screenshots without text, so figure content is inferred from captions only. Bandwidth/size numbers on the memory-hierarchy slides are in figures, not text; see lecture_06 for the professor's own table."
+  },
+  "lecture_06": {
+    "title": "CS336 Spring 2026, Lecture 6: Kernels, Triton (section review_of_gpus)",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_06.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_06.py",
+    "note": "The professor's recap of GPU hardware (L39-L141) the lecture after the slides. Used as evidence for numbers the slides show only in figures: SM counts, memory sizes and bandwidths per level (L42-L54), warp size and control divergence (L83-L90), coalescing transactions of 128 bytes (L127-L130), wave quantization (L134-L137). Line anchors refer to atlas/lectures/lecture_06/discovered.json (sha256 d21a5472...)."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json."
+  },
+  "thonking_matmul_shapes": {
+    "title": "What shapes do matrix multiplications like? (Horace He, thonking.ai)",
+    "kind": "reading",
+    "url": "https://www.thonking.ai/p/what-shapes-do-matrix-multiplications",
+    "note": "Source of the 'matrix mystery' section (slides p44-p48): tiling alignment and wave quantization."
+  },
+  "horace_brrr": {
+    "title": "Making Deep Learning Go Brrrr From First Principles (Horace He)",
+    "kind": "reading",
+    "url": "https://horace.io/brrr_intro.html",
+    "note": "Factory/warehouse analogy and operator fusion motivation (slide p30)."
+  },
+  "flash_attention_paper": {
+    "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness (Dao et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2205.14135",
+    "note": "Slides p50-p54 read Figure 1 and the forward-pass algorithm; slide p54 says 'From Dao 2023', which is FlashAttention-2 (arXiv:2307.08691)."
+  },
+  "flash_attention_2_paper": {
+    "title": "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning (Dao, 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2307.08691"
+  },
+  "online_softmax_2018": {
+    "title": "Online normalizer calculation for softmax (Milakov & Gimelshein, 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1805.02867",
+    "note": "Slide p53 cites this as 'Mikailov and Gimelshein 2018' (misspelling in the deck)."
+  },
+  "scaling_book_gpus": {
+    "title": "How to Scale Your Model: How to Think About GPUs (jax-ml)",
+    "kind": "reading",
+    "url": "https://jax-ml.github.io/scaling-book/gpus/",
+    "note": "Cited on slide p14 for the GPU/TPU comparison; called 'TPU (and now GPU) book' on p3."
+  },
+  "memory_wall_blog": {
+    "title": "AI and Memory Wall (Gholami et al., RISE Lab)",
+    "kind": "reading",
+    "url": "https://medium.com/riselab/ai-and-memory-wall-2cb4265cb0b8",
+    "note": "Figure on slide p18: FLOPs scaling faster than memory bandwidth."
+  },
+  "cuda_refresher_blog": {
+    "title": "CUDA Refresher: Reviewing the Origins of GPU Computing (NVIDIA)",
+    "kind": "reading",
+    "url": "https://developer.nvidia.com/blog/cuda-refresher-reviewing-the-origins-of-gpu-computing/",
+    "note": "CPU vs GPU die-area figure on slide p8."
+  },
+  "nvidia_matmul_perf_guide": {
+    "title": "NVIDIA Deep Learning Performance Guide: Matrix Multiplication (tile and wave quantization)",
+    "kind": "reading",
+    "url": "https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#tile-quant"
+  },
+  "pytorch_min_cut_recompute": {
+    "title": "Min-cut optimal recomputation (activation checkpointing) with AOTAutograd (PyTorch dev-discuss)",
+    "kind": "reading",
+    "url": "https://dev-discuss.pytorch.org/t/min-cut-optimal-recomputation-i-e-activation-checkpointing-with-aotautograd/467",
+    "note": "Source of the 3-stacked-sigmoid example on slides p35-p36 (8 vs 5 memory accesses)."
+  },
+  "pytorch2_fusion_blog": {
+    "title": "How PyTorch 2.0 accelerates deep learning with operator fusion (Towards Data Science)",
+    "kind": "reading",
+    "url": "https://towardsdatascience.com/how-pytorch-2-0-accelerates-deep-learning-with-operator-fusion-and-cpu-gpu-code-generation-35132a85bd26",
+    "note": "sin^2 x + cos^2 x five-kernel example on slides p32-p33."
+  },
+  "mxfp8_pretraining_paper": {
+    "title": "Recipes for Pre-training LLMs with MXFP8 (NVIDIA, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2506.08027",
+    "note": "Slide p28; frontier material, not made into a KP."
+  },
+  "stosic_tensor_cores_tutorial": {
+    "title": "Training Neural Networks with Tensor Cores (Dusan Stosic, ECCV 2020 tutorial)",
+    "kind": "reading",
+    "url": "https://nvlabs.github.io/eccv2020-mixed-precision-tutorial/files/dusan_stosic-training-neural-networks-with-tensor-cores.pdf",
+    "note": "Tensor-core precision table on slide p26."
+  },
+  "lecture_05_video": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=izZba4UA7iY",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

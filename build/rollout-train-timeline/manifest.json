@@ -1,0 +1,84 @@
+{
+  "fixture": "rollout-train-timeline",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "feynrl:sync-epoch-loop",
+    "feynrl:weight-sync-nccl-async",
+    "feynrl:staleness-budget-max-lag"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "7.866667"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "sync mode: rollout, then train, then weight sync, repeat",
+      "frame": "frames/s0.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s1",
+      "time": 2.933,
+      "caption": "overlap mode: rollout keeps running while training runs",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.867,
+      "caption": "max_lag = 2: the replay buffer may hold three policy versions",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n3"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s0",
+      "claim": "In sync mode each GPU pool is idle for the whole time the other pool works.",
+      "evidence": [
+        "lane.rollout",
+        "lane.train"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s1",
+      "claim": "In overlap mode the rollout lane pauses only during the inline sync window.",
+      "evidence": [
+        "lane.rollout",
+        "lane.train",
+        "readout"
+      ]
+    },
+    {
+      "id": "n3",
+      "at_step": "s2",
+      "claim": "Raising max_lag adds a version bar to the buffer; the oldest is evicted at each sync.",
+      "evidence": [
+        "buffer"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

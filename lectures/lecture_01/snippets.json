@@ -1,0 +1,338 @@
+{
+ "lecture_01.py:L115-L123": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 115,
+  "end": 123,
+  "text": "    text(\"## The bitter lesson\")\n    text(\"Wrong interpretation: scale is all that matters, algorithms don't matter.\")\n    text(\"Right interpretation: algorithms that scale are what matter.\")\n    text(\"### accuracy = efficiency x resources\")\n    text(\"In fact, efficiency is way more important at larger scales (can't afford to be wasteful).\")\n    link(\"https://arxiv.org/abs/2005.04305\"), text(\" showed 44x algorithmic efficiency on ImageNet between 2012 and 2019.\")\n\n    text(\"Framing: what is the best model one can build given a certain compute and data budget?\")\n    text(\"In other words, **maximize efficiency**!\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L242-L246": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 242,
+  "end": 246,
+  "text": "    text(\"Remember it's all about **efficiency**:\")\n    text(\"- Resources: data + hardware (compute, memory, communication bandwidth)\")\n    text(\"- How do you train the best model given a fixed set of resources?\")\n\n    text(\"Today, we are compute-constrained, so design decisions will reflect squeezing the most out of given hardware.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L325": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 325,
+  "end": 325,
+  "text": "    total_flops = 6 * 70e9 * 1e12  # Training 70B parameters on 1T tokens = 4.2e23 FLOPs @inspect total_flops ",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L393": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 393,
+  "end": 393,
+  "text": "    text(\"Question: given a FLOPs budget (C = 6 N D), use a bigger model (N) or train on more tokens (D)?\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L393-L399": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 393,
+  "end": 399,
+  "text": "    text(\"Question: given a FLOPs budget (C = 6 N D), use a bigger model (N) or train on more tokens (D)?\")\n    text(\"Classic compute-optimal scaling laws: \"), link(kaplan_scaling_laws_2020), link(chinchilla_2022)\n    text(\"- ISOFLOP curves: for multiple small FLOPs budgets, find optimal N\")\n    text(\"- Then fit a scaling law to extrapolate to large FLOPs budgets\")\n    image(\"images/chinchilla-isoflop.png\", width=800)\n    text(\"TL;DR: D = 20 N is roughly optimal (e.g., 70B parameter model should be trained on ~1.4T tokens)\")\n    text(\"Caveat: this doesn't take into account inference costs (want a smaller model)\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L275-L277": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 275,
+  "end": 277,
+  "text": "    text(\"Efficiency lens\")\n    text(\"- Reduce context length (1000 bytes → ~250 tokens)\")\n    text(\"- Adaptive computation (more modeling capacity on interesting parts of input)\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L248": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 248,
+  "end": 248,
+  "text": "    text(\"- Tokenization: working with raw bytes is elegant, but compute-inefficient with today's model architectures\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L672-L673": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 672,
+  "end": 673,
+  "text": "    text(\"The compression ratio is terrible, which means the sequences will be too long.\")\n    text(\"Given that the context length of a Transformer is limited (since attention is quadratic), this is not looking great...\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L279-L280": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 279,
+  "end": 280,
+  "text": "    text(\"The dream: tokenizer-free model architectures, which operate directly on bytes \"), link(byt5_2021), link(megabyte_2023), link(blt_2024), link(tfree_2024), link(hnet_2025)\n    text(\"These are promising, but have not yet been scaled up to the frontier.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L275-L280": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 275,
+  "end": 280,
+  "text": "    text(\"Efficiency lens\")\n    text(\"- Reduce context length (1000 bytes → ~250 tokens)\")\n    text(\"- Adaptive computation (more modeling capacity on interesting parts of input)\")\n\n    text(\"The dream: tokenizer-free model architectures, which operate directly on bytes \"), link(byt5_2021), link(megabyte_2023), link(blt_2024), link(tfree_2024), link(hnet_2025)\n    text(\"These are promising, but have not yet been scaled up to the frontier.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L256-L262": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 256,
+  "end": 262,
+  "text": "class Tokenizer(ABC):\n    \"\"\"Abstract interface for a tokenizer.\"\"\"\n    def encode(self, string: str) -> list[int]:\n        raise NotImplementedError\n\n    def decode(self, indices: list[int]) -> str:\n        raise NotImplementedError",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L580-L588": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 580,
+  "end": 588,
+  "text": "    text(\"Raw text is generally represented as Unicode strings.\")\n    string = \"Hello, 🌍! 你好!\"\n\n    text(\"A language model places a probability distribution over sequences of tokens (usually represented by integer indices).\")\n    indices = [15496, 11, 995, 0]\n\n    text(\"So we need a procedure that *encodes* strings into tokens.\")\n    text(\"We also need a procedure that *decodes* tokens back into strings.\")\n    text(\"A \"), link(Tokenizer), text(\" is a class that implements the encode and decode methods.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L603-L606": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 603,
+  "end": 606,
+  "text": "    text(\"Check that encode() and decode() roundtrip:\")\n    indices = tokenizer.encode(string)  # @inspect indices\n    reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string\n    assert string == reconstructed_string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L600-L606": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 600,
+  "end": 606,
+  "text": "    tokenizer = get_gpt5_tokenizer()  # @stepover\n    string = \"Hello, 🌍! 你好!\"  # @inspect string\n\n    text(\"Check that encode() and decode() roundtrip:\")\n    indices = tokenizer.encode(string)  # @inspect indices\n    reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string\n    assert string == reconstructed_string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L594-L597": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 594,
+  "end": 597,
+  "text": "    text(\"## Observations\")\n    text(\"- A word and its preceding space are part of the same token (e.g., \\\" world\\\").\")\n    text(\"- A word at the beginning and in the middle are represented differently (e.g., \\\"hello hello\\\").\")\n    text(\"- Numbers are tokenized into every few digits.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L599-L604": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 599,
+  "end": 604,
+  "text": "    text(\"Here's the GPT-5 tokenizer from OpenAI (tiktoken) in action.\")\n    tokenizer = get_gpt5_tokenizer()  # @stepover\n    string = \"Hello, 🌍! 你好!\"  # @inspect string\n\n    text(\"Check that encode() and decode() roundtrip:\")\n    indices = tokenizer.encode(string)  # @inspect indices",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L567-L571": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 567,
+  "end": 571,
+  "text": "def get_compression_ratio(string: str, indices: list[int]) -> float:  # @inspect string indices\n    \"\"\"Given `string` that has been tokenized into `indices`, return the number of UTF-8 bytes per token..\"\"\"\n    num_bytes = len(bytes(string, encoding=\"utf-8\"))  # @inspect num_bytes\n    num_tokens = len(indices)                       # @inspect num_tokens\n    return num_bytes / num_tokens",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L608-L610": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 608,
+  "end": 610,
+  "text": "    text(\"Compression ratio: number of bytes per token\")\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio\n    text(\"The larger the compression ratio, the shorter the sequence (good since attention is quadratic in sequence length).\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L609": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 609,
+  "end": 609,
+  "text": "    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L611-L612": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 611,
+  "end": 612,
+  "text": "    text(\"One could increase compression ratio by increasing **vocabulary size** (number of possible token values increases), leading to sparsity.\")\n    vocabulary_size = tokenizer.n_vocab  # @inspect vocabulary_size",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L643-L648": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 643,
+  "end": 648,
+  "text": "    text(\"There are approximately 150K Unicode characters. \"), link(title=\"Wikipedia\", url=\"https://en.wikipedia.org/wiki/List_of_Unicode_characters\")\n    vocabulary_size = max(indices) + 1  # This is a lower bound @inspect vocabulary_size\n    text(\"Problem 1: this is a very large vocabulary.\")\n    text(\"Problem 2: many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary.\")\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover\n    text(\"This tokenizer is the worst of both worlds (large vocabulary, low compression ratio).\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L667-L672": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 667,
+  "end": 672,
+  "text": "    text(\"The vocabulary is nice and small: a byte can represent 256 values.\")\n    vocabulary_size = 256  # @inspect vocabulary_size\n    text(\"What about the compression rate?\")\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover\n    assert compression_ratio == 1\n    text(\"The compression ratio is terrible, which means the sequences will be too long.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L505-L511": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 505,
+  "end": 511,
+  "text": "class CharacterTokenizer(Tokenizer):\n    \"\"\"Represent a string as a sequence of Unicode code points.\"\"\"\n    def encode(self, string: str) -> list[int]:\n        return list(map(ord, string))\n\n    def decode(self, indices: list[int]) -> str:\n        return \"\".join(map(chr, indices))",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L628-L634": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 628,
+  "end": 634,
+  "text": "    text(\"A Unicode string is a sequence of Unicode characters.\")\n    text(\"Each character can be converted into a code point (integer) via `ord`.\")\n    assert ord(\"a\") == 97\n    assert ord(\"🌍\") == 127757\n    text(\"It can be converted back via `chr`.\")\n    assert chr(97) == \"a\"\n    assert chr(127757) == \"🌍\"",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L636-L648": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 636,
+  "end": 648,
+  "text": "    text(\"Now let's build a `Tokenizer` and make sure it round-trips:\")\n    tokenizer = CharacterTokenizer()\n    string = \"Hello, 🌍! 你好!\"  # @inspect string\n    indices = tokenizer.encode(string)  # call ord @inspect indices @stepover\n    reconstructed_string = tokenizer.decode(indices)  # call chr @inspect reconstructed_string @stepover\n    assert string == reconstructed_string\n\n    text(\"There are approximately 150K Unicode characters. \"), link(title=\"Wikipedia\", url=\"https://en.wikipedia.org/wiki/List_of_Unicode_characters\")\n    vocabulary_size = max(indices) + 1  # This is a lower bound @inspect vocabulary_size\n    text(\"Problem 1: this is a very large vocabulary.\")\n    text(\"Problem 2: many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary.\")\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover\n    text(\"This tokenizer is the worst of both worlds (large vocabulary, low compression ratio).\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L652-L658": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 652,
+  "end": 658,
+  "text": "    text(\"Unicode strings can be represented as a sequence of bytes, which can be represented by integers between 0 and 255.\")\n    text(\"The most common Unicode encoding is \"), link(title=\"UTF-8\", url=\"https://en.wikipedia.org/wiki/UTF-8\")\n\n    text(\"Some Unicode characters are represented by one byte:\")\n    assert bytes(\"a\", encoding=\"utf-8\") == b\"a\"\n    text(\"Others take multiple bytes:\")\n    assert bytes(\"🌍\", encoding=\"utf-8\") == b\"\\xf0\\x9f\\x8c\\x8d\"",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L662-L663": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 662,
+  "end": 663,
+  "text": "    string = \"Hello, 🌍! 你好!\"  # @inspect string\n    indices = tokenizer.encode(string)  # @inspect indices @stepover",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L514-L524": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 514,
+  "end": 524,
+  "text": "class ByteTokenizer(Tokenizer):\n    \"\"\"Represent a string as a sequence of bytes.\"\"\"\n    def encode(self, string: str) -> list[int]:\n        string_bytes = string.encode(\"utf-8\")  # @inspect string_bytes\n        indices = list(map(int, string_bytes))  # @inspect indices\n        return indices\n\n    def decode(self, indices: list[int]) -> str:\n        string_bytes = bytes(indices)  # @inspect string_bytes\n        string = string_bytes.decode(\"utf-8\")  # @inspect string\n        return string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L667-L673": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 667,
+  "end": 673,
+  "text": "    text(\"The vocabulary is nice and small: a byte can represent 256 values.\")\n    vocabulary_size = 256  # @inspect vocabulary_size\n    text(\"What about the compression rate?\")\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover\n    assert compression_ratio == 1\n    text(\"The compression ratio is terrible, which means the sequences will be too long.\")\n    text(\"Given that the context length of a Transformer is limited (since attention is quadratic), this is not looking great...\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L661-L673": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 661,
+  "end": 673,
+  "text": "    tokenizer = ByteTokenizer()\n    string = \"Hello, 🌍! 你好!\"  # @inspect string\n    indices = tokenizer.encode(string)  # @inspect indices @stepover\n    reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string @stepover\n    assert string == reconstructed_string\n\n    text(\"The vocabulary is nice and small: a byte can represent 256 values.\")\n    vocabulary_size = 256  # @inspect vocabulary_size\n    text(\"What about the compression rate?\")\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover\n    assert compression_ratio == 1\n    text(\"The compression ratio is terrible, which means the sequences will be too long.\")\n    text(\"Given that the context length of a Transformer is limited (since attention is quadratic), this is not looking great...\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L678-L681": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 678,
+  "end": 681,
+  "text": "    string = \"I'll say supercalifragilisticexpialidocious!\"\n\n    chunks = regex.findall(r\"\\w+|.\", string)  # @inspect chunks\n    text(\"This regular expression keeps all alphanumeric characters together (words).\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L688-L690": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 688,
+  "end": 690,
+  "text": "    vocabulary_size = \"Number of distinct chunks in the training data\"\n    compression_ratio = get_compression_ratio(string, chunks)  # @inspect compression_ratio @stepover\n    text(\"Compression ratio is good, but vocabulary size can be huge.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L692-L695": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 692,
+  "end": 695,
+  "text": "    text(\"Moreover:\")\n    text(\"- Many words are rare and the model won't learn much about them.\")\n    text(\"- This doesn't obviously provide a fixed vocabulary size.\")\n    text(\"- New words we haven't seen during training get a special UNK token, which is ugly and can mess up perplexity calculations.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L676-L695": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 676,
+  "end": 695,
+  "text": "def word_tokenizer():\n    text(\"Another approach (closer to what was done classically in NLP) is to split strings into words.\")\n    string = \"I'll say supercalifragilisticexpialidocious!\"\n\n    chunks = regex.findall(r\"\\w+|.\", string)  # @inspect chunks\n    text(\"This regular expression keeps all alphanumeric characters together (words).\")\n\n    text(\"To turn this into a `Tokenizer`, we need to map these chunks into integers.\")\n    text(\"Then, we can build a mapping from each chunk into an integer.\")\n\n    text(\"What's good: each token is meaningful (since humans invented words).\")\n\n    vocabulary_size = \"Number of distinct chunks in the training data\"\n    compression_ratio = get_compression_ratio(string, chunks)  # @inspect compression_ratio @stepover\n    text(\"Compression ratio is good, but vocabulary size can be huge.\")\n\n    text(\"Moreover:\")\n    text(\"- Many words are rare and the model won't learn much about them.\")\n    text(\"- This doesn't obviously provide a fixed vocabulary size.\")\n    text(\"- New words we haven't seen during training get a special UNK token, which is ugly and can mess up perplexity calculations.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L699-L703": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 699,
+  "end": 703,
+  "text": "    text(\"## Byte Pair Encoding (BPE)\")\n    text(\"The BPE algorithm was introduced by Philip Gage in 1994 for data compression. \"), article_link(\"http://www.pennelynn.com/Documents/CUJ/HTML/94HTML/19940045.HTM\")\n    text(\"It was adapted to NLP for neural machine translation. \"), link(sennrich_2016)\n    text(\"(Previously, papers had been using word-based tokenization.)\")\n    text(\"BPE was then used by GPT-2. \"), link(gpt2_2019)",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L705-L708": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 705,
+  "end": 708,
+  "text": "    text(\"Basic idea: *train* the tokenizer on raw text to construct a vocabulary tailored to the data.\")\n    text(\"Intuition: common sequences of bytes are represented by a single token, rare sequences are represented by many tokens.\")\n\n    text(\"Sketch: start with each byte as a token, and successively merge the most common pair of adjacent tokens.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L699-L708": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 699,
+  "end": 708,
+  "text": "    text(\"## Byte Pair Encoding (BPE)\")\n    text(\"The BPE algorithm was introduced by Philip Gage in 1994 for data compression. \"), article_link(\"http://www.pennelynn.com/Documents/CUJ/HTML/94HTML/19940045.HTM\")\n    text(\"It was adapted to NLP for neural machine translation. \"), link(sennrich_2016)\n    text(\"(Previously, papers had been using word-based tokenization.)\")\n    text(\"BPE was then used by GPT-2. \"), link(gpt2_2019)\n\n    text(\"Basic idea: *train* the tokenizer on raw text to construct a vocabulary tailored to the data.\")\n    text(\"Intuition: common sequences of bytes are represented by a single token, rare sequences are represented by many tokens.\")\n\n    text(\"Sketch: start with each byte as a token, and successively merge the most common pair of adjacent tokens.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L711-L712": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 711,
+  "end": 712,
+  "text": "    string = \"the cat in the hat\"  # @inspect string\n    params = train_bpe(string, num_merges=3)",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L729-L750": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 729,
+  "end": 750,
+  "text": "def train_bpe(string: str, num_merges: int) -> BPETokenizerParams:  # @inspect string, @inspect num_merges\n    text(\"Start with the list of bytes of `string`.\")\n    indices = list(map(int, string.encode(\"utf-8\")))  # @inspect indices\n    merges: dict[tuple[int, int], int] = {}  # index1, index2 => merged index\n    vocab: dict[int, bytes] = {x: bytes([x]) for x in range(256)}  # index -> bytes\n\n    for i in range(num_merges):\n        # Count the number of occurrences of each pair of tokens\n        counts = count_adjacent_pairs(indices)  # @inspect counts @stepover\n\n        # Find the most common pair\n        pair = max(counts, key=counts.get)  # @inspect pair\n\n        # Merge that pair\n        new_index = 256 + i  # @inspect new_index\n        merges[pair] = new_index  # @inspect merges\n        vocab[new_index] = vocab[pair[0]] + vocab[pair[1]]  # @inspect vocab\n        indices = merge(indices, pair, new_index)  # @inspect indices @stepover\n\n    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio\n\n    return BPETokenizerParams(vocab=vocab, merges=merges)",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L527-L538": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 527,
+  "end": 538,
+  "text": "def merge(indices: list[int], pair: tuple[int, int], new_index: int) -> list[int]:  # @inspect indices, @inspect pair, @inspect new_index\n    \"\"\"Return `indices`, but with all instances of `pair` replaced with `new_index`.\"\"\"\n    new_indices = []  # @inspect new_indices\n    i = 0  # @inspect i\n    while i < len(indices):\n        if i + 1 < len(indices) and indices[i] == pair[0] and indices[i + 1] == pair[1]:\n            new_indices.append(new_index)\n            i += 2\n        else:\n            new_indices.append(indices[i])\n            i += 1\n    return new_indices",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L753-L758": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 753,
+  "end": 758,
+  "text": "def count_adjacent_pairs(indices: list[int]) -> dict[tuple[int, int], int]:\n    \"\"\"Return a dictionary mapping each adjacent pair of tokens in `indices` to the number of times it occurs.\"\"\"\n    counts = defaultdict(int)\n    for index1, index2 in zip(indices, indices[1:]):\n        counts[(index1, index2)] += 1\n    return counts",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L748": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 748,
+  "end": 748,
+  "text": "    compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L554-L559": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 554,
+  "end": 559,
+  "text": "    def encode(self, string: str) -> list[int]:\n        indices = list(map(int, string.encode(\"utf-8\")))  # @inspect indices\n        # Note: this is a very slow implementation\n        for pair, new_index in self.params.merges.items():  # @inspect pair, @inspect new_index\n            indices = merge(indices, pair, new_index)  # @stepover\n        return indices",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L561-L564": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 561,
+  "end": 564,
+  "text": "    def decode(self, indices: list[int]) -> str:\n        bytes_list = list(map(self.params.vocab.get, indices))  # @inspect bytes_list\n        string = b\"\".join(bytes_list).decode(\"utf-8\")  # @inspect string\n        return string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L716-L720": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 716,
+  "end": 720,
+  "text": "    tokenizer = BPETokenizer(params)  # @stepover\n    string = \"the quick brown fox\"  # @inspect string\n    indices = tokenizer.encode(string)  # @inspect indices\n    reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string @stepover\n    assert string == reconstructed_string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L722-L726": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 722,
+  "end": 726,
+  "text": "    text(\"In Assignment 1, you will go beyond this in the following ways:\")\n    text(\"- encode() currently loops over all merges. Only loop over merges that matter.\")\n    text(\"- Detect and preserve special tokens (e.g., <|endoftext|>).\")\n    text(\"- Use pre-tokenization (e.g., the GPT-2 tokenizer regex).\")\n    text(\"- Try to make the implementation as fast as possible.\")",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L554-L564": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 554,
+  "end": 564,
+  "text": "    def encode(self, string: str) -> list[int]:\n        indices = list(map(int, string.encode(\"utf-8\")))  # @inspect indices\n        # Note: this is a very slow implementation\n        for pair, new_index in self.params.merges.items():  # @inspect pair, @inspect new_index\n            indices = merge(indices, pair, new_index)  # @stepover\n        return indices\n\n    def decode(self, indices: list[int]) -> str:\n        bytes_list = list(map(self.params.vocab.get, indices))  # @inspect bytes_list\n        string = b\"\".join(bytes_list).decode(\"utf-8\")  # @inspect string\n        return string",
+  "sha256": "a7d47339eab8"
+ },
+ "lecture_01.py:L646": {
+  "path": "/Users/colin/Desktop/cs336_enrich/official/lectures/lecture_01.py",
+  "start": 646,
+  "end": 646,
+  "text": "    text(\"Problem 2: many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary.\")",
+  "sha256": "a7d47339eab8"
+ }
+}

@@ -1,0 +1,5629 @@
+{
+  "lecture": "lecture_01",
+  "source_path": "official/lectures/lecture_01.py",
+  "source_sha256": "a7d47339eab889679010e926db8beb79f475a0596243f19bb15dbd69223f67e6",
+  "summary": {
+    "counts": {
+      "section_start": 19,
+      "heading": 37,
+      "figure": 14,
+      "claim": 330,
+      "section_end": 19,
+      "cite": 128,
+      "code": 40,
+      "value": 25,
+      "directive": 11
+    },
+    "sections_in_order": [
+      "main",
+      "welcome",
+      "why_this_course_exists",
+      "current_lm_landscape",
+      "what_is_this_program",
+      "course_logistics",
+      "course_syllabus",
+      "basics",
+      "systems",
+      "scaling_laws",
+      "data",
+      "alignment",
+      "tokenization",
+      "intro_to_tokenization",
+      "tokenization_examples",
+      "character_tokenizer",
+      "byte_tokenizer",
+      "word_tokenizer",
+      "bpe_tokenizer"
+    ],
+    "n_reference_cites": 98,
+    "n_url_cites": 29
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 37,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 52,
+      "section": "welcome",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 53,
+      "section": "welcome",
+      "depth": 1,
+      "text": "CS336: Language Models From Scratch (Spring 2026)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 55,
+      "section": "welcome",
+      "depth": 1,
+      "text": "images/course-staff.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 56,
+      "section": "welcome",
+      "depth": 1,
+      "text": "...bringing you the 3rd offering of CS336.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 58,
+      "section": "welcome",
+      "depth": 1,
+      "text": "Lectures from 2nd offering (Spring 2025) are on [YouTube](https://www.youtube.com/playlist?list=PLoROMvodv4rOY23Y0BoGoBGgQ1zmU_MT_).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 59,
+      "section": "welcome",
+      "depth": 1,
+      "text": "What's new?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 60,
+      "section": "welcome",
+      "depth": 1,
+      "text": "- Same 'from scratch' philosophy",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 61,
+      "section": "welcome",
+      "depth": 1,
+      "text": "- Prioritize high value-per-time concepts, don't lose the forest for the trees",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "welcome",
+      "depth": 1,
+      "text": "- More coverage of modern LM ingredients (mixture of experts, long-context, agents)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 62,
+      "section": "welcome",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 65,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 66,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Why did we make this course?",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Problem: researchers are becoming **disconnected** from the underlying technology.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 69,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- 2016: researchers implemented and trained their own models.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 70,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- 2018: researchers downloaded models (e.g., BERT) and fine-tuned them.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 71,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- Today: researchers prompt API models (e.g., GPT/Claude/Gemini).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 73,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Moving up levels of abstraction boosts productivity, but",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 74,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- These abstractions are leaky (in contrast to programming languages or operating systems).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 75,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- There is still fundamental research to be done that requires tearing up the stack.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 77,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "**Full understanding** of this technology is necessary for **fundamental research**.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 79,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Philosophy of this course: **understanding via building**.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 80,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "But there's one small problem...",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 82,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "The industrialization of language models",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 83,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Industrialisation.jpg",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 85,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Frontier models are really expensive:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 86,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- 2023: GPT-4 supposedly cost $100M to train.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 86,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "https://www.wired.com/story/openai-ceo-sam-altman-the-age-of-giant-ai-models-is-already-over/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 87,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- 2025: xAI builds cluster with 230K GPUs for training Grok.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 87,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "https://x.com/elonmusk/status/1947701807389515912",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 89,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "There are no public details on how frontier models are built.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 90,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "From the GPT-4 technical report",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 90,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "gpt_4_2023",
+      "extra": {
+        "ref": "gpt_4_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 90,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": ":",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 91,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "images/gpt4-no-details.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 93,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Frontier models are out of reach for us.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 94,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "We could build small language models (<1B parameters), but this might not be representative of large language models.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 96,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Example 1: fraction of FLOPs spent in attention versus MLP changes with scale.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 96,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "https://x.com/stephenroller/status/1579993017234382849",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 97,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "images/roller-flops.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 98,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Example 2: emergence of behavior with scale",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 98,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2206.07682",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 99,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "images/wei-emergence-plot.png",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 101,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "What can we learn in this class that transfers to frontier models?",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 102,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "There are three types of knowledge:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 103,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- **Mechanics**: how things work (what a Transformer is, how model parallelism works)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 104,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- **Mindset**: squeezing the most out of the hardware, taking scaling seriously",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 105,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "- **Intuitions**: which data and modeling decisions yield good accuracy",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 107,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "We can teach mechanics and mindset (these do transfer).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 108,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "We can only partially teach intuitions (do not necessarily transfer across scales).",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 110,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Intuitions? 🤷",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 111,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Some design decisions are simply not (yet) justifiable and just come from experimentation.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 112,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Example: Noam Shazeer paper that introduced SwiGLU",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 112,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "shazeer_2020",
+      "extra": {
+        "ref": "shazeer_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 113,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "images/divine-benevolence.png",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 115,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "The bitter lesson",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 116,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Wrong interpretation: scale is all that matters, algorithms don't matter.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 117,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Right interpretation: algorithms that scale are what matter.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 118,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "accuracy = efficiency x resources",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 119,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "In fact, efficiency is way more important at larger scales (can't afford to be wasteful).",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 120,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2005.04305",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 120,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "showed 44x algorithmic efficiency on ImageNet between 2012 and 2019.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 122,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "Framing: what is the best model one can build given a certain compute and data budget?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 123,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "In other words, **maximize efficiency**!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 123,
+      "section": "why_this_course_exists",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 126,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 127,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Pre-neural (before 2010s)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 128,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Language model to measure the entropy of English",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 128,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "shannon_1950",
+      "extra": {
+        "ref": "shannon_1950",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 129,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- N-gram language models (used in machine translation and speech recognition systems)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 129,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "brants_2007",
+      "extra": {
+        "ref": "brants_2007",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 131,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Neural ingredients (2010s)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 132,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Long-Short Term Memory (LSTM)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 132,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "lstm_1997",
+      "extra": {
+        "ref": "lstm_1997",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 133,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- First neural language model",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 133,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "bengio_2003",
+      "extra": {
+        "ref": "bengio_2003",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 134,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Sequence-to-sequence modeling (for machine translation)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 134,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "seq2seq_2014",
+      "extra": {
+        "ref": "seq2seq_2014",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 135,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Adam optimizer",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 135,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "adam_2014",
+      "extra": {
+        "ref": "adam_2014",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 136,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Attention mechanism (for machine translation)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 136,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "bahdanau_2015_attention",
+      "extra": {
+        "ref": "bahdanau_2015_attention",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 137,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Transformer architecture (for machine translation)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 137,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "transformer_2017",
+      "extra": {
+        "ref": "transformer_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 138,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Mixture of experts",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 138,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "moe_2017",
+      "extra": {
+        "ref": "moe_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 139,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Model parallelism",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 139,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "gpipe_2018",
+      "extra": {
+        "ref": "gpipe_2018",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 139,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "zero_2019",
+      "extra": {
+        "ref": "zero_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 139,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "megatron_lm_2019",
+      "extra": {
+        "ref": "megatron_lm_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 141,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Early foundation models (late 2010s)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 142,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- ELMo: pretraining with LSTMs, fine-tuning improves downstream tasks",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 142,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "elmo_2018",
+      "extra": {
+        "ref": "elmo_2018",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 143,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- BERT: pretraining with Transformer, fine-tuning improves downstream tasks",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 143,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "bert_2018",
+      "extra": {
+        "ref": "bert_2018",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 144,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Google's T5 (11B): cast everything as text-to-text",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 144,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "t5_2019",
+      "extra": {
+        "ref": "t5_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 146,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Embracing scaling",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 147,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- OpenAI's GPT-2 (1.5B): fluent text, first signs of zero-shot",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 147,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "gpt2_2019",
+      "extra": {
+        "ref": "gpt2_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 148,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Scaling laws: provide hope / predictability for scaling",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 148,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "kaplan_scaling_laws_2020",
+      "extra": {
+        "ref": "kaplan_scaling_laws_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 149,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- OpenAI's GPT-3 (175B): in-context learning",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 149,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "gpt_3_2020",
+      "extra": {
+        "ref": "gpt_3_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 150,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Google's PaLM (540B): massive scale, undertrained",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 150,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "palm_2022",
+      "extra": {
+        "ref": "palm_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 151,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- DeepMind's Chinchilla (70B): compute-optimal scaling laws",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 151,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "chinchilla_2022",
+      "extra": {
+        "ref": "chinchilla_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 153,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Open models",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 154,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Early attempts (attempts to replicate GPT-3):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 155,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- EleutherAI's open datasets (The Pile) and models (GPT-J)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 155,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "the_pile_2020",
+      "extra": {
+        "ref": "the_pile_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 155,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "gpt_j_2021",
+      "extra": {
+        "ref": "gpt_j_2021",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 156,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Meta's OPT (175B): GPT-3 replication, lots of hardware issues",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 156,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "opt_175b_2022",
+      "extra": {
+        "ref": "opt_175b_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 157,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Hugging Face / BigScience's BLOOM (176B): focused on data sourcing",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 157,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "bloom_2022",
+      "extra": {
+        "ref": "bloom_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 159,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Credible open-weight models (weights + paper):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 160,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Meta's Llama models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 160,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "llama_2023",
+      "extra": {
+        "ref": "llama_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 160,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "llama_2_2023",
+      "extra": {
+        "ref": "llama_2_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 160,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "llama_3_2024",
+      "extra": {
+        "ref": "llama_3_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 161,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Mistral's models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 161,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "mistral_7b_2023",
+      "extra": {
+        "ref": "mistral_7b_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 161,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "mixtral_2024",
+      "extra": {
+        "ref": "mixtral_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 162,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- DeepSeek's models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 162,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "deepseek_67b_2024",
+      "extra": {
+        "ref": "deepseek_67b_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 162,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "deepseek_v2_2024",
+      "extra": {
+        "ref": "deepseek_v2_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 162,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "deepseek_v3_2024",
+      "extra": {
+        "ref": "deepseek_v3_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 162,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "deepseek_r1_2025",
+      "extra": {
+        "ref": "deepseek_r1_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 162,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "deepseek_v3_2_2025",
+      "extra": {
+        "ref": "deepseek_v3_2_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 163,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Alibaba's Qwen models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 163,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "qwen_2_5_2024",
+      "extra": {
+        "ref": "qwen_2_5_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 163,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "qwen_3_2025",
+      "extra": {
+        "ref": "qwen_3_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 164,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Moonshot's Kimi models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 164,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "kimi_1_5_2025",
+      "extra": {
+        "ref": "kimi_1_5_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 164,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "kimi_k2_5_2026",
+      "extra": {
+        "ref": "kimi_k2_5_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 165,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Z.ai's GLM models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 165,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "glm_4_5_2025",
+      "extra": {
+        "ref": "glm_4_5_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 165,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "glm_5_2026",
+      "extra": {
+        "ref": "glm_5_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 166,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Minimax's models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 166,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "minimax_m2_5_2026",
+      "extra": {
+        "ref": "minimax_m2_5_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 167,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Xiaomi's MIMO models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 167,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "xiaomi_mimo_v2_2026",
+      "extra": {
+        "ref": "xiaomi_mimo_v2_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 168,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "These models are approaching closed models (GPT, Claude, Gemini, etc.).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 170,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Open-source models (weights + paper + code + data):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 171,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- AI2's Olmo models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 171,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "olmo_7b_2024",
+      "extra": {
+        "ref": "olmo_7b_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 171,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "olmo_2_2025",
+      "extra": {
+        "ref": "olmo_2_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 171,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "olmo_3_2025",
+      "extra": {
+        "ref": "olmo_3_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 172,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- NVIDIA's Nemotron models",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 172,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "nemotron_15b_2024",
+      "extra": {
+        "ref": "nemotron_15b_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 172,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "nemotron_3_2025",
+      "extra": {
+        "ref": "nemotron_3_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 173,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- Marin's models (open development)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 173,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "marin_8b_2025",
+      "extra": {
+        "ref": "marin_8b_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 173,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "marin_32b_2025",
+      "extra": {
+        "ref": "marin_32b_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 175,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Openness is important for trust and innovation",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 175,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2403.07918",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 176,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "Ideas from open models enable us to teach CS336.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 178,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "What is a language model?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 179,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- 2018 (BERT): something you fine-tune",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 180,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- 2020 (GPT-3): something you prompt",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 181,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- 2022 (ChatGPT): something you talk to",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 181,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "example conversation",
+      "extra": {
+        "title": "example conversation",
+        "url": "https://huggingface.co/datasets/HuggingFaceTB/smoltalk/viewer/all/train?row=72&conversation-viewer=72",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 182,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "- 2026 (agents): something that acts autonomously",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 182,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "example trace",
+      "extra": {
+        "title": "example trace",
+        "url": "https://huggingface.co/datasets/nebius/SWE-rebench-openhands-trajectories/viewer/default/train?conversation-viewer=1",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 184,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "The fundamentals are the same (attention, kernels, optimization).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 185,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "The specs are different (longer context, inference efficiency matters even more).",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 185,
+      "section": "current_lm_landscape",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 188,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 189,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "This is an *executable lecture*, a program whose execution delivers the content of a lecture.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 190,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "Executable lectures make it possible to:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 191,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "- view and run code (since everything is code!),",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 192,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "total = 0  # @inspect total",
+      "extra": {
+        "end_line": 192
+      }
+    },
+    {
+      "kind": "value",
+      "line": 192,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "total",
+      "extra": {
+        "expr": "total = 0"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 193,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "for x in [1, 2, 3]:  # @inspect x",
+      "extra": {
+        "end_line": 193
+      }
+    },
+    {
+      "kind": "value",
+      "line": 193,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "x",
+      "extra": {
+        "expr": "for x in [1, 2, 3]:"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 194,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "total += x  # @inspect total",
+      "extra": {
+        "end_line": 194
+      }
+    },
+    {
+      "kind": "value",
+      "line": 194,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "total",
+      "extra": {
+        "expr": "total += x"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 195,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "- see the hierarchical structure of the lecture",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 195,
+      "section": "what_is_this_program",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 198,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 199,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "All information online:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 199,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "course website",
+      "extra": {
+        "title": "course website",
+        "url": "https://stanford-cs336.github.io/spring2026/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 201,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "This is a 5-unit class.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 202,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "Comment from Spring 2024 course evaluation:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 203,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "> *The entire assignment was approximately the same amount of work as all 5 assignments from CS 224n plus the final project. And that's just the first homework assignment.*",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 205,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "Why you should take this course",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 206,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- You have an obsessive need to understand how things work.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 207,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- You want to build up your research engineering muscles.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 209,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "Why you should not take this course",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 210,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- You actually want to get research done this quarter. (Talk to your advisor.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 211,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- You are interested in learning about the hottest new techniques in AI (e.g., multimodality, RAG, etc.). (You should take a seminar class for that.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 212,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- You want to get good results on your own application domain. (You should just prompt or fine-tune an existing model.)",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 214,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "How you can follow along at home",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 215,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- All lecture materials and assignments will be posted online, so feel free to follow on your own.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 216,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Lectures are recorded via [CGOE](https://cgoe.stanford.edu/).",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 218,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "Assignments",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 219,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- 5 assignments (basics, systems, scaling laws, data, alignment).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 220,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- No scaffolding code, but we provide unit tests and adapter interfaces to help you check correctness.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 221,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Implement locally to test for correctness, then run on cluster for benchmarking (accuracy and speed).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 222,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Leaderboard for some assignments (minimize perplexity given training budget).",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 224,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "AI policy",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 225,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Coding agents can solve all the assignments, but you won't learn anything.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 226,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- AI can be tremendously useful for answering questions and tutoring.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 227,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- You must use our provided AGENTS.md file, which asks the AI to be pedagogically-minded.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 228,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Please read our [AI policy guide](https://docs.google.com/document/d/1SZAlExB1qAc9izHt54gwunNpjKE6wXb8Y7yA_e-baK8/edit?tab=t.0).",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 230,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "Compute",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 231,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Thanks to [Modal](https://modal.com/) for providing compute. 🙏",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 232,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "- Please read the [guide](https://docs.google.com/document/d/1cHE0iKVyXLJ3XpIs2XuXTmZ-HMmPk2hIPeCvy-AydMg/edit?tab=t.otis27tacaef) on how to access and use the compute.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 232,
+      "section": "course_logistics",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 235,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 265,
+      "section": "basics",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 266,
+      "section": "basics",
+      "depth": 2,
+      "text": "Goal: be able to train a basic language model",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 267,
+      "section": "basics",
+      "depth": 2,
+      "text": "Components: tokenization, model architecture, training",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 269,
+      "section": "basics",
+      "depth": 2,
+      "text": "Tokenization",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 270,
+      "section": "basics",
+      "depth": 2,
+      "text": "What are the atoms that the model operates on?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 271,
+      "section": "basics",
+      "depth": 2,
+      "text": "Formally: a tokenizer converts between raw inputs (bytes) and sequences of integers (tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 272,
+      "section": "basics",
+      "depth": 2,
+      "text": "images/tokenized-example.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 273,
+      "section": "basics",
+      "depth": 2,
+      "text": "Popular tokenizer: **Byte-Pair Encoding** (BPE)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 273,
+      "section": "basics",
+      "depth": 2,
+      "text": "sennrich_2016",
+      "extra": {
+        "ref": "sennrich_2016",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 274,
+      "section": "basics",
+      "depth": 2,
+      "text": "Intuition: break input into frequently-occuring chunks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 275,
+      "section": "basics",
+      "depth": 2,
+      "text": "Efficiency lens",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 276,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Reduce context length (1000 bytes → ~250 tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 277,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Adaptive computation (more modeling capacity on interesting parts of input)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 279,
+      "section": "basics",
+      "depth": 2,
+      "text": "The dream: tokenizer-free model architectures, which operate directly on bytes",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 279,
+      "section": "basics",
+      "depth": 2,
+      "text": "byt5_2021",
+      "extra": {
+        "ref": "byt5_2021",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 279,
+      "section": "basics",
+      "depth": 2,
+      "text": "megabyte_2023",
+      "extra": {
+        "ref": "megabyte_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 279,
+      "section": "basics",
+      "depth": 2,
+      "text": "blt_2024",
+      "extra": {
+        "ref": "blt_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 279,
+      "section": "basics",
+      "depth": 2,
+      "text": "tfree_2024",
+      "extra": {
+        "ref": "tfree_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 279,
+      "section": "basics",
+      "depth": 2,
+      "text": "hnet_2025",
+      "extra": {
+        "ref": "hnet_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 280,
+      "section": "basics",
+      "depth": 2,
+      "text": "These are promising, but have not yet been scaled up to the frontier.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 282,
+      "section": "basics",
+      "depth": 2,
+      "text": "Model architecture",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 283,
+      "section": "basics",
+      "depth": 2,
+      "text": "Starting point: original Transformer",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 283,
+      "section": "basics",
+      "depth": 2,
+      "text": "transformer_2017",
+      "extra": {
+        "ref": "transformer_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 284,
+      "section": "basics",
+      "depth": 2,
+      "text": "images/transformer-architecture.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 286,
+      "section": "basics",
+      "depth": 2,
+      "text": "Refinements:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 287,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Activation functions: ReLU, SwiGLU",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 287,
+      "section": "basics",
+      "depth": 2,
+      "text": "shazeer_2020",
+      "extra": {
+        "ref": "shazeer_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 288,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Positional encodings: sinusoidal, RoPE",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 288,
+      "section": "basics",
+      "depth": 2,
+      "text": "rope_2021",
+      "extra": {
+        "ref": "rope_2021",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 289,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Normalization: LayerNorm, RMSNorm, QK norm, pre-norm versus post-norm",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 289,
+      "section": "basics",
+      "depth": 2,
+      "text": "layernorm_2016",
+      "extra": {
+        "ref": "layernorm_2016",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 289,
+      "section": "basics",
+      "depth": 2,
+      "text": "rms_norm_2019",
+      "extra": {
+        "ref": "rms_norm_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 289,
+      "section": "basics",
+      "depth": 2,
+      "text": "qk_norm_2023",
+      "extra": {
+        "ref": "qk_norm_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 289,
+      "section": "basics",
+      "depth": 2,
+      "text": "pre_post_norm_2020",
+      "extra": {
+        "ref": "pre_post_norm_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 290,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Attention: full, sparse/local attention, group-query attention (GQA), multi-head latent attention (MLA)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 290,
+      "section": "basics",
+      "depth": 2,
+      "text": "sparse_transformer_2019",
+      "extra": {
+        "ref": "sparse_transformer_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 290,
+      "section": "basics",
+      "depth": 2,
+      "text": "gqa_2023",
+      "extra": {
+        "ref": "gqa_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 290,
+      "section": "basics",
+      "depth": 2,
+      "text": "mla_2024",
+      "extra": {
+        "ref": "mla_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 291,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Recurrence/state-space models/linear attention: Mamba, Gated DeltaNet",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 291,
+      "section": "basics",
+      "depth": 2,
+      "text": "linear_attention_2020",
+      "extra": {
+        "ref": "linear_attention_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 291,
+      "section": "basics",
+      "depth": 2,
+      "text": "mamba_2_2024",
+      "extra": {
+        "ref": "mamba_2_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 291,
+      "section": "basics",
+      "depth": 2,
+      "text": "gdn_2024",
+      "extra": {
+        "ref": "gdn_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 291,
+      "section": "basics",
+      "depth": 2,
+      "text": "mamba_3_2026",
+      "extra": {
+        "ref": "mamba_3_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 292,
+      "section": "basics",
+      "depth": 2,
+      "text": "- MLP: dense, mixture of experts",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 292,
+      "section": "basics",
+      "depth": 2,
+      "text": "moe_2017",
+      "extra": {
+        "ref": "moe_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 292,
+      "section": "basics",
+      "depth": 2,
+      "text": "switch_transformers_2021",
+      "extra": {
+        "ref": "switch_transformers_2021",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 293,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Shape (hidden dimension, depth, number of heads, number of experts)",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 295,
+      "section": "basics",
+      "depth": 2,
+      "text": "Training",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 296,
+      "section": "basics",
+      "depth": 2,
+      "text": "How do you set the parameters of the model?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 297,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Loss function (e.g., multi-token prediction)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 297,
+      "section": "basics",
+      "depth": 2,
+      "text": "mtp_2024",
+      "extra": {
+        "ref": "mtp_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 297,
+      "section": "basics",
+      "depth": 2,
+      "text": "deepseek_v3_2024",
+      "extra": {
+        "ref": "deepseek_v3_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 298,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Optimizer (e.g., AdamW, SOAP, Muon)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 298,
+      "section": "basics",
+      "depth": 2,
+      "text": "adam_2014",
+      "extra": {
+        "ref": "adam_2014",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 298,
+      "section": "basics",
+      "depth": 2,
+      "text": "adamw_2017",
+      "extra": {
+        "ref": "adamw_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 298,
+      "section": "basics",
+      "depth": 2,
+      "text": "soap_2024",
+      "extra": {
+        "ref": "soap_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 298,
+      "section": "basics",
+      "depth": 2,
+      "text": "muon_2024",
+      "extra": {
+        "ref": "muon_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 299,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Initialization scale (e.g., Xavier init, muP)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 299,
+      "section": "basics",
+      "depth": 2,
+      "text": "glorot_2010",
+      "extra": {
+        "ref": "glorot_2010",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 299,
+      "section": "basics",
+      "depth": 2,
+      "text": "mup_2022",
+      "extra": {
+        "ref": "mup_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 300,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Learning rate schedule (e.g., cosine, WSD)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 300,
+      "section": "basics",
+      "depth": 2,
+      "text": "cosine_learning_rate_2017",
+      "extra": {
+        "ref": "cosine_learning_rate_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 300,
+      "section": "basics",
+      "depth": 2,
+      "text": "wsd_2024",
+      "extra": {
+        "ref": "wsd_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 301,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Regularization (e.g., dropout, weight decay)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 302,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Batch size (e.g., critical batch size)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 302,
+      "section": "basics",
+      "depth": 2,
+      "text": "large_batch_training_2018",
+      "extra": {
+        "ref": "large_batch_training_2018",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 303,
+      "section": "basics",
+      "depth": 2,
+      "text": "- MoE specific: load balancing (e.g., aux-free)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 303,
+      "section": "basics",
+      "depth": 2,
+      "text": "auxfree_2024",
+      "extra": {
+        "ref": "auxfree_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 303,
+      "section": "basics",
+      "depth": 2,
+      "text": "deepseek_v3_2024",
+      "extra": {
+        "ref": "deepseek_v3_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 305,
+      "section": "basics",
+      "depth": 2,
+      "text": "Assignment 1 (basics)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 306,
+      "section": "basics",
+      "depth": 2,
+      "text": "GitHub",
+      "extra": {
+        "title": "GitHub",
+        "url": "https://github.com/stanford-cs336/assignment1-basics",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 306,
+      "section": "basics",
+      "depth": 2,
+      "text": "PDF",
+      "extra": {
+        "title": "PDF",
+        "url": "https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_spring2026_assignment1_basics.pdf",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 307,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Implement BPE tokenizer",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 308,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Implement Transformer, cross-entropy loss, AdamW optimizer, training loop",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 309,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Do resource accounting",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 310,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Train on TinyStories and OpenWebText",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 311,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Leaderboard: minimize OpenWebText perplexity given 45 minutes on a B200",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 311,
+      "section": "basics",
+      "depth": 2,
+      "text": "last year's leaderboard",
+      "extra": {
+        "title": "last year's leaderboard",
+        "url": "https://github.com/stanford-cs336/spring2025-assignment1-basics-leaderboard",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 313,
+      "section": "basics",
+      "depth": 2,
+      "text": "High-level principle: everything is about balancing the following:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 314,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Expressivity (can represent complex dependencies in the data)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 315,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Stability (keep parameter and gradient norms in goldilocks zone)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 316,
+      "section": "basics",
+      "depth": 2,
+      "text": "- Efficiency (runs fast on hardware, both training and inference)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 316,
+      "section": "basics",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 319,
+      "section": "systems",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 320,
+      "section": "systems",
+      "depth": 2,
+      "text": "Goal: squeeze the most out of the hardware (GPU or TPU)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 321,
+      "section": "systems",
+      "depth": 2,
+      "text": "Components: kernels, parallelism, inference",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 323,
+      "section": "systems",
+      "depth": 2,
+      "text": "Basics",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 324,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Resource accounting: memory and compute characteristics of a model",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 325,
+      "section": "systems",
+      "depth": 2,
+      "text": "total_flops = 6 * 70e9 * 1e12  # Training 70B parameters on 1T tokens = 4.2e23 FLOPs @inspect total_flops",
+      "extra": {
+        "end_line": 325
+      }
+    },
+    {
+      "kind": "value",
+      "line": 325,
+      "section": "systems",
+      "depth": 2,
+      "text": "total_flops",
+      "extra": {
+        "expr": "total_flops = 6 * 70e9 * 1e12"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 326,
+      "section": "systems",
+      "depth": 2,
+      "text": "images/compute-memory.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 327,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Model parameters must be moved from memory (HBM) to the compute (SMs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 328,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Example: B200 can perform 2.25 PFLOP/sec (bf16) with 8TB/sec memory bandwidth",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 329,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Roofline analysis: understand whether we're compute-bound or memory-bound",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 330,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Benchmarking and profiling (nsight): see what happens in practice",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 332,
+      "section": "systems",
+      "depth": 2,
+      "text": "[DGX B200](https://docs.nvidia.com/dgx/dgxb200-user-guide/introduction-to-dgxb200.html):",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 333,
+      "section": "systems",
+      "depth": 2,
+      "text": "https://docs.nvidia.com/dgx/dgxb200-user-guide/_images/dgx-b200-system-topology.png",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 335,
+      "section": "systems",
+      "depth": 2,
+      "text": "Kernels",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 336,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Kernel is a function that runs on GPU",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 337,
+      "section": "systems",
+      "depth": 2,
+      "text": "- When using PyTorch, each primitive operation launches a standard kernel",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 338,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Can write custom kernels to make GPUs go brrr",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 339,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Principle: organize computation to minimize data movement",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 340,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Naive: read HBM; compute A; write HBM; read HBM; compute B; write HBM",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 341,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Fused: read HBM; compute A and B; write HBM",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 342,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Strategies: operator fusion (matmul + activation), tiling (FlashAttention)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 343,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Warp divergence, memory coalescing, bank conflicts, occupancy, bulk-async memory transfers",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 344,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Write kernels in CUDA/**Triton**/CUTLASS/ThunderKittens",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 346,
+      "section": "systems",
+      "depth": 2,
+      "text": "Parallelism",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 347,
+      "section": "systems",
+      "depth": 2,
+      "text": "- What if we have 1024 GPUs?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 348,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Data movement between GPUs is even slower, but same 'minimize data movement' principle holds",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 349,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Use classic collective operations (e.g., gather, reduce, all-reduce)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 350,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Shard memory (parameters, activations, gradients, optimizer states) across GPUs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 351,
+      "section": "systems",
+      "depth": 2,
+      "text": "- How to split computation: {data,tensor,pipeline,sequence,expert} parallelism",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 353,
+      "section": "systems",
+      "depth": 2,
+      "text": "Inference",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 354,
+      "section": "systems",
+      "depth": 2,
+      "text": "Goal: generate tokens given a prompt (needed to actually use models!)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 355,
+      "section": "systems",
+      "depth": 2,
+      "text": "Inference is also needed for reinforcement learning, test-time compute, evaluation",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 356,
+      "section": "systems",
+      "depth": 2,
+      "text": "Two phases: prefill and decode",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 357,
+      "section": "systems",
+      "depth": 2,
+      "text": "images/prefill-decode.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 358,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Prefill (similar to training): tokens are given, can process all at once (compute-bound)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 359,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Decode: need to generate one token at a time (memory-bound)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 360,
+      "section": "systems",
+      "depth": 2,
+      "text": "Methods to speed up decoding:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 361,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Use cheaper model (via model pruning, quantization, distillation)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 362,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Speculative decoding: use a cheaper \"draft\" model to generate multiple tokens, then use the full model to score in parallel (exact decoding!)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 363,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Systems optimizations: fused kernels, continuous batching",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 365,
+      "section": "systems",
+      "depth": 2,
+      "text": "Assignment 2 (systems)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 366,
+      "section": "systems",
+      "depth": 2,
+      "text": "GitHub",
+      "extra": {
+        "title": "GitHub",
+        "url": "https://github.com/stanford-cs336/assignment2-systems",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 366,
+      "section": "systems",
+      "depth": 2,
+      "text": "PDF from Spring 2025",
+      "extra": {
+        "title": "PDF from Spring 2025",
+        "url": "https://github.com/stanford-cs336/assignment2-systems/blob/spring2025/cs336_spring2025_assignment2_systems.pdf",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 367,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Implement a fused RMSNorm kernel in Triton",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 368,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Implement distributed data parallel training",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 369,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Implement optimizer state sharding",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 370,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Benchmark and profile the implementations",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 372,
+      "section": "systems",
+      "depth": 2,
+      "text": "Recommended book: [How to Scale Your Model](https://jax-ml.github.io/scaling-book/)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 373,
+      "section": "systems",
+      "depth": 2,
+      "text": "- Nicely lays out how to approach systems for LLMs conceptually",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 374,
+      "section": "systems",
+      "depth": 2,
+      "text": "- From Google, so it foregrounds TPUs, but high-level concepts are similar",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 374,
+      "section": "systems",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 377,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 378,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Setting: if you had 1e25 FLOPs of compute, what hyperparameters would you use to train a good model?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 379,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Too expensive to do hyperparameter tuning at full scale!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 381,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Key conceptual shift: instead of a single scale, think of a **scaling recipe** (FLOPs → hyperparameters)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 382,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "For a scaling recipe:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 383,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Run experiments to compute the loss at various smaller scales (e.g., up to 1e24 FLOPs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 384,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Fit a scaling law to predict the loss of the scaling recipe at the target scale (e.g., 1e25 FLOPs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 386,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Now you can:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 387,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "1. Optimize the scaling recipe targeting a larger scale using smaller scale experiments",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 388,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "2. Predict the loss at the target scale before actually running the experiment!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 389,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Scaling laws don't happen automatically, they require careful construction of a scaling recipe.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 390,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Parameterize the model in a way to get **hyperparameter transfer**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 390,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "mup_2022",
+      "extra": {
+        "ref": "mup_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 391,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Predictability is at least as important as optimality!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 393,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Question: given a FLOPs budget (C = 6 N D), use a bigger model (N) or train on more tokens (D)?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 394,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Classic compute-optimal scaling laws:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 394,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "kaplan_scaling_laws_2020",
+      "extra": {
+        "ref": "kaplan_scaling_laws_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 394,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "chinchilla_2022",
+      "extra": {
+        "ref": "chinchilla_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 395,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- ISOFLOP curves: for multiple small FLOPs budgets, find optimal N",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 396,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Then fit a scaling law to extrapolate to large FLOPs budgets",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 397,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "images/chinchilla-isoflop.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 398,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "TL;DR: D = 20 N is roughly optimal (e.g., 70B parameter model should be trained on ~1.4T tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 399,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Caveat: this doesn't take into account inference costs (want a smaller model)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 401,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Live example from Marin",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 401,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "https://x.com/percyliang/status/2034367256277533100",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 402,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "https://pbs.twimg.com/media/HDuErvvbsAAQ5Yt?format=jpg&name=4096x4096",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 403,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Should be done training this week, should see how well we match the preregistered loss!",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 405,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "Assignment 3 (scaling laws)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 406,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "GitHub",
+      "extra": {
+        "title": "GitHub",
+        "url": "https://github.com/stanford-cs336/assignment3-scaling",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 406,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "PDF from Spring 2025",
+      "extra": {
+        "title": "PDF from Spring 2025",
+        "url": "https://github.com/stanford-cs336/assignment3-scaling/blob/master/cs336_spring2025_assignment3_scaling.pdf",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 407,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- We define a training API (hyperparameters → loss) based on previous runs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 408,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Submit \"training jobs\" (under a FLOPs budget) and gather data points",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 409,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Fit scaling laws to the data points",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 410,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Submit extrapolated hyperparameters and loss predictions",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 411,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "- Leaderboard: minimize loss given FLOPs budget",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 411,
+      "section": "scaling_laws",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 414,
+      "section": "data",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 415,
+      "section": "data",
+      "depth": 2,
+      "text": "Question: What capabilities do we want the model to have?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 416,
+      "section": "data",
+      "depth": 2,
+      "text": "Multilingual?  Good at conversation?  Agentic coding capabilities?",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 418,
+      "section": "data",
+      "depth": 2,
+      "text": "Evaluation",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 419,
+      "section": "data",
+      "depth": 2,
+      "text": "What is the purpose of evaluation?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 420,
+      "section": "data",
+      "depth": 2,
+      "text": "1. Internal: guide model development (smoothness across scales, relative performance matters)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 421,
+      "section": "data",
+      "depth": 2,
+      "text": "2. External: measure absolute quality of a real use case (ecological validity matters)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 422,
+      "section": "data",
+      "depth": 2,
+      "text": "Examples of evaluations:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 423,
+      "section": "data",
+      "depth": 2,
+      "text": "1. Perplexity: ideally run on private documents not on Internet (avoid contamination)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 424,
+      "section": "data",
+      "depth": 2,
+      "text": "2. Advanced use cases: GPQA, HLE, SWE-Bench, Terminal-Bench",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 425,
+      "section": "data",
+      "depth": 2,
+      "text": "LMs are general purpose, require a diverse set of evaluations!",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 427,
+      "section": "data",
+      "depth": 2,
+      "text": "Data curation",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 428,
+      "section": "data",
+      "depth": 2,
+      "text": "- Data does not just fall from the sky.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 429,
+      "section": "data",
+      "depth": 2,
+      "text": "- Sources: webpages crawled from the Internet, books, arXiv papers, GitHub code, etc.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 430,
+      "section": "data",
+      "depth": 2,
+      "text": "https://ar5iv.labs.arxiv.org/html/2101.00027/assets/pile_chart2.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 431,
+      "section": "data",
+      "depth": 2,
+      "text": "- Appeal to fair use to train on copyright data?",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 431,
+      "section": "data",
+      "depth": 2,
+      "text": "https://arxiv.org/pdf/2303.15715.pdf",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 432,
+      "section": "data",
+      "depth": 2,
+      "text": "- Might have to license data (e.g., Google with Reddit data)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 432,
+      "section": "data",
+      "depth": 2,
+      "text": "https://www.reuters.com/technology/reddit-ai-content-licensing-deal-with-google-sources-say-2024-02-22/",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 433,
+      "section": "data",
+      "depth": 2,
+      "text": "- Raw data is HTML, PDF, directories (not text), requires processing",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 435,
+      "section": "data",
+      "depth": 2,
+      "text": "Data processing",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 436,
+      "section": "data",
+      "depth": 2,
+      "text": "- Transformation: convert HTML/PDF to text (extract main content)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 437,
+      "section": "data",
+      "depth": 2,
+      "text": "- Filtering: keep high quality data, remove harmful content (via classifiers)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 438,
+      "section": "data",
+      "depth": 2,
+      "text": "- Deduplication: save compute, avoid memorization; use Bloom filters or MinHash",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 439,
+      "section": "data",
+      "depth": 2,
+      "text": "- Data mixing: how much to upweight/downweight each source?",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 439,
+      "section": "data",
+      "depth": 2,
+      "text": "regmix_2025",
+      "extra": {
+        "ref": "regmix_2025",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 439,
+      "section": "data",
+      "depth": 2,
+      "text": "olmix_2026",
+      "extra": {
+        "ref": "olmix_2026",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 440,
+      "section": "data",
+      "depth": 2,
+      "text": "- Rewriting / synthetic data: use LM to augment real data, more similar to downstream tasks",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 440,
+      "section": "data",
+      "depth": 2,
+      "text": "wrap_2024",
+      "extra": {
+        "ref": "wrap_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 442,
+      "section": "data",
+      "depth": 2,
+      "text": "Types of data:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 443,
+      "section": "data",
+      "depth": 2,
+      "text": "- Pretraining data: large and diverse",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 444,
+      "section": "data",
+      "depth": 2,
+      "text": "- Mid-training data: high quality, including long-context",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 445,
+      "section": "data",
+      "depth": 2,
+      "text": "- Post-training data: supervised fine-tuning (conversations, agentic traces with tool calling)",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 447,
+      "section": "data",
+      "depth": 2,
+      "text": "Assignment 4 (data)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 448,
+      "section": "data",
+      "depth": 2,
+      "text": "GitHub",
+      "extra": {
+        "title": "GitHub",
+        "url": "https://github.com/stanford-cs336/assignment4-data",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 448,
+      "section": "data",
+      "depth": 2,
+      "text": "PDF from Spring 2025",
+      "extra": {
+        "title": "PDF from Spring 2025",
+        "url": "https://github.com/stanford-cs336/assignment4-data/blob/spring2025/cs336_spring2025_assignment4_data.pdf",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 449,
+      "section": "data",
+      "depth": 2,
+      "text": "- Convert Common Crawl HTML to text",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 450,
+      "section": "data",
+      "depth": 2,
+      "text": "- Train classifiers to filter for quality and harmful content",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 451,
+      "section": "data",
+      "depth": 2,
+      "text": "- Deduplication using MinHash",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 452,
+      "section": "data",
+      "depth": 2,
+      "text": "- Leaderboard: minimize perplexity given token budget",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 452,
+      "section": "data",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 455,
+      "section": "alignment",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 456,
+      "section": "alignment",
+      "depth": 2,
+      "text": "So far, we have trained a model on full supervision (predict the next token).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 457,
+      "section": "alignment",
+      "depth": 2,
+      "text": "Now that the model should be reasonable, we can improve it further from **weak supervision**.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 458,
+      "section": "alignment",
+      "depth": 2,
+      "text": "Why weak supervision?  When it is easier to critique than to generate.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 460,
+      "section": "alignment",
+      "depth": 2,
+      "text": "Basic template:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 461,
+      "section": "alignment",
+      "depth": 2,
+      "text": "1. Generate responses from the model.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 462,
+      "section": "alignment",
+      "depth": 2,
+      "text": "2. Score responses with a {human, verifier, LM judge}.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 463,
+      "section": "alignment",
+      "depth": 2,
+      "text": "3. Update the model to prefer better responses.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 465,
+      "section": "alignment",
+      "depth": 2,
+      "text": "Algorithms:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 466,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- Proximal Policy Optimization (PPO) from reinforcement learning",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 466,
+      "section": "alignment",
+      "depth": 2,
+      "text": "ppo_2017",
+      "extra": {
+        "ref": "ppo_2017",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 466,
+      "section": "alignment",
+      "depth": 2,
+      "text": "instruct_gpt_2022",
+      "extra": {
+        "ref": "instruct_gpt_2022",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 467,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- Direct Policy Optimization (DPO): for preference data, simpler",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 467,
+      "section": "alignment",
+      "depth": 2,
+      "text": "dpo_2023",
+      "extra": {
+        "ref": "dpo_2023",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 468,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- Group Relative Preference Optimization (GRPO): remove value function",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 468,
+      "section": "alignment",
+      "depth": 2,
+      "text": "grpo",
+      "extra": {
+        "ref": "grpo",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 470,
+      "section": "alignment",
+      "depth": 2,
+      "text": "Challenges:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 471,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- RL algorithms are unstable and hard to tune",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 472,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- At scale, this requires a lot of new infrastructure (inference with async rollouts)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 473,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- Constantly trading off systems efficiency and on-policyness",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 475,
+      "section": "alignment",
+      "depth": 2,
+      "text": "Assignment 5 (alignment)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 476,
+      "section": "alignment",
+      "depth": 2,
+      "text": "GitHub",
+      "extra": {
+        "title": "GitHub",
+        "url": "https://github.com/stanford-cs336/assignment5-alignment",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 476,
+      "section": "alignment",
+      "depth": 2,
+      "text": "PDF from Spring 2025",
+      "extra": {
+        "title": "PDF from Spring 2025",
+        "url": "https://github.com/stanford-cs336/assignment5-alignment/blob/spring2025/cs336_spring2025_assignment5_alignment.pdf",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 477,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- Implement Direct Preference Optimization (DPO)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 478,
+      "section": "alignment",
+      "depth": 2,
+      "text": "- Implement Group Relative Preference Optimization (GRPO)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 478,
+      "section": "alignment",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 242,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "Remember it's all about **efficiency**:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 243,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- Resources: data + hardware (compute, memory, communication bandwidth)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 244,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- How do you train the best model given a fixed set of resources?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 246,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "Today, we are compute-constrained, so design decisions will reflect squeezing the most out of given hardware.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 247,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- Systems: clearly about efficiency",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 248,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- Tokenization: working with raw bytes is elegant, but compute-inefficient with today's model architectures",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 249,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- Model architecture: many changes motivated by reducing memory or FLOPs (e.g., sharing KV caches, sliding window attention)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 250,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- Data filtering: avoid wasting precious compute updating on bad / irrelevant data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 251,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "- Scaling laws: use less compute on smaller models to do hyperparameter tuning",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 253,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "Tomorrow, we will become data-constrained...",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 253,
+      "section": "course_syllabus",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 484,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 485,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "This unit was inspired by Andrej Karpathy's video on tokenization; check it out!",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 485,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "https://www.youtube.com/watch?v=zduSFxRajkE",
+      "extra": {
+        "kind": "url",
+        "via": "video_link"
+      }
+    },
+    {
+      "kind": "section_start",
+      "line": 579,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 580,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "Raw text is generally represented as Unicode strings.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 581,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "string = \"Hello, 🌍! 你好!\"",
+      "extra": {
+        "end_line": 581
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 583,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "A language model places a probability distribution over sequences of tokens (usually represented by integer indices).",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 584,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "indices = [15496, 11, 995, 0]",
+      "extra": {
+        "end_line": 584
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 586,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "So we need a procedure that *encodes* strings into tokens.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 587,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "We also need a procedure that *decodes* tokens back into strings.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 588,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "A",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 588,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "Tokenizer",
+      "extra": {
+        "ref": "Tokenizer",
+        "kind": "name"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 588,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "is a class that implements the encode and decode methods.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 588,
+      "section": "intro_to_tokenization",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 591,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 592,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "To get a feel for how tokenizers work, play with this",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 592,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "interactive site",
+      "extra": {
+        "title": "interactive site",
+        "url": "https://tiktokenizer.vercel.app/?encoder=gpt2",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 594,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "Observations",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 595,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "- A word and its preceding space are part of the same token (e.g., \" world\").",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 596,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "- A word at the beginning and in the middle are represented differently (e.g., \"hello hello\").",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 597,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "- Numbers are tokenized into every few digits.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 599,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "Here's the GPT-5 tokenizer from OpenAI (tiktoken) in action.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 600,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "tokenizer = get_gpt5_tokenizer()  # @stepover",
+      "extra": {
+        "end_line": 600
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 600,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 601,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "string = \"Hello, 🌍! 你好!\"  # @inspect string",
+      "extra": {
+        "end_line": 601
+      }
+    },
+    {
+      "kind": "value",
+      "line": 601,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "string",
+      "extra": {
+        "expr": "string = \"Hello, 🌍! 你好!\""
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 603,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "Check that encode() and decode() roundtrip:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 604,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "indices = tokenizer.encode(string)  # @inspect indices",
+      "extra": {
+        "end_line": 604
+      }
+    },
+    {
+      "kind": "value",
+      "line": 604,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "indices",
+      "extra": {
+        "expr": "indices = tokenizer.encode(string)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 605,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string",
+      "extra": {
+        "end_line": 605
+      }
+    },
+    {
+      "kind": "value",
+      "line": 605,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "reconstructed_string",
+      "extra": {
+        "expr": "reconstructed_string = tokenizer.decode(indices)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 606,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "assert string == reconstructed_string",
+      "extra": {
+        "end_line": 606
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 608,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "Compression ratio: number of bytes per token",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 609,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio",
+      "extra": {
+        "end_line": 609
+      }
+    },
+    {
+      "kind": "value",
+      "line": 609,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "compression_ratio",
+      "extra": {
+        "expr": "compression_ratio = get_compression_ratio(string, indices)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 610,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "The larger the compression ratio, the shorter the sequence (good since attention is quadratic in sequence length).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 611,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "One could increase compression ratio by increasing **vocabulary size** (number of possible token values increases), leading to sparsity.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 612,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "vocabulary_size = tokenizer.n_vocab  # @inspect vocabulary_size",
+      "extra": {
+        "end_line": 612
+      }
+    },
+    {
+      "kind": "value",
+      "line": 612,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "vocabulary_size",
+      "extra": {
+        "expr": "vocabulary_size = tokenizer.n_vocab"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 614,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "Let's take a look at the actual vocabulary:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 614,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "vocab",
+      "extra": {
+        "title": "vocab",
+        "url": "get_local_url('var/gpt5_tokenizer_vocab.txt')",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 615,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "output_tokenizer(tokenizer, \"var/gpt5_tokenizer_vocab.txt\")  # @stepover",
+      "extra": {
+        "end_line": 615
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 615,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 615,
+      "section": "tokenization_examples",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 627,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 628,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "A Unicode string is a sequence of Unicode characters.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 629,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "Each character can be converted into a code point (integer) via `ord`.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 630,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "assert ord(\"a\") == 97\nassert ord(\"🌍\") == 127757",
+      "extra": {
+        "end_line": 631
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 632,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "It can be converted back via `chr`.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 633,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "assert chr(97) == \"a\"\nassert chr(127757) == \"🌍\"",
+      "extra": {
+        "end_line": 634
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 636,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "Now let's build a `Tokenizer` and make sure it round-trips:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 637,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "tokenizer = CharacterTokenizer()\nstring = \"Hello, 🌍! 你好!\"  # @inspect string",
+      "extra": {
+        "end_line": 638
+      }
+    },
+    {
+      "kind": "value",
+      "line": 638,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "string",
+      "extra": {
+        "expr": "string = \"Hello, 🌍! 你好!\""
+      }
+    },
+    {
+      "kind": "code",
+      "line": 639,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "indices = tokenizer.encode(string)  # call ord @inspect indices @stepover",
+      "extra": {
+        "end_line": 639
+      }
+    },
+    {
+      "kind": "value",
+      "line": 639,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "indices",
+      "extra": {
+        "expr": "indices = tokenizer.encode(string)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 639,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 640,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "reconstructed_string = tokenizer.decode(indices)  # call chr @inspect reconstructed_string @stepover",
+      "extra": {
+        "end_line": 640
+      }
+    },
+    {
+      "kind": "value",
+      "line": 640,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "reconstructed_string",
+      "extra": {
+        "expr": "reconstructed_string = tokenizer.decode(indices)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 640,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 641,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "assert string == reconstructed_string",
+      "extra": {
+        "end_line": 641
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 643,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "There are approximately 150K Unicode characters.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 643,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "Wikipedia",
+      "extra": {
+        "title": "Wikipedia",
+        "url": "https://en.wikipedia.org/wiki/List_of_Unicode_characters",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 644,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "vocabulary_size = max(indices) + 1  # This is a lower bound @inspect vocabulary_size",
+      "extra": {
+        "end_line": 644
+      }
+    },
+    {
+      "kind": "value",
+      "line": 644,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "vocabulary_size",
+      "extra": {
+        "expr": "vocabulary_size = max(indices) + 1"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 645,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "Problem 1: this is a very large vocabulary.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 646,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "Problem 2: many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 647,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover",
+      "extra": {
+        "end_line": 647
+      }
+    },
+    {
+      "kind": "value",
+      "line": 647,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "compression_ratio",
+      "extra": {
+        "expr": "compression_ratio = get_compression_ratio(string, indices)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 647,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 648,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "This tokenizer is the worst of both worlds (large vocabulary, low compression ratio).",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 648,
+      "section": "character_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 651,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 652,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "Unicode strings can be represented as a sequence of bytes, which can be represented by integers between 0 and 255.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 653,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "The most common Unicode encoding is",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 653,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "UTF-8",
+      "extra": {
+        "title": "UTF-8",
+        "url": "https://en.wikipedia.org/wiki/UTF-8",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 655,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "Some Unicode characters are represented by one byte:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 656,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "assert bytes(\"a\", encoding=\"utf-8\") == b\"a\"",
+      "extra": {
+        "end_line": 656
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 657,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "Others take multiple bytes:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 658,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "assert bytes(\"🌍\", encoding=\"utf-8\") == b\"\\xf0\\x9f\\x8c\\x8d\"",
+      "extra": {
+        "end_line": 658
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 660,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "Now let's build a `Tokenizer` and make sure it round-trips:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 661,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "tokenizer = ByteTokenizer()\nstring = \"Hello, 🌍! 你好!\"  # @inspect string",
+      "extra": {
+        "end_line": 662
+      }
+    },
+    {
+      "kind": "value",
+      "line": 662,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "string",
+      "extra": {
+        "expr": "string = \"Hello, 🌍! 你好!\""
+      }
+    },
+    {
+      "kind": "code",
+      "line": 663,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "indices = tokenizer.encode(string)  # @inspect indices @stepover",
+      "extra": {
+        "end_line": 663
+      }
+    },
+    {
+      "kind": "value",
+      "line": 663,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "indices",
+      "extra": {
+        "expr": "indices = tokenizer.encode(string)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 663,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 664,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string @stepover",
+      "extra": {
+        "end_line": 664
+      }
+    },
+    {
+      "kind": "value",
+      "line": 664,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "reconstructed_string",
+      "extra": {
+        "expr": "reconstructed_string = tokenizer.decode(indices)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 664,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 665,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "assert string == reconstructed_string",
+      "extra": {
+        "end_line": 665
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 667,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "The vocabulary is nice and small: a byte can represent 256 values.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 668,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "vocabulary_size = 256  # @inspect vocabulary_size",
+      "extra": {
+        "end_line": 668
+      }
+    },
+    {
+      "kind": "value",
+      "line": 668,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "vocabulary_size",
+      "extra": {
+        "expr": "vocabulary_size = 256"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 669,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "What about the compression rate?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 670,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio @stepover",
+      "extra": {
+        "end_line": 670
+      }
+    },
+    {
+      "kind": "value",
+      "line": 670,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "compression_ratio",
+      "extra": {
+        "expr": "compression_ratio = get_compression_ratio(string, indices)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 670,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 671,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "assert compression_ratio == 1",
+      "extra": {
+        "end_line": 671
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 672,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "The compression ratio is terrible, which means the sequences will be too long.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 673,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "Given that the context length of a Transformer is limited (since attention is quadratic), this is not looking great...",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 673,
+      "section": "byte_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 676,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 677,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "Another approach (closer to what was done classically in NLP) is to split strings into words.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 678,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "string = \"I'll say supercalifragilisticexpialidocious!\"\nchunks = regex.findall(r\"\\w+|.\", string)  # @inspect chunks",
+      "extra": {
+        "end_line": 680
+      }
+    },
+    {
+      "kind": "value",
+      "line": 680,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "chunks",
+      "extra": {
+        "expr": "chunks = regex.findall(r\"\\w+|.\", string)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 681,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "This regular expression keeps all alphanumeric characters together (words).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 683,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "To turn this into a `Tokenizer`, we need to map these chunks into integers.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 684,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "Then, we can build a mapping from each chunk into an integer.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 686,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "What's good: each token is meaningful (since humans invented words).",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 688,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "vocabulary_size = \"Number of distinct chunks in the training data\"\ncompression_ratio = get_compression_ratio(string, chunks)  # @inspect compression_ratio @stepover",
+      "extra": {
+        "end_line": 689
+      }
+    },
+    {
+      "kind": "value",
+      "line": 689,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "compression_ratio",
+      "extra": {
+        "expr": "compression_ratio = get_compression_ratio(string, chunks)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 689,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 690,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "Compression ratio is good, but vocabulary size can be huge.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 692,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "Moreover:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 693,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "- Many words are rare and the model won't learn much about them.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 694,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "- This doesn't obviously provide a fixed vocabulary size.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 695,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "- New words we haven't seen during training get a special UNK token, which is ugly and can mess up perplexity calculations.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 695,
+      "section": "word_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 698,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 699,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Byte Pair Encoding (BPE)",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 700,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "The BPE algorithm was introduced by Philip Gage in 1994 for data compression.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 700,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "http://www.pennelynn.com/Documents/CUJ/HTML/94HTML/19940045.HTM",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 701,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "It was adapted to NLP for neural machine translation.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 701,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "sennrich_2016",
+      "extra": {
+        "ref": "sennrich_2016",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 702,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "(Previously, papers had been using word-based tokenization.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 703,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "BPE was then used by GPT-2.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 703,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "gpt2_2019",
+      "extra": {
+        "ref": "gpt2_2019",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 705,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Basic idea: *train* the tokenizer on raw text to construct a vocabulary tailored to the data.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 706,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Intuition: common sequences of bytes are represented by a single token, rare sequences are represented by many tokens.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 708,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Sketch: start with each byte as a token, and successively merge the most common pair of adjacent tokens.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 710,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Training the tokenizer",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "code",
+      "line": 711,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "string = \"the cat in the hat\"  # @inspect string",
+      "extra": {
+        "end_line": 711
+      }
+    },
+    {
+      "kind": "value",
+      "line": 711,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "string",
+      "extra": {
+        "expr": "string = \"the cat in the hat\""
+      }
+    },
+    {
+      "kind": "code",
+      "line": 712,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "params = train_bpe(string, num_merges=3)",
+      "extra": {
+        "end_line": 712
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 714,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Using the tokenizer",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 715,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "Now, given a new text, we can encode it.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 716,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "tokenizer = BPETokenizer(params)  # @stepover",
+      "extra": {
+        "end_line": 716
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 716,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 717,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "string = \"the quick brown fox\"  # @inspect string",
+      "extra": {
+        "end_line": 717
+      }
+    },
+    {
+      "kind": "value",
+      "line": 717,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "string",
+      "extra": {
+        "expr": "string = \"the quick brown fox\""
+      }
+    },
+    {
+      "kind": "code",
+      "line": 718,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "indices = tokenizer.encode(string)  # @inspect indices",
+      "extra": {
+        "end_line": 718
+      }
+    },
+    {
+      "kind": "value",
+      "line": 718,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "indices",
+      "extra": {
+        "expr": "indices = tokenizer.encode(string)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 719,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "reconstructed_string = tokenizer.decode(indices)  # @inspect reconstructed_string @stepover",
+      "extra": {
+        "end_line": 719
+      }
+    },
+    {
+      "kind": "value",
+      "line": 719,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "reconstructed_string",
+      "extra": {
+        "expr": "reconstructed_string = tokenizer.decode(indices)"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 719,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 720,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "assert string == reconstructed_string",
+      "extra": {
+        "end_line": 720
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 722,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "In Assignment 1, you will go beyond this in the following ways:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 723,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "- encode() currently loops over all merges. Only loop over merges that matter.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 724,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "- Detect and preserve special tokens (e.g., <|endoftext|>).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 725,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "- Use pre-tokenization (e.g., the GPT-2 tokenizer regex).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 726,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "- Try to make the implementation as fast as possible.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 726,
+      "section": "bpe_tokenizer",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 494,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 495,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "- Tokenizer: strings ↔ tokens (indices)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 496,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "- Character-based, byte-based, word-based tokenization are highly suboptimal",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 497,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "- BPE is an effective heuristic that is data-driven",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 498,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "- Tokenization is a separate step, maybe one day do it end-to-end from bytes...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 500,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "But whatever solution needs to satisfy:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 501,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "1. Model (e.g., Transformer) should operate on chunks (abstractions) of the sequence (text, video, DNA, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 502,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "2. Chunks should be variable (allocate more model capacity to interesting chunks)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 502,
+      "section": "tokenization",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 49,
+      "section": "main",
+      "depth": 0,
+      "text": "Next time: resource accounting",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 49,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

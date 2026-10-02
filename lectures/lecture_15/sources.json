@@ -1,0 +1,226 @@
+{
+  "lecture_15": {
+    "title": "CS336 Spring 2026, Lecture 15: \"After pretraining\" (mid/post-training): SFT, RLHF data, PPO, DPO",
+    "kind": "slides",
+    "path": "official/lectures/lecture_15.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_15 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_15.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1; p66 is an empty trailing page)",
+    "note": "Evidence is the text layer of the slides (lecture_15.txt), extracted page-by-page by discover_slides.py (sha256 of txt in discovered.json). The deck is screenshot-heavy: the InstructGPT pipeline figure (p6, p31), the response-length and length-bias plots (p16-p17, p48), the Schulman/Gekhman hallucination figures (p20), the safety-tuning plots (p26), the mid-training recipe figure (p29-p30), the G-V gap figure (p33), the pairwise-feedback setup and InstructGPT guideline (p36-p37), the annotator-demographics and annotator-variation plots (p43-p44), the GPT-4-as-judge agreement plots (p45), the InstructGPT PPO objective and the Stiennon reward-model loss (p51-p52), the whole DPO derivation (p56-p58), the Tulu 3 variant losses (p60), the PPO-vs-DPO tables (p61), the overoptimization curves (p63) and the calibration plot (p64) are images; only their captions survive in the text layer. Numbers visible only in those images are recorded in filtering_note, never in statements or prompts."
+  },
+  "lecture_15_video": {
+    "title": "CS336 Spring 2026, Lecture 15: After pretraining, SFT, RLHF data, PPO and DPO (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=2oH6PWPrYFo",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_16": {
+    "title": "CS336 Spring 2026, Lecture 16: Post-training 2, reinforcement learning from verifiable rewards",
+    "kind": "slides",
+    "path": "official/lectures/lecture_16.pdf",
+    "note": "Next deck (atlas thread atlas/lectures/lecture_16). It expands the PPO sketch of p53 (lecture_16:policy-gradient-variance, lecture_16:ppo-ratio-clip, lecture_16:per-token-kl-reward-shaping), rejects PPO and DPO for verifiable rewards (lecture_16:why-grpo-not-ppo-or-dpo) and takes the overoptimization warning of p62-p63 as its motivation (lecture_16:verifiable-reward-vs-rlhf). Forward links from this thread use see_also and external_prerequisites with ids lecture_16:<kp-id>; no quotes are anchored into it."
+  },
+  "instructgpt": {
+    "title": "Training language models to follow instructions with human feedback (Ouyang et al., 2022; InstructGPT)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2203.02155",
+    "note": "Cited as [Ouyang 2022] on p6 and p31 (the SFT -> reward model -> PPO pipeline figure) and 'From InstructGPT' on p51 (the PPO objective with the KL penalty to the SFT model and the pretraining-mix term; image-only). p37 shows the InstructGPT annotation guideline as a screenshot."
+  },
+  "stiennon_2020_summarize": {
+    "title": "Learning to summarize from human feedback (Stiennon et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2009.01325",
+    "note": "p5 ('Stiennon 2020 (RLHF paper) - contains annotation guidelines'), p52 ('From \"Learning to summarize from human feedback\"', background and the pairwise reward-model loss as an image) and p57 ('the Stiennon objective', the Bradley-Terry log-sigmoid loss that DPO re-parametrizes). The Bradley-Terry form p(y_w > y_l) = sigmoid(r(y_w) - r(y_l)) itself is image-only in the deck."
+  },
+  "bai_2022_hh": {
+    "title": "Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback (Bai et al., 2022; Anthropic HH)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2204.05862",
+    "note": "p5 ('Bai 2022 (Anthropic HH) - details on how to set up safety annotation'); p26 labels one safety-tuning plot '(Anthropic HH)'."
+  },
+  "constitutional_ai": {
+    "title": "Constitutional AI: Harmlessness from AI Feedback (Bai et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2212.08073",
+    "note": "p47 ('From Constitutional AI, Bai et al.'): the self-critique / AI-feedback (RLAIF) pipeline figure, image-only."
+  },
+  "bubeck_2023_sparks": {
+    "title": "Sparks of Artificial General Intelligence: Early experiments with GPT-4 (Bubeck et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2303.12712",
+    "note": "p3 ('Text example from [Bubeck et al 2023]'): an instruction-following example used to motivate control over LM output."
+  },
+  "flan": {
+    "title": "Finetuned Language Models Are Zero-Shot Learners (Wei et al., 2022; FLAN)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2109.01652",
+    "note": "First stop in the p9 progression; p10 shows random FLAN examples (templated NLP tasks: subject lines, topic classification, highlights, data-to-text). p14: 'FLAN is (usually) valid data, but people don't want to talk to a NLP benchmark'."
+  },
+  "self_instruct": {
+    "title": "Self-Instruct: Aligning Language Models with Self-Generated Instructions (Wang et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2212.10560",
+    "note": "Second stop in the p9 progression (synthetic instruction data generated by the model itself)."
+  },
+  "alpaca": {
+    "title": "Alpaca: A Strong, Replicable Instruction-Following Model (Taori et al., 2023)",
+    "kind": "reading",
+    "url": "https://crfm.stanford.edu/2023/03/13/alpaca.html",
+    "note": "Third stop in the p9 progression; p11 shows random Alpaca examples (distilled from text-davinci-003 via Self-Instruct). p26: 'Adding 500 Alpaca-style examples makes models follow safety guidelines'."
+  },
+  "openassistant": {
+    "title": "OpenAssistant Conversations: Democratizing Large Language Model Alignment (Kopf et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2304.07327",
+    "note": "p9 progression, p12 random examples (human-written, detailed, with references), p14 ('OASST goes into much more detail about various factual pieces of knowledge') and p19 (the monopsony example with a Bivens & Mishel citation)."
+  },
+  "tulu3": {
+    "title": "Tulu 3: Pushing Frontiers in Open Language Model Post-Training (Lambert et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2411.15124",
+    "note": "p9 progression, p46 (UltraFeedback-style AI feedback used in Tulu 3) and p60 ('two of note from the Tulu 3 paper': SimPO and length-normalized DPO, losses image-only). Aloud (30:32-31:50) p24-p25 are Tulu 3's safety pipeline: unsafe requests and jailbreaks mined from WildChat, 'something like 50,000-ish examples' (spoken, not cross-checked)."
+  },
+  "nemotron_sft_opencode": {
+    "title": "Nemotron-SFT-OpenCode-v1 (NVIDIA, 2025)",
+    "kind": "reading",
+    "url": "https://huggingface.co/datasets/nvidia/Nemotron-SFT-OpenCode-v1",
+    "note": "p9 ('Nemotron, Tool use etc.') and p13: agentic SFT examples whose assistant turns carry tool_calls (skill, todowrite) and refer to AGENTS.md."
+  },
+  "wang_2023_far_can_camels_go": {
+    "title": "How Far Can Camels Go? Exploring the State of Instruction Tuning on Open Resources (Wang et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2306.04751",
+    "note": "p16 ('[Wang+ 2023]'): response-length distribution across instruction datasets / models, image-only."
+  },
+  "alpacafarm": {
+    "title": "AlpacaFarm: A Simulation Framework for Methods that Learn from Human Feedback (Dubois et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2305.14387",
+    "note": "p17 ('[Dubois+ 2023]'): length effects in both human and GPT-based preference evaluation, image-only. p45's GPT-4-as-annotator agreement plots come from the same simulation setup (inference)."
+  },
+  "schulman_2023_rl_truthfulness": {
+    "title": "Reinforcement Learning from Human Feedback: Progress and Challenges (John Schulman, Berkeley EECS colloquium, April 2023)",
+    "kind": "reading",
+    "url": "https://www.youtube.com/watch?v=hhiLw5Q_UFg",
+    "note": "p20 ('[Schulman 2023]'): the folklore argument that fine-tuning on facts the model does not know teaches it to hallucinate; slide is a figure."
+  },
+  "gekhman_2024_new_knowledge": {
+    "title": "Does Fine-Tuning LLMs on New Knowledge Encourage Hallucinations? (Gekhman et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2405.05904",
+    "note": "p20 cites it as '[Gekhman 2023]'; the arXiv version is 2024. Empirical evidence for the hallucination-from-unknown-facts folklore (plot image-only)."
+  },
+  "goldstein_2023_misinformation": {
+    "title": "Generative Language Models and Automated Influence Operations: Emerging Threats and Potential Mitigations (Goldstein et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2301.04246",
+    "note": "p22 ('[Goldstein+ 2023]'): misinformation as a safety motivation."
+  },
+  "kang_2023_exploiting": {
+    "title": "Exploiting Programmatic Behavior of LLMs: Dual-Use Through Standard Security Attacks (Kang et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2302.05733",
+    "note": "p22 ('[Kang+ 2023]'): scams and spam as a safety motivation."
+  },
+  "llama2": {
+    "title": "Llama 2: Open Foundation and Fine-Tuned Chat Models (Touvron et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2307.09288",
+    "note": "p23 ('# Examples? ~ few thousand in Llama 2'); p24-p25 (the 'pipeline with most details', safety scenario extraction from users) are screenshots inferred to be from this report (basis: inference). Spoken correction (30:32-31:50): aloud only p23 is Llama 2; p24 is introduced as the Tulu 3 post-training pipeline for OLMo and p25's scenario extraction as its WildChat mining, so the p24-p25 inference above is probably wrong."
+  },
+  "bianchi_2024_safety_tuned_llamas": {
+    "title": "Safety-Tuned LLaMAs: Lessons From Improving the Safety of Large Language Models that Follow Instructions (Bianchi et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2309.07875",
+    "note": "Inferred source of p26 ('Significant improvements to safety with ~500 samples', 'Adding 500 Alpaca-style examples makes models follow safety guidelines'); the slide does not name the paper (basis: inference)."
+  },
+  "minicpm": {
+    "title": "MiniCPM: Unveiling the Potential of Small Language Models with Scalable Training Strategies (Hu et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2404.06395",
+    "note": "p30 ('Publicized in recent Chinese-derived LMs (miniCPM, jetMoE)'): the two-phase / decay-phase recipe that mixes high-quality SFT data into the end of pretraining."
+  },
+  "jetmoe": {
+    "title": "JetMoE: Reaching Llama2 Performance with 0.1M Dollars (Shen et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2404.07413",
+    "note": "p30: second named example of the two-phase (mid-training) recipe."
+  },
+  "zhang_2023_news_summarization": {
+    "title": "Benchmarking Large Language Models for News Summarization (Zhang et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2301.13848",
+    "note": "p33 ('From: Zhang et al ... 2023'): the generation-validation (G-V) gap, people prefer LM summaries over the reference summaries they would write; figure image-only."
+  },
+  "santurkar_2023_opinions": {
+    "title": "Whose Opinions Do Language Models Reflect? (Santurkar et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2303.17548",
+    "note": "p43 ('[Santurkar+ 2023]'): the annotator distribution for RLHF shifts model opinions/behaviour; plot image-only."
+  },
+  "hosking_2024_human_feedback_gold": {
+    "title": "Human Feedback is not Gold Standard (Hosking, Blunsom, Bartolo, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2309.16349",
+    "note": "p44 ('[Hosking, Blunsom, Bartolo 2024]'): annotators' preferences are driven by style/assertiveness and under-weight factual errors; true across most but not all annotators."
+  },
+  "ultrafeedback": {
+    "title": "UltraFeedback: Boosting Language Models with Scaled AI Feedback (Cui et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2310.01377",
+    "note": "p46 ('Ultrafeedback ... Used in e.g. Olmo, Zephyr, etc'): GPT-4 preference labels used as RLHF/DPO data."
+  },
+  "zephyr": {
+    "title": "Zephyr: Direct Distillation of LM Alignment (Tunstall et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2310.16944",
+    "note": "p46 ('Zephyr 7b', with the substack interview link): DPO on UltraFeedback AI-feedback data."
+  },
+  "chen_2024_odin": {
+    "title": "ODIN: Disentangled Reward Mitigates Hacking in RLHF (Chen et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2402.07319",
+    "note": "p48 ('[Chen et al 2024]'): length as a reward-hacking outcome of RLHF; plot image-only."
+  },
+  "singhal_2024_long_way": {
+    "title": "A Long Way to Go: Investigating Length Correlations in RLHF (Singhal et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2310.03716",
+    "note": "p48 ('[Singhal et al 2024]'): much of RLHF's reward gain is explained by length; plot image-only."
+  },
+  "ppo_paper": {
+    "title": "Proximal Policy Optimization Algorithms (Schulman et al., 2017)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1707.06347",
+    "note": "p53 'Attempt 3: PPO (Clip the ratios at some eps)'; p49 'PPO - the original and very finicky approach'. Treated in depth in lecture 16."
+  },
+  "dpo_paper": {
+    "title": "Direct Preference Optimization: Your Language Model is Secretly a Reward Model (Rafailov et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2305.18290",
+    "note": "p55-p58: the derivation walked on the slides (nonparametric maximizer, implied reward, Bradley-Terry loss, gradient as weighted positive/negative steps). Every equation is an image; the slide text keeps only the step names."
+  },
+  "simpo": {
+    "title": "SimPO: Simple Preference Optimization with a Reference-Free Reward (Meng, Xia, Chen, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2405.14734",
+    "note": "p60 ('SimPO (no ref)'): reference-free, length-normalized implicit reward; loss image-only."
+  },
+  "llama3": {
+    "title": "The Llama 3 Herd of Models (Grattafiori et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.21783",
+    "note": "p59 ('DPO in LLaMA ... DPO + Expert iteration for post-training'): rounds of rejection sampling / SFT followed by DPO; figure image-only (basis: inference that the figure is Llama 3's)."
+  },
+  "gao_2022_overoptimization": {
+    "title": "Scaling Laws for Reward Model Overoptimization (Gao, Schulman, Hilton, 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2210.10760",
+    "note": "Inferred background for p62-p63 (reward overoptimization curves across optimizers); the slide does not name a paper for the plots (basis: inference)."
+  },
+  "kimi_k15": {
+    "title": "Kimi k1.5: Scaling Reinforcement Learning with LLMs (Kimi Team, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.12599",
+    "note": "p56 ('This is the equivalence also used in the kimi-think paper'): the closed-form link between optimal policy and reward reused to derive Kimi's squared-loss policy gradient (lecture 16 p44)."
+  }
+}

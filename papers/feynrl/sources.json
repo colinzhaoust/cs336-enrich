@@ -1,0 +1,50 @@
+{
+  "feynrl_paper": {
+    "title": "Trust the Batch, On- or Off-Policy: Adaptive Policy Optimization for RL Post-Training (Fakoor, Aubry, Stranges, Smola)",
+    "kind": "paper",
+    "arxiv": "2605.12380",
+    "revision": "arXiv:2605.12380v1 (submitted 2026-05-12); OpenReview FOGhcI4iRk",
+    "url": "https://arxiv.org/abs/2605.12380",
+    "path": "4blue2brown/data/explainer_pipeline/papers/feynrl.json",
+    "page_images": "4blue2brown/tmp/pdfs/feynrl/page-02..06.png, results-07..09.png (pages 2-9 of 18)",
+    "anchor_convention": "feynrl:§N (section), feynrl:eqN (equation number as printed), feynrl:pN (pdf page), feynrl:figN / feynrl:tableN",
+    "note": "Bundle sha256 19b66e97… (see discovered.json). Equation, section, figure and page numbers were checked against the page images for pages 2-9: Eqs. 1-13, Table 1, Figs. 1-4. Page 1 (abstract), appendices A-E (Tables 2-7, Figs. 5-9) are not in the image set; quotes anchored at feynrl:table7 / feynrl:§C / feynrl:§D / feynrl:abstract come from the arXiv abstract/HTML page via WebFetch and carry basis 'inference' in the KPs. Introduces no new algorithm: the paper adopts P3O (Fakoor, Chaudhari, Smola 2019, arXiv:1905.01756) for large-model post-training."
+  },
+  "feynrl_repo": {
+    "title": "FeynRL: RL post-training library (local clone; code behind the paper; atlas thread atlas/repos/feynrl)",
+    "kind": "repo",
+    "path": "external/FeynRL",
+    "upstream": "https://github.com/FeynRL-project/FeynRL",
+    "revision": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "sha_source": ".git/refs/heads/main read from disk; matches the bundle's code_sources revision and the repo thread's sources.json",
+    "anchor_convention": "algs/P3O/p3o.py:L107-L135 (repo-relative path, 1-based inclusive line range); checked by atlas/tools/check_anchors.py",
+    "note": "Status 'implemented' anchors point at algs/P3O/p3o.py (calculate_ess, compute_policy_loss), algs/GRPO/grpo.py and algs/CISPO/cispo.py (the fixed-clip contrasts) and core/rl_engines.py (use_decoupled_loss wiring). Cross-thread prerequisites are written as external_prerequisites with ids feynrl:<kp-id> from atlas/repos/feynrl/knowledge_points.json (grpo-clipped-loss, cispo-vs-ppo-clip, decoupled-loss-prox, staleness-budget-max-lag, supp-importance-ratio, supp-on-off-policy, group-relative-advantage, kl-reference-penalty)."
+  },
+  "p3o_readme": {
+    "title": "algs/P3O/README.md: P3O (Policy-on Policy-off Policy Optimization)",
+    "kind": "doc",
+    "path": "external/FeynRL",
+    "anchor_convention": "algs/P3O/README.md:L98-L100 (same repo root as feynrl_repo so snippet refs stay unique)",
+    "note": "The implementation's own account of the loss (L13-L48), the dual-role table (L50-L57), the algorithm box (L59-L93) and the notes on sync/async equivalence, global token normalization and the unused clip bounds (L96-L103)."
+  },
+  "rl_readme": {
+    "title": "algs/RL/README.md: RL Common (common.py)",
+    "kind": "doc",
+    "path": "external/FeynRL",
+    "anchor_convention": "algs/RL/README.md:L16",
+    "note": "Shared base class: proximal snapshot (used by PPO/GRPO/CISPO in overlap mode, not by P3O, L15-L18) and the variance-reduced KL estimator (L20-L29) that implements the KL term of Eq. 12."
+  },
+  "arxiv_html": {
+    "title": "arXiv abstract and HTML rendering of 2605.12380 (read via WebFetch, not saved)",
+    "kind": "web",
+    "url": "https://arxiv.org/html/2605.12380",
+    "anchor_convention": "feynrl:abstract, feynrl:table3, feynrl:table7, feynrl:§B, feynrl:§D",
+    "note": "Used only for parts of the paper absent from the page images: the abstract, Table 3 (training configuration), Table 7 (held-out pass@1), Appendix B (two-anchor formulation) and Appendix D (Figs. 8-9). A summarizer produced the text, so every number taken from here is marked unverified in discovered.json; one conflict (FP8-run model name) is recorded there."
+  },
+  "lecture_16": {
+    "title": "CS336 Spring 2026, Lecture 16: Post-training 2, RL from verifiable rewards (atlas thread atlas/lectures/lecture_16)",
+    "kind": "slides",
+    "path": "official/lectures/lecture_16.pdf",
+    "note": "Referenced only through external_prerequisites and course_path (ids lecture_16:<kp-id>: policy-gradient-variance, ppo-ratio-clip, per-token-kl-reward-shaping, grpo-group-zscore-advantage, rl-rollout-cost). No quotes are anchored into the deck from this thread."
+  }
+}

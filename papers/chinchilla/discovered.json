@@ -1,0 +1,2246 @@
+{
+  "paper": {
+    "id": "chinchilla",
+    "title": "Training Compute-Optimal Large Language Models",
+    "authors_first": [
+      "Jordan Hoffmann",
+      "Sebastian Borgeaud",
+      "Arthur Mensch"
+    ],
+    "arxiv": "2203.15556",
+    "revision": "arXiv:2203.15556v1 (the only version listed on the abstract page, 29 Mar 2022)",
+    "source_url": "https://arxiv.org/html/2203.15556",
+    "abs_url": "https://arxiv.org/abs/2203.15556"
+  },
+  "generated_by": "discover_paper.py (parse of paper.txt; claims/findings curated in the script)",
+  "inputs": {
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/chinchilla/paper.txt": "ff443a33cf4a02b6790fc5ed3f9a763fb3720ba1cbd2e4b62e80cb545c15f4db",
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/chinchilla/_arxiv_2203.15556.html": "69d724082e37672a65d292c60c84962aab430aba6cb3618b35477fe9829dd3cf"
+  },
+  "extraction_note": "paper.txt is html_to_text.py applied to the LaTeXML HTML served at arxiv.org/html/2203.15556 (fetched 2026-09-30). Equation numbers follow that HTML (1-4 in §1-§3, 5-11 in Appendix D.2). Section numbers are the paper's. No page numbers: the HTML has none, so anchors use §, eq, table, fig only. ar5iv returned HTTP 503 at fetch time.",
+  "headings": [
+    "Training Compute-Optimal Large Language Models",
+    "Abstract",
+    "1 Introduction",
+    "2 Related Work",
+    "Large language models.",
+    "Modelling the scaling behavior.",
+    "Estimating hyperparameters for large models.",
+    "Improved model architectures.",
+    "3 Estimating the optimal parameter/training tokens allocation",
+    "3.1 Approach 1: Fix model sizes and vary number of training tokens",
+    "3.2 Approach 2: IsoFLOP profiles",
+    "3.3 Approach 3: Fitting a parametric loss function",
+    "Model fitting.",
+    "Efficient frontier.",
+    "3.4 Optimal model scaling",
+    "4 Chinchilla",
+    "4.1 Model and training details",
+    "4.2 Results",
+    "4.2.1 Language modelling",
+    "4.2.2 MMLU",
+    "4.2.3 Reading comprehension",
+    "4.2.4 BIG-bench",
+    "4.2.5 Common sense",
+    "4.2.6 Closed-book question answering",
+    "4.2.7 Gender bias and toxicity",
+    "Gender bias.",
+    "Sample toxicity.",
+    "5 Discussion & Conclusion",
+    "6 Acknowledgements",
+    "Appendix",
+    "Appendix A Training dataset",
+    "Appendix B Optimal cosine cycle length",
+    "Appendix C Consistency of scaling results across datasets",
+    "Appendix D Details on the scaling analyses",
+    "D.1 Approach 1: Fixing model sizes and varying training sequences",
+    "D.2 Approach 3: Parametric fitting of the loss",
+    "Loss decomposition.",
+    "Expected forms of the loss terms.",
+    "Fitting the decomposition to data.",
+    "D.3 Predicted compute optimal frontier for all three methods",
+    "D.4 Small-scale comparison to Kaplan et al. (2020)",
+    "Appendix E Curvature of the FLOP-loss frontier",
+    "Appendix F FLOPs computation",
+    "Appendix G Other differences between Chinchilla and Gopher",
+    "Appendix H Results",
+    "H.1 The Pile",
+    "H.2 MMLU",
+    "H.3 Winogender Setup",
+    "H.4 BIG-bench",
+    "Appendix I Model Card",
+    "Appendix J List of trained models"
+  ],
+  "sections": [
+    {
+      "ref": "chinchilla:§1",
+      "title": "Introduction",
+      "claims": [
+        "The question: given a fixed FLOPs budget, how to trade off model size and training tokens (Eq. 1).",
+        "Kaplan et al. (2020) would grow the model 5.5x and the data 1.8x for 10x compute; this paper finds equal proportions.",
+        "Current large models (Table 1) are trained for approximately 300 billion tokens.",
+        "Prediction: for Gopher's budget, an optimal model is 4 times smaller trained on 4 times more tokens; Chinchilla = 70B on 1.4T tokens."
+      ]
+    },
+    {
+      "ref": "chinchilla:§2",
+      "title": "Related work: modelling the scaling behavior",
+      "claims": [
+        "Difference 1 from Kaplan: Kaplan fixed training tokens and the LR schedule for all models; intermediate losses of a fixed cosine-to-130B schedule overestimate the loss of a model trained with a matched schedule.",
+        "Difference 2: models up to 16B, majority over 500M parameters, versus Kaplan's majority under 100M; slight curvature in the FLOP-loss frontier (Appendix E)."
+      ]
+    },
+    {
+      "ref": "chinchilla:§3",
+      "title": "Estimating the optimal allocation (three approaches)",
+      "claims": [
+        "All three approaches assume a power-law relationship between compute and model size.",
+        "All predict parameter count and tokens should be increased equally with compute (Table 2)."
+      ]
+    },
+    {
+      "ref": "chinchilla:§3.1",
+      "title": "Approach 1: fix model sizes, vary training tokens",
+      "claims": [
+        "Model family 70M to over 10B; each size trained for 4 horizons spanning 16x, LR decayed 10x by cosine over each horizon.",
+        "Smooth and interpolate each curve; at 1500 log-spaced FLOP values take the run with lowest loss (the envelope); fit N_opt ~ C^a, D_opt ~ C^b with a = 0.50, b = 0.50.",
+        "Footnote 4: all selected points lie within the last 15% of training, so the cosine cycle should decay 10x over approximately D tokens."
+      ]
+    },
+    {
+      "ref": "chinchilla:§3.2",
+      "title": "Approach 2: IsoFLOP profiles",
+      "claims": [
+        "9 FLOP budgets from 6e18 to 3e21; vary model size (up to 16B), tokens fixed by the budget; final loss only.",
+        "Fit a parabola to each IsoFLOP curve to locate the loss-minimising model size; then power laws give a = 0.49, b = 0.51."
+      ]
+    },
+    {
+      "ref": "chinchilla:§3.3",
+      "title": "Approach 3: parametric loss",
+      "claims": [
+        "L(N,D) = E + A/N^alpha + B/D^beta (Eq. 2): entropy of text, finite-capacity term, finite-training term.",
+        "Fit by Huber loss (delta = 1e-3) on log loss with L-BFGS from a grid of initialisations (Eq. 3).",
+        "Minimising under FLOPs ~ 6ND gives the closed form Eq. 4: a = beta/(alpha+beta), b = alpha/(alpha+beta); a = 0.46, b = 0.54.",
+        "Projected optimal size for the Gopher budget: 40B parameters (Fig. 4 caption)."
+      ]
+    },
+    {
+      "ref": "chinchilla:§3.4",
+      "title": "Optimal model scaling",
+      "claims": [
+        "Table 2: exponents 0.50/0.50, 0.49/0.51, 0.46/0.54 vs Kaplan 0.73/0.27.",
+        "Approach 3 predicts even smaller models at large budgets: Huber down-weights low-FLOP points and the frontier has negative curvature.",
+        "Table 3 (Approach 1 projections): 1B -> 20.2B tokens, 10B -> 205.1B, 67B -> 1.5T, 280B -> 5.9T; the prose gives 175B -> 4.41e24 FLOPs and over 4.2T tokens, 280B -> ~1e25 FLOPs and 6.8T tokens.",
+        "A 1T model is unlikely to be optimal below 1e26 FLOPs (over 250x Gopher).",
+        "C4 and GitHub IsoFLOP replications reach the same equal-scaling conclusion (Appendix C, Table A2)."
+      ]
+    },
+    {
+      "ref": "chinchilla:§4",
+      "title": "Chinchilla",
+      "claims": [
+        "Optimal size for Gopher's budget estimated between 40 and 70 billion; chose 70B for 1.4T tokens.",
+        "Same FLOPs as Gopher; 4x smaller so memory footprint and inference cost are smaller.",
+        "Differences from Gopher (4.1): MassiveText subset distribution, AdamW instead of Adam, modified SentencePiece tokenizer without NFKC, float32 weight copy in optimiser state."
+      ]
+    },
+    {
+      "ref": "chinchilla:§4.2",
+      "title": "Results",
+      "claims": [
+        "The Pile: Chinchilla beats Gopher on all subsets; Wikitext103 perplexity 7.16 vs 7.75; leakage caveat since Chinchilla saw 4x more data.",
+        "MMLU 5-shot: 67.6% vs Gopher 60.0% (abstract says 67.5%); better on 51/57 tasks, same on 2, worse on 4.",
+        "BIG-bench: better than Gopher on all but four tasks."
+      ]
+    },
+    {
+      "ref": "chinchilla:§5",
+      "title": "Discussion and limitations",
+      "claims": [
+        "Limitation 1: only two comparable large-scale runs (Chinchilla and Gopher), no intermediate-scale tests.",
+        "Limitation 2: assumes a power-law frontier but observes concavity in log(N_opt) at high compute (Appendix E) so optimal sizes may still be overestimated.",
+        "Limitation 3: all runs are under one epoch of data.",
+        "Call for dataset scaling with attention to quality, leakage, toxicity and privacy."
+      ]
+    },
+    {
+      "ref": "chinchilla:§B",
+      "title": "Appendix B: optimal cosine cycle length",
+      "claims": [
+        "10x LR decay; cycle length too much longer than the training steps hurts; overshooting by more than 25% gives clear drops (Fig. A1)."
+      ]
+    },
+    {
+      "ref": "chinchilla:§D.2",
+      "title": "Appendix D.2: parametric fitting",
+      "claims": [
+        "Risk decomposition Eq. 9: Bayes risk + function-approximation term + stochastic-approximation term.",
+        "Fitted Eq. 10: L = E + A/N^0.34 + B/D^0.28 with E = 1.69, A = 406.4, B = 410.7; both exponents below 1/2.",
+        "Eq. 11 fits a, b, e, alpha, beta via LSE on log scale; grid of initialisations; delta = 1e-3."
+      ]
+    },
+    {
+      "ref": "chinchilla:§D.3",
+      "title": "Appendix D.3: frontier for Approaches 2 and 3 (Table A3)",
+      "claims": [
+        "Approach 2: 1B -> 20.0B tokens, 10B -> 219.5B; Approach 3: 1B -> 27.1B, 10B -> 410.1B, 67B -> 4.1T."
+      ]
+    },
+    {
+      "ref": "chinchilla:§D.4",
+      "title": "Appendix D.4: head-to-head vs Kaplan at 1e21 FLOPs",
+      "claims": [
+        "Kaplan predicts 4.68B optimal, Approach 1 predicts 2.86B; trained 4.74B and 2.80B models; the 2.80B model wins (Fig. A4)."
+      ]
+    },
+    {
+      "ref": "chinchilla:§E",
+      "title": "Appendix E: curvature of the FLOP-loss frontier",
+      "claims": [
+        "Fits to the first, middle and last third of frontier points differ (Fig. A5); curvature suggests even smaller models may be optimal at large budgets."
+      ]
+    },
+    {
+      "ref": "chinchilla:§F",
+      "title": "Appendix F: FLOPs computation",
+      "claims": [
+        "Embedding FLOPs and parameters are counted; factor 2 per multiply-accumulate; backward = 2x forward; Table A4 ratio of exact FLOPs to 6ND ranges 0.99-1.10, 'very small'.",
+        "Gopher's budget is 6.3e23 with this calculation vs 5.76e23 in Rae et al."
+      ]
+    },
+    {
+      "ref": "chinchilla:§G",
+      "title": "Appendix G: other Chinchilla/Gopher differences",
+      "claims": [
+        "AdamW beats Adam independent of LR schedule (Figs. A6, A7); higher-precision optimiser weight copy."
+      ]
+    }
+  ],
+  "equations": [
+    {
+      "number": 1,
+      "ref": "chinchilla:eq1",
+      "section": "1 Introduction",
+      "latex": "N_{opt}(C),D_{opt}(C)=\\argmin_{N,D\\text{ s.t. }\\text{FLOPs}(N,D)=C}L(N,D).",
+      "context_before": "Since the computational budget $C$ is a deterministic function $\\text{FLOPs}(N,D)$ of the number of seen training tokens and model parameters, we are interested in minimizing $L$ under the constraint "
+    },
+    {
+      "number": 2,
+      "ref": "chinchilla:eq2",
+      "section": "3.3 Approach 3: Fitting a parametric loss function",
+      "latex": "\\hat{L}(N,D)\\triangleq E+\\frac{A}{N^{\\alpha}}+\\frac{B}{D^{\\beta}}.",
+      "context_before": "Following a classical risk decomposition (see Section D.2), we propose the following functional form"
+    },
+    {
+      "number": 3,
+      "ref": "chinchilla:eq3",
+      "section": "Model fitting.",
+      "latex": "\\min_{A,B,E,\\alpha,\\beta}\\hskip 10.00002pt \\sum_{\\text{Runs }i}\\text{Huber}_{\\delta}\\Big(\\log\\hat{L}(N_{i},D_{i})-\\log L_{i}\\Big)",
+      "context_before": "To estimate $(A,B,E,\\alpha,\\beta)$ , we minimize the Huber loss (Huber, 1964) between the predicted and observed log loss using the L-BFGS algorithm (Nocedal, 1980):"
+    },
+    {
+      "number": 4,
+      "ref": "chinchilla:eq4",
+      "section": "Efficient frontier.",
+      "latex": "N_{opt}(C)=G{\\left(\\frac{C}{6}\\right)}^{a},\\hskip 10.00002ptD_{opt}(C)=G^{-1}{\\left(\\frac{C}{6}\\right)}^{b},\\hskip 10.00002pt\\text{ where }\\hskip 10.00002ptG={\\left(\\frac{\\alpha A}{\\beta B}\\right)}^{\\frac{1}{\\alpha+\\beta}},\\hskip 10.00002pta=\\frac{\\beta}{\\alpha+\\beta},\\text{ and }b=\\frac{\\alpha}{\\alpha+\\beta}.",
+      "context_before": "By construction, they have a power-law form:"
+    },
+    {
+      "number": 5,
+      "ref": "chinchilla:eq5",
+      "section": "D.2 Approach 3: Parametric fitting of the loss",
+      "latex": "\\hat{L}(N,D)\\triangleq E+\\frac{A}{N^{\\alpha}}+\\frac{B}{D^{\\beta}},",
+      "context_before": "In this section, we first show how Equation (2) can be derived. We repeat the equation below for clarity,"
+    },
+    {
+      "number": 6,
+      "ref": "chinchilla:eq6",
+      "section": "Loss decomposition.",
+      "latex": "L(f)\\triangleq\\mathbb{E}[\\log f(x)_{y}],\\hskip 20.00003pt\\text{and set}\\hskip 20.00003ptf^{\\star}\\triangleq\\argmin_{f\\in\\mathcal{F}(\\mathcal{X},\\mathcal{D}(\\mathcal{Y}))}L(f).",
+      "context_before": "The Bayes classifier, $f^{\\star}$ , minimizes the cross-entropy of $f(x)$ with the observed tokens $y$ , with expectation taken on the whole data distribution. We let $L$ be the expected risk"
+    },
+    {
+      "number": 7,
+      "ref": "chinchilla:eq7",
+      "section": "Loss decomposition.",
+      "latex": "f_{N}\\triangleq\\argmin_{f\\in\\mathcal{H}_{N}}L(f).",
+      "context_before": "The set of all transformers of size $N$ , that we denote $\\mathcal{H}_{N}$ , forms a subset of all functions that map sequences to distributions of tokens $\\mathcal{X}\\to\\mathcal{D}(\\mathcal{Y})$ . Fi"
+    },
+    {
+      "number": 8,
+      "ref": "chinchilla:eq8",
+      "section": "Loss decomposition.",
+      "latex": "\\hat{L}_{D}(f)\\triangleq\\hat{\\mathbb{E}}_{D}[\\log f(x)_{y}],\\hskip 20.00003pt\\text{setting}\\hskip 20.00003pt\\hat{f}_{N,D}\\triangleq\\argmin_{f\\in\\mathcal{H}_{N}}\\hat{L}_{D}(f).",
+      "context_before": "When we observe a dataset ${(x_{i},y_{i})_{i}}_{i\\in[1,D]}$ of size $D$ , we do not have access to $\\mathbb{E}_{P}$ , but instead to the empirical expectation $\\hat{\\mathbb{E}}_{D}$ over the empirical"
+    },
+    {
+      "number": 9,
+      "ref": "chinchilla:eq9",
+      "section": "Loss decomposition.",
+      "latex": "L(N,D)\\triangleq L(\\bar{f}_{N,D})=L(f^{\\star})+\\left(L(f_{N})-L(f^{\\star})\\right)+\\left(L(\\bar{f}_{N,D})-L(f_{N})\\right).",
+      "context_before": "Using the Bayes-classifier $f^{\\star}$ , the expected-risk minimizer $f_{N}$ and the “single-epoch empirical-risk minimizer” $\\bar{f}_{N,D}$ , we can finally decompose the loss $L(N,D)$ into"
+    },
+    {
+      "number": 10,
+      "ref": "chinchilla:eq10",
+      "section": "Expected forms of the loss terms.",
+      "latex": "L(N,D)=E+\\frac{A}{N^{0.34}}+\\frac{B}{D^{0.28}},",
+      "context_before": "Empirically, we find after fitting (2) that"
+    },
+    {
+      "number": 11,
+      "ref": "chinchilla:eq11",
+      "section": "Fitting the decomposition to data.",
+      "latex": "\\min_{a,b,e,\\alpha,\\beta}\\sum_{\\text{Run }i}\\text{Huber}_{\\delta}\\Big(\\text{LSE}\\big(a-\\alpha\\log N_{i},b-\\beta\\log D_{i},e\\big)-\\log L_{i}\\Big),",
+      "context_before": "We effectively minimize the following problem"
+    }
+  ],
+  "tables": [
+    {
+      "id": "table1",
+      "ref": "chinchilla:table1",
+      "html_id": "S1.T1",
+      "caption": "Table 1: Current LLMs. We show five of the current largest dense transformer models, their size, and the number of training tokens. Other than LaMDA (Thoppilan et al., 2022), most models are trained for approximately 300 billion tokens. We introduce Chinchilla, a substantially smaller model, trained for much longer than 300B tokens.",
+      "rows": [
+        [
+          "Model",
+          "Size ( $\\#$ Parameters)",
+          "Training Tokens"
+        ],
+        [
+          "LaMDA (Thoppilan et al., 2022)",
+          "137 Billion",
+          "168 Billion"
+        ],
+        [
+          "GPT-3 (Brown et al., 2020)",
+          "175 Billion",
+          "300 Billion"
+        ],
+        [
+          "Jurassic (Lieber et al., 2021)",
+          "178 Billion",
+          "300 Billion"
+        ],
+        [
+          "Gopher (Rae et al., 2021)",
+          "280 Billion",
+          "300 Billion"
+        ],
+        [
+          "MT-NLG 530B (Smith et al., 2022)",
+          "530 Billion",
+          "270 Billion"
+        ],
+        [
+          "Chinchilla",
+          "70 Billion",
+          "1.4 Trillion"
+        ]
+      ]
+    },
+    {
+      "id": "table2",
+      "ref": "chinchilla:table2",
+      "html_id": "S3.T2",
+      "caption": "Table 2: Estimated parameter and data scaling with increased training compute. The listed values are the exponents, $a$ and $b$ , on the relationship $N_{opt}\\propto C^{a}$ and $D_{opt}\\propto C^{b}$ . Our analysis suggests a near equal scaling in parameters and data with increasing compute which is in clear contrast to previous work on the scaling of large models. The 10 ${}^{\\text{th}}$ and 90 ${}^{\\text{th}}$ percentiles are estimated via bootstrapping data (80% of the dataset is sampled 100 times) and are shown in parenthesis.",
+      "rows": [
+        [
+          "Approach",
+          "Coeff. $a$ where $N_{opt}\\propto C^{a}$",
+          "Coeff. $b$ where $D_{opt}\\propto C^{b}$"
+        ],
+        [
+          "1. Minimum over training curves",
+          "$0.50\\;({0.488},{0.502})$",
+          "$0.50\\;(0.501,0.512)$"
+        ],
+        [
+          "2. IsoFLOP profiles",
+          "$0.49\\;(0.462,0.534)$",
+          "$0.51\\;(0.483,0.529)$"
+        ],
+        [
+          "3. Parametric modelling of the loss",
+          "$0.46\\;(0.454,0.455)$",
+          "$0.54\\;(0.542,0.543)$"
+        ],
+        [
+          "Kaplan et al. (2020)",
+          "0.73",
+          "0.27"
+        ]
+      ]
+    },
+    {
+      "id": "table3",
+      "ref": "chinchilla:table3",
+      "html_id": "S3.T3",
+      "caption": "Table 3: Estimated optimal training FLOPs and training tokens for various model sizes. For various model sizes, we show the projections from Approach 1 of how many FLOPs and training tokens would be needed to train compute-optimal models. The estimates for Approach 2 & 3 are similar (shown in Section D.3) .",
+      "rows": [
+        [
+          "Parameters",
+          "FLOPs",
+          "FLOPs (in Gopher unit)",
+          "Tokens"
+        ],
+        [
+          "400 Million",
+          "1.92e+19",
+          "$1/29,968$",
+          "8.0 Billion"
+        ],
+        [
+          "1 Billion",
+          "1.21e+20",
+          "$1/4,761$",
+          "20.2 Billion"
+        ],
+        [
+          "10 Billion",
+          "1.23e+22",
+          "$1/46$",
+          "205.1 Billion"
+        ],
+        [
+          "67 Billion",
+          "5.76e+23",
+          "$1$",
+          "1.5 Trillion"
+        ],
+        [
+          "175 Billion",
+          "3.85e+24",
+          "$6.7$",
+          "3.7 Trillion"
+        ],
+        [
+          "280 Billion",
+          "9.90e+24",
+          "$17.2$",
+          "5.9 Trillion"
+        ],
+        [
+          "520 Billion",
+          "3.43e+25",
+          "$59.5$",
+          "11.0 Trillion"
+        ],
+        [
+          "1 Trillion",
+          "1.27e+26",
+          "$221.3$",
+          "21.2 Trillion"
+        ],
+        [
+          "10 Trillion",
+          "1.30e+28",
+          "$22515.9$",
+          "216.2 Trillion"
+        ]
+      ]
+    },
+    {
+      "id": "table4",
+      "ref": "chinchilla:table4",
+      "html_id": "S4.T4",
+      "caption": "Table 4: Chinchilla architecture details. We list the number of layers, the key/value size, the bottleneck activation size d ${}_{\\text{model}}$ , the maximum learning rate, and the training batch size (# tokens). The feed-forward size is always set to $4\\times\\textrm{d}_{\\textrm{model}}$ . Note that we double the batch size midway through training for both Chinchilla and Gopher. In Appendix G we show the impact of the various optimiser related changes between Chinchilla and Gopher. All models in this analysis have been trained on TPUv3/TPUv4 (Jouppi et al., 2017) with JAX (Bradbury et al., 20",
+      "rows": [
+        [
+          "Model",
+          "Layers",
+          "Number Heads",
+          "Key/Value Size",
+          "dmodel",
+          "Max LR",
+          "Batch Size"
+        ],
+        [
+          "Gopher 280B",
+          "80",
+          "128",
+          "128",
+          "16,384",
+          "$4\\times 10^{-5}$",
+          "3M $\\rightarrow$ 6M"
+        ],
+        [
+          "Chinchilla 70B",
+          "80",
+          "64",
+          "128",
+          "8,192",
+          "$1\\times 10^{-4}$",
+          "1.5M $\\rightarrow$ 3M"
+        ]
+      ]
+    },
+    {
+      "id": "table5",
+      "ref": "chinchilla:table5",
+      "html_id": "S4.T5",
+      "caption": "Table 5: All evaluation tasks. We evaluate Chinchilla on a collection of language modelling along with downstream tasks. We evaluate on largely the same tasks as in Rae et al. (2021), to allow for direct comparison.",
+      "rows": [
+        [
+          "# Tasks",
+          "Examples"
+        ],
+        [
+          "Language Modelling",
+          "20",
+          "WikiText-103, The Pile: PG-19, arXiv, FreeLaw, $\\ldots$"
+        ],
+        [
+          "Reading Comprehension",
+          "3",
+          "RACE-m, RACE-h, LAMBADA"
+        ],
+        [
+          "Question Answering",
+          "3",
+          "Natural Questions, TriviaQA, TruthfulQA"
+        ],
+        [
+          "Common Sense",
+          "5",
+          "HellaSwag, Winogrande, PIQA, SIQA, BoolQ"
+        ],
+        [
+          "MMLU",
+          "57",
+          "High School Chemistry, Astronomy, Clinical Knowledge, $\\ldots$"
+        ],
+        [
+          "BIG-bench",
+          "62",
+          "Causal Judgement, Epistemic Reasoning, Temporal Sequences, $\\ldots$"
+        ]
+      ]
+    },
+    {
+      "id": "table6",
+      "ref": "chinchilla:table6",
+      "html_id": "S4.T6",
+      "caption": "Table 6: Massive Multitask Language Understanding (MMLU). We report the average 5-shot accuracy over 57 tasks with model and human accuracy comparisons taken from Hendrycks et al. (2020). We also include the average prediction for state of the art accuracy in June 2022/2023 made by 73 competitive human forecasters in Steinhardt (2021).",
+      "rows": [
+        [
+          "Random",
+          "25.0%"
+        ],
+        [
+          "Average human rater",
+          "34.5%"
+        ],
+        [
+          "GPT-3 5-shot",
+          "43.9%"
+        ],
+        [
+          "Gopher 5-shot",
+          "60.0%"
+        ],
+        [
+          "Chinchilla 5-shot",
+          "67.6%"
+        ],
+        [
+          "Average human expert performance",
+          "89.8%"
+        ],
+        [
+          "June 2022 Forecast",
+          "57.1%"
+        ],
+        [
+          "June 2023 Forecast",
+          "63.4%"
+        ]
+      ]
+    },
+    {
+      "id": "table7",
+      "ref": "chinchilla:table7",
+      "html_id": "S4.T7",
+      "caption": "Table 7: Reading comprehension. On RACE-h and RACE-m (Lai et al., 2017), Chinchilla considerably improves performance over Gopher. Note that GPT-3 and MT-NLG 530B use a different prompt format than we do on RACE-h/m, so results are not comparable to Gopher and Chinchilla. On LAMBADA (Paperno et al., 2016), Chinchilla outperforms both Gopher and MT-NLG 530B.",
+      "rows": [
+        [
+          "Chinchilla",
+          "Gopher",
+          "GPT-3",
+          "MT-NLG 530B"
+        ],
+        [
+          "LAMBADA Zero-Shot",
+          "77.4",
+          "74.5",
+          "76.2",
+          "76.6"
+        ],
+        [
+          "RACE-m Few-Shot",
+          "86.8",
+          "75.1",
+          "58.1",
+          "-"
+        ],
+        [
+          "RACE-h Few-Shot",
+          "82.3",
+          "71.6",
+          "46.8",
+          "47.9"
+        ]
+      ]
+    },
+    {
+      "id": "table8",
+      "ref": "chinchilla:table8",
+      "html_id": "S4.T8",
+      "caption": "Table 8: Zero-shot comparison on Common Sense benchmarks. We show a comparison between Chinchilla, Gopher, and MT-NLG 530B on various Common Sense benchmarks. We see that Chinchilla matches or outperforms Gopher and GPT-3 on all tasks. On all but one Chinchilla outperforms the much larger MT-NLG 530B model. We evaluate Chinchilla on various common sense benchmarks: PIQA (Bisk et al., 2020), SIQA (Sap et al., 2019), Winogrande (Sakaguchi et al., 2020), HellaSwag (Zellers et al., 2019), and BoolQ (Clark et al., 2019).",
+      "rows": [
+        [
+          "Chinchilla",
+          "Gopher",
+          "GPT-3",
+          "MT-NLG 530B",
+          "Supervised SOTA"
+        ],
+        [
+          "HellaSWAG",
+          "80.8%",
+          "79.2%",
+          "78.9%",
+          "80.2%",
+          "93.9%"
+        ],
+        [
+          "PIQA",
+          "81.8%",
+          "81.8%",
+          "81.0%",
+          "82.0%",
+          "90.1%"
+        ],
+        [
+          "Winogrande",
+          "74.9%",
+          "70.1%",
+          "70.2%",
+          "73.0%",
+          "91.3%"
+        ],
+        [
+          "SIQA",
+          "51.3%",
+          "50.6%",
+          "-",
+          "-",
+          "83.2%"
+        ],
+        [
+          "BoolQ",
+          "83.7%",
+          "79.3%",
+          "60.5%",
+          "78.2%",
+          "91.4%"
+        ]
+      ]
+    },
+    {
+      "id": "table9",
+      "ref": "chinchilla:table9",
+      "html_id": "S4.T9",
+      "caption": "Table 9: Closed-book question answering. For Natural Questions (Kwiatkowski et al., 2019) and TriviaQA (Joshi et al., 2017), Chinchilla outperforms Gopher in all cases. On Natural Questions, Chinchilla outperforms GPT-3. On TriviaQA we show results on two different evaluation sets to allow for comparison to GPT-3 and to open book SOTA (FiD + Distillation (Izacard and Grave, 2020)).",
+      "rows": [
+        [
+          "Method",
+          "Chinchilla",
+          "Gopher",
+          "GPT-3",
+          "SOTA (open book)"
+        ],
+        [
+          "Natural Questions (dev)",
+          "0-shot",
+          "16.6%",
+          "10.1%",
+          "14.6%",
+          "54.4%"
+        ],
+        [
+          "5-shot",
+          "31.5%",
+          "24.5%",
+          "-"
+        ],
+        [
+          "64-shot",
+          "35.5%",
+          "28.2%",
+          "29.9%"
+        ],
+        [
+          "TriviaQA (unfiltered, test)",
+          "0-shot",
+          "67.0%",
+          "52.8%",
+          "64.3 %",
+          "-"
+        ],
+        [
+          "5-shot",
+          "73.2%",
+          "63.6%",
+          "-"
+        ],
+        [
+          "64-shot",
+          "72.3%",
+          "61.3%",
+          "71.2%"
+        ],
+        [
+          "TriviaQA (filtered, dev)",
+          "0-shot",
+          "55.4%",
+          "43.5%",
+          "-",
+          "72.5%"
+        ],
+        [
+          "5-shot",
+          "64.1%",
+          "57.0%",
+          "-"
+        ],
+        [
+          "64-shot",
+          "64.6%",
+          "57.2%",
+          "-"
+        ]
+      ]
+    },
+    {
+      "id": "table10",
+      "ref": "chinchilla:table10",
+      "html_id": "S4.T10",
+      "caption": "Table 10: Winogender results. Left: Chinchilla consistently resolves pronouns better than Gopher. Right: Chinchilla performs better on examples which contradict gender stereotypes (gotcha examples). However, difference in performance across groups suggests Chinchilla exhibits bias.",
+      "rows": []
+    },
+    {
+      "id": "tableA1",
+      "ref": "chinchilla:tableA1",
+      "html_id": "A1.T1",
+      "caption": "Table A1: MassiveText data makeup. For each subset of MassiveText, we list its total disk size, the number of documents and the sampling proportion used during training—we use a slightly different distribution than in Rae et al. (2021) (shown in parenthesis). In the rightmost column show the number of epochs that are used in 1.4 trillion tokens.",
+      "rows": [
+        [
+          "Disk Size",
+          "Documents",
+          "Sampling proportion",
+          "Epochs in 1.4T tokens"
+        ],
+        [
+          "MassiveWeb",
+          "1.9 TB",
+          "604M",
+          "45% (48%)",
+          "1.24"
+        ],
+        [
+          "Books",
+          "2.1 TB",
+          "4M",
+          "30% (27%)",
+          "0.75"
+        ],
+        [
+          "C4",
+          "0.75 TB",
+          "361M",
+          "10% (10%)",
+          "0.77"
+        ],
+        [
+          "News",
+          "2.7 TB",
+          "1.1B",
+          "10% (10%)",
+          "0.21"
+        ],
+        [
+          "GitHub",
+          "3.1 TB",
+          "142M",
+          "4% (3%)",
+          "0.13"
+        ],
+        [
+          "Wikipedia",
+          "0.001 TB",
+          "6M",
+          "1% (2%)",
+          "3.40"
+        ]
+      ]
+    },
+    {
+      "id": "tableA2",
+      "ref": "chinchilla:tableA2",
+      "html_id": "A3.T2",
+      "caption": "Table A2: Estimated parameter and data scaling with increased training compute on two alternate datasets. The listed values are the exponents, $a$ and $b$ , on the relationship $N_{opt}\\propto C^{a}$ and $D_{opt}\\propto C^{b}$ . Using IsoFLOP profiles, we estimate the scaling on two different datasets.",
+      "rows": [
+        [
+          "Approach",
+          "Coef. $a$ where $N_{opt}\\propto C^{a}$",
+          "Coef. $b$ where $D_{opt}\\propto C^{b}$"
+        ],
+        [
+          "C4",
+          "0.50",
+          "0.50"
+        ],
+        [
+          "GitHub",
+          "0.53",
+          "0.47"
+        ],
+        [
+          "Kaplan et al. (2020)",
+          "0.73",
+          "0.27"
+        ]
+      ]
+    },
+    {
+      "id": "tableA3",
+      "ref": "chinchilla:tableA3",
+      "html_id": "A4.T3",
+      "caption": "Table A3: Estimated optimal training FLOPs and training tokens for various model sizes. Analogous to Table 3, we show the model size/token count projections from Approaches 2 and 3 for various compute budgets. .",
+      "rows": [
+        [
+          "Approach 2",
+          "Approach 3"
+        ],
+        [
+          "Parameters",
+          "FLOPs",
+          "Tokens",
+          "FLOPs",
+          "Tokens"
+        ],
+        [
+          "400 Million",
+          "1.84e+19",
+          "7.7 Billion",
+          "2.21e+19",
+          "9.2 Billion"
+        ],
+        [
+          "1 Billion",
+          "1.20e+20",
+          "20.0 Billion",
+          "1.62e+20",
+          "27.1 Billion"
+        ],
+        [
+          "10 Billion",
+          "1.32e+22",
+          "219.5 Billion",
+          "2.46e+22",
+          "410.1 Billion"
+        ],
+        [
+          "67 Billion",
+          "6.88e+23",
+          "1.7 Trillion",
+          "1.71e+24",
+          "4.1 Trillion"
+        ],
+        [
+          "175 Billion",
+          "4.54e+24",
+          "4.3 Trillion",
+          "1.26e+24",
+          "12.0 Trillion"
+        ],
+        [
+          "280 Billion",
+          "1.18e+25",
+          "7.1 Trillion",
+          "3.52e+25",
+          "20.1 Trillion"
+        ],
+        [
+          "520 Billion",
+          "4.19e+25",
+          "13.4 Trillion",
+          "1.36e+26",
+          "43.5 Trillion"
+        ],
+        [
+          "1 Trillion",
+          "1.59e+26",
+          "26.5 Trillion",
+          "5.65e+26",
+          "94.1 Trillion"
+        ],
+        [
+          "10 Trillion",
+          "1.75e+28",
+          "292.0 Trillion",
+          "8.55e+28",
+          "1425.5 Trillion"
+        ]
+      ]
+    },
+    {
+      "id": "tableA4",
+      "ref": "chinchilla:tableA4",
+      "html_id": "A6.T4",
+      "caption": "Table A4: FLOP comparison. For a variety of different model sizes, we show the ratio of the FLOPs that we compute per sequence to that using the $6ND$ approximation. Compared to the results presented in Rae et al. (2021), we use a slightly more accurate calculation giving a slightly different value ( $6.3\\times 10^{23}$ compared to $5.76\\times 10^{23}$ ).",
+      "rows": [
+        [
+          "Parameters",
+          "num_layers",
+          "d_model",
+          "ffw_size",
+          "num_heads",
+          "k/q size",
+          "FLOP Ratio (Ours/ $6ND$ )"
+        ],
+        [
+          "73M",
+          "10",
+          "640",
+          "2560",
+          "10",
+          "64",
+          "1.03"
+        ],
+        [
+          "305M",
+          "20",
+          "1024",
+          "4096",
+          "16",
+          "64",
+          "1.10"
+        ],
+        [
+          "552M",
+          "24",
+          "1280",
+          "5120",
+          "10",
+          "128",
+          "1.08"
+        ],
+        [
+          "1.1B",
+          "26",
+          "1792",
+          "7168",
+          "14",
+          "128",
+          "1.04"
+        ],
+        [
+          "1.6B",
+          "28",
+          "2048",
+          "8192",
+          "16",
+          "128",
+          "1.03"
+        ],
+        [
+          "6.8B",
+          "40",
+          "3584",
+          "14336",
+          "28",
+          "128",
+          "0.99"
+        ]
+      ]
+    },
+    {
+      "id": "tableA5",
+      "ref": "chinchilla:tableA5",
+      "html_id": "A8.T5",
+      "caption": "Table A5: Bits-per-Byte on The Pile. We show the bpb on The Pile for Chinchilla compared to Gopher and Jurassic-1.",
+      "rows": [
+        [
+          "Subset",
+          "Chinchilla (70B)",
+          "Gopher (280B)",
+          "Jurassic-1 (170B)"
+        ],
+        [
+          "pile_cc",
+          "0.667",
+          "0.691",
+          "0.669"
+        ],
+        [
+          "pubmed_abstracts",
+          "0.559",
+          "0.578",
+          "0.587"
+        ],
+        [
+          "stackexchange",
+          "0.614",
+          "0.641",
+          "0.655"
+        ],
+        [
+          "github",
+          "0.337",
+          "0.377",
+          "0.358"
+        ],
+        [
+          "openwebtext2",
+          "0.647",
+          "0.677",
+          "-"
+        ],
+        [
+          "arxiv",
+          "0.627",
+          "0.662",
+          "0.680"
+        ],
+        [
+          "uspto_backgrounds",
+          "0.526",
+          "0.546",
+          "0.537"
+        ],
+        [
+          "freelaw",
+          "0.476",
+          "0.513",
+          "0.514"
+        ],
+        [
+          "pubmed_central",
+          "0.504",
+          "0.525",
+          "0.579"
+        ],
+        [
+          "dm_mathematics",
+          "1.111",
+          "1.142",
+          "1.037"
+        ],
+        [
+          "hackernews",
+          "0.859",
+          "0.890",
+          "0.869"
+        ],
+        [
+          "nih_exporter",
+          "0.572",
+          "0.590",
+          "0.590"
+        ],
+        [
+          "opensubtitles",
+          "0.871",
+          "0.900",
+          "0.879"
+        ],
+        [
+          "europarl",
+          "0.833",
+          "0.938",
+          "-"
+        ],
+        [
+          "books3",
+          "0.675",
+          "0.712",
+          "0.835"
+        ],
+        [
+          "philpapers",
+          "0.656",
+          "0.695",
+          "0.742"
+        ],
+        [
+          "gutenberg_pg_19",
+          "0.548",
+          "0.656",
+          "0.890"
+        ],
+        [
+          "bookcorpus2",
+          "0.714",
+          "0.741",
+          "-"
+        ],
+        [
+          "ubuntu_irc",
+          "1.026",
+          "1.090",
+          "0.857"
+        ]
+      ]
+    },
+    {
+      "id": "tableA6",
+      "ref": "chinchilla:tableA6",
+      "html_id": "A8.T6",
+      "caption": "Table A6: Chinchilla MMLU results. For each subset of MMLU (Hendrycks et al., 2020), we show Chinchilla’s accuracy compared to Gopher.",
+      "rows": [
+        [
+          "Task",
+          "Chinchilla",
+          "Gopher",
+          "Task",
+          "Chinchilla",
+          "Gopher"
+        ],
+        [
+          "abstract_algebra",
+          "31.0",
+          "25.0",
+          "anatomy",
+          "70.4",
+          "56.3"
+        ],
+        [
+          "astronomy",
+          "73.0",
+          "65.8",
+          "business_ethics",
+          "72.0",
+          "70.0"
+        ],
+        [
+          "clinical_knowledge",
+          "75.1",
+          "67.2",
+          "college_biology",
+          "79.9",
+          "70.8"
+        ],
+        [
+          "college_chemistry",
+          "51.0",
+          "45.0",
+          "college_computer_science",
+          "51.0",
+          "49.0"
+        ],
+        [
+          "college_mathematics",
+          "32.0",
+          "37.0",
+          "college_medicine",
+          "66.5",
+          "60.1"
+        ],
+        [
+          "college_physics",
+          "46.1",
+          "34.3",
+          "computer_security",
+          "76.0",
+          "65.0"
+        ],
+        [
+          "conceptual_physics",
+          "67.2",
+          "49.4",
+          "econometrics",
+          "38.6",
+          "43.0"
+        ],
+        [
+          "electrical_engineering",
+          "62.1",
+          "60.0",
+          "elementary_mathematics",
+          "41.5",
+          "33.6"
+        ],
+        [
+          "formal_logic",
+          "33.3",
+          "35.7",
+          "global_facts",
+          "39.0",
+          "38.0"
+        ],
+        [
+          "high_school_biology",
+          "80.3",
+          "71.3",
+          "high_school_chemistry",
+          "58.1",
+          "47.8"
+        ],
+        [
+          "high_school_computer_science",
+          "58.0",
+          "54.0",
+          "high_school_european_history",
+          "78.8",
+          "72.1"
+        ],
+        [
+          "high_school_geography",
+          "86.4",
+          "76.8",
+          "high_school_gov_and_politics",
+          "91.2",
+          "83.9"
+        ],
+        [
+          "high_school_macroeconomics",
+          "70.5",
+          "65.1",
+          "high_school_mathematics",
+          "31.9",
+          "23.7"
+        ],
+        [
+          "high_school_microeconomics",
+          "77.7",
+          "66.4",
+          "high_school_physics",
+          "36.4",
+          "33.8"
+        ],
+        [
+          "high_school_psychology",
+          "86.6",
+          "81.8",
+          "high_school_statistics",
+          "58.8",
+          "50.0"
+        ],
+        [
+          "high_school_us_history",
+          "83.3",
+          "78.9",
+          "high_school_world_history",
+          "85.2",
+          "75.1"
+        ],
+        [
+          "human_aging",
+          "77.6",
+          "66.4",
+          "human_sexuality",
+          "86.3",
+          "67.2"
+        ],
+        [
+          "international_law",
+          "90.9",
+          "77.7",
+          "jurisprudence",
+          "79.6",
+          "71.3"
+        ],
+        [
+          "logical_fallacies",
+          "80.4",
+          "72.4",
+          "machine_learning",
+          "41.1",
+          "41.1"
+        ],
+        [
+          "management",
+          "82.5",
+          "77.7",
+          "marketing",
+          "89.7",
+          "83.3"
+        ],
+        [
+          "medical_genetics",
+          "69.0",
+          "69.0",
+          "miscellaneous",
+          "84.5",
+          "75.7"
+        ],
+        [
+          "moral_disputes",
+          "77.5",
+          "66.8",
+          "moral_scenarios",
+          "36.5",
+          "40.2"
+        ],
+        [
+          "nutrition",
+          "77.1",
+          "69.9",
+          "philosophy",
+          "79.4",
+          "68.8"
+        ],
+        [
+          "prehistory",
+          "81.2",
+          "67.6",
+          "professional_accounting",
+          "52.1",
+          "44.3"
+        ],
+        [
+          "professional_law",
+          "56.5",
+          "44.5",
+          "professional_medicine",
+          "75.4",
+          "64.0"
+        ],
+        [
+          "professional_psychology",
+          "75.7",
+          "68.1",
+          "public_relations",
+          "73.6",
+          "71.8"
+        ],
+        [
+          "security_studies",
+          "75.9",
+          "64.9",
+          "sociology",
+          "91.0",
+          "84.1"
+        ],
+        [
+          "us_foreign_policy",
+          "92.0",
+          "81.0",
+          "virology",
+          "53.6",
+          "47.0"
+        ],
+        [
+          "world_religions",
+          "87.7",
+          "84.2"
+        ]
+      ]
+    },
+    {
+      "id": "tableA7",
+      "ref": "chinchilla:tableA7",
+      "html_id": "A8.T7",
+      "caption": "Table A7: Chinchilla BIG-bench results. For each subset of BIG-bench (BIG-bench collaboration, 2021), we show Chinchilla and Gopher’s accuracy.",
+      "rows": [
+        [
+          "Task",
+          "Chinchilla",
+          "Gopher",
+          "Task",
+          "Chinchilla",
+          "Gopher"
+        ],
+        [
+          "hyperbaton",
+          "54.2",
+          "51.7",
+          "movie_dialog_same_or_diff",
+          "54.5",
+          "50.7"
+        ],
+        [
+          "causal_judgment",
+          "57.4",
+          "50.8",
+          "winowhy",
+          "62.5",
+          "56.7"
+        ],
+        [
+          "formal_fallacies_syllogisms_neg",
+          "52.1",
+          "50.7",
+          "movie_recommendation",
+          "75.6",
+          "50.5"
+        ],
+        [
+          "crash_blossom",
+          "47.6",
+          "63.6",
+          "moral_permissibility",
+          "57.3",
+          "55.1"
+        ],
+        [
+          "discourse_marker_prediction",
+          "13.1",
+          "11.7",
+          "strategyqa",
+          "68.3",
+          "61.0"
+        ],
+        [
+          "general_knowledge_json",
+          "94.3",
+          "93.9",
+          "nonsense_words_grammar",
+          "78.0",
+          "61.4"
+        ],
+        [
+          "sports_understanding",
+          "71.0",
+          "54.9",
+          "metaphor_boolean",
+          "93.1",
+          "59.3"
+        ],
+        [
+          "implicit_relations",
+          "49.4",
+          "36.4",
+          "navigate",
+          "52.6",
+          "51.1"
+        ],
+        [
+          "penguins_in_a_table",
+          "48.7",
+          "40.6",
+          "presuppositions_as_nli",
+          "49.9",
+          "34.0"
+        ],
+        [
+          "intent_recognition",
+          "92.8",
+          "88.7",
+          "temporal_sequences",
+          "32.0",
+          "19.0"
+        ],
+        [
+          "reasoning_about_colored_objects",
+          "59.7",
+          "49.2",
+          "question_selection",
+          "52.6",
+          "41.4"
+        ],
+        [
+          "logic_grid_puzzle",
+          "44.0",
+          "35.1",
+          "logical_fallacy_detection",
+          "72.1",
+          "58.9"
+        ],
+        [
+          "timedial",
+          "68.8",
+          "50.9",
+          "physical_intuition",
+          "79.0",
+          "59.7"
+        ],
+        [
+          "epistemic_reasoning",
+          "60.6",
+          "56.4",
+          "physics_mc",
+          "65.5",
+          "50.9"
+        ],
+        [
+          "ruin_names",
+          "47.1",
+          "38.6",
+          "identify_odd_metaphor",
+          "68.8",
+          "38.6"
+        ],
+        [
+          "hindu_knowledge",
+          "91.4",
+          "80.0",
+          "understanding_fables",
+          "60.3",
+          "39.6"
+        ],
+        [
+          "misconceptions",
+          "65.3",
+          "61.7",
+          "logical_sequence",
+          "64.1",
+          "36.4"
+        ],
+        [
+          "implicatures",
+          "75.0",
+          "62.0",
+          "mathematical_induction",
+          "47.3",
+          "57.6"
+        ],
+        [
+          "disambiguation_q",
+          "54.7",
+          "45.5",
+          "fantasy_reasoning",
+          "69.0",
+          "64.1"
+        ],
+        [
+          "known_unknowns",
+          "65.2",
+          "63.6",
+          "SNARKS",
+          "58.6",
+          "48.3"
+        ],
+        [
+          "dark_humor_detection",
+          "66.2",
+          "83.1",
+          "crass_ai",
+          "75.0",
+          "56.8"
+        ],
+        [
+          "analogical_similarity",
+          "38.1",
+          "17.2",
+          "entailed_polarity",
+          "94.0",
+          "89.5"
+        ],
+        [
+          "sentence_ambiguity",
+          "71.7",
+          "69.1",
+          "irony_identification",
+          "73.0",
+          "69.7"
+        ],
+        [
+          "riddle_sense",
+          "85.7",
+          "68.2",
+          "evaluating_info_essentiality",
+          "17.6",
+          "16.7"
+        ],
+        [
+          "date_understanding",
+          "52.3",
+          "44.1",
+          "phrase_relatedness",
+          "94.0",
+          "81.8"
+        ],
+        [
+          "analytic_entailment",
+          "67.1",
+          "53.0",
+          "novel_concepts",
+          "65.6",
+          "59.1"
+        ],
+        [
+          "odd_one_out",
+          "70.9",
+          "32.5",
+          "empirical_judgments",
+          "67.7",
+          "52.5"
+        ],
+        [
+          "logical_args",
+          "56.2",
+          "59.1",
+          "figure_of_speech_detection",
+          "63.3",
+          "52.7"
+        ],
+        [
+          "alignment_questionnaire",
+          "91.3",
+          "79.2",
+          "english_proverbs",
+          "82.4",
+          "57.6"
+        ],
+        [
+          "similarities_abstraction",
+          "87.0",
+          "81.8",
+          "Human_organs_senses_mcc",
+          "85.7",
+          "84.8"
+        ],
+        [
+          "anachronisms",
+          "69.1",
+          "56.4",
+          "gre_reading_comprehension",
+          "53.1",
+          "27.3"
+        ]
+      ]
+    },
+    {
+      "id": "tableA8",
+      "ref": "chinchilla:tableA8",
+      "html_id": "A9.T8",
+      "caption": "Table A8: Chinchilla model card. We follow the framework presented in Mitchell et al. (2019). Model Details",
+      "rows": [
+        [
+          "Model Details"
+        ],
+        [
+          "Organization Developing the Model"
+        ],
+        [
+          "DeepMind"
+        ],
+        [
+          "Model Date"
+        ],
+        [
+          "March 2022"
+        ],
+        [
+          "Model Type"
+        ]
+      ]
+    },
+    {
+      "id": "tableA9",
+      "ref": "chinchilla:tableA9",
+      "html_id": "A10.T9",
+      "caption": "Table A9: All models. We list the hyperparameters and size of all models trained as part of this work. Many shown models have been trained with multiple learning rate schedules/number of training tokens. Parameters (million)",
+      "rows": [
+        [
+          "Parameters (million)",
+          "d_model",
+          "ffw_size",
+          "kv_size",
+          "n_heads",
+          "n_layers"
+        ],
+        [
+          "44",
+          "512",
+          "2048",
+          "64",
+          "8",
+          "8"
+        ],
+        [
+          "57",
+          "576",
+          "2304",
+          "64",
+          "9",
+          "9"
+        ],
+        [
+          "74",
+          "640",
+          "2560",
+          "64",
+          "10",
+          "10"
+        ],
+        [
+          "90",
+          "640",
+          "2560",
+          "64",
+          "10",
+          "13"
+        ],
+        [
+          "106",
+          "640",
+          "2560",
+          "64",
+          "10",
+          "16"
+        ],
+        [
+          "117",
+          "768",
+          "3072",
+          "64",
+          "12",
+          "12"
+        ],
+        [
+          "140",
+          "768",
+          "3072",
+          "64",
+          "12",
+          "15"
+        ],
+        [
+          "163",
+          "768",
+          "3072",
+          "64",
+          "12",
+          "18"
+        ],
+        [
+          "175",
+          "896",
+          "3584",
+          "64",
+          "14",
+          "14"
+        ],
+        [
+          "196",
+          "896",
+          "3584",
+          "64",
+          "14",
+          "16"
+        ],
+        [
+          "217",
+          "896",
+          "3584",
+          "64",
+          "14",
+          "18"
+        ],
+        [
+          "251",
+          "1024",
+          "4096",
+          "64",
+          "16",
+          "16"
+        ],
+        [
+          "278",
+          "1024",
+          "4096",
+          "64",
+          "16",
+          "18"
+        ],
+        [
+          "306",
+          "1024",
+          "4096",
+          "64",
+          "16",
+          "20"
+        ],
+        [
+          "425",
+          "1280",
+          "5120",
+          "128",
+          "10",
+          "18"
+        ],
+        [
+          "489",
+          "1280",
+          "5120",
+          "128",
+          "10",
+          "21"
+        ],
+        [
+          "509",
+          "1408",
+          "5632",
+          "128",
+          "11",
+          "18"
+        ],
+        [
+          "552",
+          "1280",
+          "5120",
+          "128",
+          "10",
+          "24"
+        ],
+        [
+          "587",
+          "1408",
+          "5632",
+          "128",
+          "11",
+          "21"
+        ],
+        [
+          "632",
+          "1536",
+          "6144",
+          "128",
+          "12",
+          "19"
+        ],
+        [
+          "664",
+          "1408",
+          "5632",
+          "128",
+          "11",
+          "24"
+        ],
+        [
+          "724",
+          "1536",
+          "6144",
+          "128",
+          "12",
+          "22"
+        ],
+        [
+          "816",
+          "1536",
+          "6144",
+          "128",
+          "12",
+          "25"
+        ],
+        [
+          "893",
+          "1792",
+          "7168",
+          "128",
+          "14",
+          "20"
+        ],
+        [
+          "1,018",
+          "1792",
+          "7168",
+          "128",
+          "14",
+          "23"
+        ],
+        [
+          "1,143",
+          "1792",
+          "7168",
+          "128",
+          "14",
+          "26"
+        ],
+        [
+          "1,266",
+          "2048",
+          "8192",
+          "128",
+          "16",
+          "22"
+        ],
+        [
+          "1,424",
+          "2176",
+          "8704",
+          "128",
+          "17",
+          "22"
+        ],
+        [
+          "1,429",
+          "2048",
+          "8192",
+          "128",
+          "16",
+          "25"
+        ],
+        [
+          "1,593",
+          "2048",
+          "8192",
+          "128",
+          "16",
+          "28"
+        ],
+        [
+          "1,609",
+          "2176",
+          "8704",
+          "128",
+          "17",
+          "25"
+        ],
+        [
+          "1,731",
+          "2304",
+          "9216",
+          "128",
+          "18",
+          "24"
+        ],
+        [
+          "1,794",
+          "2176",
+          "8704",
+          "128",
+          "17",
+          "28"
+        ],
+        [
+          "2,007",
+          "2304",
+          "9216",
+          "128",
+          "18",
+          "28"
+        ],
+        [
+          "2,283",
+          "2304",
+          "9216",
+          "128",
+          "18",
+          "32"
+        ],
+        [
+          "2,298",
+          "2560",
+          "10240",
+          "128",
+          "20",
+          "26"
+        ],
+        [
+          "2,639",
+          "2560",
+          "10240",
+          "128",
+          "20",
+          "30"
+        ],
+        [
+          "2,980",
+          "2560",
+          "10240",
+          "128",
+          "20",
+          "34"
+        ],
+        [
+          "3,530",
+          "2688",
+          "10752",
+          "128",
+          "22",
+          "36"
+        ],
+        [
+          "3,802",
+          "2816",
+          "11264",
+          "128",
+          "22",
+          "36"
+        ],
+        [
+          "4,084",
+          "2944",
+          "11776",
+          "128",
+          "22",
+          "36"
+        ],
+        [
+          "4,516",
+          "3072",
+          "12288",
+          "128",
+          "24",
+          "36"
+        ],
+        [
+          "6,796",
+          "3584",
+          "14336",
+          "128",
+          "28",
+          "40"
+        ],
+        [
+          "9,293",
+          "4096",
+          "16384",
+          "128",
+          "32",
+          "42"
+        ],
+        [
+          "11,452",
+          "4352",
+          "17408",
+          "128",
+          "32",
+          "47"
+        ],
+        [
+          "12,295",
+          "4608",
+          "18432",
+          "128",
+          "36",
+          "44"
+        ],
+        [
+          "12,569",
+          "4608",
+          "18432",
+          "128",
+          "32",
+          "47"
+        ],
+        [
+          "13,735",
+          "4864",
+          "19456",
+          "128",
+          "32",
+          "47"
+        ],
+        [
+          "14,940",
+          "4992",
+          "19968",
+          "128",
+          "32",
+          "49"
+        ],
+        [
+          "16,183",
+          "5120",
+          "20480",
+          "128",
+          "40",
+          "47"
+        ]
+      ]
+    }
+  ],
+  "figures": [
+    {
+      "id": "fig1",
+      "ref": "chinchilla:fig1",
+      "caption": "Figure 1: Overlaid predictions. We overlay the predictions from our three different approaches, along with projections from Kaplan et al. (2020). We find that all three methods predict that current large models should be substantially smaller and therefore trained much longer than is currently done. In Figure A3, we show the results with the predicted optimal tokens plotted against the optimal number of parameters for fixed FLOP budgets. Chinchilla outperforms Gopher and the other large models (see Section 4.2)."
+    },
+    {
+      "id": "fig2",
+      "ref": "chinchilla:fig2",
+      "caption": "Figure 2: Training curve envelope. On the left we show all of our different runs. We launched a range of model sizes going from 70M to 10B, each for four different cosine cycle lengths. From these curves, we extracted the envelope of minimal loss per FLOP, and we used these points to estimate the optimal model size (center) for a given compute budget and the optimal number of training tokens (right). In green, we show projections of optimal model size and training token count based on the number of FLOPs used to train Gopher ( $5.76\\times 10^{23}$ ). For each parameter count $N$ we train 4 dif"
+    },
+    {
+      "id": "fig3",
+      "ref": "chinchilla:fig3",
+      "caption": "Figure 3: IsoFLOP curves. For various model sizes, we choose the number of training tokens such that the final FLOPs is a constant. The cosine cycle length is set to match the target FLOP count. We find a clear valley in loss, meaning that for a given FLOP budget there is an optimal model to train (left). Using the location of these valleys, we project optimal model size and number of tokens for larger models (center and right). In green, we show the estimated number of parameters and tokens for an optimal model trained with the compute budget of Gopher."
+    },
+    {
+      "id": "fig4",
+      "ref": "chinchilla:fig4",
+      "caption": "Figure 4: Parametric fit. We fit a parametric modelling of the loss $\\hat{L}(N,D)$ and display contour (left) and isoFLOP slices (right). For each isoFLOP slice, we include a corresponding dashed line in the left plot. In the left plot, we show the efficient frontier in blue, which is a line in log-log space. Specifically, the curve goes through each iso-loss contour at the point with the fewest FLOPs."
+    },
+    {
+      "id": "fig5",
+      "ref": "chinchilla:fig5",
+      "caption": "Figure 5: Pile Evaluation. For the different evaluation sets in The Pile (Gao et al., 2020), we show the bits-per-byte (bpb) improvement (decrease) of Chinchilla compared to Gopher. On all subsets, Chinchilla outperforms Gopher. Chinchilla significantly outperforms Gopher on all evaluation subsets of The Pile (Gao et al., 2020), as shown in Figure 5."
+    },
+    {
+      "id": "fig6",
+      "ref": "chinchilla:fig6",
+      "caption": "Figure 6: MMLU results compared to Gopher We find that Chinchilla outperforms Gopher by 7.6% on average (see Table 6) in addition to performing better on 51/57 individual tasks, the same on 2/57, and worse on only 4/57 tasks."
+    },
+    {
+      "id": "fig7",
+      "ref": "chinchilla:fig7",
+      "caption": "Figure 7: BIG-bench results compared to Gopher Chinchilla out performs Gopher on all but four BIG-bench tasks considered. Full results are in Table A7."
+    },
+    {
+      "id": "figA1",
+      "ref": "chinchilla:figA1",
+      "caption": "Figure A1: Grid over cosine cycle length. We show 6 curves with the cosine cycle length set to 1, 1.1, 1.25, 1.5, 2, and 5 $\\times$ longer than the target number of training steps. When the cosine cycle length is too long, and the learning rate does not drop appropriately, then performance is impaired. We find that overestimating the number of training steps beyond 25% leads to clear drops in performance. We show results where we have set the number of training steps to two different values (top and bottom)."
+    },
+    {
+      "id": "figA2",
+      "ref": "chinchilla:figA2",
+      "caption": "Figure A2: C4 and GitHub IsoFLOP curves. Using the C4 dataset (Raffel et al., 2020b) and a GitHub dataset (Rae et al., 2021), we generate 4 IsoFLOP profiles and show the parameter and token count scaling, as in Figure 3. Scaling coefficients are shown in Table A2. We show scaling results from an IsoFLOP (Approach 2) analysis after training on two different datasets: C4 (Raffel et al., 2020b) and GitHub code (we show results with data from Rae et al. (2021)), results are shown in Table A2."
+    },
+    {
+      "id": "figA3",
+      "ref": "chinchilla:figA3",
+      "caption": "Figure A3: Optimal number of tokens and parameters for a training FLOP budget. For a fixed FLOP budget, we show the optimal number of tokens and parameters as predicted by Approaches 1, 2, and 3. For an alternate representation, see Figure 1."
+    },
+    {
+      "id": "figA4",
+      "ref": "chinchilla:figA4",
+      "caption": "Figure A4: Comparison to Kaplan et al. (2020) at $10^{21}$ FLOPs. We train 2.80 and 4.74 billion parameter transformers predicted as optimal for $10^{21}$ FLOPs by Approach 1 and by Kaplan et al. (2020). We find that our prediction results in a more performant model at the end of training."
+    },
+    {
+      "id": "figA5",
+      "ref": "chinchilla:figA5",
+      "caption": "Figure A5: Training curve envelopes. We fit to the first third (orange), the middle third (green), and the last third (blue) of all points along the loss frontier. We plot only a subset of the points."
+    },
+    {
+      "id": "figA6",
+      "ref": "chinchilla:figA6",
+      "caption": "Figure A6: Comparison of other differences. Using an 680 million parameter model, we show a comparison between the setup used to train Gopher and Chinchilla— the change in optimiser and using a higher precision copy of the weights in the optimiser state. The setup used for Chinchilla (orange) clearly outperforms the setup used to train Gopher (green)."
+    },
+    {
+      "id": "figA7",
+      "ref": "chinchilla:figA7",
+      "caption": "Figure A7: Adam vs AdamW. For a 417M (blue) and 1.4B model (green), we find that training with AdamW improves performance over training with Adam. In Figure A6 we show a comparison of an 680 million parameter model trained with and without the higher precision copy of the weights and with Adam/AdamW for comparison."
+    }
+  ],
+  "findings": [
+    {
+      "id": "equal-scaling",
+      "question": "How should N and D grow with C?",
+      "metric": "exponents a, b of N_opt ~ C^a, D_opt ~ C^b",
+      "evidence_kind": "three independent fits over 400+ runs",
+      "takeaway": "a ≈ b ≈ 0.5 (0.50/0.50, 0.49/0.51, 0.46/0.54) vs Kaplan 0.73/0.27.",
+      "refs": [
+        "chinchilla:table2",
+        "chinchilla:§3.4"
+      ]
+    },
+    {
+      "id": "tokens-per-parameter",
+      "question": "How many tokens for a given model size?",
+      "metric": "Table 3 / Table A3 projections",
+      "evidence_kind": "extrapolated power laws",
+      "takeaway": "Approach 1: 1B -> 20.2B tokens, 10B -> 205.1B, 67B -> 1.5T (roughly 20 tokens per parameter; the phrase itself is not printed in the paper).",
+      "refs": [
+        "chinchilla:table3",
+        "chinchilla:tableA3"
+      ]
+    },
+    {
+      "id": "chinchilla-beats-gopher",
+      "question": "Does a 4x smaller model on 4x more data beat Gopher at equal FLOPs?",
+      "metric": "Pile bpb, Wikitext103 ppl, MMLU, BIG-bench",
+      "evidence_kind": "single large-scale comparison",
+      "takeaway": "Yes on nearly every task: Wikitext103 7.16 vs 7.75, MMLU 67.6% vs 60.0%, 51/57 MMLU tasks better.",
+      "refs": [
+        "chinchilla:§4.2.1",
+        "chinchilla:§4.2.2",
+        "chinchilla:table6"
+      ]
+    },
+    {
+      "id": "kaplan-head-to-head",
+      "question": "Is the disagreement with Kaplan real at small scale?",
+      "metric": "final loss at 1e21 FLOPs",
+      "evidence_kind": "two-run comparison",
+      "takeaway": "The 2.80B model (this paper's prediction) beats the 4.74B model (Kaplan's).",
+      "refs": [
+        "chinchilla:§D.4",
+        "chinchilla:figA4"
+      ]
+    },
+    {
+      "id": "cosine-length",
+      "question": "Does the LR schedule length matter for the fits?",
+      "metric": "final loss across cycle lengths 1x-5x",
+      "evidence_kind": "grid (Fig. A1)",
+      "takeaway": "Overshooting the training horizon by more than 25% clearly degrades loss; the schedule must match D.",
+      "refs": [
+        "chinchilla:§B",
+        "chinchilla:figA1"
+      ]
+    },
+    {
+      "id": "dataset-independence",
+      "question": "Do exponents depend on the dataset?",
+      "metric": "a, b on C4 and GitHub",
+      "evidence_kind": "IsoFLOP replication",
+      "takeaway": "C4 0.50/0.50, GitHub 0.53/0.47.",
+      "refs": [
+        "chinchilla:tableA2",
+        "chinchilla:§C"
+      ]
+    }
+  ],
+  "inconsistencies": [
+    {
+      "what": "MMLU average",
+      "a": "67.5% (abstract)",
+      "b": "67.6% (Table 6, §4.2.2, Fig. 6 caption)",
+      "refs": [
+        "chinchilla:§abstract",
+        "chinchilla:table6"
+      ]
+    },
+    {
+      "what": "Table 3 vs prose for 175B / 280B",
+      "a": "Table 3 rows: 175B -> 3.85e+24 FLOPs, 3.7 Trillion tokens; 280B -> 9.90e+24, 5.9 Trillion",
+      "b": "§3.4 prose: 175B 'should be trained with a compute budget of 4.41e24 FLOPs and on over 4.2 trillion tokens'; 280B '~1e25 FLOPs ... 6.8 trillion tokens'",
+      "refs": [
+        "chinchilla:table3",
+        "chinchilla:§3.4"
+      ]
+    },
+    {
+      "what": "Gopher training FLOPs",
+      "a": "5.76e23 (Fig. 2 caption, Table 3 'Gopher unit')",
+      "b": "6.3e23 with the Appendix F calculation",
+      "refs": [
+        "chinchilla:fig2",
+        "chinchilla:§F"
+      ]
+    },
+    {
+      "what": "a from Approach 3",
+      "a": "printed a = 0.46, b = 0.54 (Table 2)",
+      "b": "beta/(alpha+beta) from the rounded Eq. 10 exponents 0.28/(0.34+0.28) = 0.452, which rounds to 0.45",
+      "refs": [
+        "chinchilla:table2",
+        "chinchilla:eq10"
+      ]
+    },
+    {
+      "what": "'20 tokens per parameter'",
+      "a": "not printed as a phrase anywhere in the paper",
+      "b": "implied by Table 3 (1 Billion -> 20.2 Billion tokens); the phrase is Lecture 9's (lecture_09.pdf:p54)",
+      "refs": [
+        "chinchilla:table3"
+      ]
+    },
+    {
+      "what": "token range of the sweep",
+      "a": "abstract: '5 to 500 billion tokens'",
+      "b": "§1: 'trained on 5B to over 400B tokens'",
+      "refs": [
+        "chinchilla:§abstract",
+        "chinchilla:§1"
+      ]
+    }
+  ]
+}

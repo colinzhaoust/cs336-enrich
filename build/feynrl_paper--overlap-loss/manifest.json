@@ -1,0 +1,83 @@
+{
+  "fixture": "feynrl_paper--overlap-loss",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "feynrl_paper:feynrl-same-loss-sync-async"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "7.866667"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "sync: both losses read the batch's own old_logprobs",
+      "frame": "frames/s0.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s1",
+      "time": 2.933,
+      "caption": "overlap on: GRPO adds a \u03c0_prox snapshot pass",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.867,
+      "caption": "max_lag = 2: the third epoch reads three versions",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n3"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s0",
+      "claim": "In sync mode the GRPO and P3O lanes have the same shape: one training block per epoch.",
+      "evidence": [
+        "lane.grpo",
+        "lane.p3o"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s1",
+      "claim": "Turning overlap on inserts a purple \u03c0_prox snapshot block before each GRPO training block; the P3O lane gains no block.",
+      "evidence": [
+        "lane.grpo",
+        "lane.p3o"
+      ]
+    },
+    {
+      "id": "n3",
+      "at_step": "s2",
+      "claim": "At max_lag = 2 the third rollout block feeds a buffer of three versions (v0\u2026v2); the new epoch repeats the same pattern, a \u03c0_prox pass plus decoupled training for GRPO and Eq. 12 alone for P3O.",
+      "evidence": [
+        "lane.rollout",
+        "lane.grpo",
+        "lane.p3o"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

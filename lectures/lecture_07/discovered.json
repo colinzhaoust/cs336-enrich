@@ -1,0 +1,1264 @@
+{
+  "lecture": "lecture_07",
+  "source_path": "official/lectures/lecture_07.py",
+  "source_sha256": "7cdec6c6e2b78afd667c98e2826efea637bb076cd926c45b4f404b0528c42e60",
+  "summary": {
+    "counts": {
+      "section_start": 8,
+      "heading": 5,
+      "claim": 97,
+      "figure": 7,
+      "cite": 8,
+      "code": 13,
+      "section_end": 8
+    },
+    "sections_in_order": [
+      "main",
+      "collective_operations",
+      "hardware",
+      "torch_distributed",
+      "benchmarking",
+      "data_parallelism",
+      "tensor_parallelism",
+      "pipeline_parallelism"
+    ],
+    "n_reference_cites": 0,
+    "n_url_cites": 8
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 19,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 20,
+      "section": "main",
+      "depth": 0,
+      "text": "Lecture 7: parallelism",
+      "extra": {
+        "level": 1
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 21,
+      "section": "main",
+      "depth": 0,
+      "text": "Last week: parallelism within a single GPU",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 22,
+      "section": "main",
+      "depth": 0,
+      "text": "This week: parallelism across multiple GPUs",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 23,
+      "section": "main",
+      "depth": 0,
+      "text": "images/gpu-node-overview.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 25,
+      "section": "main",
+      "depth": 0,
+      "text": "In both cases, **compute** (arithmetic logic units) is far from inputs/outputs (**data**).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 26,
+      "section": "main",
+      "depth": 0,
+      "text": "Unifying theme: orchestrate computation to avoid data transfer bottlenecks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 28,
+      "section": "main",
+      "depth": 0,
+      "text": "Generalized hierarchy:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 29,
+      "section": "main",
+      "depth": 0,
+      "text": "- Single node, single GPU: L1 cache / shared memory (fastest)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 30,
+      "section": "main",
+      "depth": 0,
+      "text": "- Single node, single GPU: HBM",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 31,
+      "section": "main",
+      "depth": 0,
+      "text": "- Single node, multi-GPU: NVLink/NVSwitch",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 32,
+      "section": "main",
+      "depth": 0,
+      "text": "- Multi-node, multi-GPU: Infiniband/Ethernet (slowest)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 34,
+      "section": "main",
+      "depth": 0,
+      "text": "Last week: reduce memory accesses via fusion/tiling",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 35,
+      "section": "main",
+      "depth": 0,
+      "text": "This week: reduce communication across GPUs/nodes via replication/sharding",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 37,
+      "section": "main",
+      "depth": 0,
+      "text": "Why do multi-GPU?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 38,
+      "section": "main",
+      "depth": 0,
+      "text": "1. Your parameters (optimizer state + gradients + activations) don't fit on a single GPU.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 39,
+      "section": "main",
+      "depth": 0,
+      "text": "2. You want to use more GPUs (more FLOPs) to train faster.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 43,
+      "section": "main",
+      "depth": 0,
+      "text": "stdout for this lecture",
+      "extra": {
+        "title": "stdout for this lecture",
+        "url": "var/traces/lecture_07_stdout.txt",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "heading",
+      "line": 45,
+      "section": "main",
+      "depth": 0,
+      "text": "Part 1: building blocks of distributed communication/computation",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "section_start",
+      "line": 75,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 76,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Collective operations** are the conceptual primitives used for distributed programming",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 76,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/Collective_operation",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 77,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- These are classic in the parallel programming literature from the 1980s.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 78,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- *Collective* means that you specify a general communication pattern across many devices.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 79,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- This can be better/faster than managing point-to-point communication yourself.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 81,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Setup**:",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 82,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "images/ranks.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 83,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- **Rank**: a particular device/GPU (e.g., 0, 1, 2, 3)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 84,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- **World size**: total number of devices (e.g., 4)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 86,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Operations:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 87,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- Broadcast, scatter, gather, reduce (foundations)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 88,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- All-gather, reduce-scatter, all-reduce (workhorse)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 89,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- All-to-all (for MoEs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 91,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Broadcast**: copy from rank 0 to all ranks",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 93,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0., 1, 2, 3])\nrank0 = tensor([0., 1, 2, 3])\nrank1 = tensor([0., 1, 2, 3])\nrank2 = tensor([0., 1, 2, 3])\nrank3 = tensor([0., 1, 2, 3])",
+      "extra": {
+        "end_line": 99
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 101,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Minor use case: rank 0 loads initial checkpoint and broadcasts to all ranks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 103,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Scatter** tensor on rank 0 to all ranks",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 105,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0., 1, 2, 3])\nrank0 = tensor([0.])\nrank1 = tensor([1.])\nrank2 = tensor([2.])\nrank3 = tensor([3.])",
+      "extra": {
+        "end_line": 111
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 113,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Note: stepping stone to understanding reduce-scatter",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 115,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Gather** pieces from all ranks to rank 0 (opposite of scatter)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 117,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0.])\nrank1 = tensor([1.])\nrank2 = tensor([2.])\nrank3 = tensor([3.])\nrank0 = tensor([0., 1, 2, 3])",
+      "extra": {
+        "end_line": 123
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 125,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Note: stepping stone to understanding all-gather",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 127,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Reduce** pieces from all ranks to rank 0, applying some operation (e.g., sum, min, max)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 129,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0.])\nrank1 = tensor([1.])\nrank2 = tensor([2.])\nrank3 = tensor([3.])\nrank0 = tensor([6.])  # Sum of all ranks (0 + 1 + 2 + 3)",
+      "extra": {
+        "end_line": 135
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 137,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Note: stepping stone to understanding all-reduce",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 139,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**All-gather**: perform gather to all ranks, not just rank 0",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 141,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0.])\nrank1 = tensor([1.])\nrank2 = tensor([2.])\nrank3 = tensor([3.])\nrank0 = tensor([0., 1, 2, 3])\nrank1 = tensor([0., 1, 2, 3])\nrank2 = tensor([0., 1, 2, 3])\nrank3 = tensor([0., 1, 2, 3])",
+      "extra": {
+        "end_line": 150
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 152,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Use case: each rank holds parameter shard, gather to get full parameters for forward pass",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 154,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**Reduce-scatter**: perform reduce on each dimension, scatter results",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 156,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0., 1, 2, 3])\nrank1 = tensor([1., 2, 3, 4])\nrank2 = tensor([2., 3, 4, 5])\nrank3 = tensor([3., 4, 5, 6])\nrank0 = tensor([6.])  # Sum along dim 0 (0 + 1 + 2 + 3)\nrank1 = tensor([10.]) # Sum along dim 1 (1 + 2 + 3 + 4)\nrank2 = tensor([14.]) # Sum along dim 2 (2 + 3 + 4 + 5)\nrank3 = tensor([18.]) # Sum along dim 3 (3 + 4 + 5 + 6)",
+      "extra": {
+        "end_line": 165
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 167,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Use case: after backward pass, sum gradients from different data shards, but distribute storage",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 169,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**All-reduce** = reduce-scatter + all-gather",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 171,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0., 1, 2, 3])\nrank1 = tensor([1., 2, 3, 4])\nrank2 = tensor([2., 3, 4, 5])\nrank3 = tensor([3., 4, 5, 6])\nrank0 = tensor([6., 10, 14, 18])\nrank1 = tensor([6., 10, 14, 18])\nrank2 = tensor([6., 10, 14, 18])\nrank3 = tensor([6., 10, 14, 18])",
+      "extra": {
+        "end_line": 180
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 182,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Use case: after backward pass, sum gradients from different data shards, but replicate full parameters",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 183,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Breaking all-reduce into reduce-scatter + all-gather allows for flexibility (e.g., ZeRO/FSDP)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 185,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "**All-to-all**: each rank sends each other rank some tensor (most general)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 187,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "rank0 = tensor([0., 1, 2, 3])      # send  0 to rank 0,  1 to rank 1,  2 to rank 2,  3 to rank 3\nrank1 = tensor([4., 5, 6, 7])      # send  4 to rank 0,  5 to rank 1,  6 to rank 2,  7 to rank 3\nrank2 = tensor([8., 9, 10, 11])    # send  8 to rank 0,  9 to rank 1, 10 to rank 2, 11 to rank 3\nrank3 = tensor([12., 13, 14, 15])  # send 12 to rank 0, 13 to rank 1, 14 to rank 2, 15 to rank 3\nrank0 = tensor([0, 4, 8, 12])\nrank1 = tensor([1, 5, 9, 13])\nrank2 = tensor([2, 6, 10, 14])\nrank3 = tensor([3, 7, 11, 15])",
+      "extra": {
+        "end_line": 196
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 198,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Notes:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 199,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- Useful for MoEs: each rank has split of data and subset of experts; need to route data to experts",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 200,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- For balanced splits, all-to-all looks like transpose",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 201,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- Also handles unbalanced splits (but want splits to be as balanced as possible)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 203,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "Way to remember the terminology:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 204,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- Reduce: performs some associative/commutative operation (sum, min, max)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 205,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- Scatter is inverse of gather",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 206,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "- All: means destination is all devices",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 206,
+      "section": "collective_operations",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 209,
+      "section": "hardware",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 210,
+      "section": "hardware",
+      "depth": 1,
+      "text": "Classic (in the home):",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 211,
+      "section": "hardware",
+      "depth": 1,
+      "text": "https://media.springernature.com/lw685/springer-static/image/art%3A10.1186%2Fs42774-021-00098-3/MediaObjects/42774_2021_98_Fig1_HTML.png?as=webp",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 212,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- GPUs on same node communicate via a PCI(e) bus (v7.0, 16 lanes => 242 GB/s)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 212,
+      "section": "hardware",
+      "depth": 1,
+      "text": "https://en.wikipedia.org/wiki/PCI_Express",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 213,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- GPUs on different nodes communicate via Ethernet (~200 MB/s)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 215,
+      "section": "hardware",
+      "depth": 1,
+      "text": "Modern (in the data center):",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 216,
+      "section": "hardware",
+      "depth": 1,
+      "text": "images/gpu-node-overview.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 218,
+      "section": "hardware",
+      "depth": 1,
+      "text": "Typical setup:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 219,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- 8 GPUs per node, connected by NVLink to an NVSwitch (B200s' NVLink 5.0 gets 1.8 TB/s; HBM was 8 TB/s)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 220,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- 256 nodes per pod, connected by Infiniband (via PCIe -> HCA / Infiniband NIC -> Infiniband cable) (~0.05 TB/s)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 221,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- N pods per cluster / datacenter, connected by Ethernet (via PCIe -> CPU)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 223,
+      "section": "hardware",
+      "depth": 1,
+      "text": "Bypassing the CPU:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 224,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- Ethernet requires passing through the CPU (copying data to kernel socket buffer, build TCP packets, copy to NIC ring buffer)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 225,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- Remote Direct Memory Access (RDMA): allows one GPU to directly read/write another GPU's memory without involving the CPU",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 226,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- Infiniband supports RDMA, but standard Ethernet does not",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 228,
+      "section": "hardware",
+      "depth": 1,
+      "text": "Advancements:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 229,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- GB200/GB300 NVL72: 8 GPUs per tray, 9 trays per rack -> 72 GPUs in one NVLink domain",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 230,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- RDMA over Converged Ethernet (RoCE): Ethernet bypasses CPU, similar but cheaper/weaker than Infiniband, used by Meta",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 232,
+      "section": "hardware",
+      "depth": 1,
+      "text": "NVIDIA Collective Communication Library (NCCL)",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 233,
+      "section": "hardware",
+      "depth": 1,
+      "text": "NCCL translates collective operations into low-level packets that are sent between GPUs.",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 233,
+      "section": "hardware",
+      "depth": 1,
+      "text": "talk",
+      "extra": {
+        "title": "talk",
+        "url": "https://www.nvidia.com/en-us/on-demand/session/gtcspring21-s31880/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 234,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- Detects topology of hardware (e.g., number of nodes, switches, NVLink/PCIe)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 235,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- Optimizes the path between GPUs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 236,
+      "section": "hardware",
+      "depth": 1,
+      "text": "- Launches GPU kernels to send/receive data",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 236,
+      "section": "hardware",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 239,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 240,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "PyTorch distributed library (`torch.distributed`)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 240,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "documentation",
+      "extra": {
+        "title": "documentation",
+        "url": "https://pytorch.org/docs/stable/distributed.html",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 241,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "- Provides clean interface for collective operations (e.g., `all_gather_into_tensor`)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 242,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "- Supports multiple backends for different hardware: gloo (CPU), nccl (GPU)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 243,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "- Also supports higher-level algorithms (e.g., `FullyShardedDataParallel`) [not used in this course]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 245,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "Let's walk through some examples.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 246,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "spawn(collective_operations_main, world_size=4)",
+      "extra": {
+        "end_line": 246
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 246,
+      "section": "torch_distributed",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 287,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 288,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "How fast does communication happen?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 291,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "spawn(all_reduce, world_size=4, num_elements=100 * 1024**2)\nspawn(reduce_scatter, world_size=4, num_elements=100 * 1024**2)",
+      "extra": {
+        "end_line": 294
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 296,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "References:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 297,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "How to reason about collective operations",
+      "extra": {
+        "title": "How to reason about collective operations",
+        "url": "https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md#allreduce",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 298,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "Sample benchmarking code",
+      "extra": {
+        "title": "Sample benchmarking code",
+        "url": "https://github.com/stas00/ml-engineering/blob/master/network/benchmarks/all_reduce_bench.py",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 298,
+      "section": "benchmarking",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 51,
+      "section": "main",
+      "depth": 0,
+      "text": "Part 2: distributed training",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 52,
+      "section": "main",
+      "depth": 0,
+      "text": "Walk through bare-bones implementations of each strategy on deep MLPs.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 53,
+      "section": "main",
+      "depth": 0,
+      "text": "Recall that MLPs are the compute bottleneck in Transformers, so this is representative.",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 375,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 376,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "images/data-parallelism.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 377,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "Sharding strategy: each rank gets a slice of the data",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 379,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "data = generate_sample_data()\nspawn(data_parallelism_main, world_size=4, data=data, num_layers=4, num_steps=1)",
+      "extra": {
+        "end_line": 380
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 382,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "Notes:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 383,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "- Losses are different across ranks (computed on local data)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 384,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "- Gradients are all-reduced to be the same across ranks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 385,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "- Therefore, parameters remain the same across ranks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 387,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "Next time: FSDP/ZeRO: use all-gather and reduce-scatter to avoid holding all parameters in memory",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 387,
+      "section": "data_parallelism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 439,
+      "section": "tensor_parallelism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 440,
+      "section": "tensor_parallelism",
+      "depth": 1,
+      "text": "images/tensor-parallelism.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 441,
+      "section": "tensor_parallelism",
+      "depth": 1,
+      "text": "Sharding strategy: each rank gets part of each layer, transfer all data/activations",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 443,
+      "section": "tensor_parallelism",
+      "depth": 1,
+      "text": "data = generate_sample_data()\nspawn(tensor_parallelism_main, world_size=4, data=data, num_layers=4)",
+      "extra": {
+        "end_line": 444
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 444,
+      "section": "tensor_parallelism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 484,
+      "section": "pipeline_parallelism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 485,
+      "section": "pipeline_parallelism",
+      "depth": 1,
+      "text": "images/pipeline-parallelism.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 486,
+      "section": "pipeline_parallelism",
+      "depth": 1,
+      "text": "Sharding strategy: each rank gets subset of layers, transfer all data/activations",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 488,
+      "section": "pipeline_parallelism",
+      "depth": 1,
+      "text": "data = generate_sample_data()\nspawn(pipeline_parallelism_main, world_size=2, data=data, num_layers=4, num_micro_batches=4)",
+      "extra": {
+        "end_line": 489
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 489,
+      "section": "pipeline_parallelism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 59,
+      "section": "main",
+      "depth": 0,
+      "text": "What's missing?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 60,
+      "section": "main",
+      "depth": 0,
+      "text": "- Communication/computation overlap",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 61,
+      "section": "main",
+      "depth": 0,
+      "text": "- More general models (with attention, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "main",
+      "depth": 0,
+      "text": "- Other forms of parallelism (e.g., sequence parallelism, expert parallelism, combinations)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 63,
+      "section": "main",
+      "depth": 0,
+      "text": "- Jax/TPUs: just define the model, the sharding strategy, and the Jax compiler handles the rest",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 63,
+      "section": "main",
+      "depth": 0,
+      "text": "levanter",
+      "extra": {
+        "title": "levanter",
+        "url": "https://crfm.stanford.edu/2023/06/16/levanter-1_0-release.html",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 64,
+      "section": "main",
+      "depth": 0,
+      "text": "- But we're doing PyTorch so you can see how one builds up from the primitives",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 66,
+      "section": "main",
+      "depth": 0,
+      "text": "Summary",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 67,
+      "section": "main",
+      "depth": 0,
+      "text": "- Many ways to parallelize: data (batch), tensor/expert (width), pipeline (depth), sequence (length)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "main",
+      "depth": 0,
+      "text": "- Data parallelism: DDP (all-reduce), FSDP/ZeRO (all-gather + reduce-scatter)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 69,
+      "section": "main",
+      "depth": 0,
+      "text": "- Tensor parallelism: requires very fast interconnects (e.g., NVLink)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 70,
+      "section": "main",
+      "depth": 0,
+      "text": "- Pipeline parallelism: can work with slow interconnects, but need to work to reduce pipeline bubbles",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 71,
+      "section": "main",
+      "depth": 0,
+      "text": "- Can **re-compute** or store in **memory** or store in another GPUs memory and **communicate**",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 72,
+      "section": "main",
+      "depth": 0,
+      "text": "- Hardware is getting faster, but will always want bigger models, so will have this hierarchical structure",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 72,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

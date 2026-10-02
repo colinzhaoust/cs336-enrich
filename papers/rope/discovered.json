@@ -1,0 +1,778 @@
+{
+  "paper": {
+    "id": "rope",
+    "title": "RoFormer: Enhanced Transformer with Rotary Position Embedding",
+    "arxiv": "2104.09864",
+    "revision": "arXiv:2104.09864v5",
+    "pdf_sha256": "e9a481fbe1c8a20b7b1fa566b13102a1896c7829fa9a8b4c80528452a5ddaf79",
+    "page_count": 14
+  },
+  "generated_by": "discover_paper.py",
+  "inputs": {
+    "/Users/colin/Desktop/4blue2brown/data/explainer_pipeline/papers/rope.json": "e25a8de3ccf895f5b1981cc3839b5ccd2559ed0dda1c5c8c3361e916e3666c9e",
+    "/Users/colin/Desktop/4blue2brown/data/formula_explainer/formulas/rope/relative.json": "da7747f8642e7ecd3a1f952fbcbb861561b633a338aabbac1743cff5bf92ce1f",
+    "/Users/colin/Desktop/cs336_enrich/atlas/papers/rope/lecture_03.txt": "66daf54ffed30dda2b78725553cbf28d8dff1886c5b5e17ffd89915e5b722b2a",
+    "/Users/colin/Desktop/4blue2brown/external/RoFormer/README.md": "60db852bc4032879791090c20f6bca31759fc6f60b434beb543d3242804f7133"
+  },
+  "verification_note": "Equation numbers, section numbers and pages 2-9 were verified against the page images in 4blue2brown/tmp/pdfs/rope; Fig. 3, Table 2 and Table 5 are on pages not in the image set and carry page=null.",
+  "sections": [
+    {
+      "id": "sec1",
+      "ref": "rope:§1",
+      "page": 2,
+      "title": "Introduction",
+      "claims": [
+        "Prior absolute and relative encodings add position to the context representation and are therefore unsuitable for linear self-attention.",
+        "RoPE encodes absolute position with a rotation matrix and thereby incorporates explicit relative position in the attention formulation.",
+        "Claimed properties: sequence-length flexibility, decaying inter-token dependency with distance, compatibility with linear attention."
+      ],
+      "equations": [],
+      "figures_tables": [],
+      "course_restates": [
+        {
+          "ref": "lecture_03.pdf:p30",
+          "match": "Many variations in position embeddings"
+        }
+      ]
+    },
+    {
+      "id": "sec2",
+      "ref": "rope:§2",
+      "page": 3,
+      "title": "Background and related work (Eqs. 1-10)",
+      "claims": [
+        "Attention takes q_m=f_q(x_m,m), k_n=f_k(x_n,n); position enters only through f.",
+        "Sinusoidal/learned absolute encodings add p_i before projection (Eqs. 3-4).",
+        "Shaw, Transformer-XL, T5, DeBERTa modify terms of the expanded additive score (Eqs. 5-10)."
+      ],
+      "equations": [
+        {
+          "number": 1,
+          "ref": "rope:eq1",
+          "section": "§2.1",
+          "page": 2,
+          "latex": null
+        },
+        {
+          "number": 2,
+          "ref": "rope:eq2",
+          "section": "§2.1",
+          "page": 3,
+          "latex": null
+        },
+        {
+          "number": 3,
+          "ref": "rope:eq3",
+          "section": "§2.2",
+          "page": 3,
+          "latex": "f_{t:t\\in\\{q,k,v\\}}(x_i,i) := W_{t}(x_i + p_i)",
+          "role": "prior_work",
+          "thread_stage": "additive absolute position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 4,
+          "ref": "rope:eq4",
+          "section": "§2.2",
+          "page": 3,
+          "latex": "p_{i,2t}=\\sin(k/10000^{2t/d}),\\quad p_{i,2t+1}=\\cos(k/10000^{2t/d})",
+          "role": "prior_work",
+          "thread_stage": "additive absolute position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 5,
+          "ref": "rope:eq5",
+          "section": "§2.3",
+          "page": 3,
+          "latex": null,
+          "role": "prior_work",
+          "thread_stage": "additive and decomposed relative position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 6,
+          "ref": "rope:eq6",
+          "section": "§2.3",
+          "page": 3,
+          "latex": null,
+          "role": "prior_work",
+          "thread_stage": "additive and decomposed relative position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 7,
+          "ref": "rope:eq7",
+          "section": "§2.3",
+          "page": 3,
+          "latex": null,
+          "role": "prior_work",
+          "thread_stage": "additive and decomposed relative position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 8,
+          "ref": "rope:eq8",
+          "section": "§2.3",
+          "page": 3,
+          "latex": null,
+          "role": "prior_work",
+          "thread_stage": "additive and decomposed relative position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 9,
+          "ref": "rope:eq9",
+          "section": "§2.3",
+          "page": 3,
+          "latex": null,
+          "role": "prior_work",
+          "thread_stage": "additive and decomposed relative position encoding",
+          "coverage": "animate"
+        },
+        {
+          "number": 10,
+          "ref": "rope:eq10",
+          "section": "§2.3",
+          "page": 4,
+          "latex": null,
+          "role": "prior_work",
+          "thread_stage": "additive and decomposed relative position encoding",
+          "coverage": "animate"
+        }
+      ],
+      "figures_tables": [],
+      "course_restates": [
+        {
+          "ref": "lecture_03.pdf:p31",
+          "match": "•   Sine: Has various cross-terms that are not relative"
+        }
+      ]
+    },
+    {
+      "id": "sec3.1",
+      "ref": "rope:§3.1",
+      "page": 4,
+      "title": "Formulation",
+      "claims": [
+        "Requirement: the inner product of q_m and k_n must be a function g of x_m, x_n and m-n only."
+      ],
+      "equations": [
+        {
+          "number": 11,
+          "ref": "rope:eq11",
+          "section": "§3.1",
+          "page": 4,
+          "latex": "\\langle f_q(x_m,m), f_k(x_n,n)\\rangle = g(x_m,x_n,m-n)",
+          "role": "premise",
+          "thread_stage": "formulation of relative position encoding",
+          "coverage": "animate"
+        }
+      ],
+      "figures_tables": [],
+      "course_restates": [
+        {
+          "ref": "lecture_03.pdf:p31",
+          "match": "That is, the attention function only gets to depend on the relative position (i-j). How do"
+        }
+      ]
+    },
+    {
+      "id": "sec3.2.1",
+      "ref": "rope:§3.2.1",
+      "page": 4,
+      "title": "A 2D case",
+      "claims": [
+        "In d=2 a solution is f_q=(W_q x_m)e^{imθ}: multiply the affine-transformed vector by a rotation by mθ.",
+        "Written as a 2x2 rotation matrix acting on (x^(1),x^(2))."
+      ],
+      "equations": [
+        {
+          "number": 12,
+          "ref": "rope:eq12",
+          "section": "§3.2.1",
+          "page": 4,
+          "latex": "f_q(x_m,m)=(W_q x_m)e^{im\\theta},\\; f_k(x_n,n)=(W_k x_n)e^{in\\theta},\\; g=\\mathrm{Re}[(W_q x_m)(W_k x_n)^* e^{i(m-n)\\theta}]",
+          "role": "mechanism",
+          "thread_stage": "two-dimensional rotary solution",
+          "coverage": "animate"
+        },
+        {
+          "number": 13,
+          "ref": "rope:eq13",
+          "section": "§3.2.1",
+          "page": 4,
+          "latex": "f_{\\{q,k\\}}(x_m,m)=\\begin{pmatrix}\\cos m\\theta & -\\sin m\\theta\\\\ \\sin m\\theta & \\cos m\\theta\\end{pmatrix} W_{\\{q,k\\}} x_m",
+          "role": "mechanism",
+          "thread_stage": "two-dimensional rotary solution",
+          "coverage": "animate"
+        }
+      ],
+      "figures_tables": [],
+      "course_restates": [
+        {
+          "ref": "lecture_03.pdf:p33",
+          "match": "Just pair up the coordinates and rotate them in 2d (motivation: complex numbers)"
+        },
+        {
+          "ref": "lecture_03.pdf:p32",
+          "match": "•  We know that inner products are invariant to arbitrary rotation."
+        }
+      ]
+    },
+    {
+      "id": "sec3.2.2",
+      "ref": "rope:§3.2.2",
+      "page": 5,
+      "title": "General form",
+      "claims": [
+        "Split d dims into d/2 pairs; each pair rotates by mθ_i with θ_i=10000^{-2(i-1)/d}.",
+        "Score becomes x_m^T W_q R_{n-m} W_k x_n because R_m^T R_n = R_{n-m} (R is orthogonal).",
+        "Direct matrix multiplication with the sparse R is not efficient; another realization is given in §3.4.2.",
+        "Contrast: prior methods are additive, RoPE is multiplicative."
+      ],
+      "equations": [
+        {
+          "number": 14,
+          "ref": "rope:eq14",
+          "section": "§3.2.2",
+          "page": 5,
+          "latex": "f_{\\{q,k\\}}(x_m,m)=R^d_{\\Theta,m} W_{\\{q,k\\}} x_m",
+          "role": "mechanism",
+          "thread_stage": "d-dimensional RoPE and relative identity",
+          "coverage": "animate"
+        },
+        {
+          "number": 15,
+          "ref": "rope:eq15",
+          "section": "§3.2.2",
+          "page": 5,
+          "latex": "R^d_{\\Theta,m}=\\mathrm{blockdiag}\\big(R(m\\theta_1),\\dots,R(m\\theta_{d/2})\\big),\\quad \\Theta=\\{\\theta_i=10000^{-2(i-1)/d}, i\\in[1,\\dots,d/2]\\}",
+          "role": "mechanism",
+          "thread_stage": "d-dimensional RoPE and relative identity",
+          "coverage": "animate"
+        },
+        {
+          "number": 16,
+          "ref": "rope:eq16",
+          "section": "§3.2.2",
+          "page": 5,
+          "latex": "(R_mW^qx_m)^T(R_nW^kx_n)=x_m^T(W^q)^TR_{n-m}W^kx_n",
+          "role": "mechanism",
+          "thread_stage": "d-dimensional RoPE and relative identity",
+          "coverage": "animate"
+        }
+      ],
+      "figures_tables": [
+        {
+          "id": "fig1",
+          "ref": "rope:fig1",
+          "section": "§3.2.2",
+          "page": 5
+        }
+      ],
+      "course_restates": [
+        {
+          "ref": "lecture_03.pdf:p33",
+          "match": "Just pair up the coordinates and rotate them in 2d (motivation: complex numbers)"
+        },
+        {
+          "ref": "lecture_03.pdf:p34",
+          "match": "Difference with sine embeddings – not additive, no cross terms"
+        }
+      ]
+    },
+    {
+      "id": "sec3.3",
+      "ref": "rope:§3.3",
+      "page": 5,
+      "title": "Properties of RoPE",
+      "claims": [
+        "Long-term decay: with θ_i=10000^{-2i/d} the inner product decays as relative distance grows (proof deferred to §3.4.3).",
+        "Linear attention: because rotation preserves norm, R can be applied to the non-negative feature maps φ(q), φ(k) in the numerator only (Eq. 19)."
+      ],
+      "equations": [
+        {
+          "number": 17,
+          "ref": "rope:eq17",
+          "section": "§3.3",
+          "page": 6,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "linear self-attention compatibility",
+          "coverage": "explain"
+        },
+        {
+          "number": 18,
+          "ref": "rope:eq18",
+          "section": "§3.3",
+          "page": 6,
+          "latex": "\\mathrm{Attention}(Q,K,V)_m=\\frac{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)v_n}{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)}",
+          "role": "analysis",
+          "thread_stage": "linear self-attention compatibility",
+          "coverage": "explain"
+        },
+        {
+          "number": 19,
+          "ref": "rope:eq19",
+          "section": "§3.3",
+          "page": 6,
+          "latex": "\\mathrm{Attention}(Q,K,V)_m=\\frac{\\sum_n (R^d_{\\Theta,m}\\phi(q_m))^\\top(R^d_{\\Theta,n}\\varphi(k_n))v_n}{\\sum_n \\phi(q_m)^\\top\\varphi(k_n)}",
+          "role": "analysis",
+          "thread_stage": "linear self-attention compatibility",
+          "coverage": "explain"
+        }
+      ],
+      "figures_tables": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec3.4.1",
+      "ref": "rope:§3.4.1",
+      "page": 6,
+      "title": "Derivation of RoPE under 2D",
+      "claims": [
+        "Write f in polar form; the radial parts are position-independent, the angular part must satisfy φ(m+1)-φ(m)=const, so φ(m)=mθ+γ; γ=0 gives Eq. 33."
+      ],
+      "equations": [
+        {
+          "number": 20,
+          "ref": "rope:eq20",
+          "section": "§3.4.1",
+          "page": 6,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 21,
+          "ref": "rope:eq21",
+          "section": "§3.4.1",
+          "page": 6,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 22,
+          "ref": "rope:eq22",
+          "section": "§3.4.1",
+          "page": 6,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 23,
+          "ref": "rope:eq23",
+          "section": "§3.4.1",
+          "page": 6,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 24,
+          "ref": "rope:eq24",
+          "section": "§3.4.1",
+          "page": 6,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 25,
+          "ref": "rope:eq25",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 26,
+          "ref": "rope:eq26",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 27,
+          "ref": "rope:eq27",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 28,
+          "ref": "rope:eq28",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 29,
+          "ref": "rope:eq29",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 30,
+          "ref": "rope:eq30",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": "\\phi(m)=m\\theta+\\gamma",
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 31,
+          "ref": "rope:eq31",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 32,
+          "ref": "rope:eq32",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        },
+        {
+          "number": 33,
+          "ref": "rope:eq33",
+          "section": "§3.4.1",
+          "page": 7,
+          "latex": "f_q(x_m,m)=(W_q x_m)e^{im\\theta},\\; f_k(x_n,n)=(W_k x_n)e^{in\\theta}",
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        }
+      ],
+      "figures_tables": [],
+      "course_restates": []
+    },
+    {
+      "id": "sec3.4.2",
+      "ref": "rope:§3.4.2",
+      "page": 7,
+      "title": "Computationally efficient realization",
+      "claims": [
+        "R x = x ⊙ cos + (−x_2, x_1, −x_4, x_3, ...) ⊙ sin: two elementwise products instead of a d×d matmul."
+      ],
+      "equations": [
+        {
+          "number": 34,
+          "ref": "rope:eq34",
+          "section": "§3.4.2",
+          "page": 7,
+          "latex": "R^d_{\\Theta,m}x = x\\otimes(\\cos m\\theta_1,\\cos m\\theta_1,\\dots)^\\top + (-x_2,x_1,-x_4,x_3,\\dots)^\\top\\otimes(\\sin m\\theta_1,\\sin m\\theta_1,\\dots)^\\top",
+          "role": "analysis",
+          "thread_stage": "proof and efficient realization",
+          "coverage": "fold"
+        }
+      ],
+      "figures_tables": [],
+      "course_restates": [
+        {
+          "ref": "lecture_03.pdf:p34",
+          "match": "Multiply with sines and cosines"
+        },
+        {
+          "ref": "lecture_03.pdf:p35",
+          "match": "Get the RoPE"
+        }
+      ]
+    },
+    {
+      "id": "sec3.4.3",
+      "ref": "rope:§3.4.3",
+      "page": 8,
+      "title": "Long-term decay of RoPE",
+      "claims": [
+        "Group q,k into pairs; the score is Re of a sum of complex products with phase (m-n)θ_i; Abel summation bounds it by max|h_{i+1}-h_i| · Σ|S_{i+1}|; the authors state (1/(d/2))Σ|S_i| decays with distance and plot it (Fig. 2)."
+      ],
+      "equations": [
+        {
+          "number": 35,
+          "ref": "rope:eq35",
+          "section": "§3.4.3",
+          "page": 8,
+          "latex": "(R^d_{\\Theta,m}W_q x_m)^\\top(R^d_{\\Theta,n}W_k x_n)=\\mathrm{Re}\\Big[\\sum_{i=0}^{d/2-1} q_{[2i:2i+1]}k^*_{[2i:2i+1]}e^{i(m-n)\\theta_i}\\Big]",
+          "role": "analysis",
+          "thread_stage": "long-term decay",
+          "coverage": "animate"
+        },
+        {
+          "number": 36,
+          "ref": "rope:eq36",
+          "section": "§3.4.3",
+          "page": 8,
+          "latex": null,
+          "role": "analysis",
+          "thread_stage": "long-term decay",
+          "coverage": "animate"
+        },
+        {
+          "number": 37,
+          "ref": "rope:eq37",
+          "section": "§3.4.3",
+          "page": 8,
+          "latex": "\\Big|\\sum_i q_{[2i:2i+1]}k^*_{[2i:2i+1]}e^{i(m-n)\\theta_i}\\Big| \\le \\big(\\max_i |h_{i+1}-h_i|\\big)\\sum_{i=0}^{d/2-1}|S_{i+1}|",
+          "role": "analysis",
+          "thread_stage": "long-term decay",
+          "coverage": "animate"
+        }
+      ],
+      "figures_tables": [
+        {
+          "id": "fig2",
+          "ref": "rope:fig2",
+          "section": "§3.4.3",
+          "page": 8
+        }
+      ],
+      "course_restates": []
+    },
+    {
+      "id": "sec4",
+      "ref": "rope:§4",
+      "page": 8,
+      "title": "Experiments and evaluation",
+      "claims": [
+        "WMT14 En-De: RoFormer 27.5 BLEU vs Transformer-base 27.3 (Table 1).",
+        "BERT pre-training MLM loss: RoFormer converges faster (Fig. 3, curve only).",
+        "GLUE (Table 2): mixed; better on MRPC, STS-B, QQP, worse on SST-2, QNLI, MNLI.",
+        "Performer + RoPE converges faster (Fig. 3 right).",
+        "CAIL2019-SCM: 68.29 at length 512 vs 69.79 at length 1024 (Table 5)."
+      ],
+      "equations": [],
+      "figures_tables": [
+        {
+          "id": "table1",
+          "ref": "rope:table1",
+          "section": "§4.1",
+          "page": 9
+        },
+        {
+          "id": "fig3",
+          "ref": "rope:fig3",
+          "section": "§4.2.3",
+          "page": null
+        },
+        {
+          "id": "table2",
+          "ref": "rope:table2",
+          "section": "§4.3",
+          "page": null
+        },
+        {
+          "id": "table5",
+          "ref": "rope:table5",
+          "section": "§4.5",
+          "page": null
+        }
+      ],
+      "course_restates": []
+    }
+  ],
+  "findings": [
+    {
+      "id": "translation_bleu",
+      "question": "Does the RoFormer architecture retain translation quality?",
+      "setting": "WMT14 English-to-German",
+      "metric": "BLEU",
+      "evidence_kind": "exact_table",
+      "takeaway": "Table 1 reports 27.5 for RoFormer and 27.3 for Transformer-base.",
+      "refs": [
+        "rope:table1"
+      ]
+    },
+    {
+      "id": "pretraining_convergence",
+      "question": "Does RoPE change the shown pre-training optimization trajectory?",
+      "setting": "BookCorpus + Wikipedia MLM and Performer comparisons",
+      "metric": "training loss over steps",
+      "evidence_kind": "authors_reported_curve",
+      "takeaway": "Figure 3 reports faster convergence for RoFormer and for Performer equipped with RoPE; the curves are not digitized here.",
+      "refs": [
+        "rope:fig3"
+      ]
+    },
+    {
+      "id": "glue_task_deltas",
+      "question": "Is RoFormer uniformly better across GLUE tasks?",
+      "setting": "Six GLUE datasets under the paper's pre-training setup",
+      "metric": "task-specific validation scores",
+      "evidence_kind": "exact_table",
+      "takeaway": "Table 2 is mixed: RoFormer is higher on MRPC, STS-B, and QQP, but lower on SST-2, QNLI, and MNLI in the reported setup.",
+      "refs": [
+        "rope:table2"
+      ]
+    },
+    {
+      "id": "long_sequence_legal",
+      "question": "Does a longer sequence setting help on long legal text?",
+      "setting": "CAIL2019-SCM with RoFormer-512 versus RoFormer-1024",
+      "metric": "test accuracy",
+      "evidence_kind": "exact_table",
+      "takeaway": "Table 5 reports 68.29 at length 512 and 69.79 at length 1024; sequential training stages and other confounds remain relevant.",
+      "refs": [
+        "rope:table5"
+      ]
+    },
+    {
+      "id": "long_term_decay",
+      "question": "How does the rotary score behave as relative distance grows?",
+      "setting": "frequency-paired decomposition in Eqs. 35–37",
+      "metric": "upper bound on the summed rotary contribution",
+      "evidence_kind": "algebraic_analysis",
+      "takeaway": "The paper derives a distance-dependent bound and presents Figure 2 as evidence of long-term decay.",
+      "refs": [
+        "rope:eq35-37",
+        "rope:fig2"
+      ]
+    }
+  ],
+  "code": {
+    "repo": "https://github.com/ZhuiyiTechnology/roformer",
+    "revision": "dfc678ad506fc527ba17ead8db23cbe4d947a9b4",
+    "rotary_lines": {
+      "ref": "README.md:L22-L32",
+      "text": [
+        "cos_pos = repeat_elements(sinusoidal_pos[..., None, 1::2], rep=2, axis=-1)",
+        "sin_pos = repeat_elements(sinusoidal_pos[..., None, ::2], rep=2, axis=-1)",
+        "qw2 = stack([-qw[..., 1::2], qw[..., ::2]], 4)",
+        "qw2 = reshape(qw2, shape(qw))",
+        "qw = qw * cos_pos + qw2 * sin_pos",
+        "kw2 = K.stack([-kw[..., 1::2], kw[..., ::2]], 4)",
+        "kw2 = K.reshape(kw2, K.shape(kw))",
+        "kw = kw * cos_pos + kw2 * sin_pos",
+        "",
+        "# Attention",
+        "a = tf.einsum('bjhd,bkhd->bhjk', qw, kw)"
+      ]
+    },
+    "model_selection": {
+      "ref": "train.py:L119-L126",
+      "note": "build_transformer_model(model='roformer'); the rotary layer itself lives in the bert4keras dependency, not in this repo."
+    },
+    "formula_code_links": [
+      {
+        "formula_id": "formula:rope.relative",
+        "formula_label": "Eq. 16 · relative-position identity",
+        "code_id": "roformer-readme",
+        "symbol": "cos_pos / sin_pos",
+        "path": "README.md",
+        "line_start": 22,
+        "line_end": 23,
+        "role": "constructs the paired rotation phases",
+        "state": "confirmed",
+        "evidence_refs": [
+          "rope-paper:eq14-16",
+          "roformer-readme:rope-pseudocode"
+        ]
+      },
+      {
+        "formula_id": "formula:rope.relative",
+        "formula_label": "Eq. 16 · relative-position identity",
+        "code_id": "roformer-readme",
+        "symbol": "qw2 / kw2 sign-swap",
+        "path": "README.md",
+        "line_start": 24,
+        "line_end": 29,
+        "role": "implements the 2D quarter-turn within every feature pair",
+        "state": "confirmed",
+        "evidence_refs": [
+          "rope-paper:eq20-34",
+          "roformer-readme:rope-pseudocode"
+        ]
+      },
+      {
+        "formula_id": "formula:rope.relative",
+        "formula_label": "Eq. 16 · relative-position identity",
+        "code_id": "roformer-readme",
+        "symbol": "einsum attention",
+        "path": "README.md",
+        "line_start": 31,
+        "line_end": 32,
+        "role": "takes the inner product after both query and key are rotated",
+        "state": "confirmed",
+        "evidence_refs": [
+          "rope-paper:eq16",
+          "roformer-readme:rope-pseudocode"
+        ]
+      }
+    ]
+  },
+  "course": {
+    "source": "lecture_03.pdf",
+    "rope_pages": [
+      "lecture_03.pdf:p4",
+      "lecture_03.pdf:p30",
+      "lecture_03.pdf:p31",
+      "lecture_03.pdf:p32",
+      "lecture_03.pdf:p33",
+      "lecture_03.pdf:p34",
+      "lecture_03.pdf:p35",
+      "lecture_03.pdf:p65"
+    ],
+    "order": [
+      {
+        "ref": "lecture_03.pdf:p30",
+        "step": "taxonomy: sine / absolute / relative / RoPE"
+      },
+      {
+        "ref": "lecture_03.pdf:p31",
+        "step": "requirement <f(x,i),f(y,j)> = g(x,y,i-j); why sine and absolute fail"
+      },
+      {
+        "ref": "lecture_03.pdf:p32",
+        "step": "inner products are invariant to rotation: rotate by position"
+      },
+      {
+        "ref": "lecture_03.pdf:p33",
+        "step": "which rotation: pair up coordinates, rotate in 2D (complex numbers); Gemma 4 alternative"
+      },
+      {
+        "ref": "lecture_03.pdf:p34",
+        "step": "the actual math: multiply with sines and cosines; not additive, no cross terms"
+      },
+      {
+        "ref": "lecture_03.pdf:p35",
+        "step": "implementation: cos/sin matrix, multiply query/key inputs at every attention layer"
+      },
+      {
+        "ref": "lecture_03.pdf:p65",
+        "step": "later: NoPE for long range, RoPE + sliding window for short range"
+      }
+    ]
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "lecture_17": {
+    "title": "CS336 Spring 2026, Lecture 17: Multimodal models",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_17.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_17.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_17.json",
+    "note": "Line anchors refer to the local shallow clone (sha256 d8c3054e..., recorded in discovered.json). The file's own heading is 'Lecture 17: multimodal models' (L5); the thread is registered as 'Alignment and multimodality' per the course listing, but the file contains no alignment section: the only post-training content is one line on Qwen3-VL ('SFT on long CoT data, knowledge distillation, RL', L257) and the Vicuna description (L128), which are linked to lecture_15/lecture_16 through external_prerequisites. Unlike lectures 2, 6 and 10 this file has no @inspect values at all: it is 177 text() claims, 32 image() figures and 20 link() citations, so every status is 'said', 'shown' or 'cited'. The only arithmetic this thread performs is on numbers the professor states as text (336/14 = 24 so 576 patches; 224/14 = 16 so 256 patches, 64 after 2x2 merging; 512x512 into 1024 tokens is a 32x32 grid, 16x16 pixels per token; log2(8192) = 13 bits per code) and it is always labelled as this thread's arithmetic. Numbers that live only inside embedded figures (clip-efficiency.png, siglip-parallelism.png, llava-onevision-data-*.png, llava-onevision-training.png, qwen-vl-stage*.png, qwen3-vl-pretraining.png, qwen3-vl-results.png, qwen2-vl-capabilities.png) are recorded as 'shown' and never restated. Dataset sizes, TPU-days and batch sizes stated in text (400M pairs, 32768, 16K/32K/1M, 10 days on 256 TPUv3, 5 days on 32 TPUv4, 158K examples, 2.9T/1.5T/400B tokens) are the professor's readings of the cited papers and are quoted with that attribution."
+  },
+  "lecture_01": {
+    "title": "CS336 Spring 2026, Lecture 1: Overview and tokenization",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_01.py",
+    "note": "Referenced only through external_prerequisites (lecture_01:<kp-id>); see atlas/lectures/lecture_01/knowledge_points.json. L19 says 'recall the tokenization lecture': the tokenizer interface (strings to integer indices), the vocabulary-size versus sequence-length trade and BPE are assumed when images are turned into tokens and when Chameleon trains a new BPE tokenizer (L285)."
+  },
+  "lecture_03": {
+    "title": "CS336 Spring 2026, Lecture 3: Architectures and hyperparameters",
+    "kind": "slides",
+    "path": "official/lectures/lecture_03.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_03:<kp-id>). RoPE and its frequency bands (position-embedding-taxonomy) are assumed by MRoPE (L223, L246-L247); QK-norm and z-loss (qk-norm, z-loss) are named as Chameleon's stability fixes without re-derivation (L293)."
+  },
+  "lecture_15": {
+    "title": "CS336 Spring 2026, Lecture 15: Mid/post-training, SFT and RLHF",
+    "kind": "slides",
+    "path": "official/lectures/lecture_15.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_15:<kp-id>). Vicuna is 'LLaMA fine-tuned on ShareGPT conversations' (L128), LLaVA's 158K GPT-4-generated conversations (L132-L134) are SFT data, and Qwen3-VL's post-training is 'SFT on long CoT data, knowledge distillation, RL' (L257); the SFT-then-RL recipe and the fact-you-do-not-know hallucination result were taught there. DPO and reward overoptimization do not appear in this file and carry no edge."
+  },
+  "lecture_16": {
+    "title": "CS336 Spring 2026, Lecture 16: Post-training 2, reinforcement learning from verifiable rewards",
+    "kind": "slides",
+    "path": "official/lectures/lecture_16.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_16:<kp-id>). 'SFT on long CoT data, knowledge distillation, RL' (L257) is the R1-style stage order taught there."
+  },
+  "clip_2021": {
+    "title": "Learning Transferable Visual Models From Natural Language Supervision (Radford et al., OpenAI, 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2103.00020",
+    "note": "Linked at lecture_17.py:L49. Source of the contrastive objective (L57-L60, clip.png and clip-code.png), the 400M-pair WIT dataset and 500K-query collection (L64-L66), the ViT-L/14@336px best model (L78), the 63M-parameter text encoder (L81), the zero-shot ImageNet headline (L85) and the predict-text-versus-contrastive efficiency ablation (L88-L90, clip-efficiency.png, not restated). The paper phrases the per-query cap as up to 20,000 pairs per query; the lecture says '~20K'."
+  },
+  "openclip_2022": {
+    "title": "Reproducible scaling laws for contrastive language-image learning (Cherti et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2212.07143",
+    "note": "Linked twice: lecture_17.py:L67 ('Reproduced in OpenCLIP (using LAION-5B dataset, which used CLIP for filtering)') and L199 (Qwen-VL's vision encoder is OpenCLIP's ViT-bigG, written 'ViT-bigC' in the file)."
+  },
+  "clip_preprocess_code": {
+    "title": "openai/CLIP clip/clip.py, _transform (resize, center crop)",
+    "kind": "code",
+    "url": "https://github.com/openai/CLIP/blob/main/clip/clip.py#L79",
+    "note": "Linked at lecture_17.py:L69 as 'code'. Source of the bicubic resize of the shorter side and the center crop (L70-L72)."
+  },
+  "vit_2020": {
+    "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale (Dosovitskiy et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2010.11929",
+    "note": "Linked at lecture_17.py:L75; vit.png (L76) is this paper's architecture figure. Source of the patch-as-token idea the whole lecture rests on."
+  },
+  "siglip_2023": {
+    "title": "Sigmoid Loss for Language Image Pre-Training (Zhai et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2303.15343",
+    "note": "Linked at lecture_17.py:L99. Source of the binary (sigmoid) objective (L103, siglip-code.png), the chunked device-parallel loss (siglip-parallelism.png, L116, not restated), the TPU-days comparison (L114-L115) and the batch-size findings (L119-L121)."
+  },
+  "pali_webli_2022": {
+    "title": "PaLI: A Jointly-Scaled Multilingual Language-Image Model (Chen et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2209.06794",
+    "note": "Linked at lecture_17.py:L107 for the WebLI dataset (O(billion) pairs, OCR text, top-10% quality filter, 100 languages, L107-L111)."
+  },
+  "llava_2023": {
+    "title": "Visual Instruction Tuning (Liu, Li, Wu, Lee, 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2304.08485",
+    "note": "Linked at lecture_17.py:L125. Source of the GPT-4 data-generation pipeline (L131-L134, llava-gen.png), the CLIP + linear projection + Vicuna architecture (L138-L140, llava-architecture.png) and the two-stage freeze schedule (L143-L144)."
+  },
+  "vicuna_blog_2023": {
+    "title": "Vicuna: An Open-Source Chatbot Impressing GPT-4 with 90% ChatGPT Quality (LMSYS blog, 2023-03-30)",
+    "kind": "article",
+    "url": "https://www.lmsys.org/blog/2023-03-30-vicuna/",
+    "note": "Linked at lecture_17.py:L128 via post_link; LLaVA's text decoder."
+  },
+  "llava_onevision_2024": {
+    "title": "LLaVA-OneVision: Easy Visual Task Transfer (Li et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2408.03326",
+    "note": "Linked at lecture_17.py:L149. Source of the SigLIP + 2-layer-MLP + Qwen-2 72B architecture (L154-L156), the three-input-type token budgeting (L165-L170, llava-onevision-modalities.png), the data and training-stage tables (L174-L179, shown only) and the cross-modality transfer examples (L182-L187, figures shown only)."
+  },
+  "llava_1_5_2023": {
+    "title": "Improved Baselines with Visual Instruction Tuning (Liu et al., 2023; LLaVA-1.5)",
+    "kind": "paper",
+    "url": "https://static.hliu.cc/files/llava/improved_llava.pdf",
+    "note": "Linked at lecture_17.py:L161 as 'paper' for AnyRes ('introduced in LLaVA 1.5'). The grid-tiling scheme appears in this paper's high-resolution section; the name AnyRes is usually associated with LLaVA-NeXT, which the lecture lists at L150. The lecture's attribution is kept as said."
+  },
+  "qwen_vl_2023": {
+    "title": "Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, Text Reading, and Beyond (Bai et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2308.12966",
+    "note": "Linked at lecture_17.py:L196. Source of the one-layer cross-attention adaptor with 2D positional encodings mapping to 256 tokens (L200), the <img>/<box>/<ref> special tokens (L201) and the three-stage schedule (L205-L209; the per-stage data tables qwen-vl-stage1/2.png are shown only)."
+  },
+  "qwen2_vl_2024": {
+    "title": "Qwen2-VL: Enhancing Vision-Language Model's Perception of the World at Any Resolution (Wang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2409.12191",
+    "note": "Linked at lecture_17.py:L215. Source of naive dynamic resolution, the 224x224 -> 66 tokens example (L220), 2 fps video sampling with a 16384-token cap (L221), MRoPE (L223, qwen2-vl-mrope.png, figure only) and the three-stage schedule (L228-L230). The lecture does not say what the two tokens beyond 64 are; the paper wraps each image's tokens in <|vision_start|> and <|vision_end|>, which this thread records as its reading of the paper, not as lecture content."
+  },
+  "dfn_2023": {
+    "title": "Data Filtering Networks (Fang et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2309.17425",
+    "note": "Linked at lecture_17.py:L226: Qwen2-VL initialises its vision encoder from DFN."
+  },
+  "qwen3_vl_2025": {
+    "title": "Qwen3-VL Technical Report (Qwen team, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2511.21631",
+    "note": "Linked at lecture_17.py:L237. Source of interleaved MRoPE (L246-L247), explicit timestamp tokens (L248), the square-root-normalized per-token loss (L249), DeepStack as adapter (L252), the four pre-training stages with 8K/32K/256K lengths (L255, qwen3-vl-pretraining.png shown only) and the post-training recipe (L257). The lecture does not define the square-root normalization; the reading in modality-balance-and-stability's filtering note is this thread's, and the report has the definition."
+  },
+  "siglip2_2025": {
+    "title": "SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features (Tschannen et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2502.14786",
+    "note": "Linked at lecture_17.py:L245: Qwen3-VL's vision encoder, 'same architecture as SigLIP'."
+  },
+  "deepstack_2024": {
+    "title": "DeepStack: Deeply Stacking Visual Tokens is Surprisingly Simple and Effective for LMMs (Meng et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2406.04334",
+    "note": "Linked at lecture_17.py:L252 ('cross-layer fusion to inject visual information into multiple layers'). One line in the lecture; folded into vlm-template-encoder-projector-lm's filtering note rather than given its own KP."
+  },
+  "chameleon_2024": {
+    "title": "Chameleon: Mixed-Modal Early-Fusion Foundation Models (Chameleon Team, Meta, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2405.09818",
+    "note": "Linked at lecture_17.py:L269. Source of the all-discrete-tokens design (L274-L277), the 512x512 -> 1024 tokens / 8192 codebook image tokenizer (L284), the new BPE tokenizer (L285), the two-stage data mix (L288-L289), and the low-entropy-text / high-entropy-image norm-growth and logit-drift diagnosis with QK-norm and z-loss fixes (L292-L293)."
+  },
+  "make_a_scene_2022": {
+    "title": "Make-A-Scene: Scene-Based Text-to-Image Generation with Human Priors (Gafni et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2203.13131",
+    "note": "Linked at lecture_17.py:L279 under 'Vision encoder': the image tokenizer Chameleon builds on."
+  },
+  "vqvae_2017": {
+    "title": "Neural Discrete Representation Learning (van den Oord, Vinyals, Kavukcuoglu, 2017; VQ-VAE)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1711.00937",
+    "note": "Linked at lecture_17.py:L281; vq-vae.png (L283) is this paper's figure. Source of 'map image to a discrete codebook, decode back to image and minimize reconstruction loss' (L282)."
+  },
+  "lecture_17_video": {
+    "title": "CS336 Spring 2026, Lecture 17: Multimodal models (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=26FtD08ZpOU",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

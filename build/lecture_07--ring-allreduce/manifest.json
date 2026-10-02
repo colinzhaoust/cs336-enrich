@@ -1,0 +1,105 @@
+{
+  "fixture": "lecture_07--ring-allreduce",
+  "family": "rank-ring",
+  "scene": "RankRingScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "lecture_07:all-reduce-decomposition",
+    "lecture_07:collective-bytes"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "23.733333"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "inputs: rank r holds r, r+1, r+2, r+3",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 3.4,
+      "caption": "reduce-scatter, ring step 1 of 3: send one slot, add it",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 7.067,
+      "caption": "reduce-scatter, ring step 2 of 3",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 10.733,
+      "caption": "reduce-scatter done: rank i owns slot i's sum",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 14.4,
+      "caption": "all-gather, ring step 1 of 3: send a finished slot, copy it",
+      "frame": "frames/s4.png",
+      "notices": []
+    },
+    {
+      "id": "s5",
+      "time": 18.067,
+      "caption": "all-gather, ring step 2 of 3",
+      "frame": "frames/s5.png",
+      "notices": []
+    },
+    {
+      "id": "s6",
+      "time": 21.733,
+      "caption": "all-gather done: every rank holds the all-reduce",
+      "frame": "frames/s6.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s3",
+      "claim": "After the first W - 1 steps each rank owns exactly one fully summed slot (gold): the reduce-scatter result 6, 10, 14, 18.",
+      "evidence": [
+        "rank.0",
+        "rank.1",
+        "rank.2",
+        "rank.3"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s6",
+      "claim": "The all-gather half takes as many steps and sends again, so the per-rank counter ends at 2(W - 1) slots of S/W.",
+      "evidence": [
+        "rank.0",
+        "rank.1",
+        "rank.2",
+        "rank.3",
+        "counter"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

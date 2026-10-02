@@ -1,0 +1,102 @@
+{
+  "fixture": "lecture_03--swa-reach",
+  "family": "swa-reach",
+  "scene": "SwaReachScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "lecture_03:swa-reach-through-depth"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "17.133333"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "token 1,000 at the input; one row per layer above it",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.6,
+      "caption": "local layer: each query reads one window back",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 5.6,
+      "caption": "next local layer: one more window of reach",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 8.6,
+      "caption": "3 local layers: reach 3 windows, window still 1",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 11.6,
+      "caption": "full-attention layer: reach jumps to the whole context",
+      "frame": "frames/s4.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s5",
+      "time": 15.133,
+      "caption": "layer 5 (local) at 60,000: every input already carries it",
+      "frame": "frames/s5.png",
+      "notices": [
+        "n3"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s3",
+      "claim": "After three local layers the lit band reaches about three windows past token 1,000 (13,285), while the dashed window each layer reads is still one window wide.",
+      "evidence": [
+        "stack.front",
+        "stack.window"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s4",
+      "claim": "One full-attention layer lights its whole row: every later position now carries token 1,000's information.",
+      "evidence": [
+        "stack.front"
+      ]
+    },
+    {
+      "id": "n3",
+      "at_step": "s5",
+      "claim": "Layer 5 only reads 55,905-60,000, yet position 60,000 depends on token 1,000, because every input in that window was written by the full layer; five local layers alone would reach only 21,475.",
+      "evidence": [
+        "stack.target",
+        "stack.window"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

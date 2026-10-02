@@ -1,0 +1,37 @@
+{
+  "rope_paper": {
+    "title": "RoFormer: Enhanced Transformer with Rotary Position Embedding (Su, Lu, Pan, Murtadha, Wen, Liu)",
+    "kind": "paper",
+    "arxiv": "2104.09864",
+    "revision": "arXiv:2104.09864v5",
+    "url": "https://arxiv.org/abs/2104.09864",
+    "path": "4blue2brown/data/explainer_pipeline/papers/rope.json",
+    "page_images": "4blue2brown/tmp/pdfs/rope/page-0X.png, results-0X.png",
+    "anchor_convention": "rope:§3.2 (section), rope:eq14 (equation number as printed), rope:p5 (pdf page), rope:fig2 / rope:table1",
+    "note": "Bundle sha256 e9a481fb… (see discovered.json). Equation and page numbers were checked against the page images for pages 2-9; Fig. 3, Table 2 and Table 5 are on later pages not in the image set."
+  },
+  "roformer_code": {
+    "title": "ZhuiyiTechnology/roformer (official repository)",
+    "kind": "repo",
+    "path": "4blue2brown/external/RoFormer",
+    "upstream": "https://github.com/ZhuiyiTechnology/roformer",
+    "revision": "dfc678ad506fc527ba17ead8db23cbe4d947a9b4",
+    "anchor_convention": "train.py:L120-L140, README.md:L22-L32",
+    "note": "The repository contains training/fine-tuning scripts only; the rotary operation appears as pseudocode in README.md:L18-L32 (snapshot at 4blue2brown/data/explainer_pipeline/code_snapshots/rope_readme_excerpt.py). train.py:L119-L126 selects model='roformer' from the bert4keras dependency, where the layer actually lives."
+  },
+  "lecture_03": {
+    "title": "CS336 Spring 2026, Lecture 3: Architectures and hyperparameters (RoPE on slides 30-35, 65)",
+    "kind": "slides",
+    "path": "official/lectures/lecture_03.pdf",
+    "text": "atlas/papers/rope/lecture_03.txt (pdftotext -layout)",
+    "anchor_convention": "lecture_03.pdf:pNN (pdf page = slide number)",
+    "note": "Gives the course's teaching order for RoPE, to be compared with the paper's order."
+  },
+  "cs336_rope_model": {
+    "title": "Numeric RoPE model (rotate, rotaryPair, rotatePairs)",
+    "kind": "model",
+    "path": "4blue2brown/cs336/models/rope.mjs",
+    "anchor_convention": "rope.mjs:rotaryPair / rope.mjs:rotatePairs",
+    "note": "rotaryPair() drives the shared-shift fixture (q=[1,0], k=[0.7,0.7], theta=pi/6); rotatePairs() applies block-diagonal rotation with theta_j = base^(-2j/d), j from 0."
+  }
+}

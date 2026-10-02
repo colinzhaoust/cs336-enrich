@@ -1,0 +1,2868 @@
+{
+  "lecture": "lecture_12",
+  "source_path": "official/lectures/lecture_12.py",
+  "source_sha256": "93e4049c9ee2665a7e5c883fee2c213e2eaa45aa5d452e447b5a15a5f353fd09",
+  "summary": {
+    "counts": {
+      "section_start": 11,
+      "heading": 5,
+      "claim": 215,
+      "cite": 51,
+      "figure": 43,
+      "section_end": 11
+    },
+    "sections_in_order": [
+      "main",
+      "what_is_good",
+      "perplexity",
+      "exam_benchmarks",
+      "chat_benchmarks",
+      "agentic_benchmarks",
+      "pure_reasoning_benchmarks",
+      "safety_benchmarks",
+      "realism",
+      "validity",
+      "how_to_think_about_evaluation"
+    ],
+    "n_reference_cites": 1,
+    "n_url_cites": 50
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 5,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 6,
+      "section": "main",
+      "depth": 0,
+      "text": "Lecture 12: evaluation",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 7,
+      "section": "main",
+      "depth": 0,
+      "text": "- So far: we've covered everything for training an LM (architecture, training, systems, scaling).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 8,
+      "section": "main",
+      "depth": 0,
+      "text": "- Missing piece: what **data** do you train on?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 9,
+      "section": "main",
+      "depth": 0,
+      "text": "- Data shapes model behavior (code? multilingual? DNA?).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 10,
+      "section": "main",
+      "depth": 0,
+      "text": "- Before talking about data, need to talk about what behavior we want from a model.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 12,
+      "section": "main",
+      "depth": 0,
+      "text": "**Evaluation**: given a model, how \"**good**\" is it?",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 33,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 34,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Evaluation might appear to be a mechanical process:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 35,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "1. Define some prompts",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 36,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "2. Send prompts to a model and get back responses",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 37,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "3. Compute accuracy",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 39,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "But actually, evaluation is a deep and important topic...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 40,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "...which shapes the development of AI.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 42,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "**Core challenge**: <font color=\"red\">abstract construct</font> → <font color=\"blue\">concrete metric</font>",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 44,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Maybe a model is good if it does well on benchmarks...",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 45,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Artificial Analysis",
+      "extra": {
+        "title": "Artificial Analysis",
+        "url": "https://artificialanalysis.ai/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 46,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "images/artificial-analysis.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 48,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Maybe a model is good if it does well on benchmarks and is cheap to run...",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 49,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "images/artificial-analysis-cost.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 51,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Maybe a model is good if people prefer its responses...",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 52,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Arena AI (formerly Chatbot Arena)",
+      "extra": {
+        "title": "Arena AI (formerly Chatbot Arena)",
+        "url": "https://arena.ai/leaderboard",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 53,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "images/lmarena-leaderboard.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 55,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "Maybe a model is good if people simply choose to use (and pay for) it...",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 56,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "OpenRouter",
+      "extra": {
+        "title": "OpenRouter",
+        "url": "https://openrouter.ai/rankings",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 57,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "images/openrouter.png",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 57,
+      "section": "what_is_good",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 60,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 61,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Recall: that a language model is a probability distribution **p(x)** over sequences of tokens.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Perplexity (1/p(D))^(1/|D|) measures whether p assigns high probability to some dataset D.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 64,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- In pre-training, you minimize perplexity on the training set.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 65,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- The obvious thing is to measure perplexity on the test set.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 66,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- This is what people did traditionally in language modeling research.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Standard datasets:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 69,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Penn Treebank (WSJ)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 70,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- WikiText-103 (Wikipedia)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 71,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- One Billion Word Benchmark (from machine translation WMT11 - EuroParl, UN, news)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 72,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Classic paradigm: in-distribution evaluation: train on train split and evaluate on test split of some dataset.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 73,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Pure CNNs+LSTMs on the One Billion Word Benchmark (perplexity 51.3 → 30.0)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 73,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/1602.02410",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 75,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "GPT-2:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 76,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Trained on WebText (40GB text, websites linked from Reddit)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 77,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Zero-shot on standard datasets (**out-of-distribution** evaluation)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 78,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "images/gpt2-perplexity.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 79,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Works better on small datasets (PTB) where transfer is helpful, but not larger datasets (1BW)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 81,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Perplexity is all you need (more faith than science):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 82,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- True distribution is t, model is p.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 83,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Best possible perplexity is H(t) obtained iff p = t.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 84,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- If p = t, then solve all the tasks: p(solution | problem)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 85,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- So by pushing down on perplexity, we will eventually \"reach AGI\".",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 87,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Perplexity is maybe more than you need:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 88,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Example: *Stanford was founded in 1885*",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 89,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Perplexity penalizes prediction on all tokens, some (e.g., *founded*) of which might not be relevant",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 90,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Solution: measure conditional perplexity p(response | prompt)^(1/|response|)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 92,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Some benchmarks are perplexity in disguise:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 93,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Cloze tasks (fill in the blank): LAMBADA",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 93,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/1606.06031",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 94,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "images/lambada.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 95,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Multiple choice sentence completion: HellaSwag",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 95,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/1905.07830",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 96,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "images/hellaswag.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 98,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "**Warning** (if you're running a perplexity leaderboard):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 99,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- People submit `LM` and you compute `log_prob = LM(test_data)`",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 100,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- You need to trust that the probabilities are valid (sum to 1)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 101,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- For downstream tasks, `response = LM(prompt)` and compute accuracy on `response`",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 103,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 104,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Perplexity is still used heavily in language model development (smooth scaling laws)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 105,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "- Still need benchmarks that capture real-world situations (for the non-believers)...",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 105,
+      "section": "perplexity",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 108,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 109,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "Exams are a useful way to test language models (as with humans):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 110,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Have control over the subject and difficulty",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 111,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Design to have unambiguous correct answer, easy to grade",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 113,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "**Massive Multitask Language Understanding (MMLU)**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 113,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "mmlu_2021",
+      "extra": {
+        "ref": "mmlu_2021",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 114,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- 57 subjects (e.g., math, US history, law, morality), multiple-choice",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 115,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- \"collected by graduate and undergraduate students from freely available sources online\"",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 116,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Despite the name, MMLU is really about testing knowledge, not language understanding",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 117,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Evaluated on GPT-3 using few-shot prompting",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 118,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "images/mmlu.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 119,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/mmlu",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 120,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "HELM MMLU for visualizing predictions",
+      "extra": {
+        "title": "HELM MMLU for visualizing predictions",
+        "url": "https://crfm.stanford.edu/helm/mmlu/latest/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 122,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "**MMLU-Pro**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 122,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2406.01574",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 123,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Removed noisy/trivial questions from MMLU",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 124,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Expanded 4 choices to 10 choices",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 125,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Evaluated using chain of thought (gives model more of a chance)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 126,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Accuracy of models drop by 16% to 33% (not as saturated)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 127,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "images/mmlu-pro.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 128,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/mmlu-pro",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 129,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "HELM MMLU-Pro for visualizing predictions",
+      "extra": {
+        "title": "HELM MMLU-Pro for visualizing predictions",
+        "url": "https://crfm.stanford.edu/helm/capabilities/latest/#/leaderboard/mmlu_pro",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 131,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "**Graduate-Level Google-Proof Q&A (GPQA)**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 131,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2311.12022",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 132,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Questions written by 61 PhD contractors from Upwork",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 133,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "images/gpqa.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 134,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- PhD experts achieve 65% accuracy",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 135,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Non-experts achieve 34% over 30 minutes with access to Google",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 136,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- GPT-4 achieves 39%",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 137,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/gpqa",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 138,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "HELM GPQA for visualizing predictions",
+      "extra": {
+        "title": "HELM GPQA for visualizing predictions",
+        "url": "https://crfm.stanford.edu/helm/capabilities/latest/#/leaderboard/gpqa",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 140,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "**Humanity's Last Exam (HLE)**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 140,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2501.14249",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 141,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- 2500 questions: multimodal, many subjects, multiple-choice + short-answer",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 142,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "images/hle-examples.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 143,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Awarded $500K prize pool + co-authorship to question creators",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 144,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Filtered by frontier LLMs, multiple stages of review",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 145,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "images/hle-pipeline.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 146,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "images/hle-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 147,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/hle",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 149,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 150,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Trend towards harder questions as models improve and saturate existing benchmarks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 151,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Multiple-choice format can be as difficult as one wants",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 152,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "- Does not capture real usage (open-ended, doesn't necessarily exist correct answer)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 152,
+      "section": "exam_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 155,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 156,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- So far, we've been evaluating on well-defined multiple-choice tasks.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 157,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Most people don't ask multiple-choice exam questions to their AI assistant.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 159,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Example:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 160,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Prompt: *I would like to make a beet salad with goat cheese. What kind of herbs would work well and what would not work well?*",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 161,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Response: *Here’s a breakdown of herbs that work well (and some that don’t) in a beet + goat cheese salad, based on how their flavors interact with the sweet-earthiness of beets and the tangy creaminess of goat cheese...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 163,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "**Challenge**: how to evaluate an open-ended response?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 165,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "**Chatbot Arena**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 165,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2403.04132",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 166,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Data collection:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 167,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Random person from the Internet types in prompt",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 168,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- They get response from two random (anonymized) models",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 169,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- They rate which one is better",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 170,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "images/arena-beets.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 171,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Compute ELO rankings based on pairwise comparisons:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 172,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Define model: p(A wins against B) = 1 / (1 + 10^((ELO_B - ELO_A)/400))",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 173,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Fit this model to maximize probability of pairwise comparisons",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 174,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Arena AI (formerly Chatbot Arena)",
+      "extra": {
+        "title": "Arena AI (formerly Chatbot Arena)",
+        "url": "https://arena.ai/leaderboard",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 175,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "images/lmarena-leaderboard.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 176,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Properties:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 177,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Real-world prompts (free for users, incentives to actually use it)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 178,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- But who are these people? biases? spammers?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 179,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Binary preference but conflates style and correctness",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 180,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- How does the human even assess correctness?  Prone to sycophancy?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 181,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Feature: don't need to feed same prompts to all models (important because human is rating)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 182,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Dynamic: incorporates new prompts and models over time",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 184,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "**AlpacaEval** (2023)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 184,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "leaderboard",
+      "extra": {
+        "title": "leaderboard",
+        "url": "https://tatsu-lab.github.io/alpaca_eval/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 185,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- 805 instructions from various sources",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 186,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Metric: win rate against baseline model (GPT-4 preview) as judged by GPT-4 preview (potential bias?)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 187,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Problem: LLM judges favor longer responses, resulted in leaderboard gaming",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 188,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Alpaca Eval 2.0 used regression to debias the metric",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 188,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2404.04475",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 189,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- How do we evaluate the metric?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 190,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Correlation with Chatbot Arena (humans) is high:",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 191,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "https://github.com/tatsu-lab/alpaca_eval/raw/main/figures/chat_correlations_no_ae.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 192,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "images/alpacaeval-leaderboard.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 194,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "**WildBench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 194,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2406.04770",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 195,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Sourced 1024 examples from 1M human-chatbot conversations",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 196,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Uses GPT-4 turbo as a judge with a checklist (like CoT for judging) + GPT-4 as a judge",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 197,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Well-correlated with Chatbot Arena (seems to be the de facto sanity check)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 198,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "images/wildbench.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 199,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "HELM WildBench for visualizing predictions",
+      "extra": {
+        "title": "HELM WildBench for visualizing predictions",
+        "url": "https://crfm.stanford.edu/helm/capabilities/latest/#/leaderboard/wildbench",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 201,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 202,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Challenge: how to evaluate open-ended responses?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 203,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Pairwise comparisons between similar responses provide higher signal",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 204,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Beware of biases (both from humans and LLM judges)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 205,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "- Checklist/rubric improves reliability (regardless of human or LLM judge)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 205,
+      "section": "chat_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 208,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 209,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "Previously: evaluate what LMs say (chat)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 210,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "Now: evaluate what LMs do (agents)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 212,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "Agent = language model + agent scaffold (logic for deciding how to use the LM)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 214,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "Consider tasks that require tool use (e.g., running code) and iterating over a period of time",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 216,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "**SWEBench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 216,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2310.06770",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 217,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- 2294 tasks across 12 Python repositories",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 218,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Given codebase + issue description, submit a PR",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 219,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Evaluation metric: unit tests",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 220,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/swebench.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 221,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/swe-bench-verified",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 223,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "**TerminalBench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 223,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2601.11868",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 223,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "website",
+      "extra": {
+        "title": "website",
+        "url": "https://www.tbench.ai/",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 224,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/terminal-bench.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 225,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Computer terminal environments: simple and universal",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 226,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- 229 tasks crowdsourced from 93 contributors, 89 tasks constitute Terminal-Bench 2.0",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 227,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/terminal-bench-human-time.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 228,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/terminal-bench-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 229,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/terminal-bench",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 231,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "**CyBench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 231,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2408.08926",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 232,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/cybench.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 233,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- 40 Capture the Flag (CTF) tasks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 234,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Use first-solve time as a measure of difficulty",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 235,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/cybench-agent.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 236,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/cybench-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 237,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://llm-stats.com/benchmarks/cybench",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 239,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "**MLEBench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 239,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2410.07095",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 240,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- 75 Kaggle competitions (require training models, processing data, etc.)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 241,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/mlebench.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 242,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "images/mlebench-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 244,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "Agent scaffolds",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 244,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://www.philschmid.de/agents-2.0-deep-agents",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 245,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "https://www.philschmid.de/static/blog/agents-2.0-deep-agents/overview.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 246,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Explicit planning: keep a todo list that gets checked off",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 247,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Hierarchical delegation: agents calling other sub-agents (clean context)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 248,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Persistent memory: read/write files",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 249,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Extreme context engineering: explicit more instructions on process",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 251,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 252,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Agents dramatically enhance the capability surface of language models",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 253,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Agent scaffolds are very important",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 254,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "- Evaluating agents = evaluating agent scaffold + language model",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 254,
+      "section": "agentic_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 257,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 258,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- All of the tasks so far require linguistic and world knowledge.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 259,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Can we isolate **reasoning** from knowledge?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 260,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Arguably, reasoning captures a more pure form of intelligence (isn't just about memorizing facts).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 262,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "**ARC-AGI**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 262,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "website",
+      "extra": {
+        "title": "website",
+        "url": "https://arcprize.org/arc-agi",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 263,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- 100\\% solvable by humans, but challenging for AI",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 264,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Each task is unique, so memorization doesn't help.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 266,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- ARC-AGI-1 (2019): first iteration",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 267,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "https://arcprize.org/media/images/arc-task-grids.jpg",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 269,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- ARC-AGI-2 (March 2025): more multi-step reasoning",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 270,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "https://arcprize.org/media/images/blog/arc-agi-2-unsolved-1.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 272,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "images/arc-agi-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 273,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Pretrained language models didn't move the needle",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 274,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Reasoning models (o1, o3) started making things take off",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 276,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- ARC-AGI-3 (March 2026): interactive environments",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 276,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "https://arcprize.org/media/ARC_AGI_3_Technical_Report.pdf",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 277,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "images/arc-agi-3.png",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 278,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "images/arc-agi-3-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 280,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 281,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Goal is to disentangle reasoning from knowledge (difficult to do!)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 282,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Constrained to human reasoning (not superhuman reasoning)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 283,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "- Clearly exposes gaps in current models",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 283,
+      "section": "pure_reasoning_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 286,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 287,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "https://www.team-bhp.com/forum/attachments/road-safety/2173645d1625144681-will-crash-test-rating-change-if-higher-variant-chosen-images-30.jpeg",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 288,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "What does safety mean for AI?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 290,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "**HarmBench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 290,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2402.04249",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 291,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Based on 510 harmful behaviors that violate laws or norms",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 292,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "HarmBench on HELM",
+      "extra": {
+        "title": "HarmBench on HELM",
+        "url": "https://crfm.stanford.edu/helm/safety/latest/#/leaderboard/harm_bench",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 293,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "Example of safety failure",
+      "extra": {
+        "title": "Example of safety failure",
+        "url": "https://crfm.stanford.edu/helm/safety/latest/#/runs/harm_bench:model=anthropic_claude-3-7-sonnet-20250219?instancesPage=4",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 295,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "**AIR-Bench**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 295,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2407.17436",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 296,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Based on regulatory frameworks and company policies",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 297,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Taxonomized into 314 risk categories, 5694 prompts",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 298,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "https://crfm.stanford.edu/helm/assets/air-overview-DpBbyagA.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 299,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "HELM AIR-Bench",
+      "extra": {
+        "title": "HELM AIR-Bench",
+        "url": "https://crfm.stanford.edu/helm/air-bench/latest/#/leaderboard",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 301,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "Jailbreaking:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 302,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Language models are trained to refuse harmful instructions",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 303,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Greedy Coordinate Gradient (GCG) automatically optimizes prompts to bypass safety",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 303,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2307.15043",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 304,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Transfers from open-weight models (Llama) to closed models (GPT-4)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 305,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "images/gcg-examples.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 307,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "What is safety?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 308,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Many aspects of safety are strongly contextual (politics, law, social norms - which vary across countries)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 309,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "- Many risks are quite varied (hallucinations, sycophancy, abetting crimes, inequality, losing critical thinking)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 311,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "**Dual-use**: capable cybersecurity agents (Mythos) can be used to hack into a system or to do penetration testing",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 311,
+      "section": "safety_benchmarks",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 314,
+      "section": "realism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 315,
+      "section": "realism",
+      "depth": 1,
+      "text": "**Ecological validity**: how well does an evaluation capture real-world use?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 316,
+      "section": "realism",
+      "depth": 1,
+      "text": "- Exam benchmarks (e.g., GPQA) are far away from real-world use.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 317,
+      "section": "realism",
+      "depth": 1,
+      "text": "- Chatbot Arena prompts are from real people, but distribution is uncontrolled.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 319,
+      "section": "realism",
+      "depth": 1,
+      "text": "**GDPVal** (OpenAI)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 319,
+      "section": "realism",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2510.04374",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 320,
+      "section": "realism",
+      "depth": 1,
+      "text": "- 44 occupations from top 9 sectors according to US GDP",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 321,
+      "section": "realism",
+      "depth": 1,
+      "text": "- Tasks come from professionals with ~14 years of experience",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 322,
+      "section": "realism",
+      "depth": 1,
+      "text": "images/gdpval.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 324,
+      "section": "realism",
+      "depth": 1,
+      "text": "**MedHELM**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 324,
+      "section": "realism",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2505.23802",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 325,
+      "section": "realism",
+      "depth": 1,
+      "text": "- Previous medical benchmarks were based on standardized exams",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 326,
+      "section": "realism",
+      "depth": 1,
+      "text": "- 121 clinical tasks sourced from 29 clinicians, mixture of private and public datasets",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 327,
+      "section": "realism",
+      "depth": 1,
+      "text": "https://crfm.stanford.edu/helm/assets/medhelm-overview-CND0EIsy.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 328,
+      "section": "realism",
+      "depth": 1,
+      "text": "MedHELM",
+      "extra": {
+        "title": "MedHELM",
+        "url": "https://crfm.stanford.edu/helm/medhelm/latest/#/leaderboard",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 330,
+      "section": "realism",
+      "depth": 1,
+      "text": "**Clio** (Anthropic)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 330,
+      "section": "realism",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2412.13678",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 331,
+      "section": "realism",
+      "depth": 1,
+      "text": "- Use language models to analyze real user data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 332,
+      "section": "realism",
+      "depth": 1,
+      "text": "- Share general patterns of what people are asking",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 333,
+      "section": "realism",
+      "depth": 1,
+      "text": "images/clio-table4.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 335,
+      "section": "realism",
+      "depth": 1,
+      "text": "Unfortunately, realism and privacy are sometimes at odds with each other.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 335,
+      "section": "realism",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 338,
+      "section": "validity",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 339,
+      "section": "validity",
+      "depth": 1,
+      "text": "How do we know our evaluations are valid?",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 341,
+      "section": "validity",
+      "depth": 1,
+      "text": "Train-test overlap",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 342,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Machine learning 101: don't train on your test set",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 343,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Pre-foundation models (ImageNet, SQuAD): well-defined train-test splits",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 344,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Today: train on the Internet and don't tell people about your data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 346,
+      "section": "validity",
+      "depth": 1,
+      "text": "Route 1: try to infer train-test overlap from model",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 347,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Exploit exchangeability of data points",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 347,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2310.17623",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 348,
+      "section": "validity",
+      "depth": 1,
+      "text": "images/contamination-exchangeability.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 350,
+      "section": "validity",
+      "depth": 1,
+      "text": "Route 2: encourage reporting norms (e.g., people report confidence intervals)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 351,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Model providers should report train-test overlap",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 351,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2410.08385",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 353,
+      "section": "validity",
+      "depth": 1,
+      "text": "Route 3: use fresh evals",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 354,
+      "section": "validity",
+      "depth": 1,
+      "text": "- LiveCodeBench, UncheatableEval: scrape new webpages",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 355,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Timestamps aren't always safe due to copying either",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 357,
+      "section": "validity",
+      "depth": 1,
+      "text": "Route 4: use private evals",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 358,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Companies use internal code bases that aren't on the Internet",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 359,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Use your personal writings",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 360,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Easiest for perplexity",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 362,
+      "section": "validity",
+      "depth": 1,
+      "text": "Dataset quality",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 363,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Fixed up SWE-Bench to produce SWE-Bench Verified",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 363,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://openai.com/index/introducing-swe-bench-verified/",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 364,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Create Platinum versions of benchmarks",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 364,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2502.03461",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 365,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://pbs.twimg.com/media/GjICXQlWkAAYnDS?format=jpg&name=4096x4096",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 366,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://pbs.twimg.com/media/GjICcGQXYAAM4o1?format=jpg&name=4096x4096",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 367,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Problems with agentic benchmarks: insufficient test cases, trivial agent can solve task",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 367,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2507.02825",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 368,
+      "section": "validity",
+      "depth": 1,
+      "text": "- Docent: use LLM to inspect agent traces to detect problems",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 368,
+      "section": "validity",
+      "depth": 1,
+      "text": "https://transluce.org/introducing-docent",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 368,
+      "section": "validity",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 371,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 372,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "What's the point of evaluation?",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 373,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "There is no one true evaluation; it depends on what question you're trying to answer.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 374,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "1. User or company wants to make a purchase decision (model A or model B) for their use case (e.g., customer service chatbots).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 375,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "2. Researchers want to measure the raw capabilities of a model (e.g., intelligence).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 376,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "3. We want to understand the benefits + harms of a model (for business and policy reasons).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 377,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "4. Model developers want to get feedback to improve the model.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 379,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "What are we evaluating?",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 380,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "- Pre-foundation models, we evaluated **methods** (standardized train-test splits).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 381,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "- Today, we're (mostly) evaluating **models/systems** (anything goes).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 383,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "There are some exceptions...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 384,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "- nanogpt speedrun: fixed data, compute time to get to a particular validation loss",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 385,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "images/karpathy-nanogpt-speedrun.png",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 385,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "https://x.com/karpathy/status/1846790537262571739",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 387,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "Evaluating methods encourage algorithmic innovation from researchers.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 388,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "Evaluating models/systems is useful for downstream users.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 390,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "Either way, we need to define the rules of the game!",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 390,
+      "section": "how_to_think_about_evaluation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 27,
+      "section": "main",
+      "depth": 0,
+      "text": "Takeaways:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 28,
+      "section": "main",
+      "depth": 0,
+      "text": "- There is no one true evaluation; choose the evaluation depending on what you're trying to measure.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 29,
+      "section": "main",
+      "depth": 0,
+      "text": "- Clearly state the rules of the game (methods versus models versus agents).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 30,
+      "section": "main",
+      "depth": 0,
+      "text": "- Considerations: difficulty, realism, validity.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 30,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

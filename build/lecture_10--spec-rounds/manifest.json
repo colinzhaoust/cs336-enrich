@@ -1,0 +1,78 @@
+{
+  "fixture": "lecture_10--spec-rounds",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "speculative-sampling-mechanism"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "10.800000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "the draft proposes 4 tokens, one after another",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.933,
+      "caption": "the target scores all 4 drafts in one pass",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.867,
+      "caption": "d1 kept, d2 rejected and resampled, d3 d4 dropped",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 8.8,
+      "caption": "round 2: all 4 accepted, plus the target's next token",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "The four draft proposals are four short sequential bars, while the target checks all of them in a single bar about one plain decode step long.",
+      "evidence": [
+        "lane.draft",
+        "lane.target"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "Each target pass emits the accepted prefix plus one token of its own: 2 tokens after one rejection, 5 when all four are accepted.",
+      "evidence": [
+        "lane.target",
+        "readout"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

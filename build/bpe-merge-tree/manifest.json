@@ -1,0 +1,79 @@
+{
+  "fixture": "bpe-merge-tree",
+  "family": "merge-tree",
+  "scene": "MergeTreeScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "lecture_01:bpe-merge-step"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "9.800000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "start: 18 bytes, every byte is a token; count adjacent pairs",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.667,
+      "caption": "merge 1: (t,h) \u2192 'th' \u00b7 16 tokens \u00b7 ties broken by first occurrence",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.333,
+      "caption": "merge 2: ('th',e) \u2192 'the' \u00b7 14 tokens",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 8.0,
+      "caption": "merge 3: ('the',\u2423) \u2192 'the\u2423' \u00b7 12 tokens \u00b7 compression 18/12 = 1.5",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "Every occurrence of the chosen pair is replaced at once, and the vocabulary grows by exactly one entry.",
+      "evidence": [
+        "tokens",
+        "vocab"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "Merges cross word boundaries because there is no pre-tokenization: the third token is 'the\u2423' including the space.",
+      "evidence": [
+        "tokens",
+        "vocab",
+        "pairs"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

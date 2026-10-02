@@ -1,0 +1,64 @@
+{
+  "lecture_06": {
+    "title": "CS336 Spring 2026, Lecture 6: Benchmarking, profiling, and writing kernels in Triton",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_06.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_06.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_06.json",
+    "note": "Line anchors refer to the local shallow clone (sha256 d21a5472..., recorded in discovered.json). Timings (@inspect result, results, naive_time, builtin_time, compiled_time) and profiler tables are GPU measurements that only exist in the professor's trace; this thread records that they were computed but never states their values. The review_of_gpus section (L39-L141) is also used as evidence by the lecture_05 thread; here it is the professor's recap and anchors the programming-model KPs."
+  },
+  "lecture_05": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs",
+    "kind": "slides",
+    "path": "official/lectures/lecture_05.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_05:<kp-id>); see atlas/lectures/lecture_05/knowledge_points.json. Tiling, operator fusion, coalescing and the execution hierarchy were taught there on slides; this lecture turns them into code."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); arithmetic intensity and the memory-bound test are assumed, not re-derived, in lecture 6."
+  },
+  "torch_benchmark_recipe": {
+    "title": "PyTorch Benchmark recipe (torch.utils.benchmark)",
+    "kind": "reading",
+    "url": "https://pytorch.org/tutorials/recipes/recipes/benchmark.html",
+    "note": "Linked at lecture_06.py:L164; the professor rolls his own benchmark() instead 'to make benchmarking more transparent'."
+  },
+  "torch_profiler_recipe": {
+    "title": "PyTorch Profiler recipe",
+    "kind": "reading",
+    "url": "https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html",
+    "note": "Linked at lecture_06.py:L210. The lecture's profile() uses ProfilerActivity.CUDA and sorts by cuda_time_total (L244-L252). nsight is named for the assignment (L211) but not linked."
+  },
+  "torch_gelu_docs": {
+    "title": "torch.nn.GELU documentation (tanh approximation)",
+    "kind": "reading",
+    "url": "https://pytorch.org/docs/stable/generated/torch.nn.GELU.html",
+    "note": "Linked at lecture_06.py:L263 and in the naive_gelu comment (L696). Source of the tanh-approximation formula used in naive_gelu and the Triton kernel."
+  },
+  "triton_fused_softmax_tutorial": {
+    "title": "Triton tutorial 02: Fused Softmax",
+    "kind": "reading",
+    "url": "https://triton-lang.org/main/getting-started/tutorials/02-fused-softmax.html",
+    "note": "Linked at lecture_06.py:L396; the lecture's naive_softmax read/write accounting and triton_softmax_kernel follow it."
+  },
+  "ptx_isa": {
+    "title": "NVIDIA PTX ISA documentation (Parallel Thread Execution)",
+    "kind": "spec",
+    "url": "https://docs.nvidia.com/cuda/parallel-thread-execution/",
+    "note": "The grid/CTA/thread figure embedded at lecture_06.py:L59 and L306 is https://docs.nvidia.com/cuda/parallel-thread-execution/_images/grid-with-CTAs.png from this document. The %ctaid.x / %tid.x / ld.global / st.global names the professor reads off the generated PTX (L331-L334) are defined here."
+  },
+  "nvidia_cuda_blocks_image": {
+    "title": "NVIDIA developer blog figure: thread blocks scheduled onto SMs",
+    "kind": "figure",
+    "url": "https://developer-blogs.nvidia.com/wp-content/uploads/2019/06/pasted-image-0.png",
+    "note": "Embedded at lecture_06.py:L133 in the block-occupancy recap."
+  },
+  "lecture_06_video": {
+    "title": "CS336 Spring 2026, Lecture 6: Benchmarking, profiling, and writing kernels in Triton (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=xnDHaNUvHBg",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

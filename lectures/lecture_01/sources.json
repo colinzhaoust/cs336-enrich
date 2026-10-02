@@ -1,0 +1,94 @@
+{
+  "lecture_01": {
+    "title": "CS336 Spring 2026, Lecture 1: Overview and tokenization",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_01.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_01.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_01.json",
+    "trace": "official/lectures/var/traces/lecture_01.json",
+    "note": "Line anchors refer to the local shallow clone dated 2026-08-31 (sha256 a7d47339...). @inspect values quoted in KPs were read from var/traces/lecture_01.json and re-derived locally; they agree."
+  },
+  "assignment1": {
+    "title": "CS336 Assignment 1: Basics",
+    "kind": "assignment",
+    "path": "official/assignments/assignment1-basics",
+    "url": "https://github.com/stanford-cs336/assignment1-basics",
+    "note": "The professor defers the efficient BPE encoder, special tokens, and GPT-2 pre-tokenization regex here (lecture_01.py:L722-L726)."
+  },
+  "sennrich_2016": {
+    "title": "Neural Machine Translation of Rare Words with Subword Units (Sennrich et al., 2016)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1508.07909"
+  },
+  "gage_1994": {
+    "title": "A New Algorithm for Data Compression (Philip Gage, C Users Journal, 1994)",
+    "kind": "paper",
+    "url": "http://www.pennelynn.com/Documents/CUJ/HTML/94HTML/19940045.HTM"
+  },
+  "gpt2_2019": {
+    "title": "Language Models are Unsupervised Multitask Learners (Radford et al., 2019)",
+    "kind": "paper",
+    "url": "https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf"
+  },
+  "karpathy_tokenization": {
+    "title": "Let's build the GPT Tokenizer (Karpathy, video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=zduSFxRajkE"
+  },
+  "tiktoken": {
+    "title": "openai/tiktoken (o200k_base encoding used as the 'GPT-5 tokenizer')",
+    "kind": "code",
+    "url": "https://github.com/openai/tiktoken"
+  },
+  "tiktokenizer": {
+    "title": "Tiktokenizer interactive site",
+    "kind": "reading",
+    "url": "https://tiktokenizer.vercel.app/?encoder=gpt2"
+  },
+  "utf8_wiki": {
+    "title": "UTF-8 (Wikipedia)",
+    "kind": "reading",
+    "url": "https://en.wikipedia.org/wiki/UTF-8"
+  },
+  "unicode_list_wiki": {
+    "title": "List of Unicode characters (Wikipedia)",
+    "kind": "reading",
+    "url": "https://en.wikipedia.org/wiki/List_of_Unicode_characters"
+  },
+  "byt5_2021": {
+    "title": "ByT5: Towards a token-free future with pre-trained byte-to-byte models",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2105.13626"
+  },
+  "blt_2024": {
+    "title": "Byte Latent Transformer: Patches Scale Better Than Tokens",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.09871"
+  },
+  "hnet_2025": {
+    "title": "H-Net: Dynamic Chunking for End-to-End Hierarchical Sequence Modeling",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2507.07955"
+  },
+  "kaplan_scaling_laws_2020": {
+    "title": "Scaling Laws for Neural Language Models (Kaplan et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2001.08361.pdf"
+  },
+  "chinchilla_2022": {
+    "title": "Training Compute-Optimal Large Language Models (Hoffmann et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/2203.15556.pdf"
+  },
+  "algorithmic_efficiency_2020": {
+    "title": "Measuring the Algorithmic Efficiency of Neural Networks (Hernandez & Brown, 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2005.04305"
+  },
+  "lecture_01_video": {
+    "title": "CS336 Spring 2026, Lecture 1: Overview and tokenization (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=JuoVZkPBiKk",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

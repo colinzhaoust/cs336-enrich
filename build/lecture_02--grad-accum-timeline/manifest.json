@@ -1,0 +1,87 @@
+{
+  "fixture": "lecture_02--grad-accum-timeline",
+  "family": "accum-trace",
+  "scene": "AccumTraceScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "gradient-accumulation"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "16.800000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 2.2,
+      "caption": "full batch B=64: one forward+backward, then optimizer step",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 5.533,
+      "caption": "micro-batch 16: micro-step 1 of 4, grads kept",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 8.067,
+      "caption": "micro-step 2: grads add up, not zeroed",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 11.733,
+      "caption": "micro-steps 3-4: 64 examples, same span",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 13.667,
+      "caption": "one optimizer step every B/micro = 4 micro-steps; then zero_grad",
+      "frame": "frames/s4.png",
+      "notices": []
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "A micro-step's activation peak is a quarter of the full batch's (0.5 vs 2 MiB), while the gradient buffer keeps its full size and is only a quarter filled.",
+      "evidence": [
+        "plot",
+        "gradbuf",
+        "counters"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "Four micro-steps cover the same 64 examples, so the same span of FLOPs as the one full-batch pass; only the height of the activation curve changed.",
+      "evidence": [
+        "plot",
+        "gradbuf",
+        "counters"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

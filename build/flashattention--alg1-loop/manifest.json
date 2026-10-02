@@ -1,0 +1,79 @@
+{
+  "fixture": "flashattention--alg1-loop",
+  "family": "alg1-loop",
+  "scene": "Alg1LoopScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "flashattention:fa-forward-loop-structure",
+    "flashattention:fa-io-complexity"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "14.000000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.6,
+      "caption": "j = 1: load K\u2081, V\u2081 \u00b7 i = 1: load Q\u2081, O\u2081, write O\u2081",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 4.2,
+      "caption": "inner loop: every Q block meets K\u2081, V\u2081",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 6.8,
+      "caption": "j = 2: Q\u2081 and O\u2081 cross HBM again",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s3",
+      "time": 11.8,
+      "caption": "end: K_j, V_j once each \u00b7 every Q_i T_c = 3 times",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s2",
+      "claim": "When the outer loop moves to K\u2082, V\u2082, Q\u2081 and O\u2081 are loaded again: each Q block and its O block cross HBM once per K/V block.",
+      "evidence": [
+        "qcol",
+        "grid"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "At the end each K_j, V_j was loaded once and each Q_i T_c = 3 times (12 Q-block loads, 12 O-block writes); no S tile was written to HBM.",
+      "evidence": [
+        "qcol",
+        "counter"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

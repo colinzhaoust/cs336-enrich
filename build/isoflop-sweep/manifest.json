@@ -1,0 +1,73 @@
+{
+  "fixture": "isoflop-sweep",
+  "family": "curve",
+  "scene": "CurveScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "lecture_09:chinchilla-three-methods",
+    "chinchilla:approach-2"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "11.000000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 1.4,
+      "caption": "C = 1e18: loss along one IsoFLOP curve as N grows and D = C/6N shrinks",
+      "frame": "frames/s0.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s1",
+      "time": 4.6,
+      "caption": "C = 1e19: the curve lowers and its minimum moves right",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 9.2,
+      "caption": "four budgets: the minima trace N_opt \u221d C^a with a \u2248 0.5",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s0",
+      "claim": "Along one IsoFLOP curve, N rises as D falls; the loss has a single minimum.",
+      "evidence": [
+        "curve.0",
+        "min.0"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s2",
+      "claim": "The minimum of each larger budget sits to the right of the previous one; both N_opt and D_opt grow with C.",
+      "evidence": [
+        "min.0",
+        "min.3",
+        "readout"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

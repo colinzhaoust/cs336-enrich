@@ -1,0 +1,99 @@
+{
+  "fixture": "grpo--alg1-iterations",
+  "family": "iter-grpo",
+  "scene": "IterGrpoScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "grpo:iterative-grpo"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "22.000000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.733,
+      "caption": "iteration 1 \u00b7 line 3: \u03c0_ref \u2190 \u03c0_\u03b8 = \u03b8\u2080",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 3.667,
+      "caption": "step 1 \u00b7 line 6: \u03c0_old \u2190 \u03c0_\u03b8, then sample G outputs",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 6.6,
+      "caption": "line 11: one update (\u03bc = 1), \u03c0_\u03b8 = \u03b8\u2081",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 10.667,
+      "caption": "steps 2-3: \u03c0_old moves every step, \u03c0_ref stays",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 13.333,
+      "caption": "line 12: r_\u03c6 retrained on policy samples, 10% replay",
+      "frame": "frames/s4.png",
+      "notices": []
+    },
+    {
+      "id": "s5",
+      "time": 16.2,
+      "caption": "iteration 2 \u00b7 line 3: \u03c0_ref jumps to \u03b8\u2083",
+      "frame": "frames/s5.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s6",
+      "time": 19.8,
+      "caption": "iteration 2, step 2 \u00b7 line 6: \u03c0_old = \u03b8\u2084",
+      "frame": "frames/s6.png",
+      "notices": []
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s3",
+      "claim": "\u03c0_old has followed the policy at every step (\u03b8\u2082 before step 3's sampling) while \u03c0_ref has stayed at \u03b8\u2080.",
+      "evidence": [
+        "old",
+        "ref"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s5",
+      "claim": "\u03c0_ref moves only at an iteration boundary, after r_\u03c6 was retrained: it now points at \u03b8\u2083, the policy at the end of iteration 1, not the initial model.",
+      "evidence": [
+        "ref",
+        "rm"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

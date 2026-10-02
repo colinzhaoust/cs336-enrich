@@ -1,0 +1,3175 @@
+{
+  "lecture": "lecture_14",
+  "source_path": "official/lectures/lecture_14.py",
+  "source_sha256": "8e0e17f868002f2e8f73afed018b2dd787c0a1b371eec599c44d8dbfe555ae9b",
+  "summary": {
+    "counts": {
+      "section_start": 10,
+      "heading": 3,
+      "claim": 246,
+      "cite": 32,
+      "figure": 18,
+      "section_end": 10,
+      "code": 28,
+      "value": 16,
+      "directive": 7
+    },
+    "sections_in_order": [
+      "main",
+      "transformation",
+      "filtering",
+      "deduplication",
+      "hash_functions",
+      "exact_deduplication",
+      "jaccard_minhash",
+      "locality_sensitive_hashing",
+      "data_mixing",
+      "post_training_data"
+    ],
+    "n_reference_cites": 4,
+    "n_url_cites": 28
+  },
+  "items": [
+    {
+      "kind": "section_start",
+      "line": 11,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 12,
+      "section": "main",
+      "depth": 0,
+      "text": "Lecture 14: Data II",
+      "extra": {
+        "level": 2
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 13,
+      "section": "main",
+      "depth": 0,
+      "text": "Last lecture:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 14,
+      "section": "main",
+      "depth": 0,
+      "text": "- Live service (e.g., GitHub) → dump/crawl (e.g., GitHub Archive) → processed data (e.g., The Stack)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 15,
+      "section": "main",
+      "depth": 0,
+      "text": "- Considerations: terms of service, copyright (licenses or fair use)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 17,
+      "section": "main",
+      "depth": 0,
+      "text": "This lecture:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 18,
+      "section": "main",
+      "depth": 0,
+      "text": "- Data pipeline: transformation, filtering, deduplication, mixing",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 19,
+      "section": "main",
+      "depth": 0,
+      "text": "- Mid-training + SFT: synthetic data",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 39,
+      "section": "transformation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 40,
+      "section": "transformation",
+      "depth": 1,
+      "text": "Raw data does not come as text.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 41,
+      "section": "transformation",
+      "depth": 1,
+      "text": "It is HTML, PDF (arxiv), or directories (code repositories).",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 43,
+      "section": "transformation",
+      "depth": 1,
+      "text": "HTML to text (main one):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 44,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Remove boilerplate (e.g., navigation, ads) and extract content",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 45,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- What about images, tables, etc.?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 46,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Inherently lossy (need to linearize)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 47,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Tools (rule-based): trafilatura, resiliparse, jusText, lynx, etc.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 48,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Accuracy matters:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 48,
+      "section": "transformation",
+      "depth": 1,
+      "text": "dclm_2024",
+      "extra": {
+        "ref": "dclm_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 49,
+      "section": "transformation",
+      "depth": 1,
+      "text": "images/dclm-wet.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 51,
+      "section": "transformation",
+      "depth": 1,
+      "text": "FinePDFs",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 51,
+      "section": "transformation",
+      "depth": 1,
+      "text": "https://huggingface.co/spaces/HuggingFaceFW/FinePDFsBlog",
+      "extra": {
+        "kind": "url",
+        "via": "post_link"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 52,
+      "section": "transformation",
+      "depth": 1,
+      "text": "https://huggingfacefw-finepdfsblog.hf.space/_astro/pdf-description.Cb49jXc6_Z17eX4E.webp",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 53,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Source: Common Crawl",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 54,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Recrawl truncated PDFs (since they are big)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 55,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- OCR (RolmOCR) using a VLM or Docling (make these run fast)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 56,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- Lots of cleanup and filtering",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 57,
+      "section": "transformation",
+      "depth": 1,
+      "text": "- A lot of layout information is missing",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 57,
+      "section": "transformation",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 60,
+      "section": "filtering",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 61,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Algorithmic building block:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 62,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Given some **target data** T and lots of **raw data** R, find subset T' of R similar to T.",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 63,
+      "section": "filtering",
+      "depth": 1,
+      "text": "images/raw-target-schema.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 65,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Applications:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 66,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Language identification (English versus rest)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 67,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Quality filtering (high quality versus low quality)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 68,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Toxicity filtering (non-toxic versus toxic)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 70,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Desiderata for filtering algorithm:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 71,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Generalize from the target data (want T and T' to be different)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 72,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Extremely fast (have to run it on R, which is huge)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 74,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Survey paper on data selection",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 74,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2402.16827",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 76,
+      "section": "filtering",
+      "depth": 1,
+      "text": "General framework: Given target T and raw R, find subset of R similar to T",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 77,
+      "section": "filtering",
+      "depth": 1,
+      "text": "1. Estimate some model based on R and T and derive a scoring function",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 78,
+      "section": "filtering",
+      "depth": 1,
+      "text": "2. Keep examples in R based on their score",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 80,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Types of classifiers:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 81,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Generative model of T (KenLM): score(x) = p_T(x)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 82,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Simple classifier (fastText): score(x) = p(T | x)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 83,
+      "section": "filtering",
+      "depth": 1,
+      "text": "To use: keep examples x with score(x) >= threshold (stochastically)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 85,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Model-based filtering?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 86,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Some deliberately do not use model-based filtering (C4, Gopher, RefinedWeb, FineWeb, Dolma)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 87,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Some use model-based filtering (GPT-3, LLaMA, DCLM) [becoming the norm]",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 89,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Language identification:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 90,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Goal: find text of a specific language (e.g., English)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 91,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- fastText language identification",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 91,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://fasttext.cc/docs/en/language-identification.html",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 92,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Off-the-shelf classifier",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 93,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Supports 176 languages",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 94,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Trained on multilingual sites: Wikipedia, Tatoeba (translation site) and SETimes (Southeast European news)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 95,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Dolma keeps pages with p(English) >= 0.5",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 95,
+      "section": "filtering",
+      "depth": 1,
+      "text": "dolma_2024",
+      "extra": {
+        "ref": "dolma_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 97,
+      "section": "filtering",
+      "depth": 1,
+      "text": "OpenMathText",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 97,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2310.06786",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 98,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Goal: curate large corpus of mathematical text from CommonCrawl",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 99,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Use rules to filter (e.g., contains latex commands)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 100,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- KenLM trained on ProofPile, keep if perplexity < 15000",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 101,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Trained fastText classifier to predict mathematical writing, threshold is 0.17 if math, 0.8 if no math",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 102,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Result: produced 14.7B tokens, used to train 1.4B models that do better than models trained on 20x data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 104,
+      "section": "filtering",
+      "depth": 1,
+      "text": "GPT-3",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 104,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2005.14165",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 105,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Positives: samples from {Wikipedia, WebText2, Books1, Books2}",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 106,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Negatives: samples from CommonCrawl",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 107,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Train linear classifier based on word features",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 107,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://spark.apache.org/docs/latest/ml-features#tokenizer",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 108,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Keep documents stochastically based on score",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 112,
+      "section": "filtering",
+      "depth": 1,
+      "text": "LLaMA/RedPajama",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 112,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2302.13971",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 113,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Positives: samples from pages **referenced** by Wikipedia",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 114,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Negatives: samples from CommonCrawl",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 115,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Keep documents that are classified positive",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 117,
+      "section": "filtering",
+      "depth": 1,
+      "text": "phi-1",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 117,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2306.11644",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 118,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Philosophy: really high quality data (textbooks) to train a small model (1.5B)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 119,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Includes synthetic data from GPT 3.5 (later: GPT-4) and filtered data",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 120,
+      "section": "filtering",
+      "depth": 1,
+      "text": "R = \"Python subset of the Stack\"   # Raw data\nprompt = \"determine its educational value for a student whose goal is to learn basic coding concepts\"\nT = \"Use GPT-4 with this prompt to classify 100K subset of R to get positive examples\"",
+      "extra": {
+        "end_line": 122
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 123,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Train random forest classifier on T using output embedding from pretrained codegen model",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 124,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Select data from R that is classified positive by the classifier",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 125,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Result on [HumanEval](https://huggingface.co/datasets/openai_humaneval):",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 126,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Train 1.3B LM on Python subset of The Stack (performance: 12.19% after 96K steps)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 127,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Train 1.3B LM on new filtered subset (performance: 17.68% after 36K steps) - better!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 129,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Toxicity filtering in Dolma",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 129,
+      "section": "filtering",
+      "depth": 1,
+      "text": "dolma_2024",
+      "extra": {
+        "ref": "dolma_2024",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 130,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Dataset: Jigsaw Toxic Comments dataset (2018)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 130,
+      "section": "filtering",
+      "depth": 1,
+      "text": "dataset",
+      "extra": {
+        "title": "dataset",
+        "url": "https://www.kaggle.com/datasets/julian3833/jigsaw-toxic-comment-classification-challenge",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 131,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Project goal: help people have better discussions online",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 131,
+      "section": "filtering",
+      "depth": 1,
+      "text": "https://www.kaggle.com/competitions/jigsaw-toxic-comment-classification-challenge/discussion/46064",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 132,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Data: comments on Wikipedia talk page annotated with {toxic, severe_toxic, obscene, threat, insult, identity_hate}",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 134,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Scale-dependent effects of filtering:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 135,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- No single optimal threshold for filtering",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 136,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- If training for longer, want more (lower quality) data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 137,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- If training for shorter, want less (higher quality) data",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 138,
+      "section": "filtering",
+      "depth": 1,
+      "text": "images/data-filtering-scale.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 140,
+      "section": "filtering",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 141,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Filtering is critical for building a good model",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 142,
+      "section": "filtering",
+      "depth": 1,
+      "text": "- Recipe: define target data (what good looks like), extrapolate to raw data",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 142,
+      "section": "filtering",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 145,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 146,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Two types of duplicates:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 147,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Exact duplicates (mirror sites, GitHub forks)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 147,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Gutenberg mirrors",
+      "extra": {
+        "title": "Gutenberg mirrors",
+        "url": "https://www.gutenberg.org/MIRRORS.ALL",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 148,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Near duplicates: same text differing by a few tokens",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 150,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Examples of near duplicates:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 151,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Terms of service and licenses",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 151,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "MIT license",
+      "extra": {
+        "title": "MIT license",
+        "url": "https://opensource.org/license/mit",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 152,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Formulaic writing (copy/pasted or generated from a template)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 152,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "https://d3i71xaburhd42.cloudfront.net/4566c0d22ebf3c31180066ab23b6c445aeec78d5/5-Table1-1.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 153,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Minor formatting differences in copy/pasting",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 155,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Product description repeated 61,036 times in C4",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 156,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "'“by combining fantastic ideas, interesting arrangements, and follow the current trends in the field of that make you more inspired and give artistic touches. We’d be honored if you can apply some or all of these design in your wedding.  believe me, brilliant ideas would be perfect if it can be applied in real and make the people around you amazed!",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 157,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "example page",
+      "extra": {
+        "title": "example page",
+        "url": "https://www.amazon.co.uk/suryagede-100-Graffiti-Gas-Mask/dp/B07CRHT3RG",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 159,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Deduplication training data makes language models better",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 159,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2107.06499",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 160,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Train more efficiently (because have fewer tokens)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 161,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Avoid memorization (can mitigate copyright, privacy concerns)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 163,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Design space:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 164,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "1. What is an item (sentence, paragraph, document)?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 165,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "2. How to match (exact match, existence of common subitem, fraction of common subitems)?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 166,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "3. What action to take (remove all, remove all but one)?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 168,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "Key challenge:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 169,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Deduplication is fundamentally about comparing items to other items",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 170,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "- Need linear time algorithms to scale",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 178,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 179,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "- Hash function h maps item to a hash value (integer or string)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 180,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "- Hash value much smaller than item",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 181,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "- Hash collision: h(x) = h(y) for x ≠ y",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 183,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "Tradeoff between efficiency and collision resistance",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 183,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed",
+      "extra": {
+        "kind": "url",
+        "via": "article_link"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 184,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "- Cryptographic hash functions (SHA-256): collision resistant, slow (used in bitcoin)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 185,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "- DJB2, MurmurHash, CityHash: not collision resistant, fast (used for hash tables)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 187,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "We will use MurmurHash:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 188,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "h = mmh3.hash(\"hello\")  # @inspect h",
+      "extra": {
+        "end_line": 188
+      }
+    },
+    {
+      "kind": "value",
+      "line": 188,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "h",
+      "extra": {
+        "expr": "h = mmh3.hash(\"hello\")"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 188,
+      "section": "hash_functions",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 191,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 192,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "**Simple example**",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 193,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "1. Item: string",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 194,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "2. How to match: exact match",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 195,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "3. Action: remove all but one",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 198,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "items = [\"Hello!\", \"hello\", \"hello there\", \"hello\", \"hi\", \"bye\"]  # @inspect items",
+      "extra": {
+        "end_line": 198
+      }
+    },
+    {
+      "kind": "value",
+      "line": 198,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "items",
+      "extra": {
+        "expr": "items = [\"Hello!\", \"hello\", \"hello there\", \"hello\", \"hi\", \"bye\"]"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 201,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "hash_items = itertools.groupby(sorted(items, key=mmh3.hash), key=mmh3.hash)\ndeduped_items = [next(group) for h, group in hash_items]  # @inspect deduped_items",
+      "extra": {
+        "end_line": 204
+      }
+    },
+    {
+      "kind": "value",
+      "line": 204,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "deduped_items",
+      "extra": {
+        "expr": "deduped_items = [next(group) for h, group in hash_items]"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 206,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "- Pro: simple, clear semantics, high precision",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 207,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "- Con: does not deduplicate near duplicates",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 208,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "- This code is written in a MapReduce way, can easily parallelize and scale",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 210,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "**C4**",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 210,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "https://arxiv.org/pdf/1910.10683v4",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 211,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "1. Item: 3-sentence spans",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 212,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "2. How to match: use exact match",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 213,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "3. Action: remove all but one",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 214,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "Warning: when a 3-sentence span is removed from the middle of a document, the resulting document might not be coherent",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 214,
+      "section": "exact_deduplication",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 217,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 218,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Let's now look at approximate set membership.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 219,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "First we need a similarity measure.",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 221,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Jaccard similarity",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 222,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Definition: Jaccard(A, B) = |A intersect B| / |A union B|",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 223,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "A = {\"1\", \"2\", \"3\", \"4\"}\nB = {\"1\", \"2\", \"3\", \"5\"}\njaccard = compute_jaccard(A, B)  # @inspect jaccard",
+      "extra": {
+        "end_line": 230
+      }
+    },
+    {
+      "kind": "value",
+      "line": 230,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "jaccard",
+      "extra": {
+        "expr": "jaccard = compute_jaccard(A, B)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 232,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Definition: two documents are **near duplicates** if their Jaccard similarity >= threshold",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 234,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Algorithmic challenge: find near duplicates in linear time",
+      "extra": {}
+    },
+    {
+      "kind": "heading",
+      "line": 236,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "MinHash",
+      "extra": {
+        "level": 3
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 237,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "MinHash: a random hash function h so that Pr[h(A) = h(B)] = Jaccard(A, B)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 239,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Normally, you want different items to hash to different hashes",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 240,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "...but here, you want collision probability to depend on similarity",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 245,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Characteristic matrix representation:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 246,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "item | A | B",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 247,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "1    | 1 | 1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 248,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "2    | 1 | 1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 249,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "3    | 1 | 1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 250,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "4    | 1 | 0",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 251,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "5    | 0 | 1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 253,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Random hash function induces a permutation over items",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 254,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Look at which item is first in A and which item is first in B.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 255,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Each item has the same probability as being first (min)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 256,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "- If 1, 2, 3 is first, then first in A = first in B.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 257,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "- If 4, 5 is first, then first in A ≠ first in B.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 260,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "n = 100  # Generate this many random hash functions\nmatches = [minhash(A, seed) == minhash(B, seed) for seed in range(n)]  # @stepover",
+      "extra": {
+        "end_line": 261
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 261,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 262,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "estimated_jaccard = len([m for m in matches if m]) / len(matches)  # @inspect estimated_jaccard",
+      "extra": {
+        "end_line": 262
+      }
+    },
+    {
+      "kind": "value",
+      "line": 262,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "estimated_jaccard",
+      "extra": {
+        "expr": "estimated_jaccard = len([m for m in matches if m]) / len(matches)"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 263,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "assert abs(estimated_jaccard - jaccard) < 0.01",
+      "extra": {
+        "end_line": 263
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 265,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "Now we can hash our items, but a collision doesn't tell us Jaccard(A, B) > threshold.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 265,
+      "section": "jaccard_minhash",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 268,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 269,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Locality sensitive hashing (LSH)",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 269,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "book chapter",
+      "extra": {
+        "title": "book chapter",
+        "url": "http://infolab.stanford.edu/~ullman/mmds/ch3n.pdf",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 271,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Suppose we hash examples with just one MinHash function",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 272,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "P[A and B collide] = Jaccard(A, B)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 273,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "On average, more similar items will collide, but very stochastic...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 275,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Goal: have A and B collide if Jaccard(A, B) > threshold",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 276,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "We have to somehow sharpen the probabilities...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 278,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Solution: use n hash functions",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 279,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Break up into b bands of r hash functions each (n = b * r)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 281,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "n = 12      # Number of hash functions\nb = 3       # Number of bands\nr = 4       # Number of hash functions per band",
+      "extra": {
+        "end_line": 283
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 284,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Hash functions:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 285,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "h1 h2 h3 h4  |  h5 h6 h7 h8  |  h9 h10 h11 h12",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 287,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Key: A and B collide if for *some* band, *all* its hash functions return same value",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 288,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "As we will see, the and-or structure of the bands sharpens the threshold",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 290,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Given Jaccard(A, B), what is the probability that A and B collide?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 297,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "**Example**",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 298,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "prob_collision = get_prob_collision(sim=0.8, b=5, r=10)  # @inspect prob_collision",
+      "extra": {
+        "end_line": 298
+      }
+    },
+    {
+      "kind": "value",
+      "line": 298,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "prob_collision",
+      "extra": {
+        "expr": "prob_collision = get_prob_collision(sim=0.8, b=5, r=10)"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 299,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "https://cdn.sanity.io/images/vr8gru94/production/b470799575b8e77911bacb8500977afef06d6c85-1280x720.png",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 302,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "sims = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.98]\nprobs = {sim: get_prob_collision(sim=sim, b=10, r=10) for sim in sims}  # @inspect probs @stepover",
+      "extra": {
+        "end_line": 303
+      }
+    },
+    {
+      "kind": "value",
+      "line": 303,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "probs",
+      "extra": {
+        "expr": "probs = {sim: get_prob_collision(sim=sim, b=10, r=10) for sim in sims}"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 303,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 305,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Increasing r sharpens the threshold and moves the curve to the right (harder to match)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 306,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "probs = {sim: get_prob_collision(sim=sim, b=10, r=20) for sim in sims}  # @inspect probs @stepover",
+      "extra": {
+        "end_line": 306
+      }
+    },
+    {
+      "kind": "value",
+      "line": 306,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "probs",
+      "extra": {
+        "expr": "probs = {sim: get_prob_collision(sim=sim, b=10, r=20) for sim in sims}"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 306,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 308,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Increasing b moves the curve to the left (easier to match)",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 309,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "probs = {sim: get_prob_collision(sim=sim, b=20, r=20) for sim in sims}  # @inspect probs @stepover",
+      "extra": {
+        "end_line": 309
+      }
+    },
+    {
+      "kind": "value",
+      "line": 309,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "probs",
+      "extra": {
+        "expr": "probs = {sim: get_prob_collision(sim=sim, b=20, r=20) for sim in sims}"
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 309,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 310,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "https://cdn.sanity.io/images/vr8gru94/production/aace49fa240778e8ecf6e85ad08a2de7f5385566-1280x720.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 312,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Example setting",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 312,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "https://arxiv.org/pdf/2107.06499",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 312,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": ": n = 9000, b = 20, r = 450",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 313,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "b = 20\nr = 450",
+      "extra": {
+        "end_line": 314
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 315,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "What is the threshold (where the phase transition happens)?",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 316,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "threshold = (1 / b) ** (1 / r)  # @inspect threshold",
+      "extra": {
+        "end_line": 316
+      }
+    },
+    {
+      "kind": "value",
+      "line": 316,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "threshold",
+      "extra": {
+        "expr": "threshold = (1 / b) ** (1 / r)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 318,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Probability that a fixed band matches:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 319,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "prob_match = (1 / b)  # @inspect prob_match",
+      "extra": {
+        "end_line": 319
+      }
+    },
+    {
+      "kind": "value",
+      "line": 319,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "prob_match",
+      "extra": {
+        "expr": "prob_match = (1 / b)"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 320,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "Probability that A and B collide is a constant (≈ 1-1/e):",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 321,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "prob_collision = 1 - (1 - 1 / b) ** b  #  @inspect prob_collision",
+      "extra": {
+        "end_line": 321
+      }
+    },
+    {
+      "kind": "value",
+      "line": 321,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "prob_collision",
+      "extra": {
+        "expr": "prob_collision = 1 - (1 - 1 / b) ** b"
+      }
+    },
+    {
+      "kind": "section_end",
+      "line": 321,
+      "section": "locality_sensitive_hashing",
+      "depth": 2,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 175,
+      "section": "deduplication",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 331,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 332,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Recall that language models are trained on multiple data sources.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 334,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Datasets in Marin:",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 334,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "token viewer",
+      "extra": {
+        "title": "token viewer",
+        "url": "https://huggingface.co/spaces/marin-community/token-count-viewer",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 335,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "images/marin-token-viewer.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 337,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "The Pile",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 337,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "the_pile_2020",
+      "extra": {
+        "ref": "the_pile_2020",
+        "kind": "reference"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 338,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "https://stanford-cs324.github.io/winter2022/lectures/images/the-pile.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 339,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Key question: what distribution over the data sources should we use?",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 341,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Example:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 342,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "sources = {\"Wikipedia\", \"CC\", \"GitHub\"}\np = {\"Wikipedia\": 0.3, \"CC\": 0.5, \"GitHub\": 0.2}  # One possible data mixture",
+      "extra": {
+        "end_line": 343
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 345,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Baselines:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 346,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Vibes: set p(s) manually based on intuition (quite common)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 347,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Uniform sampling: sample uniformly (p(s) ∝ 1)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 348,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Proportional mixing: sample proportional to the number of tokens in a source (p(s) ∝ num_tokens(s))",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 350,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Intuition: should upweight higher quality sources",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 351,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "However...",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 352,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "1. We want to ensure diversity (e.g., across incomparable sources: literature, code, papers)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 353,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "2. Each source is finite, so if put too much weight on a small source, then need to epoch over it",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 355,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "This last point is important and a bit subtle.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 356,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Example:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 357,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "source_token_counts = {\n        \"low\": trillion(10),  # 10T tokens (abundant) @stepover\n        \"high\": billion(10),  # 10B tokens (scarce) @stepover\n    }\np = {\"low\": 0.5, \"high\": 0.5}  # Naive data mixture\ntrain_tokens = trillion(1)  # Train for 1T tokens @stepover",
+      "extra": {
+        "end_line": 362
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 362,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 363,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "low_num_epochs = (p[\"low\"] * train_tokens) / source_token_counts[\"low\"]  # @inspect low_num_epochs",
+      "extra": {
+        "end_line": 363
+      }
+    },
+    {
+      "kind": "value",
+      "line": 363,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "low_num_epochs",
+      "extra": {
+        "expr": "low_num_epochs = (p[\"low\"] * train_tokens) / source_token_counts[\"low\"]"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 364,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "high_num_epochs = (p[\"high\"] * train_tokens) / source_token_counts[\"high\"]  # @inspect high_num_epochs",
+      "extra": {
+        "end_line": 364
+      }
+    },
+    {
+      "kind": "value",
+      "line": 364,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "high_num_epochs",
+      "extra": {
+        "expr": "high_num_epochs = (p[\"high\"] * train_tokens) / source_token_counts[\"high\"]"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 365,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "50x epochs on high quality data...can lead to overfitting!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 367,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "UniMax",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 367,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2304.09151",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 368,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Setting: balancing different languages for multilingual models",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 369,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Previous work: between uniform and proportional mixing (p(s) ∝ num_tokens(s)^α for α in [0, 1])",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 370,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Idea: sample sources uniformly but with a hard **cap** C on number of epochs for any source",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 371,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Specifically, p(s) * num_training_tokens ≤ C for all sources s",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 373,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Regression-based mixing",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 373,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2407.01492",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "cite",
+      "line": 373,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2602.12237",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 374,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "images/regmix.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 375,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Define distribution over mixtures `p` (e.g., Dirichlet)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 376,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Define regression method (e.g., linear, gradient boosted trees)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 377,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Define target based on downstream evals (careful not to overfit!)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 378,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Discrepancy between small and large scale (tradeoff cost and accuracy)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 379,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "images/data-mixing-methods.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 380,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Hope 1: regression model is accurate at minimizer 🙏",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 381,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Hope 2: optimal data mixtures transfer from small to large scale 🙏",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 383,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Hold on. There's at least one scale-dependent effect:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 384,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "source_token_counts = {\n        \"low\": trillion(10),  # 10T tokens (abundant) @stepover\n        \"high\": billion(10),  # 10B tokens (scarce) @stepover\n    }",
+      "extra": {
+        "end_line": 387
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 388,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- If train small models on low token counts:",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 389,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "p = {\"low\": 0.1, \"high\": 0.9}  # More mass on high quality data",
+      "extra": {
+        "end_line": 389
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 390,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- But if train large model on this mixture, we will epoch a ton on high quality data and overfit!",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 392,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Simulated epoching",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 392,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2501.11747",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 393,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- General idea: make small scale look like large scale (general theme of this course)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 394,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Instantiation: downsample all sources proportionally",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 395,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "small_run_tokens = billion(10)  # @stepover",
+      "extra": {
+        "end_line": 395
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 395,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 396,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "large_run_tokens = trillion(1)  # @stepover",
+      "extra": {
+        "end_line": 396
+      }
+    },
+    {
+      "kind": "directive",
+      "line": 396,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "stepover",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 397,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "ratio = small_run_tokens / large_run_tokens  # @inspect ratio",
+      "extra": {
+        "end_line": 397
+      }
+    },
+    {
+      "kind": "value",
+      "line": 397,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "ratio",
+      "extra": {
+        "expr": "ratio = small_run_tokens / large_run_tokens"
+      }
+    },
+    {
+      "kind": "code",
+      "line": 398,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "downsampled_source_token_counts = {s: count * ratio for s, count in source_token_counts.items()}  # @inspect downsampled_source_token_counts",
+      "extra": {
+        "end_line": 398
+      }
+    },
+    {
+      "kind": "value",
+      "line": 398,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "downsampled_source_token_counts",
+      "extra": {
+        "expr": "downsampled_source_token_counts = {s: count * ratio for s, count in source_token_counts.items()}"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 399,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- In this downsampled mixture, models that epoch too much won't look good.",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 400,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- So the optimum will be more balanced.",
+      "extra": {}
+    },
+    {
+      "kind": "code",
+      "line": 401,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "p = {\"low\": 0.7, \"high\": 0.3}  # More mass on high quality data",
+      "extra": {
+        "end_line": 401
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 403,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 404,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Problem: how to weight different data sources (e.g., Wikipedia, general, code)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 405,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Regression-based mixing: estimate mixture → loss at small scale, optimize (analogous to scaling laws)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 406,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "- Important consideration: epoching and overfitting (solution: cap or simulated)",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 406,
+      "section": "data_mixing",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "section_start",
+      "line": 409,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 410,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "Recipe:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 411,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "1. Define a set of environments",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 412,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "2. Define a set of tasks / prompts",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 413,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "3. Collect responses from a strong model (teacher)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 415,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "OpenThoughts",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 415,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2506.04178",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 416,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- 1.2M examples using QwQ-32B as a teacher",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 417,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Questions come from 27 human and synthetic sources (e.g., StackExchange, NuminaMath, Chemistry)",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 418,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/openthoughts-sources.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 419,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Sampling multiple (16) responses per prompt is helpful",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 420,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Better models aren't necessarily better teachers: QwQ-32B is a better teacher than DeepSeek-R1",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 421,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Answer filtering wasn't helpful",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 422,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Smaller high quality sources (e.g., OpenMath-2-Math) is better than large diverse sources",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 423,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/openthoughts-pipeline.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 425,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "SWE-smith",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 425,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2504.21798",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "figure",
+      "line": 426,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/swe-smith.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 427,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Given a repository, use LM to generate tasks (introduce bugs with LM)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 428,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- 128 GitHub repositories yields 50K tasks",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 430,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "SWE-Zero",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 430,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "https://arxiv.org/abs/2604.01496",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 431,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- SWE tasks have heavy dependencies (unlike math or coding contests)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 432,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Setting up thousands of Docker images is an infrastructural nightmare",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 433,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Observation: strong models can solve many tasks without execution feedback",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 434,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/swezero-noexec.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 435,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "Key: strong models have internal \"world model\" of code semantics",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 436,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- SWE-Zero: 300K agent trajectories that don't require repository-specific execution",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 437,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- 150K GitHub PRs",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 438,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- OpenHands scaffold, remove future git commits to prevent \"git hacking\" by agent",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 439,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/swezero-prompt.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 440,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Distilled from Qwen3-Coder-480B + filtering (try to execute anyway)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 441,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- SWE-Hero: 13K agent trajectories that do require execution feedback",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 442,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/swezero-results.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 444,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "SWE-rebench",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 444,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "https://arxiv.org/pdf/2505.20411",
+      "extra": {
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 445,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- 21K interactive Python SWE tasks from 3.4K GitHub repositories",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 446,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- 450K PRs from GitHub and GitHub Archive",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 447,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Used Qwen 2.5-72B-Instruct to install dependencies and assess PR quality",
+      "extra": {}
+    },
+    {
+      "kind": "figure",
+      "line": 448,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "images/swe-rebench.png",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 450,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "SWE-ZERO-12M-trajectories",
+      "extra": {}
+    },
+    {
+      "kind": "cite",
+      "line": 450,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "data",
+      "extra": {
+        "title": "data",
+        "url": "https://huggingface.co/datasets/AlienKevin/SWE-ZERO-12M-trajectories",
+        "kind": "url"
+      }
+    },
+    {
+      "kind": "claim",
+      "line": 451,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Scale SWE-Zero up to 12M agent trajectories",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 452,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Used the SWE-rebench-v2 tasks (32K executable tasks + 120K nonexecutable tasks)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 453,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Ran mini-coder-1.7b (very small model, 50.4 pass@100), mini-swe-agent scaffold",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 454,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- [Example](https://huggingface.co/datasets/AlienKevin/SWE-ZERO-12M-trajectories/viewer/default/train?row=5&conversation-viewer=0)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 456,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 457,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Generating prompts: fully-synthetic, semi-synthetic (real environment + synthetic tasks), real (GitHub PRs)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 458,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Responses: from capable models (that are also good teachers)",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 459,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Code environments are painful",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 460,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "- Lots of filtering and other details",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 460,
+      "section": "post_training_data",
+      "depth": 1,
+      "text": "",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 30,
+      "section": "main",
+      "depth": 0,
+      "text": "Summary:",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 31,
+      "section": "main",
+      "depth": 0,
+      "text": "- Filtering: train classifier (language id, quality, toxicity) for what good looks like",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 32,
+      "section": "main",
+      "depth": 0,
+      "text": "- Deduplication: hashing scales to large datasets for fuzzy matching",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 33,
+      "section": "main",
+      "depth": 0,
+      "text": "- Mixing: try mixtures at small scale, extrapolate to optimal mixture and large scale",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 34,
+      "section": "main",
+      "depth": 0,
+      "text": "- Applications: language identification, quality filtering, toxicity filtering",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 35,
+      "section": "main",
+      "depth": 0,
+      "text": "- Post-training data: looks like evaluations, use of synthetic data",
+      "extra": {}
+    },
+    {
+      "kind": "claim",
+      "line": 36,
+      "section": "main",
+      "depth": 0,
+      "text": "- A lot of data work is domain-specific, looking at examples, etc.",
+      "extra": {}
+    },
+    {
+      "kind": "section_end",
+      "line": 36,
+      "section": "main",
+      "depth": 0,
+      "text": "",
+      "extra": {}
+    }
+  ]
+}

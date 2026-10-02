@@ -1,0 +1,2939 @@
+{
+  "lecture": "lecture_06",
+  "title": "Benchmarking, profiling, and writing kernels in Triton",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are line ranges in official/lectures/lecture_06.py (see sources.json; sha256 recorded in discovered.json). Status and anchors are evidence read from the executable lecture; prerequisite edges marked author-inference are hypotheses until a learner attempt confirms them. Cross-lecture prerequisites are listed under external_prerequisites (lecture_05:<id>, lecture_02:<id>); the validator only checks in-file ids. Every timing the professor @inspects (L169, L174, L280-L282) and every profiler table (L215, L219, L223, L289, L293, L297) is a GPU measurement on his machine (a B200, per L232); this thread records that they were computed and states only their direction or ratio, never a millisecond value. Python-side values (cdiv counts, strides, read/write tallies, toy softmax outputs) are deterministic and are stated. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer (2026-10-01): anchors with ref 'video:M:SS-M:SS' and role 'spoken' quote the human-made YouTube captions in transcript.json (source lecture_06_video; verified by tools/check_anchors.py, ±8 s). Filtering notes that begin 'Spoken evidence' record what the audio adds to or corrects in the written source; 'Spoken slip' marks speech that disagrees with the code and was not imported. Timings read aloud are not quoted, by the rule above. Status 'spoken' marks KPs whose testable content exists only in the audio. Top-level spoken_filtering lists every explicit skip, deferral and aside, read from the full transcript; spoken_map segments the whole talk by KP.",
+  "knowledge_points": [
+    {
+      "id": "benchmark-recipe",
+      "label": "Benchmarking: warm up, synchronize, CUDA events, several trials",
+      "kind": "procedure",
+      "statement": "Benchmarking measures end-to-end wall-clock time and nothing finer; to make it mean something you warm up first (compilation, caches), call torch.cuda.synchronize() because kernel launches return before the GPU finishes, time with CUDA events, and average several trials.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L157-L158",
+            "role": "claim",
+            "quote": "Benchmarking measures the wall-clock time of performing some operation. It only gives you end-to-end time, not where time is spent (profiling)."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L181-L185",
+            "role": "claim",
+            "quote": "Warmup: first times might be slower due to compilation, etc. ... torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L189-L200",
+            "role": "computation",
+            "quote": "for trial in range(num_trials):  # Do it multiple times to capture variance ... Use CUDA events for accurate GPU timing (avoid capturing CPU overhead)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L202",
+            "role": "computation",
+            "quote": "mean_time = mean(times)   # @inspect mean_time @stepover"
+          },
+          {
+            "source": "torch_benchmark_recipe",
+            "ref": "torch.utils.benchmark recipe",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:22:04-22:36",
+            "role": "spoken",
+            "quote": "here's a recipe for success. You benchmark and profile your code. You make changes, and you benchmark your profile, your code again. ... you should always just measure what's going on in your code and figure out what the bottlenecks are before you start writing kernels."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:24:01-24:35",
+            "role": "spoken",
+            "quote": "always remember to do your warm-up. ... some things are lazily compiled ... you're going to run it over and over again, so the initial conditions don't really matter."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:24:35-25:09",
+            "role": "spoken",
+            "quote": "you often want to time it multiple times because there is some variance. The proper way to time things is to use these CUDA events ... remember to synchronize to wait for the CUDA threads to finish, because everything on the GPU is happening if you have an async."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:25:17-25:32",
+            "role": "spoken",
+            "quote": "If you are being very particular, you probably want to maybe look at the whole distribution, the P95 or whatever. But we'll just do the average here."
+          }
+        ],
+        "filtering_note": "torch.utils.benchmark is linked (L164) but not used; the professor rolls his own 'to make benchmarking more transparent' (L165). Defaults are num_warmups=1, num_trials=3 (L179). The CUDA-event versus time.time() distinction is a comment (L190), not demonstrated. The @inspect result at L169 is a GPU measurement and is not reproduced in this thread. Spoken evidence (22:19-22:36): why benchmarking is taught before Triton: 'you should always just measure ... and figure out what the bottlenecks are before you start writing kernels'. Spoken evidence (25:24-25:32): the mean over trials is a simplification; a careful benchmark looks at 'the whole distribution, the P95 or whatever'. The code only says 'Do it multiple times to capture variance' (L189)."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:execution-hierarchy",
+          "basis": "author-inference",
+          "note": "'Wait for CUDA threads to finish' assumes the learner knows a kernel runs as many threads on the device, separately from the Python process."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Wrapping run() in time.time() calls measures how long the GPU took.",
+          "why_wrong": "A kernel launch returns to Python immediately; without torch.cuda.synchronize() the stopwatch stops before the GPU has finished, so the measured time is mostly launch overhead (L185, L198)."
+        },
+        {
+          "belief": "The first call is as good a measurement as any other.",
+          "why_wrong": "First calls can include compilation and cache warmup (L181); the steady state is what matters because the kernel will be run many times (L182)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You delete torch.cuda.synchronize() at L198 and replace the CUDA events with time.time() around run(). For a large matmul, which way does the measured time move relative to the true GPU time (up or down)?",
+          "format": "trend",
+          "answer": "down, far below the true time",
+          "why": "The launch is asynchronous: Python returns from run() before the kernel finishes, so the stopwatch captures launch overhead, not execution (L185, L190, L198).",
+          "targets_misconception": "Wrapping run() in time.time() calls measures how long the GPU took."
+        },
+        "transfer": {
+          "q": "A colleague benchmarks naive_gelu, builtin_gelu and torch.compile(naive_gelu) with num_warmups=0 and num_trials=1. Which of the three measurements is most distorted, and in which direction?",
+          "format": "short",
+          "answer": "compiled_gelu, reported far too slow",
+          "why": "With no warmup the single trial includes torch.compile's compilation (L181, L275). The other two have no compile step, so the distortion is concentrated on the compiled version, making it look slower than the naive one."
+        },
+        "check": {
+          "q": "You benchmark torch.compile(naive_gelu) with num_trials = 1, then change num_warmups from 0 to 3. What happens to the measured time? Answer up, down or same.",
+          "format": "trend",
+          "answer": "down: with no warmup the single trial includes compilation; after warmup it measures only the compiled kernel.",
+          "value": "down",
+          "why": "Warmup absorbs one-off costs such as torch.compile's compilation and cache effects before timing starts (L181-L185, L275).",
+          "targets_misconception": "The first call is as good a measurement as any other.",
+          "varies": "the fix is applied and the learner predicts its effect, instead of spotting the distorted measurement",
+          "invariant": "the first call of a compiled function includes compilation, which warmup removes from the measurement",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does the professor say benchmarking gives you, and what it does not give you?",
+            "answer": "End-to-end wall-clock time; not where the time is spent (that is profiling)."
+          },
+          {
+            "q": "Why does benchmark() call torch.cuda.synchronize() before it starts recording times?",
+            "answer": "Kernel launches are asynchronous; synchronize waits for the warmup kernels to finish so the timed trials start from a quiet GPU."
+          },
+          {
+            "q": "Name the two uses the professor lists for benchmarking even though it is only end-to-end.",
+            "answer": "Comparing implementations (which is faster) and understanding how performance scales (e.g. with dimension)."
+          }
+        ],
+        "self_explain": "Why does the professor time with CUDA events recorded on the GPU rather than with the Python clock, if he synchronizes anyway?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L179-L203"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:25:17-25:32",
+          "notice": "listen for: the average is a simplification; a careful benchmark looks at the distribution (P95)"
+        }
+      ]
+    },
+    {
+      "id": "matmul-time-scaling",
+      "label": "Matmul time: flat at small dims, then cubic",
+      "kind": "mechanism",
+      "statement": "Benchmarking a square matmul over dim = 256 ... 8192 shows time roughly constant at small dims, where a fixed per-launch cost dominates and the GPU is mostly idle (the professor: GPUs 'are built for fairly large matrix multiplications'), and then growing like dim³, where the 2·dim³ FLOPs dominate.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L172-L174",
+            "role": "computation",
+            "quote": "for dim in [256, 512, 1024, 2048, 4096, 8192]: results[dim] = benchmark(run_operation2(dim=dim, operation=lambda a, b: a @ b))  # @inspect results"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L176",
+            "role": "claim",
+            "quote": "Note: time is roughly constant when dimension is small, then cubic scaling."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:25:35-26:23",
+            "role": "spoken",
+            "quote": "scale up your matrices and see how the time changes. ... it should grow cubically. But notice that there is this flaw where up until you get up to almost 2,000 dimensional matrices, things are basically a constant. ... the shapes of these GPUs are built for fairly large matrix multiplications. And if you have a 2 by 2 matrix, it's going to be very inefficient."
+          }
+        ],
+        "filtering_note": "The professor states the shape of the curve but not where the crossover is; the results dict holds GPU timings from his machine and is not reproduced here. He does not say why the small-dim regime is flat; this thread attributes it to launch overhead in supp-kernel-launch (author inference). Spoken evidence (25:55-26:23), correcting two claims in this note: the crossover is said aloud, flat 'up until you get up to almost 2,000 dimensional matrices' on his B200 (a reading of his own GPU plot, not a portable number); and he does give a reason for the flat regime, 'the shapes of these GPUs are built for fairly large matrix multiplications', i.e. a small matmul cannot fill the hardware. That reason is not launch overhead, which remains this thread's inference (supp-kernel-launch). The two are compatible (an under-filled GPU finishes in roughly fixed time), and the statement was not changed."
+      },
+      "prerequisites": [
+        {
+          "kp": "benchmark-recipe",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:matmul-flops",
+          "basis": "author-inference",
+          "note": "'Cubic' is 2·dim³ FLOPs; the learner must know the matmul FLOP count to see why."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Matmul time scales with the number of output elements, dim².",
+          "why_wrong": "Each of the dim² outputs is a length-dim dot product, so FLOPs are 2·dim³ and time follows them once the kernel is compute-bound (L176)."
+        },
+        {
+          "belief": "Halving dim always cuts the time by a large factor.",
+          "why_wrong": "Below the crossover the time is set by a fixed per-launch cost, so dim changes barely move it (L176 'roughly constant')."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In the cubic regime, you go from dim = 4096 to dim = 8192. The benchmark time multiplies by roughly what factor?",
+          "format": "number",
+          "answer": "8",
+          "tolerance": 0.25,
+          "why": "FLOPs are 2·dim³; doubling dim multiplies them by 8, and in the compute-bound regime time follows FLOPs (L176).",
+          "targets_misconception": "Matmul time scales with the number of output elements, dim²."
+        },
+        "transfer": {
+          "q": "Going from dim = 256 to dim = 512, the measured time barely changes even though FLOPs went up 8x. What is dominating the measurement there, and what does the professor's recipe step before timing (L181-L185) have in common with it?",
+          "format": "short",
+          "answer": "A fixed per-call cost (launching the kernel and waiting for it) rather than the arithmetic; the warmup/synchronize step exists because launches are asynchronous and have overhead, the same overhead that floors the small-dim timings.",
+          "why": "When the kernel's work is tiny, the time is the launch and completion latency, which does not depend on dim (L176, supp-kernel-launch)."
+        },
+        "check": {
+          "q": "In the lecture's matmul benchmark, you go from dim = 128 to dim = 256, where the time is dominated by a fixed per-launch cost. What happens to the measured time? Answer up, down or same.",
+          "format": "trend",
+          "answer": "same (roughly): at these sizes the fixed launch-and-sync cost dominates, so 8x the FLOPs barely changes the time.",
+          "value": "same",
+          "why": "Small matmuls are overhead-bound: the time is the kernel launch and completion latency, which does not depend on dim. Only at large dims does time grow like dim³ (L172-L176).",
+          "targets_misconception": "Halving dim always cuts the time by a large factor.",
+          "varies": "a pair of small dims, asked as a direction",
+          "invariant": "below the crossover, matmul time is a fixed overhead independent of dim",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Describe the two regimes the professor notes for matmul time versus dimension.",
+            "answer": "Roughly constant at small dimension, then cubic scaling."
+          },
+          {
+            "q": "In the cubic regime, which quantity grows as dim³ and sets the time?",
+            "answer": "The FLOP count, 2·dim³ (one multiply-add per (i, j, k) triple)."
+          }
+        ],
+        "self_explain": "Why can an 8x increase in FLOPs produce almost no change in measured time at small dims?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "predict-trend",
+          "ref": "lecture_06.py:L172-L176"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--matmul-time",
+          "notice": "Below about dim 2048 the curve lies on the fixed-cost floor and doubling dim barely moves it; above, each doubling multiplies the time by close to 8 as the 2·dim³ term takes over."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:25:45-26:23",
+          "notice": "listen for: flat until about dim 2,000, and his reason: GPUs are built for large matmuls"
+        }
+      ]
+    },
+    {
+      "id": "profiler-kernels",
+      "label": "Profiling shows the CUDA kernels behind a PyTorch op",
+      "kind": "mechanism",
+      "statement": "The PyTorch profiler (ProfilerActivity.CUDA, rows sorted by cuda_time_total) lists which CUDA kernels an op actually launched and how long each ran; the kernel chosen depends on tensor shape, and its name encodes the implementation (cutlass = NVIDIA linear-algebra library, sm100 = Blackwell, f32 = float32, 64x64x16 = tile shape).",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L207-L208",
+            "role": "claim",
+            "quote": "While benchmarking looks at end-to-end time, profiling looks at where time is spent. Independent of time, profiling also helps you understand what's going under the hood."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L225-L227",
+            "role": "claim",
+            "quote": "You can see which CUDA kernels are actually being called (the long names). Different CUDA kernels are invoked depending on the tensor dimensions."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L229-L234",
+            "role": "claim",
+            "quote": "cutlass3x_sm100_simt_sgemm_f32_f32_f32_f32_f32_64x64x16_1x1x1_3_nnn_align1_bi... cutlass: NVIDIA's CUDA library for linear algebra; sm100: corresponds to the NVIDIA Blackwell architecture (B200); f32: float32; 64x64x16: tile shape"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L244-L252",
+            "role": "computation",
+            "quote": "torch.profiler.profile(activities=[ProfilerActivity.CUDA], ...) ... prof.key_averages().table(sort_by=\"cuda_time_total\", ...)"
+          },
+          {
+            "source": "torch_profiler_recipe",
+            "ref": "PyTorch profiler recipe",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:26:29-26:53",
+            "role": "spoken",
+            "quote": "Profiling tells you where time is actually spent. ... profiling, even if you don't care about the time, helps you figure out what's actually happening under the hood."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:28:46-29:02",
+            "role": "spoken",
+            "quote": "if you change the dimensions-- so now I'm doing a 128 by 128 matmul-- you get actually a different one. If you look closely, that this is 64x64x16, this is 32x32x16."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:29:31-30:01",
+            "role": "spoken",
+            "quote": "cutlass is the NVIDIA CUDA library for linear algebra. SM100 corresponds to the Blackwell architecture. ... 64x64x16 is the shape of the tile"
+          }
+        ],
+        "filtering_note": "The three tables (add at 2048, matmul at 2048, matmul at 128; L214-L223) are verbatim GPU output appended to var/profiles.txt and exist only in the professor's trace; no kernel durations are quoted here. nsight is deferred to the assignment (L211). 'simt' (no tensor cores) and 'nnn_align1' in the example name are not decoded by the professor. Spoken evidence (28:46-29:02): what 'a different kernel' means concretely: at dim 2048 the matmul kernel's tile is 64x64x16, at dim 128 it is 32x32x16 (read off his profiler tables; a kernel name, not a duration). nsight is deferred to the assignment and skipped (26:55-27:01)."
+      },
+      "prerequisites": [
+        {
+          "kp": "benchmark-recipe",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:tiling-shared-memory",
+          "basis": "author-inference",
+          "note": "'64x64x16: tile shape' only means something if the learner knows matmul kernels work on output tiles."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "One PyTorch op always maps to one fixed CUDA kernel.",
+          "why_wrong": "The dispatcher picks a kernel per shape and dtype (L227: different kernels for dim 2048 and dim 128), and a composite op like naive_gelu launches several (L300)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You profile a @ b at dim = 2048 and again at dim = 128. Do the two profiles show the same kernel name or different ones?",
+          "format": "choice",
+          "choices": [
+            "the same kernel at both sizes",
+            "different kernels, picked per shape",
+            "the same kernel, with a larger grid"
+          ],
+          "answer": "different kernels, picked per shape",
+          "distractor_from": [
+            "'the same kernel at both sizes' <- misconception: 'One PyTorch op always maps to one fixed CUDA kernel.'",
+            "'the same kernel, with a larger grid' <- same misconception (only the launch configuration changes)"
+          ],
+          "why": "L227: different CUDA kernels are invoked depending on the tensor dimensions; the tile shape baked into the name (64x64x16) must suit the matrix size.",
+          "targets_misconception": "One PyTorch op always maps to one fixed CUDA kernel."
+        },
+        "transfer": {
+          "q": "A profile row reads cutlass3x_sm90_tensorop_gemm_bf16_..._128x128x64_... Using the professor's decoding of L230-L234, read off the architecture, the dtype, the tile shape, and what 'tensorop' says compared with 'simt' in the lecture's example.",
+          "format": "short",
+          "answer": "sm90 = Hopper (H100); bf16; 128x128x64 tile; tensorop means the kernel uses tensor cores, whereas the lecture's simt sgemm f32 kernel used ordinary SIMT cores.",
+          "why": "The name is a recipe: library_arch_unit_dtype_tile. Only the arch and tile tokens are decoded in the lecture; 'tensorop' versus 'simt' follows the same pattern."
+        },
+        "check": {
+          "q": "A profiler row reads cutlass3x_sm100_simt_sgemm_f32_..._128x64x8_... Using the professor's decoding of kernel names, what does 128x64x8 describe?",
+          "format": "choice",
+          "choices": [
+            "threads per block",
+            "the grid size",
+            "the matrix shape",
+            "the tile shape"
+          ],
+          "answer": "the tile shape",
+          "distractor_from": [
+            "'the matrix shape' <- misconception: 'One PyTorch op always maps to one fixed CUDA kernel.' (reads the name as describing the problem rather than the chosen implementation)",
+            "'the grid size' <- plausible: three numbers look like launch dimensions",
+            "'threads per block' <- plausible: confuses tile with block"
+          ],
+          "why": "The name is a recipe: library (cutlass), architecture (sm100 = Blackwell), unit (simt), dtype (f32), tile shape (here 128x64x8). Kernels are picked per shape, so different tiles show up for different dims (L229-L234).",
+          "targets_misconception": "One PyTorch op always maps to one fixed CUDA kernel.",
+          "varies": "a different kernel name and only one field asked",
+          "invariant": "kernel names encode the implementation (library, arch, unit, dtype, tile), not the problem size",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does profiling add beyond benchmarking?",
+            "answer": "Where the time is spent (per kernel), and what is running under the hood."
+          },
+          {
+            "q": "In cutlass3x_sm100_simt_sgemm_f32_..._64x64x16_..., what do 'cutlass', 'sm100' and '64x64x16' denote?",
+            "answer": "NVIDIA's CUDA linear-algebra library; the Blackwell (B200) architecture; the tile shape.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which profiler activity and which sort key does the lecture's profile() use?",
+            "answer": "ProfilerActivity.CUDA; sort_by='cuda_time_total'.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would the library pick a different kernel for a 128x128 matmul than for 2048x2048, given that the math is identical?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L244-L252"
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_06.py:L229-L234"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:28:46-29:02",
+          "notice": "listen for: the same a @ b picks a smaller tile (32x32x16) at dim 128"
+        }
+      ]
+    },
+    {
+      "id": "gelu-fusion",
+      "label": "GeLU: naive chain of ops vs builtin vs torch.compile",
+      "kind": "mechanism",
+      "statement": "naive_gelu written as a chain of PyTorch ops launches one kernel per op, each reading and writing HBM; builtin gelu and torch.compile(naive_gelu) run one fused kernel with one HBM read and one write, which is why both are much faster, and the compiled kernel is a Triton kernel.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L267-L277",
+            "role": "computation",
+            "quote": "1. Implementation naively from scratch in PyTorch (non-fused) ... 2. Built-in PyTorch implementation (fused) ... 3. Use PyTorch compiler on the naive implementation ... check_equal_1d(naive_gelu, compiled_gelu)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L280-L283",
+            "role": "computation",
+            "quote": "naive_time = benchmark(...) ... builtin_time ... compiled_time ... The builtin and compiled versions are significantly faster!"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L300-L302",
+            "role": "claim",
+            "quote": "Naive implementation: multiple kernels, requires many reads/writes from/to HBM (no fusion). Builtin and compiled versions: one kernel (kernel fusion), one read from HBM, one write to HBM. The compiled kernel is a Triton kernel."
+          },
+          {
+            "source": "torch_gelu_docs",
+            "ref": "torch.nn.GELU (tanh approximation)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:31:26-31:47",
+            "role": "spoken",
+            "quote": "you can take any PyTorch function, you call torch.compile on it, and it generates another function. And it does the same thing."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:32:05-32:33",
+            "role": "spoken",
+            "quote": "Built-in is much faster and compiled is much faster as well, but not maybe as quite as fast as built-in. ... They all compute the same answer, but they have wildly different performance characteristics."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:33:23-33:54",
+            "role": "spoken",
+            "quote": "the reason this is slow is that when you launch a kernel, the kernel has to read from HBM. ... between kernel invocations, things have to go back to HBM."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:34:05-34:15",
+            "role": "spoken",
+            "quote": "why does this exist? Well, because people use GeLU. So someone wrote a kernel for it and put it in the standard library."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:36:18-36:48",
+            "role": "spoken",
+            "quote": "The compiled kernel is one Triton kernel, and this is slower than the built-in. ... it's very hardware dependent. And I think none of this is terribly optimized."
+          }
+        ],
+        "filtering_note": "naive_time, builtin_time and compiled_time are GPU measurements; only the direction is recorded: naive slowest, builtin and compiled 'significantly faster' (L283). The three profiler tables (L288-L297) that show the kernel counts are verbatim GPU output. The professor never counts naive_gelu's kernels; from L697 the expression has on the order of eight elementwise ops, so 'multiple' is left as stated. check_equal_1d uses atol=1e-6 (L713). Spoken evidence (32:09, 36:18-36:48): the order is builtin fastest, compiled close behind, naive slowest; asked why, he says the compiled Triton kernel 'is slower than the built-in', that last year it 'was actually closer', and that it is 'very hardware dependent'. The naive time is read aloud (32:00-32:05) and, by this thread's rule, not quoted. Spoken evidence (33:23-33:54): the reason given for naive's slowness is the round trip, 'between kernel invocations, things have to go back to HBM'; the built-in exists simply 'because people use GeLU' (34:08). How torch.compile works is skipped (34:24)."
+      },
+      "prerequisites": [
+        {
+          "kp": "profiler-kernels",
+          "basis": "teaching-order",
+          "note": "The explanation is read off the profiler: many rows versus one row."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:operator-fusion",
+          "basis": "author-inference",
+          "note": "Lecture 5 introduced fusion on slides; here it is observed in a profile."
+        },
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "Why fewer HBM round trips mean less time: GeLU is memory-bound."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "builtin_gelu is faster because it uses a cheaper formula with fewer FLOPs.",
+          "why_wrong": "It uses the same tanh approximation (L702) and is checked equal to naive_gelu (L272). The saving is one kernel instead of many, i.e. one HBM read and write instead of one per op (L300-L301)."
+        },
+        {
+          "belief": "torch.compile speeds things up by changing the arithmetic.",
+          "why_wrong": "The professor checks compiled_gelu against naive_gelu precisely because 'compilation shouldn't change semantics' (L277); it changes the kernel count, not the math."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "naive_gelu launches about k elementwise kernels on a 16384x16384 tensor; builtin_gelu launches one. The op is memory-bound. The ratio naive_time / builtin_time is closest to which?",
+          "format": "choice",
+          "choices": [
+            "about 1",
+            "about k",
+            "about k squared"
+          ],
+          "answer": "about k",
+          "why": "Each unfused kernel moves the whole tensor through HBM at least once, so bytes moved, and hence time, scale with the kernel count; the FLOPs are the same either way (L300-L301).",
+          "targets_misconception": "builtin_gelu is faster because it uses a cheaper formula with fewer FLOPs."
+        },
+        "transfer": {
+          "q": "You write a sigmoid-based GeLU as a chain of four PyTorch ops in the same style as naive_gelu. Without compiling, how does its kernel count and HBM traffic compare with naive_gelu's, and what single change brings it to builtin-level speed?",
+          "format": "short",
+          "answer": "Fewer kernels (about four instead of about eight) and proportionally fewer HBM round trips, so faster but still unfused; torch.compile fuses the chain into one Triton kernel with one read and one write.",
+          "why": "The cost is per launched kernel, each with its own HBM read and write; fusion removes all but one (L300-L302)."
+        },
+        "check": {
+          "q": "A memory-bound chain of 6 elementwise PyTorch ops runs on a 8192 × 8192 fp32 tensor, each op reading one tensor and writing one. torch.compile fuses the chain into one kernel with one read and one write. By what factor does HBM traffic fall? Type only the number.",
+          "format": "number",
+          "answer": "6",
+          "value": 6,
+          "tolerance": 0.02,
+          "why": "Unfused: 6 kernels × (one read + one write) = 12 tensor transfers. Fused: 2. 12 / 2 = 6. The arithmetic is unchanged; the saving is the round trips to HBM (L300-L302).",
+          "targets_misconception": "torch.compile speeds things up by changing the arithmetic.",
+          "varies": "the number of ops in the chain and an explicit traffic ratio",
+          "invariant": "each unfused elementwise op costs one HBM read and write; fusion leaves one of each",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "How many HBM reads and writes does the fused GeLU do, versus the naive chain?",
+            "answer": "Fused: one read and one write. Naive: one read and write per kernel, many kernels."
+          },
+          {
+            "q": "Which compiler produces the kernel behind torch.compile(naive_gelu)?",
+            "answer": "Triton (the compiled kernel is a Triton kernel)."
+          },
+          {
+            "q": "Which check does the professor run before benchmarking the compiled version, and what is the stated reason?",
+            "answer": "check_equal_1d(naive_gelu, compiled_gelu); compilation should not change semantics.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does fusing leave the FLOP count unchanged yet cut the time by a large factor?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:fusion-timeline",
+          "notice": "Five kernel launches, each with its own HBM read and write, collapse into one launch with a single read and a single write; the arithmetic between them is unchanged."
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_06.py:L694-L702"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:33:23-33:54",
+          "notice": "listen for: why each kernel boundary sends the tensor back to HBM"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:36:18-36:48",
+          "notice": "listen for: compiled Triton is slower than the built-in here, and the gap is hardware dependent"
+        }
+      ]
+    },
+    {
+      "id": "cuda-vs-triton",
+      "label": "CUDA programs threads; Triton programs thread blocks",
+      "kind": "comparison",
+      "statement": "In CUDA you specify what each thread does (fine-grained control, but you manage shared memory and more yourself); in Triton you specify what each thread block does, following the frame: load data into shared memory, operate on it, write back to global memory.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L308-L310",
+            "role": "claim",
+            "quote": "In CUDA (developed by NVIDIA), specify what each thread does. Pros: fine-grained control. Cons: need to manage more things (e.g., shared memory)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L312-L314",
+            "role": "claim",
+            "quote": "In Triton (developed by OpenAI), specify what each thread block does. ... Conceptual framework: load data into shared memory, operate on it, write back to global memory"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L69-L73",
+            "role": "claim",
+            "quote": "for non-elementwise operations like softmax or matrix multiplication, threads need to communicate. Reading/writing from HBM is slow, so use shared memory (local to SM). ... In Triton, think natively in terms of thread blocks (later)."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L140",
+            "role": "claim",
+            "quote": "Programming model: grid (HBM) -> thread block (shared memory) -> thread (registers)"
+          },
+          {
+            "source": "ptx_isa",
+            "ref": "grid-with-CTAs figure",
+            "role": "figure"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:4:34-5:19",
+            "role": "spoken",
+            "quote": "why do we have thread blocks? ... for operations that involve communicating with threads, such as softmax or matrix multiplication, this view isn't really enough."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:5:19-6:05",
+            "role": "spoken",
+            "quote": "it could be enough if you were willing to pay the cost of writing and reading HBM. ... use shared memory, which is local to SM. ... a collection of threads that are all going to access this shared memory."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:37:07-37:47",
+            "role": "spoken",
+            "quote": "if you were to write in CUDA ... the mental model is, what does each thread do? ... it's very closely related to what is actually happening underneath the hood. And it's fine-grained, gives you fine-grained control."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:37:47-38:32",
+            "role": "spoken",
+            "quote": "some operations require them to communicate. So what has to happen is that they have to synchronize. ... you have to basically do that bookkeeping. So if you were doing all element-wise operations, this CUDA is just fine."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:38:32-38:59",
+            "role": "spoken",
+            "quote": "Triton was developed by OpenAI. ... You basically specify what each thread block does. ... If you really go and want to exploit every single new feature of the latest hardware, it might not give you the full flexibility."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:46:33-47:14",
+            "role": "spoken",
+            "quote": "for this element wise, it looks pretty much the same, right. And in fact, CUDA is even, I think, simpler, because it really is element wise."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:23:16-1:23:38",
+            "role": "spoken",
+            "quote": "things are easier to think about thread blocks than individual threads, because you don't have to think about explicitly synchronizing threads or doing shared memory."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:24:39-1:25:08",
+            "role": "spoken",
+            "quote": "every language has an inductive bias ... Triton was built by people who train transformers. So anything involving transformers, I think it's going to be relatively easy there."
+          }
+        ],
+        "filtering_note": "No CUDA code is shown; the comparison is two bullet lists. What Triton automates inside a block (thread-to-element mapping, shared-memory allocation, coalescing, warp-level reductions) is left implicit and only surfaces when the PTX is inspected (L334). Triton's own word for a block's instance, 'program', appears only as tl.program_id. Spoken evidence (37:47-38:32, 46:33-47:14): where each language pays: for purely elementwise work 'this CUDA is just fine' and even 'simpler'; CUDA's cost appears when threads must communicate, because then 'they have to synchronize' and 'you have to basically do that bookkeeping', which Triton hides (1:23:16-1:23:38). Its limit is also said: for 'every single new feature of the latest hardware, it might not give you the full flexibility' (38:46). Spoken evidence (5:19-5:48): thread blocks are not logically required for communication, only for speed: threads 'could' communicate through HBM 'if you were willing to pay the cost', which is too slow."
+      },
+      "prerequisites": [
+        {
+          "kp": "gelu-fusion",
+          "basis": "teaching-order",
+          "note": "Motivation: the compiled kernel the profiler showed is a Triton kernel; now write one by hand."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:execution-hierarchy",
+          "basis": "author-inference",
+          "note": "Thread, block, grid and the fact that a block shares one SM's shared memory."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Each line of a Triton kernel is executed by a single thread on a single element.",
+          "why_wrong": "A Triton program is one whole thread block: tl.arange produces a BLOCK_SIZE-wide vector that the compiler spreads across the block's threads (eight elements per thread in the GeLU PTX, L334)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In triton_gelu_kernel, the line x = tl.load(x_ptr + offsets, mask=mask) (L379) is executed on behalf of how much of the hardware: one thread, one warp, or the whole thread block?",
+          "format": "choice",
+          "choices": [
+            "one thread, loading the single element at its offset",
+            "one warp, the 32 threads that issue the load together",
+            "the whole thread block, loading BLOCK_SIZE elements at once"
+          ],
+          "answer": "the whole thread block, loading BLOCK_SIZE elements at once",
+          "distractor_from": [
+            "'one thread' <- misconception: 'Each line of a Triton kernel is executed by a single thread on a single element.'",
+            "'one warp' <- plausible: carries CUDA's warp-level SIMT picture over to Triton's block-level programs"
+          ],
+          "why": "Triton code describes what a block does (L312); offsets is a BLOCK_SIZE-element vector and the load is the block's collective read.",
+          "targets_misconception": "Each line of a Triton kernel is executed by a single thread on a single element."
+        },
+        "transfer": {
+          "q": "You port the softmax kernel to a model where you must decide which thread holds which column and insert a barrier before computing the row maximum. Which of the two programming models is that, and which single Triton line hides that work in the lecture's kernel?",
+          "format": "short",
+          "answer": "CUDA; tl.max(x_row, axis=0) at L476 performs the cross-thread reduction with no explicit thread mapping or barrier.",
+          "why": "Per-thread programming exposes communication inside the block; per-block programming lets the compiler handle it (L309-L310 versus L312-L314)."
+        },
+        "check": {
+          "q": "Writing the lecture's softmax in CUDA instead of Triton, which of these must you write yourself that Triton's tl.max(x_row, axis=0) handles for you?",
+          "format": "choice",
+          "choices": [
+            "the cross-thread reduction and its sync",
+            "the pointer arithmetic for the row",
+            "the mask for out-of-range columns",
+            "the launch grid of one program per row"
+          ],
+          "answer": "the cross-thread reduction and its sync",
+          "distractor_from": [
+            "'pointer arithmetic for the row' <- misconception: 'Each line of a Triton kernel is executed by a single thread on a single element.' (Triton code still does its own pointer arithmetic per block)",
+            "'the mask for out-of-range columns' <- plausible: Triton kernels write masks explicitly too",
+            "'the launch grid' <- plausible: Triton also needs a host-side grid"
+          ],
+          "why": "Triton programs a whole block, so a reduction over the block is one call and the compiler maps threads and inserts barriers. Pointer offsets, masks and the grid are written explicitly in the Triton kernel as well (L308-L314, L476).",
+          "targets_misconception": "Each line of a Triton kernel is executed by a single thread on a single element.",
+          "varies": "the learner separates what Triton hides from what it still asks you to write",
+          "invariant": "Triton hides intra-block thread mapping and communication; CUDA exposes them",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What is the unit you program in CUDA, and what is it in Triton?",
+            "answer": "CUDA: a thread. Triton: a thread block."
+          },
+          {
+            "q": "State the three-step conceptual framework the professor gives for a Triton kernel.",
+            "answer": "Load data into shared memory, operate on it, write back to global memory."
+          },
+          {
+            "q": "Which memory level does the professor pair with each of grid, thread block and thread?",
+            "answer": "Grid: HBM. Thread block: shared memory. Thread: registers."
+          }
+        ],
+        "self_explain": "Why does programming at the block level make explicit shared-memory management disappear from the user's code?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "https://docs.nvidia.com/cuda/parallel-thread-execution/_images/grid-with-CTAs.png"
+        },
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "lecture_06.py:L308-L314"
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:37:47-38:32",
+          "notice": "listen for: CUDA is fine for elementwise work; its cost is synchronization bookkeeping once threads communicate"
+        }
+      ]
+    },
+    {
+      "id": "triton-program-grid",
+      "label": "Triton launch: grid of programs, program_id, offsets, mask",
+      "kind": "definition",
+      "statement": "A Triton launch is a grid of programs: the host computes num_blocks = triton.cdiv(num_elements, BLOCK_SIZE) and calls kernel[(num_blocks,)](...); inside, pid = tl.program_id(axis=0), offsets = pid*BLOCK_SIZE + tl.arange(0, BLOCK_SIZE) are the elements this program owns, and mask = offsets < num_elements stops the last program from touching memory past the end.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L345-L350",
+            "role": "computation",
+            "quote": "Determine grid (elements divided into blocks) ... num_elements = x.numel()  # @inspect num_elements; BLOCK_SIZE = 1024; num_blocks = triton.cdiv(num_elements, BLOCK_SIZE)  # @inspect num_blocks"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L353",
+            "role": "computation",
+            "quote": "kernel = triton_gelu_kernel[(num_blocks,)](x, y, num_elements, BLOCK_SIZE=BLOCK_SIZE)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L369-L376",
+            "role": "computation",
+            "quote": "pid = tl.program_id(axis=0)      # Identifies the block; start = pid * BLOCK_SIZE; offsets = start + tl.arange(0, BLOCK_SIZE); mask = offsets < num_elements"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L60-L62",
+            "role": "claim",
+            "quote": "Thread: executes code on a small part of the data. Thread block or concurrent thread array (CTA): a group of threads. Grid: collection of thread blocks"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:40:26-40:52",
+            "role": "spoken",
+            "quote": "I'm going to allocate an output tensor. OK, because in Triton, we're not thinking functionally anymore. ... You have to explicitly read and write. So there's no returning value."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:40:52-41:31",
+            "role": "spoken",
+            "quote": "I can't generally fit this all into one SM, because it's just too big. ... The total number of elements is 8,000. I'm just going to set the blocksize to 1,024 for now. And then I have eight blocks."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:43:09-44:03",
+            "role": "spoken",
+            "quote": "for every block, we're going to have this function being called. ... This block wakes up and say, who am I? Well, the program ID is-- basically the PID is basically identifying the block. ... So that's PID times blocksize."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:44:39-45:11",
+            "role": "spoken",
+            "quote": "in this case, num elements divides by blocksize. But in general, that's not the case. So you'll often see in train code, there's this masking. ... for blocks that are not the final block, it's going to be just all ones."
+          }
+        ],
+        "filtering_note": "num_elements = 8192 and num_blocks = 8 (L320, L348-L350) are Python values, not GPU measurements, and are stated. The comment calls BLOCK_SIZE the 'Number of threads' (L349); in Triton it is the number of elements per program, and the PTX later shows 8 elements per thread (L334), so the block has 128 threads. That tl.arange needs a power-of-two length is not said here; it surfaces as next_power_of_2 in the softmax (L449). Spoken evidence (40:35-40:44): why the host allocates y first: in Triton 'there's no returning value', the kernel writes through a pointer. '8,000' (41:20) is the professor's rounding of num_elements = 8192. Spoken slip (1:08:59): 'remember, blocksize is the number of threads' repeats L349's comment; in Triton BLOCK_SIZE counts elements per program, and his own PTX reading (52:49-52:59, eight elements per thread) implies 128 threads for 1024 elements. Not imported."
+      },
+      "prerequisites": [
+        {
+          "kp": "cuda-vs-triton",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "num_blocks = num_elements // BLOCK_SIZE.",
+          "why_wrong": "Floor division drops the tail when num_elements is not a multiple of BLOCK_SIZE; cdiv rounds up and the mask makes the overhanging program harmless (L350, L376)."
+        },
+        {
+          "belief": "BLOCK_SIZE is the number of threads in the block.",
+          "why_wrong": "It is the number of elements one program handles; Triton chooses the thread count, and the GeLU PTX shows each thread doing 8 elements (L334), i.e. 128 threads for BLOCK_SIZE = 1024."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "num_elements = 10000 and BLOCK_SIZE = 1024. How many programs are launched, and in the last program how many of its 1024 mask entries are True?",
+          "format": "short",
+          "answer": "10 programs; 784 True entries",
+          "why": "cdiv(10000, 1024) = 10. The last program starts at 9*1024 = 9216, so offsets 9216..9999 (784 of them) are below num_elements and the remaining 240 are masked (L350, L370-L376).",
+          "targets_misconception": "num_blocks = num_elements // BLOCK_SIZE."
+        },
+        "transfer": {
+          "q": "Same kernel, but the host launches with grid (num_elements // BLOCK_SIZE,) and num_elements = 10000. Which output elements are wrong, and what do they contain, and which programs if any read out of bounds?",
+          "format": "short",
+          "answer": "Elements 9216..9999 are never computed and keep whatever torch.empty_like left there; no program reads out of bounds, since the 9 launched programs cover offsets below 9216.",
+          "why": "The mask only protects the programs that run; a missing program is silent, which is why the host must round up (L343, L350)."
+        },
+        "check": {
+          "q": "A Triton elementwise kernel with BLOCK_SIZE = 512 is launched with grid (num_elements // BLOCK_SIZE,) for num_elements = 5000. How many output elements are never computed? Type only the number.",
+          "format": "number",
+          "answer": "392",
+          "value": 392,
+          "tolerance": 0.01,
+          "why": "5000 // 512 = 9 programs cover offsets 0..4607; elements 4608..4999, which is 392 elements, are never written. triton.cdiv would launch 10 programs and the mask would protect the last one (L345-L350).",
+          "targets_misconception": "num_blocks = num_elements // BLOCK_SIZE.",
+          "varies": "different sizes; asks the count of missed elements",
+          "invariant": "floor division drops the partial last block; the mask cannot protect a program that is never launched",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Write the two kernel lines that turn pid into the element indices a program owns.",
+            "answer": "start = pid * BLOCK_SIZE; offsets = start + tl.arange(0, BLOCK_SIZE)"
+          },
+          {
+            "q": "What does triton.cdiv(num_elements, BLOCK_SIZE) compute, and why is // not used?",
+            "answer": "Ceiling division, the number of programs needed to cover every element; floor would leave the tail uncovered."
+          },
+          {
+            "q": "What does tl.program_id(axis=0) return inside the kernel?",
+            "answer": "The index of this program (thread block) along grid axis 0.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why can the same mask serve both the tl.load and the tl.store of a program?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L343-L353"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--launch-grid",
+          "notice": "Changing num_elements moves only the mask boundary inside the last program; switching the grid to n // BLOCK_SIZE drops that last program and leaves a tail that no program computes."
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:43:09-44:03",
+          "notice": "listen for: the 'who am I?' step: program id times block size gives the first element"
+        }
+      ]
+    },
+    {
+      "id": "triton-gelu-kernel",
+      "label": "The Triton GeLU kernel line by line",
+      "kind": "procedure",
+      "statement": "The GeLU kernel loads one block of x with a mask, computes 0.5·x·(1 + tanh(0.79788456·(x + 0.044715·x³))) on that block with tanh built from exp (tanh a = (e^{2a} − 1)/(e^{2a} + 1), because tl.tanh does not exist), and stores with the same mask: one HBM read and one write per element, every intermediate stays on-chip.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L379",
+            "role": "computation",
+            "quote": "x = tl.load(x_ptr + offsets, mask=mask)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L381-L386",
+            "role": "computation",
+            "quote": "Compute (tl.tanh doesn't exist, use tanh(a) = (exp(2a) - 1) / (exp(2a) + 1); a = 0.79788456 * (x + 0.044715 * x * x * x); exp = tl.exp(2 * a); tanh = (exp - 1) / (exp + 1); y = 0.5 * x * (1 + tanh)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L389",
+            "role": "computation",
+            "quote": "tl.store(y_ptr + offsets, y, mask=mask)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L323",
+            "role": "computation",
+            "quote": "check_equal_1d(triton_gelu, naive_gelu)  # Check for correctness"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:42:30-42:57",
+            "role": "spoken",
+            "quote": "this is probably the simplest kernel you can imagine. ... now these are pointers. Right, you can think about these as just integers, they're addresses."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:45:11-46:02",
+            "role": "spoken",
+            "quote": "What I do is I read. And this is basically pointer arithmetic. ... According to the mask, if I'm masked out, then I don't read it. ... And then you do tl store y pointer plus offsets y and the mask."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:48:38-49:16",
+            "role": "spoken",
+            "quote": "x pointer is a memory location in HBM. ... load takes those memory locations and returns the data associated with them. ... In practice, this is going to be generally a register or shared memory. Triton figures out what to do there."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:50:15-50:37",
+            "role": "spoken",
+            "quote": "all the kernels are going to look something like this. ... You wake up, you figure out which index you're going to look at. You read. You do some stuff, and then you write to HBM."
+          }
+        ],
+        "filtering_note": "Correctness is established by allclose against naive_gelu with atol=1e-6 (L323, L709-L713), not by argument. Overflow of exp(2a) for large a (giving inf/inf = nan) is not discussed; naive_gelu's torch.tanh has no such issue. 0.79788456 = sqrt(2/pi) is named only in the comment at L381. The kernel asserts x is CUDA and contiguous (L339-L340) because it indexes by flat offset. Spoken evidence (48:38-49:16, 47:35-47:43): where loaded data lives is not the programmer's choice: the local x is 'generally a register or shared memory. Triton figures out what to do there', and whether tensor cores are used 'you don't control that. The hardware figures out where to put things.' The tanh-from-exp workaround is not mentioned aloud ('you do your normal computation', 45:44). The kernel was shown, not traced: 'I'm not going to be able to trace through this' (42:18)."
+      },
+      "prerequisites": [
+        {
+          "kp": "triton-program-grid",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "gelu-fusion",
+          "basis": "teaching-order",
+          "note": "This is the one-read-one-write kernel the profiler showed for the fused versions."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Inside the kernel, a, exp and tanh are tensors written to memory like the intermediates of naive_gelu.",
+          "why_wrong": "They are block-local values held in registers; only tl.load (L379) and tl.store (L389) touch global memory, so each element crosses HBM once in and once out."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Count the tl.load and tl.store calls one program of triton_gelu_kernel executes, then say how many times each element of x crosses HBM over the whole launch (reads plus writes).",
+          "format": "short",
+          "answer": "1 load, 1 store; each element: 1 read and 1 write",
+          "why": "Every intermediate (a, exp, tanh) lives in registers between the single load at L379 and the single store at L389; no program touches another program's elements.",
+          "targets_misconception": "Inside the kernel, a, exp and tanh are tensors written to memory like the intermediates of naive_gelu."
+        },
+        "transfer": {
+          "q": "You extend the kernel so that y = gelu(x) * sigmoid(x), computing sigmoid from tl.exp in the same program. How many extra HBM reads and writes per element does that add, and what does the addition cost?",
+          "format": "short",
+          "answer": "Zero extra HBM traffic; only extra arithmetic on values already in registers, which is close to free for a memory-bound kernel.",
+          "why": "x is already loaded; sigmoid(x) and the product are more block-local ops before the single store (L379-L389)."
+        },
+        "check": {
+          "q": "One Triton program loads a block of x once and computes y = gelu(x) + gelu(2x) + x³ entirely in that program before a single masked store. Counting reads and writes of fp32 values, how many bytes of HBM traffic does each element cost? Type only the number.",
+          "format": "number",
+          "answer": "8",
+          "value": 8,
+          "tolerance": 0.01,
+          "why": "One 4-byte read of x and one 4-byte write of y. Every intermediate (2x, the two gelus, x³, the sums) lives in registers, so extra arithmetic adds no HBM traffic (L379-L389).",
+          "targets_misconception": "Inside the kernel, a, exp and tanh are tensors written to memory like the intermediates of naive_gelu.",
+          "varies": "a different composite expression and a byte count instead of 'extra' traffic",
+          "invariant": "inside one Triton program, intermediates stay on-chip; only tl.load and tl.store touch HBM",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Why does the kernel write exp = tl.exp(2*a) and tanh = (exp - 1)/(exp + 1) instead of calling a tanh function?",
+            "answer": "tl.tanh does not exist in the Triton language used; tanh is rebuilt from the exp identity.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which two lines of triton_gelu_kernel are the only ones that touch global memory?",
+            "answer": "tl.load at L379 and tl.store at L389."
+          },
+          {
+            "q": "Against which function and with what tolerance is triton_gelu checked?",
+            "answer": "naive_gelu; torch.allclose with atol=1e-6.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why can the kernel body be written as if x were a single number, when one program handles 1024 elements?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L361-L389"
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_06.py:L694-L697"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:50:15-50:37",
+          "notice": "listen for: the template every kernel follows: wake up, find your indices, read, compute, write"
+        }
+      ]
+    },
+    {
+      "id": "ptx-inspection",
+      "label": "Reading the PTX Triton generates",
+      "kind": "procedure",
+      "statement": "Triton compiles to PTX, the GPU assembly, readable via kernel.asm['ptx']; in it ld.global/st.global are the HBM reads and writes, %ctaid.x is the block index and %tid.x the thread index, %f* and %r* are float and integer registers, and the GeLU kernel's PTX shows each thread handling 8 elements (thread coarsening).",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L325-L328",
+            "role": "claim",
+            "quote": "Triton compiles down to PTX (parallel thread execution), an assembly language for GPUs. We can see the PTX code generated by Triton. link(get_local_url(\"var/triton_gelu-ptx.txt\"))"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L330-L334",
+            "role": "claim",
+            "quote": "ld.global.* and st.global.* reads and writes from global memory; %ctaid.x is block index, %tid.x is thread index; %f* are floating point registers, %r* are integer registers; One thread processes 8 elements at the same time (thread coarsening)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L735-L740",
+            "role": "computation",
+            "quote": "ptx = kernel.asm[\"ptx\"]; f.write(ptx)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L96",
+            "role": "claim",
+            "quote": "Example: thread coarsening (each thread processes multiple elements)."
+          },
+          {
+            "source": "ptx_isa",
+            "ref": "PTX ISA (special registers %ctaid, %tid; ld.global, st.global)",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:48:02-48:32",
+            "role": "spoken",
+            "quote": "this is in some sense a lie. ... This is basically for our consumption to specify the computation. The compiler takes this, as we'll see later, and writes it into something called ptx"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:50:53-51:08",
+            "role": "spoken",
+            "quote": "when you write Triton, the compiler generates ptx code, which is this intermediate assembly language for GPUs."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:51:22-52:01",
+            "role": "spoken",
+            "quote": "this is now what a thread is actually doing. Not a thread block, because that's been compiled away. ... this LD global is basically saying load from HBM into some registers. And the registers are denoted as the r are integer registers, fr, floating point registers."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:52:42-53:07",
+            "role": "spoken",
+            "quote": "I alluded to thread coarsening, which is that this is one thread. But rather than processing a single element, it's actually processing eight elements. So the compiler decided that, well, actually, this thread is pretty lightweight."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:53:30-54:07",
+            "role": "spoken",
+            "quote": "this is compiled once. And it's the same piece of code that each thread runs. ... the cta.x is the block index, and tid.x is the thread index."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:54:52-55:03",
+            "role": "spoken",
+            "quote": "There's still a lot of things that are not specified in ptx. Like, for example, which SM things are operating on and the warps and everything."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:56:27-56:50",
+            "role": "spoken",
+            "quote": "this load, is going to block for some number of cycles. ... remember, the SM is running multiple warps at the same time. So when you get to that point, it can just find another warp to run."
+          }
+        ],
+        "filtering_note": "The PTX file is generated at run time (var/triton_gelu-ptx.txt) and is not in the repository; the four observations are the professor's reading of it, and no PTX instruction text appears in the .py. The 8 elements per thread follows from BLOCK_SIZE=1024 and Triton's default of 4 warps (1024 / (4·32) = 8); the professor states the 8 but not this arithmetic (author inference). Spoken evidence (52:49-53:03): the eight elements per thread is the compiler's decision, 'this thread is pretty lightweight', i.e. thread coarsening chosen automatically. Spoken evidence (53:30-54:07): PTX is 'compiled once' and the same code runs on every thread, which tells itself apart only by %ctaid.x and %tid.x. Spoken evidence (54:52-56:50): even PTX does not fix which SM or warp runs the code, and a blocking ld.global is hidden because the SM 'can just find another warp to run' (answering a student's question about whether tl.load stalls). A follow-up, why four warp schedulers, is left unanswered (57:09)."
+      },
+      "prerequisites": [
+        {
+          "kp": "triton-gelu-kernel",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:execution-hierarchy",
+          "basis": "author-inference",
+          "note": "Block index versus thread index, and 32 threads per warp, are needed to read %ctaid.x / %tid.x and to turn 8 elements per thread into a thread count."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Because the Triton source reads elementwise, the compiled kernel runs one thread per element.",
+          "why_wrong": "The PTX shows each thread processing 8 elements (L334), the thread coarsening the professor described in the GPU review (L96); the thread-to-element mapping is the compiler's choice."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "BLOCK_SIZE = 1024 and the PTX shows each thread handling 8 elements. How many threads did Triton use per block, and how many warps is that?",
+          "format": "short",
+          "answer": "128 threads; 4 warps",
+          "why": "1024 elements / 8 per thread = 128 threads; 128 / 32 threads per warp = 4 warps (L334, L83).",
+          "targets_misconception": "Because the Triton source reads elementwise, the compiled kernel runs one thread per element."
+        },
+        "transfer": {
+          "q": "You dump the PTX for triton_softmax_kernel. Which special register would you expect to find selecting the row, and which instruction family would you expect to see for reading x_row?",
+          "format": "short",
+          "answer": "%ctaid.x (the program id, which is the row index at L467); ld.global for the row load at L473.",
+          "why": "tl.program_id(0) maps to the CTA index and tl.load from a global pointer maps to ld.global (L331-L332)."
+        },
+        "check": {
+          "q": "In the PTX Triton generates, which special register gives a thread its position within its block?",
+          "format": "choice",
+          "choices": [
+            "%ctaid.x",
+            "%tid.x",
+            "%f1",
+            "%r1"
+          ],
+          "answer": "%tid.x",
+          "distractor_from": [
+            "'%ctaid.x' <- misconception: 'Because the Triton source reads elementwise, the compiled kernel runs one thread per element.' (treats the program id as if it indexed individual elements)",
+            "'%f1' <- plausible: a float register, not an index",
+            "'%r1' <- plausible: an integer register holding a computed value, not a special register"
+          ],
+          "why": "%ctaid.x is the CTA (block) index, which tl.program_id maps to; %tid.x is the thread index within the block; %f* and %r* are ordinary float and integer registers (L330-L334).",
+          "targets_misconception": "Because the Triton source reads elementwise, the compiled kernel runs one thread per element.",
+          "varies": "the thread index instead of the block index",
+          "invariant": "PTX exposes block index (%ctaid) and thread index (%tid) as separate special registers",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What do ld.global and st.global in the PTX correspond to in the Triton source?",
+            "answer": "tl.load and tl.store on global-memory pointers."
+          },
+          {
+            "q": "Which PTX special register holds the block index and which the thread index?",
+            "answer": "%ctaid.x is the block index; %tid.x is the thread index.",
+            "layer": "detail"
+          },
+          {
+            "q": "How does the lecture obtain the PTX text of a launched Triton kernel?",
+            "answer": "kernel.asm[\"ptx\"] on the object returned by the launch.",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would giving each thread 8 elements rather than 1 be a reasonable choice for a memory-bound elementwise kernel?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L735-L740"
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_06.py:L330-L334"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:52:42-53:07",
+          "notice": "listen for: eight elements per thread, chosen by the compiler because the thread is lightweight"
+        }
+      ]
+    },
+    {
+      "id": "naive-softmax-traffic",
+      "label": "Naive softmax: 5MN+M reads, 3MN+2M writes vs MN/MN fused",
+      "kind": "quantity",
+      "statement": "Softmax exponentiates and normalizes each row; written as five PyTorch ops on an M×N matrix it costs 5MN + M reads and 3MN + 2M writes, whereas a fused kernel needs MN reads and MN writes, so about 4x less memory traffic.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L423-L439",
+            "role": "computation",
+            "quote": "Compute the max of each row (MN reads, M writes) ... Subtract off the max (MN + M reads, MN writes) ... normalization constant (MN reads, M writes) ... Normalize (MN reads, MN writes) ... Total: 5MN + M reads, 3MN + 2M writes. In principle, should have MN reads, MN writes (speedup of 4x!)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L398-L401",
+            "role": "claim",
+            "quote": "Exponentiate and normalize each row of a matrix: [0 0 0] => [1/3 1/3 1/3]; [1 1 -inf] => [1/2 1/2 0]"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L404-L408",
+            "role": "computation",
+            "quote": "x = torch.tensor([[5., 5, 5], [0, 0, 100]], ...); y1 = naive_softmax(x) # @inspect y1"
+          },
+          {
+            "source": "triton_fused_softmax_tutorial",
+            "ref": "Triton tutorial 02: fused softmax",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:58:16-58:35",
+            "role": "spoken",
+            "quote": "You exponentiate and normalize each row of a matrix. ... this is used in intention and used in generating output probabilities."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:59:04-59:38",
+            "role": "spoken",
+            "quote": "I'm going to compute the max of each row. And this is for numerical stability. I'm going to subtract off the max. And then I'm going to exponentiate element-wise."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:59:40-1:00:13",
+            "role": "spoken",
+            "quote": "remember, this is just plain PyTorch. ... unless you call to torch and compile, these are going to be different operations. ... five MN reads, three MN writes. And in principle, you should really only have much fewer."
+          }
+        ],
+        "filtering_note": "The 4x is 'in principle' (L439): (5MN + M + 3MN + 2M) / 2MN approaches 4 for large N. The professor does not say the max subtraction is for numerical stability, though the toy row [0, 0, 100] is exactly the case where exp(100) would overflow fp32. y1 = [[1/3, 1/3, 1/3], [0, 0, 1]] is deterministic and is stated. Spoken evidence (59:13), correcting this note: 'The professor does not say the max subtraction is for numerical stability' is wrong for the talk. Aloud: 'I'm going to compute the max of each row. And this is for numerical stability.' The code does not say it, and he does not connect it to the [0, 0, 100] row. The naive version is also said to be on Assignment 1 (58:55)."
+      },
+      "prerequisites": [
+        {
+          "kp": "gelu-fusion",
+          "basis": "teaching-order",
+          "note": "Same unfused-chain argument, now for an op with a reduction."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "Why counting reads and writes, not FLOPs, predicts the speedup."
+        },
+        {
+          "kp": "lecture_05:operator-fusion",
+          "basis": "author-inference"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The fused softmax is faster because it computes fewer exponentials.",
+          "why_wrong": "Both versions do the same arithmetic; the saving is bytes through HBM, from about 8MN down to 2MN (L438-L439)."
+        },
+        {
+          "belief": "A reduction like softmax cannot be fused because the max must be known before the exp.",
+          "why_wrong": "If the whole row sits on-chip in one program, max, subtract, exp, sum and divide all happen without returning to HBM (L488)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Using the per-op tallies at L423-L438, take M = 1 and N = 1000, add naive reads and writes, and divide by the fused kernel's MN + MN. What ratio do you get?",
+          "format": "number",
+          "answer": "4.0",
+          "tolerance": 0.05,
+          "why": "(5·1000 + 1) + (3·1000 + 2) = 8003 accesses versus 2000, ratio 4.0015: the professor's 'speedup of 4x' (L439).",
+          "targets_misconception": "The fused softmax is faster because it computes fewer exponentials."
+        },
+        "transfer": {
+          "q": "You delete the max step and the subtraction (ops 1 and 2) from naive_softmax. What are the new read and write totals, and what goes wrong on the row [0, 0, 100] in fp32?",
+          "format": "short",
+          "answer": "3MN + M reads and 2MN + M writes; exp(100) overflows fp32 to inf, so the row becomes inf/inf = nan.",
+          "why": "Remaining ops: exp (MN, MN), sum (MN, M), normalize (MN + M, MN), counting normalize's M denominator reads; the code comment at L435 counts normalize as MN reads, which gives 3MN. fp32 tops out near 3.4e38 and e^100 is about 2.7e43."
+        },
+        "check": {
+          "q": "A softmax without the max-subtraction step computes exp(x) directly in fp16, whose largest finite value is 65,504. What is the smallest integer logit for which exp overflows to inf? Type only the number.",
+          "format": "number",
+          "answer": "12",
+          "value": 12,
+          "tolerance": 0.01,
+          "why": "ln(65,504) ≈ 11.09, so exp(11) ≈ 59,874 still fits and exp(12) ≈ 162,755 overflows. The max subtraction (ops 1-2 of naive_softmax) makes every exponent ≤ 0, so it cannot overflow (L398-L408).",
+          "varies": "dtype (fp16) and asks the overflow threshold instead of the traffic totals",
+          "invariant": "without subtracting the row max, exp of a moderate logit overflows; with it, exp ≤ 1",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {
+            "q": "Naive five-op softmax on an M×N matrix: total reads and total writes?",
+            "answer": "5MN + M reads; 3MN + 2M writes."
+          },
+          {
+            "q": "Reads and writes of the ideal fused softmax, and the speedup the professor quotes?",
+            "answer": "MN reads, MN writes; about 4x."
+          },
+          {
+            "q": "Softmax of the row [1, 1, -inf]?",
+            "answer": "[1/2, 1/2, 0].",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the naive read count (5MN + M) exceed the write count (3MN + 2M)?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_06.py:L419-L440"
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "lecture_06.py:L438-L439",
+          "faded": true,
+          "steps": [
+            {
+              "do": "Row max (x.max): reads all MN entries, writes one value per row: MN reads, M writes.",
+              "why": "A reduction reads the whole matrix but writes only M results, which is why the reads end up outnumbering the writes."
+            },
+            {
+              "do": "Subtract the max: reads x and the M maxima (MN + M), writes MN. Exponentiate: MN reads, MN writes.",
+              "why": "Each op is its own kernel, so its input comes from HBM and its output goes back there, as in lecture 5's sin²x + cos²x chain."
+            },
+            {
+              "do": "Sum for the normaliser: MN reads, M writes. Normalise: MN reads, MN writes (the code's tally; the M denominators it also reads are not counted).",
+              "why": "Another reduction, then another elementwise kernel that re-reads the numerator from HBM."
+            },
+            {
+              "do": "Add up. Reads: MN + (MN + M) + MN + MN + MN = 5MN + M. Writes: M + MN + MN + M + MN = 3MN + 2M.",
+              "why": "Five kernels, each a full pass over the matrix; the M terms are the per-row maxima and sums."
+            },
+            {
+              "do": "Fused: one kernel reads x once and writes y once, MN + MN. The ratio (8MN + 3M) / 2MN is about 4 for large N: the 'speedup of 4x' of L439.",
+              "why": "Within one kernel a row's max, exponentials and sum stay on-chip; the FLOPs are the same, only the HBM round trips go away."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:59:04-59:38",
+          "notice": "listen for: the max is subtracted 'for numerical stability'"
+        }
+      ]
+    },
+    {
+      "id": "triton-softmax-kernel",
+      "label": "Triton softmax: one row per program, row stride, -inf padding",
+      "kind": "mechanism",
+      "statement": "The Triton softmax launches one program per row (grid (M,)), sets BLOCK_SIZE = next_power_of_2(N) so a whole row fits in one block, reaches the row through x_ptr + row_idx * x_row_stride, loads with mask col < num_cols and other=-inf so padding contributes exp(-inf) = 0, reduces with tl.max and tl.sum over axis 0, and stores the row with the same mask.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L448-L450",
+            "role": "computation",
+            "quote": "block_size = triton.next_power_of_2(N)  # Each block contains all the columns; num_blocks = M  # Each block is a row"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L453-L457",
+            "role": "computation",
+            "quote": "triton_softmax_kernel[(M,)](x_ptr=x, y_ptr=y, x_row_stride=x.stride(0), y_row_stride=y.stride(0), num_cols=N, BLOCK_SIZE=block_size)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L467-L473",
+            "role": "computation",
+            "quote": "row_idx = tl.program_id(0); col_offsets = tl.arange(0, BLOCK_SIZE); x_start_ptr = x_ptr + row_idx * x_row_stride; ... x_row = tl.load(x_ptrs, mask=col_offsets < num_cols, other=float(\"-inf\"))"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L476-L479",
+            "role": "computation",
+            "quote": "x_row = x_row - tl.max(x_row, axis=0); numerator = tl.exp(x_row); denominator = tl.sum(numerator, axis=0); y_row = numerator / denominator"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L482-L484",
+            "role": "computation",
+            "quote": "y_start_ptr = y_ptr + row_idx * y_row_stride; ... tl.store(y_ptrs, y_row, mask=col_offsets < num_cols)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L411",
+            "role": "figure",
+            "quote": "image(\"images/triton-softmax.png\", width=600)"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:00:42-1:01:11",
+            "role": "spoken",
+            "quote": "we're going to say each row is a block. ... Softmax is not an element wise. But it is row wise. So the blocks don't interact. And the blocks don't have shared memory, so that's fine."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:01:24-1:01:52",
+            "role": "spoken",
+            "quote": "I'm going to define the blocksize as basically the number of columns. Go to the next power of 2 for good luck. And then the number of blocks is just the number of rows."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:03:18-1:03:44",
+            "role": "spoken",
+            "quote": "if it's masked out, then I put minus infinity, because that's going to be the equivalent of a 0 for the Softmax operation."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:04:07-1:04:29",
+            "role": "spoken",
+            "quote": "if you can fit it into a block, you can just write normal PyTorch, almost."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:04:52-1:05:21",
+            "role": "spoken",
+            "quote": "if you want to do Softmax by column. I think that should be fine, because here, we're tracking these pointers ... all you would have to do is change the stride"
+          }
+        ],
+        "filtering_note": "Why BLOCK_SIZE must be a power of two (tl.arange requires it) is not said; the professor just calls next_power_of_2. The row stride is passed explicitly (L455), so non-contiguous rows would work, unlike row_sum_kernel which hardcodes row * N (L529). The assert at L464 is a compile-time check. Correctness is by check_equal_2d against pytorch_softmax (L416). Spoken evidence (1:01:37): the note's 'Why BLOCK_SIZE must be a power of two is not said' is confirmed by the audio: it is rounded up 'for good luck' (the real reason, tl.arange needing a power-of-two length, is never given). Spoken evidence (1:00:48-1:01:11): why one program per row: softmax 'is row wise. So the blocks don't interact', and blocks share no memory (see reduction-stays-in-one-block). A student asks about softmax over columns; the hedged answer is to change the strides (1:04:52-1:05:21)."
+      },
+      "prerequisites": [
+        {
+          "kp": "naive-softmax-traffic",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "triton-program-grid",
+          "basis": "teaching-order",
+          "note": "Same program_id / arange / mask pattern, now with one row per program."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Padding with other=0.0 would work just as well as -inf.",
+          "why_wrong": "A padded 0 enters the max and, after subtraction, exp(0 - max) adds a positive term to the denominator, so the real entries are under-normalized; -inf is ignored by the max and gives exp(-inf) = 0 (L473)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "N = 3 columns, so BLOCK_SIZE = 4 and one column is padding. Someone changes other to 0.0. For the row [5, 5, 5], what value does the kernel now output for each of the three real entries? (Give the number; the correct output would be 1/3.)",
+          "format": "number",
+          "answer": "0.3326",
+          "tolerance": 0.001,
+          "why": "x_row = [5, 5, 5, 0]; max 5; exp of [0, 0, 0, -5] = [1, 1, 1, 0.0067]; denominator 3.0067, so each real entry is 1/3.0067 = 0.3326 instead of 0.3333. With -inf the fourth term is exactly 0.",
+          "targets_misconception": "Padding with other=0.0 would work just as well as -inf."
+        },
+        "transfer": {
+          "q": "x is 2048 × 1000. How many programs does triton_softmax launch, what BLOCK_SIZE does the host pick, and how many padded columns does each program carry?",
+          "format": "short",
+          "answer": "2048 programs; BLOCK_SIZE = 1024; 24 padded columns",
+          "why": "grid is (M,) (L453); next_power_of_2(1000) = 1024 (L449); 1024 - 1000 = 24 columns are masked and loaded as -inf."
+        },
+        "check": {
+          "q": "triton_softmax runs on x of shape 512 × 3000. How many padded columns does each program carry? Type only the number.",
+          "format": "number",
+          "answer": "1096",
+          "value": 1096,
+          "tolerance": 0.01,
+          "why": "BLOCK_SIZE = next_power_of_2(3000) = 4096, so each row's block has 4096 − 3000 = 1096 masked columns, loaded as −inf so they add exp(−inf) = 0 (L448-L450, L467-L473).",
+          "varies": "the matrix shape",
+          "invariant": "the row block is rounded up to a power of two, and the excess columns are masked padding",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What is the grid of triton_softmax_kernel, and what does each program own?",
+            "answer": "(M,): one program per row; each program owns one whole row."
+          },
+          {
+            "q": "Why is other=float('-inf') used for the masked load?",
+            "answer": "So padded columns do not change the row max and contribute exp(-inf) = 0 to the sum."
+          },
+          {
+            "q": "Which two reductions appear in the kernel, and over which axis?",
+            "answer": "tl.max and tl.sum, both over axis=0 (the column vector).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the softmax kernel never need a loop, while the row-sum kernel in the next section does?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L462-L484"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/triton-softmax.png"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--softmax-padding",
+          "notice": "With other = -inf the padding share of the denominator is exactly 0 and every output is 1/N; with other = 0.0 each padded lane adds exp(0 − max), so the outputs fall below 1/N, badly when the row's values are negative."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:00:42-1:01:11",
+          "notice": "listen for: one block per row because softmax is row-wise and blocks do not interact"
+        }
+      ]
+    },
+    {
+      "id": "triton-row-sum-kernel",
+      "label": "Row sum when the row exceeds BLOCK_SIZE: tile loop plus final reduce",
+      "kind": "mechanism",
+      "statement": "When a row is longer than BLOCK_SIZE, one program per row loops over tiles: acc, a BLOCK_SIZE vector, accumulates each masked tile load (other=0.0), and a single tl.sum(acc, axis=0) after the loop collapses the vector to the row's scalar.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L488-L495",
+            "role": "claim",
+            "quote": "What if the row doesn't fit in a block? Example: 4096 columns, but block size is 1024... Break up row into tiles; Each thread iterates over tiles and accumulates a sum; Do final reduction (sum) over accumulators of each thread (shared memory or warp shuffles)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L521-L530",
+            "role": "computation",
+            "quote": "One row: T1 T2 T3 T4 | T1 T2 T3 T4 | T1 T2 T3 T4 (N = 12, BLOCK_SIZE = 4); acc = tl.zeros([BLOCK_SIZE], dtype=tl.float32); for start in range(0, N, BLOCK_SIZE): ... x = tl.load(x_ptr + row * N + cols, mask=mask, other=0.0); acc += x"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L532-L535",
+            "role": "computation",
+            "quote": "Final reduction from BLOCK_SIZE (all threads) to a scalar: result = tl.sum(acc, axis=0); tl.store(out_ptr + row, result)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L498-L503",
+            "role": "computation",
+            "quote": "x = torch.tensor([[1., 2, 3, 4], [5, 6, 7, 8]]) ... y1 = builtin_row_sum(x) ... y2 = triton_row_sum(x)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L34",
+            "role": "claim",
+            "quote": "Examples: GeLU (elementwise), softmax (row-wise), row sum (baby tiling), matmul (tiling)"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:05:30-1:06:17",
+            "role": "spoken",
+            "quote": "if you have, let's say, a row that's 4,000 columns, but the blocksize is only 1,024. ... We're going to break up the row into tiles. So in this case, there's going to be four tiles. And each thread is going to iterate over the tiles and accumulate a sum."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:07:05-1:08:13",
+            "role": "spoken",
+            "quote": "tile 0 is columns 0 through 3, tile 1 is columns 4 through 7. ... So here, I'm putting 3, 1, 4, 1. And then the second loop iteration, I'm going to add 5 to this. I get 8. I add 9 to this, I get 10. ... a vector of accumulators."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:09:59-1:10:18",
+            "role": "spoken",
+            "quote": "we have a for loop within a thread. And this is necessary when your data doesn't fit within a block."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:10:29-1:10:55",
+            "role": "spoken",
+            "quote": "this is up to the Triton compiler to figure out where to put it. But in general, if the blocksize is large enough, it has to go in shared memory."
+          }
+        ],
+        "filtering_note": "The demo input has N = 4 < BLOCK_SIZE = 1024, so the loop runs once; the 4096/1024 case is only described (L490). The comment at L522 is the clearest picture: with N = 12 and BLOCK_SIZE = 4, lane i accumulates columns i, i+4, i+8. The address x_ptr + row * N + cols (L529) assumes contiguous rows, unlike softmax's explicit stride. 'Shared memory or warp shuffles' (L495) names mechanisms Triton hides behind tl.sum. y1 = y2 = [10, 26] is deterministic. Spoken evidence (1:07:05-1:08:13): a worked trace the code only sketches (L522): with BLOCK_SIZE 4, the accumulators start at the first tile [3, 1, 4, 1], become [8, 10, 6, 7] after the second, and the third tile (columns 8-11) adds only 5 and 3, so it is partial and masked; one sum at the end. Where acc lives is 'up to the Triton compiler', and 'if the blocksize is large enough, it has to go in shared memory' (1:10:39-1:10:55). Row sum stands in for a long-row softmax 'because it's just easier to think about' (1:06:19); the online softmax a long row would need is not shown."
+      },
+      "prerequisites": [
+        {
+          "kp": "triton-softmax-kernel",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Each loop iteration reduces its tile to a scalar and adds it to a running total.",
+          "why_wrong": "acc is a BLOCK_SIZE vector and the loop only does elementwise adds (L530); the one vector-to-scalar reduction happens after the loop (L533)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "N = 12, BLOCK_SIZE = 4, and the row is [1, 2, ..., 12]. After the loop finishes, what is the 4-vector acc, and what does tl.sum(acc, axis=0) return?",
+          "format": "short",
+          "answer": "acc = [15, 18, 21, 24]; sum = 78",
+          "why": "Lane i sums columns i, i+4, i+8 (L522): [1+5+9, 2+6+10, 3+7+11, 4+8+12]; the final tl.sum gives 78 = 12·13/2.",
+          "targets_misconception": "Each loop iteration reduces its tile to a scalar and adds it to a running total."
+        },
+        "transfer": {
+          "q": "N = 10 and BLOCK_SIZE = 4. How many loop iterations run, and in the last one which column indices are masked and what value do they add to acc?",
+          "format": "short",
+          "answer": "3 iterations (start = 0, 4, 8); columns 10 and 11 are masked and add 0.0 (the other value).",
+          "why": "range(0, 10, 4) = 0, 4, 8; at start = 8 the cols are 8..11 and mask = cols < 10 (L526-L529)."
+        },
+        "check": {
+          "q": "The row-sum kernel runs with N = 11, BLOCK_SIZE = 4, on the row [1, 2, ..., 11]. After the tile loop finishes, what is acc[3] (0-indexed), before tl.sum? Type only the number.",
+          "format": "number",
+          "answer": "12",
+          "value": 12,
+          "tolerance": 0.01,
+          "why": "Iterations start at 0, 4, 8. Position 3 of each tile holds columns 3, 7 and 11: values 4 and 8, while column 11 is masked and adds 0.0. acc[3] = 4 + 8 + 0 = 12. Each iteration adds a whole vector; only the final tl.sum reduces it to a scalar (L521-L535).",
+          "targets_misconception": "Each loop iteration reduces its tile to a scalar and adds it to a running total.",
+          "varies": "row length and the question (one accumulator entry instead of iteration count)",
+          "invariant": "acc is a BLOCK_SIZE vector accumulated across tiles, with masked lanes contributing the other value 0.0",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What shape is acc in row_sum_kernel, and what operation turns it into a scalar?",
+            "answer": "[BLOCK_SIZE] (L523); tl.sum(acc, axis=0) at L533."
+          },
+          {
+            "q": "Why is other=0.0 right for the row-sum load but -inf right for the softmax load?",
+            "answer": "0 is the identity for a sum; -inf is the identity for a max and gives exp(-inf) = 0 in the softmax sum."
+          },
+          {
+            "q": "Which of the two reduction kernels assumes contiguous rows, and what pointer expression shows it?",
+            "answer": "row_sum_kernel: x_ptr + row * N + cols at L529 (softmax passes x_row_stride instead).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the professor call this 'baby tiling'? What is the tile here, and what is reused across the loop?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L517-L535"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/triton-row-sum.png"
+        },
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_06--blocks-vs-tiles",
+          "notice": "One block visits the tiles one loop step at a time: the acc lanes go 3,1,4,1 then 8,10,6,7, masked lanes add 0.0, and only after the last tile does tl.sum turn the 4 lanes into 39."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--launch-grid",
+          "notice": "In row-reduction mode with a short row [1, 2, …, N], acc[l] is the sum of every BLOCK_SIZE-th entry starting at l; the program count does not change when N grows, only the number of tiles."
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:1:07:05-1:08:13",
+          "notice": "listen for: four accumulators updated lane by lane (3,1,4,1 → 8,10,6,7), summed only at the end"
+        }
+      ]
+    },
+    {
+      "id": "reduction-stays-in-one-block",
+      "label": "A reduction stays inside one block: tiles, not more blocks",
+      "kind": "rule-of-thumb",
+      "statement": "Thread blocks (Triton programs) share no memory, so in the lecture's kernels a reduction is owned by one block: softmax and row sum launch one program per row, and a row longer than BLOCK_SIZE is cut into tiles that the same program loops over, not into extra blocks; the grid counts independent reductions, not tiles.",
+      "provenance": {
+        "status": "spoken",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:00:48-1:01:11",
+            "role": "spoken",
+            "quote": "why do I make each row a block? Well, because now, remember, each row, I have to normalize and sum. ... So the blocks don't interact. And the blocks don't have shared memory, so that's fine. There's no shared memory across blocks."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:11:06-1:11:28",
+            "role": "spoken",
+            "quote": "Remember when GeLU, we also split a row into a bunch of pieces. But those were blocks. ... These are not blocks. These are tiles. The block corresponds to this whole row. And the block has to basically process all the tiles."
+          }
+        ],
+        "filtering_note": "Spoken only (1:00:48-1:01:11, 1:11:06-1:11:28). The code says the softmax 'reduction happens within a block (handled by Triton)' (L488), 'Process each row independently' (L466), launches one program per row for both kernels (L450, L512) and describes the tile loop (L493-L494), but never says why a long row is not spread over several blocks. So the grid count in the prompts can be read off the code; what is spoken only is the reason, which the check tests. Aloud the reason and the contrast are explicit: 'the blocks don't interact. And the blocks don't have shared memory', and, against GeLU, 'These are not blocks. These are tiles. The block corresponds to this whole row.' The rule is the lecture's design, not a hardware law: real kernels can split one reduction across blocks with atomics or a second pass over partial sums (author note), which the lecture does not mention. Placed after triton-row-sum-kernel, where the contrast is drawn."
+      },
+      "prerequisites": [
+        {
+          "kp": "triton-row-sum-kernel",
+          "basis": "teaching-order",
+          "note": "The tile loop inside one program."
+        },
+        {
+          "kp": "triton-program-grid",
+          "basis": "teaching-order",
+          "note": "GeLU's grid of independent blocks is the contrast case."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A row longer than BLOCK_SIZE is split across several blocks, the way GeLU splits a long vector.",
+          "why_wrong": "GeLU's pieces never need each other. A row sum's pieces must be added together, and blocks have no shared memory in which to combine them, so the pieces become tiles that one program loops over (1:11:06-1:11:28)."
+        },
+        {
+          "belief": "The grid size is the number of BLOCK_SIZE pieces in the tensor, whatever the operation.",
+          "why_wrong": "That holds only for elementwise kernels. For a row reduction the grid is (M,), one program per row, however many tiles each row needs (L450, L512)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The lecture's row-sum kernel runs on a 512 × 4096 matrix with BLOCK_SIZE = 1024. How many programs (thread blocks) are in the launch grid? Type only the number.",
+          "format": "number",
+          "answer": "512",
+          "value": 512,
+          "tolerance": 0.01,
+          "why": "One program per row: the grid is (M,) = 512. Each program loops over 4096 / 1024 = 4 tiles. Cutting rows into blocks would give 2048 programs, but those blocks could not add their partial sums together.",
+          "targets_misconception": "A row longer than BLOCK_SIZE is split across several blocks, the way GeLU splits a long vector."
+        },
+        "transfer": {
+          "q": "The kernel is changed to sum each column of the same 512 × 4096 matrix, walking down a column with the row stride, using tiles of 128 elements along the column. How many programs are in the grid, and how many tile iterations does each one run?",
+          "format": "short",
+          "answer": "4096 programs (one per column), each running 512 / 128 = 4 tile iterations.",
+          "why": "Each column sum is one independent reduction, so it gets one program; its 512 elements are cut into tiles that the same program loops over. The grid counts reductions (4096), not tiles (16,384).",
+          "varies": "the reduction axis (rows to columns) and the tile length",
+          "invariant": "one program per independent reduction; tiles are looped inside it",
+          "transfer_distance": "near"
+        },
+        "check": {
+          "q": "In the GeLU kernel an 8192-element vector is cut into 8 pieces of 1024, each a separate block. In the row-sum kernel a 4096-column row is cut into 4 pieces of 1024, all handled by one block. Why the difference?",
+          "format": "choice",
+          "choices": [
+            "Row-sum pieces must be added together, and separate blocks share no memory to combine them",
+            "Launching extra blocks costs overhead, so row sum uses as few blocks as it possibly can",
+            "GeLU's vector is longer than one row, so it needs more blocks just to cover all of it",
+            "Row sum is memory-bound while GeLU is compute-bound, so row sum needs far fewer blocks"
+          ],
+          "answer": "Row-sum pieces must be added together, and separate blocks share no memory to combine them",
+          "distractor_from": "'launch overhead' <- treats a cost as the constraint (GeLU launches 8 blocks happily); 'longer vector' <- misconception: the grid size is the number of BLOCK_SIZE pieces whatever the operation; 'memory- vs compute-bound' <- both kernels are memory-bound, and boundness does not set the grid",
+          "why": "GeLU's pieces are independent, so they can be separate programs. A row sum's pieces feed one total, and blocks 'don't have shared memory' across them, so one program loops over the tiles and sums at the end (1:00:48-1:01:11, 1:11:06-1:11:28).",
+          "targets_misconception": "A row longer than BLOCK_SIZE is split across several blocks, the way GeLU splits a long vector.",
+          "varies": "surface: explain the design contrast instead of counting programs",
+          "invariant": "blocks cannot combine partial results, so a reduction lives inside one block",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Why does the lecture's softmax kernel give each row its own block?",
+            "answer": "Softmax normalizes over a row, and blocks share no memory ('the blocks don't interact'), so a row's max and sum must be computed inside one block; different rows are independent, so they can be separate blocks."
+          },
+          {
+            "q": "In the row-sum kernel, what is the difference between a tile and a block?",
+            "answer": "A block (program) owns one whole row; tiles are BLOCK_SIZE pieces of that row which the same block processes one after another in a loop."
+          }
+        ],
+        "self_explain": "Why can GeLU's pieces be independent blocks while a row's tiles cannot, and what would a kernel need in order to split one row across several blocks?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:lecture_06--blocks-vs-tiles",
+          "notice": "The same 10 values cut into the same 3 pieces become 3 blocks that all run at once in GeLU, but 1 block that visits 3 tiles in sequence in the row sum; the block count stays 1 while the acc lanes grow."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--launch-grid",
+          "notice": "In the reduction modes the program count follows the number of rows (or columns) and never the row length; making a row longer adds tiles to each program's loop, not programs."
+        },
+        {
+          "type": "video-span",
+          "action": "distinguish",
+          "ref": "video:1:11:06-1:11:28",
+          "notice": "listen for: 'These are not blocks. These are tiles.' and what the block corresponds to"
+        }
+      ]
+    },
+    {
+      "id": "tensor-strides",
+      "label": "Strides: a matrix is linear memory, index = row·stride_row + col·stride_col",
+      "kind": "definition",
+      "statement": "A matrix is linearized in memory; element (row, col) sits at row * stride_row + col * stride_col elements from the start, so a contiguous 2×4 tensor has strides (4, 1) and (1, 2) is at index 6; Triton kernels receive strides as arguments so pointer arithmetic can navigate a, b and c.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L591-L596",
+            "role": "computation",
+            "quote": "Review: each matrix is linearized in memory; x = torch.tensor([[0., 1, 2, 3], [4, 5, 6, 7]]); stride_row, stride_col = x.stride()  # @inspect stride_row stride_col; row = 1; col = 2; index = row * stride_row + col * stride_col  # @inspect index"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L623-L630",
+            "role": "computation",
+            "quote": "matmul_relu_kernel[grid](a, b, c, M, N, K, a.stride(0), a.stride(1), b.stride(0), b.stride(1), c.stride(0), c.stride(1), ...)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L455",
+            "role": "computation",
+            "quote": "x_row_stride=x.stride(0), y_row_stride=y.stride(0)"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:19:09-1:19:46",
+            "role": "spoken",
+            "quote": "in memory, it's linearized. ... multiply the row by the stride, the plus the column by the stride of the column. ... every time you go advance to the next row, you go four positions in your memory. And every time you advance a column, you go one. And if it were to transpose, it would be flipped."
+          }
+        ],
+        "filtering_note": "Only the row-major contiguous case is shown; the professor does not show a transposed view, where strides would be (1, 4). The values here are CPU-computed (stride (4, 1), index 6) and are stated. Strides are counted in elements, not bytes, which the lecture does not say. Spoken evidence (1:19:42), correcting this note: the transposed case is not shown, but it is said: 'if it were to transpose, it would be flipped', i.e. strides (1, 4)."
+      },
+      "prerequisites": [
+        {
+          "kp": "triton-softmax-kernel",
+          "basis": "author-inference",
+          "note": "x.stride(0) is first used, unexplained, in the softmax launch (L455); the review at L591 comes later."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:supp-row-major-layout",
+          "basis": "author-inference",
+          "note": "Row-major layout; this KP adds the stride formula and its use as kernel arguments."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A stride is a byte offset.",
+          "why_wrong": "x.stride() is in elements: the 2×4 float tensor at L592 has strides (4, 1), not (16, 4), and the pointer arithmetic x_ptr + row * stride adds elements to a typed pointer (L471, L656)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "x = torch.arange(12.).reshape(3, 4), contiguous. What is x.stride(), and what is the linear index of element (2, 1)?",
+          "format": "short",
+          "answer": "(4, 1); index 9",
+          "why": "Row-major: moving one row skips 4 elements, one column skips 1; 2·4 + 1·1 = 9 (L593-L596).",
+          "targets_misconception": "A stride is a byte offset."
+        },
+        "transfer": {
+          "q": "xt = x.T for the same contiguous 3×4 x (no copy). What is xt.stride(), and what linear index does xt[1, 2] map to?",
+          "format": "short",
+          "answer": "(1, 4); index 1·1 + 2·4 = 9, the same storage element as x[2, 1]",
+          "why": "Transposing a view swaps the strides without moving data; the formula row·stride_row + col·stride_col still holds, which is why kernels take strides rather than assuming row·N + col."
+        },
+        "check": {
+          "q": "x = torch.arange(24.).reshape(4, 6) is contiguous, and y = x.T is a view (no copy). What value is stored at y[3, 2]? Type only the number.",
+          "format": "number",
+          "answer": "15",
+          "value": 15,
+          "tolerance": 0.01,
+          "why": "y has strides (1, 6), so y[3, 2] sits at 3·1 + 2·6 = 15 elements from the start, the same storage as x[2, 3]. Because x = arange, the value equals the linear index: 15 (L591-L596, L623-L630).",
+          "targets_misconception": "A stride is a byte offset.",
+          "varies": "shape and index; the answer is read as a value rather than given as a stride tuple",
+          "invariant": "a transpose view swaps strides; index = row·stride_row + col·stride_col in elements",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "State the linear index formula for element (row, col) in terms of strides.",
+            "answer": "index = row * stride_row + col * stride_col."
+          },
+          {
+            "q": "Why does matmul_relu_kernel take six stride arguments?",
+            "answer": "Two per matrix (a, b, c) so the kernel can build pointers for any row-major, column-major or strided layout without assuming contiguity."
+          }
+        ],
+        "self_explain": "Why pass strides into the matmul kernel when row_sum_kernel got away with row * N + col?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_06.py:L591-L596"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--stride-map",
+          "notice": "Toggling x.T leaves the memory strip unchanged and swaps the two jumps: one step in i now moves 1 cell and one step in j moves a whole row of x."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:19:26-1:19:46",
+          "notice": "listen for: row stride 4, column stride 1, and 'flipped' for the transpose"
+        }
+      ]
+    },
+    {
+      "id": "matmul-tiling-intensity",
+      "label": "Matmul: naive O(1) intensity, tiling gives O(tile_size)",
+      "kind": "mechanism",
+      "statement": "A naive matmul reads A[m, k] and B[k, n] from HBM for every (m, n, k): MKN reads and O(1) arithmetic intensity; loading all of A and B into shared memory would give MK + KN reads but does not fit; tiling loads one A tile and one B tile per step into shared memory and reuses each across a whole output tile, for O(tile_size) intensity.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L551-L559",
+            "role": "claim",
+            "quote": "Naive approach: Fix any (m, n). For each k: Read A[m, k] and B[k, n] from HBM. Multiply and accumulate. ... Bottleneck: M K N reads, M N writes. Arithmetic intensity: O(1)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L561-L569",
+            "role": "claim",
+            "quote": "Computing C4 and C5 both need A4, A5, A6. Can we read A4, A5, A6 from HBM once to compute both? Answer: yes, using shared memory! ... Now we get M K + K N reads and M N writes. ... However, A and B are usually too large to fit in shared memory."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L574-L582",
+            "role": "claim",
+            "quote": "Key idea: divide the matrix C into output tiles (thread blocks). Fix an output tile in C. For each pair of (row tile of A, column tile of B): Load the corresponding A tile and B tile from HBM into shared memory. Perform matrix multiplication on the tiles. Accumulate ... Arithmetic intensity: O(tile_size)."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L573",
+            "role": "figure",
+            "quote": "image(\"images/gemm_tiled.png\", width=600)"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:13:58-1:14:43",
+            "role": "spoken",
+            "quote": "for every M and N and K, I have to read from HBM. So it's on the order of M times K times N reads. ... the number of reads is also the same. So arithmetic intensity is a constant, which is not good."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:14:43-1:15:10",
+            "role": "spoken",
+            "quote": "you notice that there is a lot of redundant reads. So imagine computing C4. You needed to read A4, A5, and A6. And if you compute C5, you're going to have to read those over again as well."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:15:14-1:16:09",
+            "role": "spoken",
+            "quote": "I'm going to load all of A and B into shared memory. ... I only get quadratic number of reads, which means I get the error intensity of order n ... A and B are usually too large to fit into shared memory."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:16:14-1:16:38",
+            "role": "spoken",
+            "quote": "this very classic idea of tiling. ... it's going to look like the naive-- it's going to globally look like the naive approach, but locally it look like the idealized approach"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:18:15-1:18:36",
+            "role": "spoken",
+            "quote": "the arithmetic intensity here now goes up to order tile size. So you can generally not reach order n, because that would require you to fit everything into shared memory. But if your tiles are big, then that's still not too bad."
+          }
+        ],
+        "filtering_note": "O(tile_size) is stated without the arithmetic. Filling it in: an output tile BM×BN with K-step BK does 2·BM·BN·BK FLOPs per BM·BK + BK·BN elements loaded, i.e. 2·BM·BN/(BM+BN) FLOPs per element, which is T for square tiles. Lecture 5 (tiling-shared-memory) made the same argument on slides as 'cut global reads by T'. The 'partial sum (in shared memory)' at L579 is held in registers (acc) in the Triton kernel. Spoken evidence (1:16:26-1:16:38): the framing the code lacks: tiling 'globally look[s] like the naive approach, but locally ... like the idealized approach'. Spoken evidence (1:18:20-1:18:36): O(n) is the ceiling you 'can generally not reach' because it would need everything in shared memory, and O(tile size) is 'still not too bad' if tiles are big. The O(n) ideal is linked back to lecture 2 (1:15:21). The 'error intensity' at 1:15:21 is a caption error for 'arithmetic intensity'."
+      },
+      "prerequisites": [
+        {
+          "kp": "cuda-vs-triton",
+          "basis": "teaching-order",
+          "note": "The load-to-shared, operate, write-back frame is what tiling instantiates."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:tiling-shared-memory",
+          "basis": "author-inference",
+          "note": "Same mechanism taught on slides; here it is restated as a recipe that the next KP implements."
+        },
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "O(1) versus O(tile_size) intensity only matters against the accelerator's FLOPs-per-byte."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Tiling makes the matmul faster by reducing FLOPs.",
+          "why_wrong": "The FLOPs are 2MNK either way; tiling cuts HBM reads from MKN toward MK + KN by reusing each loaded tile across an output tile (L558, L567, L582)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Square output tiles of side T (BLOCK_M = BLOCK_N = T). You double T. The total number of HBM reads of A and B is multiplied by what factor?",
+          "format": "number",
+          "answer": "0.5",
+          "tolerance": 0.05,
+          "why": "Each element of A is read once per column tile of C, N/T times, and each element of B once per row tile, M/T times; total reads (MKN + KNM)/T halve when T doubles. FLOPs do not change.",
+          "targets_misconception": "Tiling makes the matmul faster by reducing FLOPs."
+        },
+        "transfer": {
+          "q": "M = N = K = 1024 with the lecture's BLOCK_M = BLOCK_N = 64. How many times is each element of A read from HBM in the tiled kernel, versus in the naive per-(m, n) scheme?",
+          "format": "short",
+          "answer": "16 times (N / BLOCK_N) versus 1024 times (once per n)",
+          "why": "An A element is needed by every output column; tiling shares one load across the 64 columns of an output tile (L561-L563, L576-L577)."
+        },
+        "check": {
+          "q": "M = N = K = 4096 with BLOCK_M = BLOCK_N = 128 in the tiled matmul. How many times is each element of B read from HBM? Type only the number.",
+          "format": "number",
+          "answer": "32",
+          "value": 32,
+          "tolerance": 0.01,
+          "why": "A B element is needed by every output row; one tile load serves BLOCK_M = 128 rows, so it is loaded M / BLOCK_M = 4096 / 128 = 32 times, versus 4096 times in the naive per-(m, n) scheme (L561-L577).",
+          "varies": "matrix size and the operand (B, reused across rows, instead of A)",
+          "invariant": "tiling divides the number of HBM loads per element by the tile side along the reuse dimension",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Naive matmul: how many HBM reads, and what arithmetic intensity does the professor assign?",
+            "answer": "M·K·N reads; O(1)."
+          },
+          {
+            "q": "Why not simply load all of A and B into shared memory?",
+            "answer": "They are usually too large to fit."
+          },
+          {
+            "q": "What arithmetic intensity does tiling achieve, in the professor's notation?",
+            "answer": "O(tile_size)."
+          }
+        ],
+        "self_explain": "Why does the reuse come from the output tile being two-dimensional rather than a single row of C?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/gemm_tiled.png"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:tiling-sweep",
+          "notice": "Growing the tile shrinks the HBM-reads counter while the FLOPs counter stays fixed."
+        },
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "lecture_06.py:L574-L582",
+          "steps": [
+            {
+              "do": "Naive (L551-L558): for every (m, n) and every k, read A[m, k] and B[k, n] from HBM. That is on the order of MKN reads for 2MKN FLOPs, so O(1) FLOPs per read.",
+              "why": "Nothing is shared: C4 and C5 both need A4, A5, A6, and each output reads them separately."
+            },
+            {
+              "do": "Tiled, with square output tiles of side T: one tile of C needs T rows of A and T columns of B, each K long. It loads them once, one tile pair at a time, into shared memory: 2TK reads for the tile.",
+              "why": "In shared memory each A element is reused by the tile's T columns and each B element by its T rows."
+            },
+            {
+              "do": "There are (M/T)(N/T) output tiles, so the total is (M/T)(N/T) · 2TK = 2MKN/T reads.",
+              "why": "Put per element: each A element is read N/T times and each B element M/T times, lecture 5's factor-T argument."
+            },
+            {
+              "tex": "\\frac{2MKN\\ \\text{FLOPs}}{2MKN/T\\ \\text{reads}} = T = O(\\text{tile size})",
+              "do": "Divide FLOPs by reads.",
+              "why": "FLOPs do not depend on T and only the reads shrink, so intensity grows with the tile until the tiles no longer fit in shared memory (L569)."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:16:14-1:16:38",
+          "notice": "listen for: globally naive, locally idealized"
+        }
+      ]
+    },
+    {
+      "id": "triton-matmul-relu-kernel",
+      "label": "Fused matmul+ReLU in Triton: 2-D grid, pointer tiles, K loop, tl.dot",
+      "kind": "procedure",
+      "statement": "The fused matmul+ReLU kernel uses a 2-D grid (cdiv(M, BLOCK_M), cdiv(N, BLOCK_N)) so program (pid_m, pid_n) owns one output tile; it builds [BLOCK_M, BLOCK_K] and [BLOCK_K, BLOCK_N] pointer matrices from strides, loops k in steps of BLOCK_K doing acc += tl.dot(a, b) and advancing both pointer sets by BLOCK_K·stride, applies tl.maximum(acc, 0) once on the finished tile, and stores it through a 2-D mask.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L620-L621",
+            "role": "computation",
+            "quote": "BLOCK_M, BLOCK_N, BLOCK_K = 64, 64, 32; grid = (triton.cdiv(M, BLOCK_M), triton.cdiv(N, BLOCK_N))"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L647-L657",
+            "role": "computation",
+            "quote": "pid_m = tl.program_id(0); pid_n = tl.program_id(1); indices_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M) ... a_ptrs = a_ptr + indices_m[:, None] * stride_am + indices_k[None, :] * stride_ak  # [BLOCK_M, BLOCK_K]"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L659-L667",
+            "role": "computation",
+            "quote": "acc = tl.zeros([BLOCK_M, BLOCK_N], dtype=tl.float32); for k in range(0, K, BLOCK_K): a = tl.load(a_ptrs, mask=..., other=0.0); b = tl.load(b_ptrs, ...); acc += tl.dot(a, b); a_ptrs += BLOCK_K * stride_ak; b_ptrs += BLOCK_K * stride_bk"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L669-L674",
+            "role": "computation",
+            "quote": "Apply activation function (e.g., ReLU): acc = tl.maximum(acc, 0.0) ... tl.store(c_ptrs, acc, mask=(indices_m[:, None] < M) & (indices_n[None, :] < N))"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L584-L587",
+            "role": "claim",
+            "quote": "Bonus: Often, you want to apply an elementwise activation function. Example: GeLU(A @ B). Solution: kernel fusion!"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:12:16-1:12:41",
+            "role": "spoken",
+            "quote": "I'm going to do a matmul followed by a ReLU, just because, just for kicks. ... if you have one linear layer, it's a matmul. And then you apply a ReLU activation."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:18:36-1:18:53",
+            "role": "spoken",
+            "quote": "if you want to apply an element-wise activation function, it's very easy to just put it on at the end. And this is kernel fusion."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:19:54-1:20:24",
+            "role": "spoken",
+            "quote": "you wake up and you are on tile M and N. ... there's a bunch of index manipulation which you can-- I'll just gloss through"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:20:38-1:21:23",
+            "role": "spoken",
+            "quote": "set up this accumulator matrix. This is going to be in shared memory. ... I load A, the small matrix, I load B, the small B tile. And then I perform this dot. So remember, whenever things are in shared memory, things look like PyTorch"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:1:21:34-1:21:51",
+            "role": "spoken",
+            "quote": "if I wanted to apply element-wise non-linearity, I might as well do that here. Before I write it out to HBM, I can do some any operation on it."
+          }
+        ],
+        "filtering_note": "The 2-D masks with other=0.0 (L663-L664) make ragged M, N, K correct because padded products contribute 0; the professor does not walk this. acc is fp32 regardless of input dtype (L659). No correctness check against naive_matmul_relu runs in this section (c is computed at L542 and L599 but never compared; check_equal_2d_2d at L723 is unused). Tile sizes are fixed, not autotuned. For the 1024² demo the grid is 16×16 = 256 programs with 32 K-steps each (Python arithmetic, stated). The lecture's 'accumulate in shared memory' (L579) is acc in registers here. Spoken evidence (1:20:09-1:20:24): the pointer and index construction (L647-L657) is explicitly glossed over. Aloud the accumulator is again 'going to be in shared memory' (1:20:48), matching the comment at L579; this note's reading that acc is held in registers is the author's (Triton's usual allocation for a 64x64 fp32 tile), not the professor's. Why ReLU: one linear layer plus an activation is a common pattern, and fusing it costs nothing because the tile is still on-chip before the store (1:21:34-1:21:51)."
+      },
+      "prerequisites": [
+        {
+          "kp": "matmul-tiling-intensity",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "tensor-strides",
+          "basis": "teaching-order",
+          "note": "The pointer matrices are the stride formula broadcast over a tile."
+        },
+        {
+          "kp": "triton-row-sum-kernel",
+          "basis": "teaching-order",
+          "note": "Same loop-with-accumulator pattern, now with a 2-D accumulator and tl.dot instead of +."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:tiling-shared-memory",
+          "basis": "author-inference",
+          "note": "BLOCK_M × BLOCK_N is the output tile; BLOCK_K is how much of the contraction axis is staged per step."
+        },
+        {
+          "kp": "lecture_05:operator-fusion",
+          "basis": "author-inference",
+          "note": "The ReLU is fused because the tile is still on-chip when the loop ends."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Each program computes one output element, like the naive per-(m, n) description.",
+          "why_wrong": "A program owns a whole BLOCK_M × BLOCK_N tile (L651-L652, L659); that is where the reuse of A and B tiles comes from."
+        },
+        {
+          "belief": "The ReLU can be applied inside the K loop as partial sums accumulate.",
+          "why_wrong": "ReLU of a sum is not the sum of ReLUs of partial sums; the kernel applies tl.maximum once after the loop, on the completed tile (L670)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "M = N = K = 1024 with BLOCK_M = BLOCK_N = 64 and BLOCK_K = 32. How many programs are launched, and how many iterations does each program's K loop run?",
+          "format": "short",
+          "answer": "256 programs (16 × 16); 32 iterations",
+          "why": "grid = (cdiv(1024, 64), cdiv(1024, 64)) = (16, 16) (L621); range(0, 1024, 32) has 32 steps (L662).",
+          "targets_misconception": "Each program computes one output element, like the naive per-(m, n) description."
+        },
+        "transfer": {
+          "q": "You move acc = tl.maximum(acc, 0.0) inside the for loop, right after acc += tl.dot(a, b). For an output entry whose two K-step partial sums are -8 and then +5, what does the modified kernel output, and what should it output?",
+          "format": "short",
+          "answer": "It outputs 5 (max(-8, 0) = 0, then 0 + 5 = 5); the correct value is ReLU(-3) = 0.",
+          "why": "Clamping partial sums discards negative contributions before the sum is complete; the activation must wait for the finished tile (L670)."
+        },
+        "check": {
+          "q": "Someone moves acc = tl.maximum(acc, 0.0) inside the K loop, right after acc += tl.dot(a, b). For an output entry whose three K-step partial sums are −5, then +4, then +3, what does the modified kernel output? Type only the number.",
+          "format": "number",
+          "answer": "7",
+          "value": 7,
+          "tolerance": 0.01,
+          "why": "max(−5, 0) = 0; 0 + 4 = 4; 4 + 3 = 7. The correct output is ReLU(−5 + 4 + 3) = ReLU(2) = 2. Clamping partial sums drops negative contributions; ReLU must be applied once to the finished tile (L669-L674).",
+          "targets_misconception": "The ReLU can be applied inside the K loop as partial sums accumulate.",
+          "varies": "three partial sums whose true total is positive",
+          "invariant": "ReLU is not linear, so applying it to partial sums changes the result",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What do pid_m and pid_n select, and how are indices_m and indices_n formed from them?",
+            "answer": "The (m, n) output tile; indices_m = pid_m * BLOCK_M + arange(BLOCK_M), indices_n = pid_n * BLOCK_N + arange(BLOCK_N)."
+          },
+          {
+            "q": "How are a_ptrs and b_ptrs moved to the next tile each iteration?",
+            "answer": "a_ptrs += BLOCK_K * stride_ak; b_ptrs += BLOCK_K * stride_bk.",
+            "layer": "detail"
+          },
+          {
+            "q": "Which line fuses the activation, and where does it sit relative to the K loop?",
+            "answer": "acc = tl.maximum(acc, 0.0), after the loop and before the store."
+          }
+        ],
+        "self_explain": "Why is the output tile written to HBM exactly once even though the K loop runs K / BLOCK_K times?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L635-L674"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L607-L632"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "official/lectures/images/gemm_tiled.png"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_06--launch-grid",
+          "notice": "In matmul mode the grid counts output tiles, cdiv(M, BLOCK_M) × cdiv(N, BLOCK_N); changing K changes only the loop length inside each program, because the K reduction stays in one program."
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:21:34-1:21:51",
+          "notice": "listen for: the activation is applied to the finished tile before the single write to HBM"
+        }
+      ]
+    },
+    {
+      "id": "supp-kernel-launch",
+      "label": "Supplement: what a CUDA kernel launch is",
+      "kind": "definition",
+      "statement": "A kernel launch is the host enqueuing a GPU function to run over a grid of thread blocks; the call returns immediately (asynchronous) and carries a roughly fixed overhead regardless of how little work the kernel does, which is why timing needs torch.cuda.synchronize() and why tiny matmuls take constant time.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L185",
+            "role": "claim",
+            "quote": "torch.cuda.synchronize()  # Wait for CUDA threads to finish (important!)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L176",
+            "role": "claim",
+            "quote": "Note: time is roughly constant when dimension is small, then cubic scaling."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L353",
+            "role": "computation",
+            "quote": "kernel = triton_gelu_kernel[(num_blocks,)](x, y, num_elements, BLOCK_SIZE=BLOCK_SIZE)"
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L300",
+            "role": "claim",
+            "quote": "Naive implementation: multiple kernels, requires many reads/writes from/to HBM (no fusion)."
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:3:42-3:59",
+            "role": "spoken",
+            "quote": "when you launch a kernel, you're basically launching a grid of threads and thread blocks to all parallel simultaneously do some computation."
+          }
+        ],
+        "filtering_note": "The professor never defines 'kernel' or 'launch'; he uses them from L226 on. The flat small-dim regime (L176) is consistent with launch overhead but he does not attribute it. That the overhead is on the order of microseconds is general knowledge, not a lecture number, and no value is quoted. Spoken evidence (3:46), correcting this note: 'The professor never defines kernel or launch' is too strong for the talk; aloud a launch is defined in one sentence: 'when you launch a kernel, you're basically launching a grid of threads and thread blocks'. Asynchrony is said at 24:57 ('everything on the GPU is happening ... async'). The fixed per-launch overhead is still never said, and his reason for the flat small-matmul regime is under-filled hardware, not launch cost (25:55-26:23, see matmul-time-scaling), so this stays a supplement."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_05:execution-hierarchy",
+          "basis": "author-inference",
+          "note": "A launch is a grid of blocks of threads."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A kernel launch blocks the Python program until the GPU finishes.",
+          "why_wrong": "Launches are asynchronous; that is why benchmark() must call torch.cuda.synchronize() before reading the clock (L185, L198)."
+        },
+        {
+          "belief": "Launch overhead is negligible next to any GPU work.",
+          "why_wrong": "For small inputs the overhead is the whole time, which is why the matmul timings are flat at small dims (L176) and why many tiny kernels (naive_gelu) lose to one fused kernel even before counting bytes."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two implementations do identical total GPU work on a tiny tensor, but A launches 1 kernel and B launches 8. In the overhead-dominated regime, B's time relative to A's is closest to which?",
+          "format": "choice",
+          "choices": [
+            "about the same",
+            "about 8x",
+            "about 64x"
+          ],
+          "answer": "about 8x",
+          "why": "When the work per kernel is negligible, time is launches times fixed overhead.",
+          "targets_misconception": "Launch overhead is negligible next to any GPU work."
+        },
+        "transfer": {
+          "q": "A training loop calls a tiny elementwise kernel 1000 times on a 100-element tensor. Which lever cuts the time more: a GPU with 2x the memory bandwidth, or fusing the 1000 calls into one kernel, and why?",
+          "format": "short",
+          "answer": "Fusing; the time is 1000 launch overheads, not bytes moved, so bandwidth barely matters.",
+          "why": "Bandwidth only helps once a kernel's traffic exceeds its launch cost; at 100 elements it never does."
+        },
+        "check": {
+          "q": "A loop calls a tiny elementwise kernel 1,000 times on a 100-element tensor. You move to a GPU with 2x the memory bandwidth and the same launch overhead. What happens to the total time? Answer up, down or same.",
+          "format": "trend",
+          "answer": "same (roughly): the time is 1,000 launch overheads; the bytes moved per call are negligible, so bandwidth barely matters.",
+          "value": "same",
+          "why": "Bandwidth only helps once a kernel's traffic outweighs its launch cost; at 100 elements it never does. Fusing the calls is the lever (L176, L185).",
+          "targets_misconception": "Launch overhead is negligible next to any GPU work.",
+          "varies": "the hardware lever is applied and the learner predicts its effect",
+          "invariant": "in the overhead-bound regime, time is set by the number of launches, not bytes",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What does torch.cuda.synchronize() do, and why must benchmark() call it before reading the timer?",
+            "answer": "It blocks the host until all queued GPU work finishes; without it the timer stops while the kernel is still running, because launches are asynchronous."
+          },
+          {
+            "q": "In the Triton GeLU, which Python expression is one kernel launch?",
+            "answer": "triton_gelu_kernel[(num_blocks,)](x, y, num_elements, BLOCK_SIZE=BLOCK_SIZE).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does making launches asynchronous help overall throughput even though it complicates timing?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_06.py:L183-L200"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-trend",
+          "ref": "fixture:lecture_06--matmul-time",
+          "notice": "Switching to the 2× faster GPU halves only the work term: on the fixed-cost floor (small dim) the time does not move, because the per-call cost is not arithmetic."
+        }
+      ]
+    },
+    {
+      "id": "supp-memory-bound-fusion",
+      "label": "Supplement: memory-bound elementwise ops and what fusion buys",
+      "kind": "mechanism",
+      "statement": "An elementwise op on a large tensor is memory-bound (a few FLOPs per element against bytes moved), so its time is set by bytes through HBM, not FLOPs; a chain of k unfused elementwise ops moves the tensor through HBM about k times while a fused kernel moves it once, so fusion's speedup is on the order of the eliminated round trips, and extra arithmetic inside the fused kernel is nearly free.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L67-L70",
+            "role": "claim",
+            "quote": "For elementwise operations (e.g., GeLU), threads are most natural: each thread processes one element. ... Reading/writing from HBM is slow, so use shared memory (local to SM)."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L300-L301",
+            "role": "claim",
+            "quote": "Naive implementation: multiple kernels, requires many reads/writes from/to HBM (no fusion). Builtin and compiled versions: one kernel (kernel fusion), one read from HBM, one write to HBM."
+          },
+          {
+            "source": "lecture_06",
+            "ref": "lecture_06.py:L33",
+            "role": "claim",
+            "quote": "Triton: think in terms of thread blocks (read to shared memory, do stuff (fusion), write back HBM)"
+          },
+          {
+            "source": "lecture_06_video",
+            "ref": "video:35:03-35:27",
+            "role": "spoken",
+            "quote": "naive implementation. Multiple kernels requires multiple reads and writes to and from HBM. There's no kernel fusion here. This is slow. ... you read from HBM once, you write to HBM once per element."
+          }
+        ],
+        "filtering_note": "Lecture 2 established GeLU as memory-bound (about 5 FLOPs per byte against roughly 295 needed on H100 bf16); lecture 6 uses the consequence without restating it. 'About k round trips' is approximate: an op with two tensor inputs reads twice, and fp32 versus bf16 changes bytes per element. Spoken evidence (35:03-35:27): the fused/unfused contrast is said in round-trip terms ('you read from HBM once, you write to HBM once per element'); that an elementwise op is memory-bound, so round trips set its time, is still not said aloud."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:arithmetic-intensity",
+          "basis": "author-inference",
+          "note": "The memory-bound test is the premise."
+        },
+        {
+          "kp": "lecture_05:operator-fusion",
+          "basis": "author-inference"
+        },
+        {
+          "kp": "lecture_05:memory-wall-roofline",
+          "basis": "author-inference",
+          "note": "Why being memory-bound is the common case for non-matmul ops."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The time of an elementwise kernel is proportional to its FLOPs per element.",
+          "why_wrong": "Below the roofline kink time is bytes divided by bandwidth; GeLU's ~20 FLOPs per element and ReLU's 1 take the same time (lecture 2, L368-L415), and the fused GeLU kernel's extra exp costs nothing visible."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Inside the fused Triton GeLU kernel you replace the tanh approximation with the exact erf-based GeLU, which does more arithmetic per element but touches the same bytes. The kernel time changes how (up / down / same)?",
+          "format": "trend",
+          "answer": "same (roughly unchanged)",
+          "why": "The kernel is memory-bound: bytes in and out are identical, and the extra FLOPs are hidden under the memory time.",
+          "targets_misconception": "The time of an elementwise kernel is proportional to its FLOPs per element."
+        },
+        "transfer": {
+          "q": "You run the same fused elementwise kernel on bf16 input and output instead of fp32: same FLOPs, half the bytes. The time multiplies by about what factor?",
+          "format": "number",
+          "answer": "0.5",
+          "tolerance": 0.2,
+          "why": "Memory-bound time is bytes over bandwidth; halving bytes halves the time while the FLOPs are irrelevant."
+        },
+        "retrieval": [
+          {
+            "q": "For a memory-bound elementwise op, which quantity sets the time, and what does fusion change about it?",
+            "answer": "Bytes moved through HBM; fusion removes the intermediate round trips so the tensor crosses HBM once in and once out."
+          },
+          {
+            "q": "Roughly how does the speedup from fusing k elementwise ops scale with k, and why is it not exact?",
+            "answer": "About k (one HBM round trip per op becomes one total); not exact because ops with two tensor inputs read twice and element sizes differ."
+          }
+        ],
+        "self_explain": "Why does the same reasoning not promise a k× speedup for fusing k large matmuls?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "predict-trend",
+          "ref": "fixture:fusion-timeline",
+          "notice": "When the kernels fuse, the bytes bar shrinks to one read and one write while the FLOPs bar does not move."
+        }
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Order in which main() calls sections in lecture_06.py (L17-L26), mapped to KPs. review_of_gpus (L39-L141) is the professor's recap of lecture 5 and anchors KPs here only where it introduces the programming-model vocabulary; its hardware numbers are owned by the lecture_05 thread. The summary list (L28-L36) is not a KP. Spoken-only KP (status 'spoken', from the lecture captions) placed where it is said: reduction-stays-in-one-block (1:11:06) after triton-row-sum-kernel.",
+    "stops": [
+      "benchmark-recipe",
+      "matmul-time-scaling",
+      "profiler-kernels",
+      "gelu-fusion",
+      "cuda-vs-triton",
+      "triton-program-grid",
+      "triton-gelu-kernel",
+      "ptx-inspection",
+      "naive-softmax-traffic",
+      "triton-softmax-kernel",
+      "triton-row-sum-kernel",
+      "reduction-stays-in-one-block",
+      "matmul-tiling-intensity",
+      "tensor-strides",
+      "triton-matmul-relu-kernel"
+    ],
+    "supplements": [
+      "supp-kernel-launch",
+      "supp-memory-bound-fusion"
+    ]
+  },
+  "spoken_filtering": [
+    {
+      "at": "4:22",
+      "kind": "skip",
+      "quote": "Some of these things are invisible to the programmer, but they are in the hardware. But we won't worry about them for this intro lecture.",
+      "what_was_filtered": "Thread block clusters and B200 tensor memory (TMEM) are named and set aside.",
+      "kp": null
+    },
+    {
+      "at": "16:24",
+      "kind": "skip",
+      "quote": "There are some solutions here, which I won't get into. Something called swizzling",
+      "what_was_filtered": "How swizzling avoids bank conflicts.",
+      "kp": null
+    },
+    {
+      "at": "21:59",
+      "kind": "aside",
+      "quote": "I'm not going to actually maybe say that much in terms of content.",
+      "what_was_filtered": "Benchmarking and profiling are presented as a habit more than as content.",
+      "kp": "benchmark-recipe"
+    },
+    {
+      "at": "23:05",
+      "kind": "aside",
+      "quote": "But because this class is language models from scratch, I'm going to do it from scratch.",
+      "what_was_filtered": "torch.utils.benchmark is linked but not used.",
+      "kp": "benchmark-recipe"
+    },
+    {
+      "at": "25:24",
+      "kind": "skip",
+      "quote": "you probably want to maybe look at the whole distribution, the P95 or whatever. But we'll just do the average here.",
+      "what_was_filtered": "Timing distributions (P95) are replaced by the mean.",
+      "kp": "benchmark-recipe"
+    },
+    {
+      "at": "26:55",
+      "kind": "defer-assignment",
+      "quote": "In your assignment, you'll use Nsight, which gives you more details.",
+      "what_was_filtered": "Nsight profiling goes to the assignment.",
+      "kp": "profiler-kernels"
+    },
+    {
+      "at": "27:01",
+      "kind": "skip",
+      "quote": "But we're going to skip that in the interest of time.",
+      "what_was_filtered": "Nsight is not shown in lecture.",
+      "kp": "profiler-kernels"
+    },
+    {
+      "at": "30:08",
+      "kind": "defer-assignment",
+      "quote": "I think we make you do it on the assignment, so you have no choice.",
+      "what_was_filtered": "Practice with benchmarking and profiling goes to the assignment.",
+      "kp": "profiler-kernels"
+    },
+    {
+      "at": "34:24",
+      "kind": "skip",
+      "quote": "I'm not going to say too much about how it works",
+      "what_was_filtered": "How torch.compile turns the computation graph into a Triton kernel.",
+      "kp": "gelu-fusion"
+    },
+    {
+      "at": "36:42",
+      "kind": "aside",
+      "quote": "And I think none of this is terribly optimized.",
+      "what_was_filtered": "The GeLU timings are illustrative, not tuned; the compiled-vs-builtin gap is hardware dependent.",
+      "kp": "gelu-fusion"
+    },
+    {
+      "at": "38:55",
+      "kind": "aside",
+      "quote": "But let's not worry about that.",
+      "what_was_filtered": "Triton's limits for the newest hardware features.",
+      "kp": "cuda-vs-triton"
+    },
+    {
+      "at": "42:18",
+      "kind": "skip",
+      "quote": "unfortunately, I'm not going to be able to trace through this, so I'll just show you what the code looks like here.",
+      "what_was_filtered": "The Triton kernel cannot be stepped through in the executable lecture; its code is shown instead.",
+      "kp": "triton-gelu-kernel"
+    },
+    {
+      "at": "47:31",
+      "kind": "aside",
+      "quote": "And maybe I'll get back to that. But the short answer is that you don't control that.",
+      "what_was_filtered": "How Triton code maps onto tensor cores.",
+      "kp": "triton-gelu-kernel"
+    },
+    {
+      "at": "50:01",
+      "kind": "defer-later",
+      "quote": "Let me try to come back to this question when I show you the ptx",
+      "what_was_filtered": "Whether tl.load stalls the thread; answered at 56:22 (warp switching).",
+      "kp": "ptx-inspection"
+    },
+    {
+      "at": "51:08",
+      "kind": "skip",
+      "quote": "I am obviously not going to go through all of this, but just to give you the flavor of what this looks like.",
+      "what_was_filtered": "The PTX listing is skimmed, not read.",
+      "kp": "ptx-inspection"
+    },
+    {
+      "at": "55:42",
+      "kind": "aside",
+      "quote": "I think sometimes you just have to reach in and actually handhold a bit more. But generally, yeah, you shouldn't need to do that.",
+      "what_was_filtered": "Hand-writing PTX.",
+      "kp": "ptx-inspection"
+    },
+    {
+      "at": "57:06",
+      "kind": "aside",
+      "quote": "why four warp schedules? I don't exactly the reason behind that.",
+      "what_was_filtered": "A student's question about why an SM has four warp schedulers is left unanswered.",
+      "kp": null
+    },
+    {
+      "at": "57:57",
+      "kind": "defer-assignment",
+      "quote": "And then hopefully by that point, you'll have all the ingredients that you need to do the assignment and implement flash attention.",
+      "what_was_filtered": "FlashAttention is implemented in the assignment, not in lecture.",
+      "kp": null
+    },
+    {
+      "at": "58:55",
+      "kind": "defer-assignment",
+      "quote": "Actually, I think this is on assignment one.",
+      "what_was_filtered": "The naive softmax is an Assignment 1 exercise.",
+      "kp": "naive-softmax-traffic"
+    },
+    {
+      "at": "1:04:37",
+      "kind": "defer-later",
+      "quote": "So we'll come back to that, yeah.",
+      "what_was_filtered": "Rows wider than a block; answered by the row-sum tiling that follows.",
+      "kp": "triton-row-sum-kernel"
+    },
+    {
+      "at": "1:06:19",
+      "kind": "aside",
+      "quote": "And now I'm switching from Softmax to row sum because it's just easier to think about.",
+      "what_was_filtered": "A softmax over rows wider than a block (which needs a running max) is replaced by row sum; the long-row softmax is not shown.",
+      "kp": "triton-row-sum-kernel"
+    },
+    {
+      "at": "1:20:09",
+      "kind": "skip",
+      "quote": "there's a bunch of index manipulation which you can-- I'll just gloss through",
+      "what_was_filtered": "The matmul kernel's pointer and index construction.",
+      "kp": "triton-matmul-relu-kernel"
+    },
+    {
+      "at": "1:24:15",
+      "kind": "defer-later",
+      "quote": "Next time, we're going to go to more GPU and talk about multi-GPU programming.",
+      "what_was_filtered": "Multi-GPU programming is next lecture.",
+      "kp": null
+    },
+    {
+      "at": "1:25:04",
+      "kind": "aside",
+      "quote": "Of course, in the extreme, you can always go to ptx and write that. But I wouldn't advise that as a first step.",
+      "what_was_filtered": "Alternatives to Triton (PTX, ThunderKittens, CuTe DSL) are named, not taught.",
+      "kp": null
+    },
+    {
+      "at": "1:26:24",
+      "kind": "aside",
+      "quote": "I think it's hard to answer this in the abstract. It depends on the nature of the computation. Maybe we can talk offline about that.",
+      "what_was_filtered": "A question about loading whole tensors versus processing pieces is taken offline.",
+      "kp": null
+    }
+  ],
+  "spoken_map": [
+    {
+      "from": "0:05",
+      "to": "0:30",
+      "kp": null,
+      "what": "welcome; link to Tatsu's GPU lecture"
+    },
+    {
+      "from": "0:30",
+      "to": "3:14",
+      "kp": null,
+      "what": "recap of GPU hardware: SMs, registers, L1/shared, L2, HBM (owned by the lecture_05 thread)"
+    },
+    {
+      "from": "3:14",
+      "to": "4:34",
+      "kp": "triton-program-grid"
+    },
+    {
+      "from": "4:34",
+      "to": "7:04",
+      "kp": "cuda-vs-triton"
+    },
+    {
+      "from": "7:04",
+      "to": "8:47",
+      "kp": null,
+      "what": "programming model vs hardware: correctness vs performance"
+    },
+    {
+      "from": "8:47",
+      "to": "11:13",
+      "kp": null,
+      "what": "recap: warps, control divergence, zero-cost warp switching (lecture_05 thread)"
+    },
+    {
+      "from": "11:13",
+      "to": "14:21",
+      "kp": null,
+      "what": "register-limited occupancy and its worked example (code L106-L119; no KP in this thread)"
+    },
+    {
+      "from": "14:21",
+      "to": "16:49",
+      "kp": null,
+      "what": "recap: shared-memory bank conflicts and swizzling"
+    },
+    {
+      "from": "16:49",
+      "to": "18:15",
+      "kp": null,
+      "what": "recap: memory coalescing (lecture_05 thread)"
+    },
+    {
+      "from": "18:15",
+      "to": "19:13",
+      "kp": null,
+      "what": "recap: block occupancy and wave quantization (lecture_05 thread)"
+    },
+    {
+      "from": "19:13",
+      "to": "21:44",
+      "kp": null,
+      "what": "hardware summary; Q&A on blocks sharing an SM"
+    },
+    {
+      "from": "21:44",
+      "to": "23:21",
+      "kp": "benchmark-recipe"
+    },
+    {
+      "from": "23:21",
+      "to": "25:35",
+      "kp": "benchmark-recipe"
+    },
+    {
+      "from": "25:35",
+      "to": "26:25",
+      "kp": "matmul-time-scaling"
+    },
+    {
+      "from": "26:25",
+      "to": "30:12",
+      "kp": "profiler-kernels"
+    },
+    {
+      "from": "30:12",
+      "to": "32:19",
+      "kp": "gelu-fusion"
+    },
+    {
+      "from": "32:19",
+      "to": "35:34",
+      "kp": "gelu-fusion"
+    },
+    {
+      "from": "35:34",
+      "to": "36:51",
+      "kp": "gelu-fusion"
+    },
+    {
+      "from": "36:51",
+      "to": "39:44",
+      "kp": "cuda-vs-triton"
+    },
+    {
+      "from": "39:44",
+      "to": "42:18",
+      "kp": "triton-program-grid"
+    },
+    {
+      "from": "42:18",
+      "to": "46:12",
+      "kp": "triton-gelu-kernel"
+    },
+    {
+      "from": "46:12",
+      "to": "47:14",
+      "kp": "cuda-vs-triton"
+    },
+    {
+      "from": "47:14",
+      "to": "50:41",
+      "kp": "triton-gelu-kernel"
+    },
+    {
+      "from": "50:41",
+      "to": "54:22",
+      "kp": "ptx-inspection"
+    },
+    {
+      "from": "54:22",
+      "to": "57:15",
+      "kp": "ptx-inspection"
+    },
+    {
+      "from": "57:15",
+      "to": "58:06",
+      "kp": null,
+      "what": "preview of the remaining examples"
+    },
+    {
+      "from": "58:06",
+      "to": "1:00:21",
+      "kp": "naive-softmax-traffic"
+    },
+    {
+      "from": "1:00:21",
+      "to": "1:02:14",
+      "kp": "triton-softmax-kernel"
+    },
+    {
+      "from": "1:02:14",
+      "to": "1:05:23",
+      "kp": "triton-softmax-kernel"
+    },
+    {
+      "from": "1:05:23",
+      "to": "1:08:21",
+      "kp": "triton-row-sum-kernel"
+    },
+    {
+      "from": "1:08:21",
+      "to": "1:11:06",
+      "kp": "triton-row-sum-kernel"
+    },
+    {
+      "from": "1:11:06",
+      "to": "1:11:53",
+      "kp": "reduction-stays-in-one-block"
+    },
+    {
+      "from": "1:11:53",
+      "to": "1:12:41",
+      "kp": "triton-matmul-relu-kernel"
+    },
+    {
+      "from": "1:12:41",
+      "to": "1:15:10",
+      "kp": "matmul-tiling-intensity"
+    },
+    {
+      "from": "1:15:10",
+      "to": "1:18:36",
+      "kp": "matmul-tiling-intensity"
+    },
+    {
+      "from": "1:18:36",
+      "to": "1:19:03",
+      "kp": "triton-matmul-relu-kernel"
+    },
+    {
+      "from": "1:19:03",
+      "to": "1:19:46",
+      "kp": "tensor-strides"
+    },
+    {
+      "from": "1:19:46",
+      "to": "1:22:06",
+      "kp": "triton-matmul-relu-kernel"
+    },
+    {
+      "from": "1:22:06",
+      "to": "1:23:16",
+      "kp": null,
+      "what": "lecture summary: programming model vs finite hardware"
+    },
+    {
+      "from": "1:23:16",
+      "to": "1:23:50",
+      "kp": "cuda-vs-triton"
+    },
+    {
+      "from": "1:23:50",
+      "to": "1:24:21",
+      "kp": null,
+      "what": "summary of examples; next lecture"
+    },
+    {
+      "from": "1:24:21",
+      "to": "1:25:30",
+      "kp": "cuda-vs-triton"
+    },
+    {
+      "from": "1:25:30",
+      "to": "1:26:36",
+      "kp": null,
+      "what": "Q&A on loading whole tensors vs pieces"
+    }
+  ]
+}

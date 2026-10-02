@@ -1,0 +1,84 @@
+{
+  "fixture": "lecture_07--tp-gather-scatter",
+  "family": "rank-ring",
+  "scene": "RankRingScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "lecture_07:tp-backward-reduce-scatter"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "10.400000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "forward: rank r computes its slice x_r with its block W_r",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.8,
+      "caption": "forward ends: all-gather, every rank holds x0 \u2026 x3",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.6,
+      "caption": "backward: each rank holds a partial \u2202x for every slice",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 8.4,
+      "caption": "backward: reduce-scatter, rank j keeps \u03a3\u2202x_j",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "The forward all-gather takes each rank from 1 slice to all W slices.",
+      "evidence": [
+        "rank.0",
+        "rank.1",
+        "rank.2",
+        "rank.3",
+        "counter"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "The backward reduce-scatter runs it in reverse: W partial slices per rank become 1 summed slice per rank.",
+      "evidence": [
+        "rank.0",
+        "rank.1",
+        "rank.2",
+        "rank.3",
+        "counter"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

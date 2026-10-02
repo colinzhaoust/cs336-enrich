@@ -1,0 +1,232 @@
+{
+  "threads": [
+    {
+      "id": "lecture_01",
+      "kind": "lecture",
+      "title": "CS336 L1 · Tokenization",
+      "subtitle": "Executable lecture → BPE from the professor's own example",
+      "kp": "../lectures/lecture_01/knowledge_points.json",
+      "sources": "../lectures/lecture_01/sources.json",
+      "discovered": "../lectures/lecture_01/discovered.json"
+    },
+    {
+      "id": "lecture_02",
+      "kind": "lecture",
+      "title": "CS336 L2 · Resource accounting",
+      "subtitle": "Executable lecture → knowledge points with line-level provenance",
+      "kp": "../lectures/lecture_02/knowledge_points.json",
+      "sources": "../lectures/lecture_02/sources.json",
+      "discovered": "../lectures/lecture_02/discovered.json"
+    },
+    {
+      "id": "lecture_03",
+      "kind": "lecture",
+      "title": "CS336 L3 · Architecture and hyperparameters",
+      "subtitle": "Slide deck → what the field converged on and why",
+      "kp": "../lectures/lecture_03/knowledge_points.json",
+      "sources": "../lectures/lecture_03/sources.json",
+      "discovered": "../lectures/lecture_03/discovered.json"
+    },
+    {
+      "id": "lecture_04",
+      "kind": "lecture",
+      "title": "CS336 L4 · Attention alternatives and MoE",
+      "subtitle": "Slide deck → KV cache, GQA, routing, load balance",
+      "kp": "../lectures/lecture_04/knowledge_points.json",
+      "sources": "../lectures/lecture_04/sources.json",
+      "discovered": "../lectures/lecture_04/discovered.json"
+    },
+    {
+      "id": "lecture_05",
+      "kind": "lecture",
+      "title": "CS336 L5 · GPUs",
+      "subtitle": "Slide deck → knowledge points with page-level provenance",
+      "kp": "../lectures/lecture_05/knowledge_points.json",
+      "sources": "../lectures/lecture_05/sources.json",
+      "discovered": "../lectures/lecture_05/discovered.json"
+    },
+    {
+      "id": "lecture_06",
+      "kind": "lecture",
+      "title": "CS336 L6 · Kernels and Triton",
+      "subtitle": "Executable lecture → kernels line by line",
+      "kp": "../lectures/lecture_06/knowledge_points.json",
+      "sources": "../lectures/lecture_06/sources.json",
+      "discovered": "../lectures/lecture_06/discovered.json"
+    },
+    {
+      "id": "lecture_07",
+      "kind": "lecture",
+      "title": "CS336 L7 · Parallelism (collectives, ZeRO, TP, PP)",
+      "subtitle": "Executable lecture → what each parallelism costs in bytes",
+      "kp": "../lectures/lecture_07/knowledge_points.json",
+      "sources": "../lectures/lecture_07/sources.json",
+      "discovered": "../lectures/lecture_07/discovered.json"
+    },
+    {
+      "id": "lecture_08",
+      "kind": "lecture",
+      "title": "CS336 L8 · Parallelism basics (systems view)",
+      "subtitle": "Slide deck → bandwidth hierarchy, comm/compute ratios, 3D parallelism",
+      "kp": "../lectures/lecture_08/knowledge_points.json",
+      "sources": "../lectures/lecture_08/sources.json",
+      "discovered": "../lectures/lecture_08/discovered.json"
+    },
+    {
+      "id": "lecture_09",
+      "kind": "lecture",
+      "title": "CS336 L9 · Scaling laws",
+      "subtitle": "Slide deck → power laws, compute-optimal allocation, how to run a study",
+      "kp": "../lectures/lecture_09/knowledge_points.json",
+      "sources": "../lectures/lecture_09/sources.json",
+      "discovered": "../lectures/lecture_09/discovered.json"
+    },
+    {
+      "id": "lecture_10",
+      "kind": "lecture",
+      "title": "CS336 L10 · Inference",
+      "subtitle": "Executable lecture → why decode is memory-bound and what to do about it",
+      "kp": "../lectures/lecture_10/knowledge_points.json",
+      "sources": "../lectures/lecture_10/sources.json",
+      "discovered": "../lectures/lecture_10/discovered.json"
+    },
+    {
+      "id": "lecture_11",
+      "kind": "lecture",
+      "title": "CS336 L11 · Scaling: case study and details",
+      "subtitle": "Slide deck → how labs actually run a scaling study",
+      "kp": "../lectures/lecture_11/knowledge_points.json",
+      "sources": "../lectures/lecture_11/sources.json",
+      "discovered": "../lectures/lecture_11/discovered.json"
+    },
+    {
+      "id": "lecture_12",
+      "kind": "lecture",
+      "title": "CS336 L12 · Evaluation",
+      "subtitle": "Executable lecture → what a benchmark number can and cannot mean",
+      "kp": "../lectures/lecture_12/knowledge_points.json",
+      "sources": "../lectures/lecture_12/sources.json",
+      "discovered": "../lectures/lecture_12/discovered.json"
+    },
+    {
+      "id": "lecture_13",
+      "kind": "lecture",
+      "title": "CS336 L13 · Data: sources and datasets",
+      "subtitle": "Executable lecture → where the tokens come from and what each dataset dropped",
+      "kp": "../lectures/lecture_13/knowledge_points.json",
+      "sources": "../lectures/lecture_13/sources.json",
+      "discovered": "../lectures/lecture_13/discovered.json"
+    },
+    {
+      "id": "lecture_14",
+      "kind": "lecture",
+      "title": "CS336 L14 · Data: filtering, dedup, mixing",
+      "subtitle": "Executable lecture → every filter is a bias; MinHash and LSH by the numbers",
+      "kp": "../lectures/lecture_14/knowledge_points.json",
+      "sources": "../lectures/lecture_14/sources.json",
+      "discovered": "../lectures/lecture_14/discovered.json"
+    },
+    {
+      "id": "lecture_15",
+      "kind": "lecture",
+      "title": "CS336 L15 · Mid/post-training: SFT and RLHF",
+      "subtitle": "Slide deck → from preference data to a policy, and what goes wrong",
+      "kp": "../lectures/lecture_15/knowledge_points.json",
+      "sources": "../lectures/lecture_15/sources.json",
+      "discovered": "../lectures/lecture_15/discovered.json"
+    },
+    {
+      "id": "lecture_16",
+      "kind": "lecture",
+      "title": "CS336 L16 · RL from verifiable rewards",
+      "subtitle": "Slide deck → policy gradients, GRPO, what R1 actually did",
+      "kp": "../lectures/lecture_16/knowledge_points.json",
+      "sources": "../lectures/lecture_16/sources.json",
+      "discovered": "../lectures/lecture_16/discovered.json"
+    },
+    {
+      "id": "lecture_17",
+      "kind": "lecture",
+      "title": "CS336 L17 · Alignment and multimodality",
+      "subtitle": "Executable lecture → images as tokens, encoders as adapters",
+      "kp": "../lectures/lecture_17/knowledge_points.json",
+      "sources": "../lectures/lecture_17/sources.json",
+      "discovered": "../lectures/lecture_17/discovered.json"
+    },
+    {
+      "id": "chinchilla",
+      "kind": "paper",
+      "title": "Paper · Chinchilla (compute-optimal scaling)",
+      "subtitle": "Three ways to fit the same law; pairs with Lecture 9",
+      "kp": "../papers/chinchilla/knowledge_points.json",
+      "sources": "../papers/chinchilla/sources.json",
+      "discovered": "../papers/chinchilla/discovered.json"
+    },
+    {
+      "id": "feynrl_paper",
+      "kind": "paper",
+      "title": "Paper · FeynRL (P3O)",
+      "subtitle": "Trust the batch: adaptive policy optimization, paired with the FeynRL repo thread",
+      "kp": "../papers/feynrl/knowledge_points.json",
+      "sources": "../papers/feynrl/sources.json",
+      "discovered": "../papers/feynrl/discovered.json"
+    },
+    {
+      "id": "flashattention",
+      "kind": "paper",
+      "title": "Paper · FlashAttention",
+      "subtitle": "IO-aware exact attention; pairs with Lecture 5",
+      "kp": "../papers/flashattention/knowledge_points.json",
+      "sources": "../papers/flashattention/sources.json",
+      "discovered": "../papers/flashattention/discovered.json"
+    },
+    {
+      "id": "grpo",
+      "kind": "paper",
+      "title": "Paper · DeepSeekMath (GRPO)",
+      "subtitle": "Group-relative advantages; the equations FeynRL implements",
+      "kp": "../papers/grpo/knowledge_points.json",
+      "sources": "../papers/grpo/sources.json",
+      "discovered": "../papers/grpo/discovered.json"
+    },
+    {
+      "id": "rope",
+      "kind": "paper",
+      "title": "Paper · RoFormer (RoPE)",
+      "subtitle": "Paper argument vs course teaching order",
+      "kp": "../papers/rope/knowledge_points.json",
+      "sources": "../papers/rope/sources.json",
+      "discovered": "../papers/rope/discovered.json"
+    },
+    {
+      "id": "edtrace",
+      "kind": "repo",
+      "title": "Repo · edtrace",
+      "subtitle": "The tracer behind the executable lectures: what it records and what it cannot",
+      "kp": "../repos/edtrace/knowledge_points.json",
+      "sources": "../repos/edtrace/sources.json",
+      "discovered": "../repos/edtrace/discovered.json"
+    },
+    {
+      "id": "feynrl",
+      "kind": "repo",
+      "title": "Repo · FeynRL",
+      "subtitle": "One RL training step traced through the code",
+      "kp": "../repos/feynrl/knowledge_points.json",
+      "sources": "../repos/feynrl/sources.json",
+      "discovered": "../repos/feynrl/discovered.json"
+    },
+    {
+      "id": "tea",
+      "kind": "repo",
+      "title": "Repo · TheoremExplainAgent",
+      "subtitle": "An agentic Manim pipeline traced end to end; where quality is and is not checked",
+      "kp": "../repos/tea/knowledge_points.json",
+      "sources": "../repos/tea/sources.json",
+      "discovered": "../repos/tea/discovered.json"
+    }
+  ],
+  "builds": "../build/",
+  "widgets_v": 3,
+  "figure_base": "https://raw.githubusercontent.com/stanford-cs336/lectures/main/"
+}

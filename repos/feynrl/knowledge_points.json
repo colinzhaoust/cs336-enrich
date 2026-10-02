@@ -1,0 +1,988 @@
+{
+  "repo": "feynrl",
+  "title": "FeynRL: one GRPO training step, from config to weight sync",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are repo-relative file:line ranges in external/FeynRL at sha dfe85351 (see sources.json). Statuses: 'implemented' = the code does this (evidence); 'documented' = README/ARCHITECTURE prose; 'tested' = a unit test pins the number; 'supplement' = prerequisite the repo assumes and never states. Prerequisite basis 'call-order' comes from the entry trace in discovered_sync.json (main_rl.py -> run_rl_sync.main, produced by discover_repo.py with --skip run_rl_async); 'import-order' from the import graph; 'author-inference' otherwise. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Anything about runtime behaviour (GPU counts, timings, actual rewards) is untested here: this thread was authored by static reading only.",
+  "knowledge_points": [
+    {
+      "id": "config-recipe-gsm8k",
+      "label": "The gsm8k recipe: what one YAML sets and where each key lands",
+      "kind": "procedure",
+      "statement": "train_sync.yaml runs GRPO on Qwen2.5-1.5B with 6 DeepSpeed training GPUs and 2 vLLM rollout GPUs (TP=1), 512 prompts x 4 samples per epoch, clip 0.4/0.4, kl_coeff 0, direct weight sync, one optimizer step per epoch over the full replay buffer.",
+      "provenance": {
+        "status": "documented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_example_gsm8k", "ref": "train_sync.yaml:L7-L8", "role": "claim", "quote": "training_gpus: 6\n  rollout_gpus: 2"},
+          {"source": "feynrl_example_gsm8k", "ref": "train_sync.yaml:L13", "role": "claim", "quote": "weight_sync_method: \"direct\""},
+          {"source": "feynrl_example_gsm8k", "ref": "train_sync.yaml:L33-L47", "role": "claim", "quote": "alg_name: \"grpo\" ... kl_coeff: 0.0\n  clip_low: 0.4\n  clip_high: 0.4\n  entropy_coeff: 0.0\n  update_after_full_replay: True"},
+          {"source": "feynrl_example_gsm8k", "ref": "train_sync.yaml:L55-L62", "role": "claim", "quote": "total_number_of_epochs: 100\n  train_steps_per_epoch: 1 ... train_batch_size_per_gpu: 8 ... normalize_loss: True"},
+          {"source": "feynrl_example_gsm8k", "ref": "train_sync.yaml:L71-L82", "role": "claim", "quote": "n_samples: 4 ... tensor_parallel_size: 1\n  rollout_batch_size_per_gpu: 64\n  rollout_samples_per_epoch: 512"},
+          {"source": "feynrl_repo", "ref": "main_rl.py:L14-L17", "role": "computation", "quote": "config = cfg.load_and_verify(method=\"rl\", input_yaml=args.config_file, ..."},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L18-L24", "role": "computation", "quote": "Algorithm_Registry = {# supported algorithms\n                      'grpo':  ('algs.GRPO.grpo', 'GRPO'),\n                      'cispo': ('algs.CISPO.cispo', 'CISPO'),\n                      'p3o':   ('algs.P3O.p3o', 'P3O'),\n                      'ppo':   ('algs.PPO.ppo', 'PPO'),\n                      'p4o':   ('algs.P4O.p4o', 'P4O'),"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L30-L46", "role": "computation", "quote": "kwargs = { # model related arguments\n               'model_path':params.model.name, ... 'kl_coeff':params.train.kl_coeff,\n               'clip_low':params.train.clip_low,\n               'clip_high':params.train.clip_high,"}
+        ],
+        "filtering_note": "The YAML also carries DeepSpeed ZeRO-3 and PEFT blocks (L97-L143) that this thread does not trace. examples/llm/README.md reports reward curves; those are runtime results not verified here."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {"belief": "rollout_samples_per_epoch is the number of completions per epoch.", "why_wrong": "It is the number of prompts; completions = prompts x n_samples, and prompts are rounded up to a whole dataloader batch (core/rl_engines.py:L362-L367)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "With train_sync.yaml as written (2 rollout engines x 64 prompts per batch, 512 prompts per epoch, n_samples 4), how many completions enter the replay buffer per epoch?",
+          "format": "number",
+          "answer": "2048",
+          "tolerance": 0.0,
+          "why": "Batch of prompts = 2 x 64 = 128; ceil(512/128) = 4 batches = 512 prompts; x 4 samples = 2048 (core/rl_engines.py:L362-L376).",
+          "targets_misconception": "rollout_samples_per_epoch is the number of completions per epoch."
+        },
+        "transfer": {
+          "q": "Change only rollout_samples_per_epoch to 500. How many completions per epoch now?",
+          "format": "number",
+          "answer": "2048",
+          "tolerance": 0.0,
+          "why": "ceil(500/128) = 4 batches, still 512 prompts because prompts are rounded up to the batch boundary (core/rl_engines.py:L199-L200, L366); x 4 = 2048."
+        },
+        "retrieval": [
+          {"q": "Which YAML key picks the algorithm class, and which table maps its value to a module path?", "answer": "train.alg_name, looked up in Algorithm_Registry in core/rl_engines.py (via misc.utils.load_algorithm).", "layer": "detail"},
+          {"q": "In the gsm8k sync recipe, what are clip_low/clip_high and kl_coeff?", "answer": "0.4 / 0.4 and 0.0 (no reference model is loaded)."}
+        ],
+        "self_explain": "Why does the recipe train for 100 epochs with only one training step per epoch, instead of 1 epoch with 100 steps?"
+      },
+      "presentations": [
+        {"type": "code", "action": "trace", "ref": "train_sync.yaml:L27-L82"},
+        {"type": "code", "action": "trace", "ref": "core/rl_engines.py:L30-L63"},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--pipeline-sizes", "notice": "rollout_samples_per_epoch counts prompts, and the code rounds it up to whole batches of engines × rollout_batch_size_per_gpu (the hatched tail) before multiplying by n_samples."}
+      ]
+    },
+    {
+      "id": "sync-epoch-loop",
+      "label": "The sync loop: rollout -> batch -> train -> version bump -> weight sync",
+      "kind": "procedure",
+      "statement": "main_rl.py dispatches on overlap.enabled; run_rl_sync.run_epoch_sync resets the replay buffer, blocks on collect_rollouts, builds micro-batches, runs run_training_step train_steps_per_epoch times, increments policy_version once, and then main() pushes weights to the rollout engines (direct, with disk fallback) before the next epoch.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "main_rl.py:L20-L26", "role": "computation", "quote": "if config.overlap and config.overlap.enabled:\n        from run_rl_async import main\n        main(args, config)\n    else:\n        from run_rl_sync import main"},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L31-L33", "role": "claim", "quote": "Sequential epoch: [collect_rollouts] -> [prepare_training_batches] -> [train]]"},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L35-L47", "role": "computation", "quote": "replay_buffer.reset() ... rollout_metrics = collect_rollouts(dataloader=rollout_dataloader, rollout_engines=rollout_engines, epoch=epoch, policy_version=policy_version, ..."},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L72-L76", "role": "computation", "quote": "for step in range(steps_per_epoch):\n        train_metrics = run_training_step(engines=training_engines, shard_refs=shard_refs, ..."},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L89-L90", "role": "computation", "quote": "# 5. Post-training\n    policy_version += 1"},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L417-L426", "role": "computation", "quote": "if not sync_success and not is_last_epoch and weight_sync_method == \"direct\": ... sync_success = sync_weights_direct(training_engines=training_engines, rollout_engines=rollout_engines, version=policy_version, ..."},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L35", "role": "claim", "quote": "Synchronous (run_rl_sync.py): Each epoch generates all rollouts (blocking), trains on them, syncs weights, and repeats. Fully on-policy"}
+        ],
+        "filtering_note": "ARCHITECTURE.md calls sync mode 'fully on-policy'; the code allows train_steps_per_epoch > 1 passes over the same buffer, so only the first pass has ratio exactly 1. The checkpoint/resume branches (L258-L301, L435-L460) are skipped in this thread."
+      },
+      "prerequisites": [
+        {"kp": "config-recipe-gsm8k", "basis": "call-order", "note": "load_and_verify is hop 1 of the entry trace; run_rl_sync.main is hop 6."},
+        {"kp": "supp-on-off-policy", "basis": "author-inference"}
+      ],
+      "misconceptions": [
+        {"belief": "Each training step generates fresh rollouts.", "why_wrong": "Rollouts are generated once per epoch (L40-L47); run_training_step at L73 reuses the same shard_refs on every step."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Set train_steps_per_epoch: 3 in the sync recipe. Per epoch, how many times is policy_version incremented, and how many full passes over the replay buffer does each training engine make?",
+          "format": "short",
+          "answer": "policy_version += 1 once; 3 passes over the same micro-batches",
+          "why": "The for-loop at L72 calls run_training_step 3 times with the same shard_refs; the increment at L90 sits after the loop.",
+          "targets_misconception": "Each training step generates fresh rollouts."
+        },
+        "transfer": {
+          "q": "You keep overlap.enabled: False but set weight_sync_method: \"nccl\". What happens, and at which stage?",
+          "format": "short",
+          "answer": "load_and_verify raises ValueError before any engine starts: 'nccl' requires overlap.enabled=True (configs/load.py:L722-L724).",
+          "why": "The sync vLLM engine has no NCCL receive path, so the validator rejects the combination up front rather than failing at the first sync."
+        },
+        "check": {
+          "q": "A fresh sync-mode run (overlap.enabled False, no resume) uses total_number_of_epochs: 6, train_steps_per_epoch: 4 and weight_sync_method: \"direct\", and no sync ever fails. Over the whole run, how many times does main() call sync_weights_direct? Type only the number.",
+          "format": "number",
+          "answer": "5",
+          "tolerance": 0.05,
+          "value": 5,
+          "why": "run_rl_sync.main loops `for epoch in range(start_epoch, number_of_epochs)` with start_epoch 0 (run_rl_sync.py:L259, L339). Inside run_epoch_sync the train_steps_per_epoch loop (L72-L76) only calls run_training_step on the same shard_refs; there is no sync inside it, and policy_version += 1 happens once after the loop (L90). Back in main, the direct sync is guarded by `if not sync_success and not is_last_epoch and weight_sync_method == \"direct\"` (L417), with is_last_epoch = (epoch == number_of_epochs - 1) (L341). So epochs 0-4 sync and epoch 5 does not: 6 - 1 = 5 calls. Counting one sync per training step would give 24 (or 23).",
+          "targets_misconception": "Each training step generates fresh rollouts (and so needs fresh weights on the rollout engines).",
+          "varies": "functional: asks for the count of weight-sync calls over a whole run instead of the config validator's response to an illegal sync method",
+          "invariant": "One rollout/sync cycle per epoch: train_steps_per_epoch passes reuse the same buffer, the version bumps once, and the push to rollout engines happens once per epoch except after the last epoch.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "One sync epoch runs five phases. What is the first, before collect_rollouts, and what happens last, after the training steps?", "answer": "First replay_buffer.reset(); last, policy_version += 1 and the weights are pushed to the rollout engines (sync_weights_direct, or a disk save and refresh if that fails)."},
+          {"q": "Which config field does main_rl.py test to choose between run_rl_sync and run_rl_async?", "answer": "config.overlap.enabled", "layer": "detail"}
+        ],
+        "self_explain": "Why is policy_version incremented once per epoch rather than once per optimizer step?"
+      },
+      "presentations": [
+        {"type": "code", "action": "trace", "ref": "run_rl_sync.py:L27-L99"},
+        {"type": "animation", "action": "predict-trend", "ref": "fixture:rollout-train-timeline", "notice": "In sync mode the rollout GPUs are idle for the whole training segment and the training GPUs are idle for the whole rollout segment; the two bars never overlap."},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--epoch-ledger", "notice": "The train_steps_per_epoch passes reuse the same micro-batches and policy_version bumps once per epoch; the last epoch ends with no weight sync (white), so N epochs give N − 1 syncs."}
+      ]
+    },
+    {
+      "id": "rollout-engine-generate",
+      "label": "Rollout engines: vLLM actors, tensor parallel, old_logprobs from the sampler",
+      "kind": "mechanism",
+      "statement": "create_rollout_engines spawns max(1, rollout_gpus // tp) Ray actors each owning a vLLM LLM with tensor_parallel_size=tp; generate() samples n_samples completions per prompt with SamplingParams(logprobs=1) and stores the sampler's per-token logprob as old_logprobs, shifted to prediction alignment.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L149-L150", "role": "computation", "quote": "# if model doesn't fit in one gpu, tp can be > 1\n    num_engines = max(1, rollout_gpus // tp)"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L178-L183", "role": "computation", "quote": "sync_kwargs = {**kwargs, \"quantization\": params.rollout.quantization}\n            engines.append(VLLMRolloutEngine.options(num_gpus=tp, ..."},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L171-L186", "role": "computation", "quote": "llm_kwargs = dict(model=self.model_path, ... tensor_parallel_size=self.tensor_parallel_size, ... worker_extension_cls=\"rollouts.weight_sync.WeightSyncExtension\", ... enable_prefix_caching=True,"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L12-L20", "role": "computation", "quote": "if self.force_strict_on_policy:\n            if self.temperature != 1.0:\n                raise ValueError(\"Strict on-policy requires temperature = 1.0 (no scaling).\")"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L62", "role": "computation", "quote": "logprobs=1, # it returns logprobs for each token"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L318-L321", "role": "computation", "quote": "if self.force_strict_on_policy and int(policy_version) != int(self.loaded_version): ... Off-policy rollout: policy_version={int(policy_version)}"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L436-L440", "role": "computation", "quote": "pred_start = prompt_len - 1\n                            pred_end   = seq_len - 1\n                            pred_masks[pred_start:pred_end] = 1 ... pred_old_logprobs[pred_start:pred_end] = response_logprobs"},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L18-L22", "role": "claim", "quote": "Tensor Parallelism: Capability to shard large models across multiple GPUs for rollout."}
+        ],
+        "filtering_note": "The async engine (rollouts/vllm_engine_async.py, 1047 lines) has its own generate path with pull loops; only the sync engine is traced here. Whether vLLM's returned logprob equals the trainer's recomputed logprob at ratio 1 depends on kernels; the code assumes it and reports approx_kl to check."
+      },
+      "prerequisites": [
+        {"kp": "config-recipe-gsm8k", "basis": "call-order", "note": "create_rollout_engines (hop 23) reads params.rollout.* and params.run.rollout_gpus."}
+      ],
+      "misconceptions": [
+        {"belief": "old_logprobs are recomputed by the training engine before the update.", "why_wrong": "They come from vLLM at generation time (SamplingParams logprobs=1, extract_logprobs at L425); the trainer only computes the current pi (and, in overlap mode, the proximal snapshot)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "rollout_gpus: 8 and tensor_parallel_size: 4. How many rollout actors are created, and how many GPUs does each request?",
+          "format": "short",
+          "answer": "2 actors, each with num_gpus=4",
+          "why": "num_engines = max(1, 8 // 4) = 2 (L150); each actor is created with .options(num_gpus=tp) (L181)."
+        },
+        "transfer": {
+          "q": "You keep force_strict_on_policy: True and set temperature: 0.7. Does the run fail at config validation, at rollout-engine construction, or at the first generate call, and what does the error message say?",
+          "format": "short",
+          "answer": "During rollout-engine construction, make_sampling_params raises ValueError 'Strict on-policy requires temperature = 1.0 (no scaling).' (rollouts/base.py:L13-L14).",
+          "why": "Temperature rescales the sampling distribution so stored logprobs would no longer be the policy's; the flag refuses to produce such data."
+        },
+        "check": {
+          "q": "A sync rollout engine is built with force_strict_on_policy: True, temperature 1.0, top_p 1.0, top_k -1 and no stop strings, so construction succeeds. Its loaded_version is 2, but the driver calls generate(..., policy_version=3). What does generate do?",
+          "format": "choice",
+          "choices": ["It raises ValueError before sampling, because policy_version 3 differs from loaded_version 2", "It samples normally, and the trainer later recomputes old_logprobs under the version-3 weights", "It reloads the version-3 weights from disk first, and then samples with the refreshed model", "It samples normally, and stamps each sample with loaded_version 2 so the trainer can reweight"],
+          "answer": "It raises ValueError before sampling, because policy_version 3 differs from loaded_version 2",
+          "why": "rollouts/vllm_engine.py:L318-L321: `if self.force_strict_on_policy and int(policy_version) != int(self.loaded_version): raise ValueError(\"Off-policy rollout: policy_version=... but loaded_version=...\")`, checked at the top of generate before any sampling. The strict flag exists because old_logprobs are taken from vLLM's sampler at generation time (SamplingParams logprobs=1, rollouts/base.py:L62; stored as pred_old_logprobs at vllm_engine.py:L440); nothing downstream recomputes them, so mismatched weights would silently produce off-policy data.",
+          "distractor_from": "Option 2: the misconception that old_logprobs are recomputed by the training engine before the update. Option 3: assumes generate refreshes weights itself (refresh happens only in main() via refresh_rollout_engine). Option 4: assumes the version stamp triggers a correction instead of the strict flag refusing the data (the stamp is stored, rollouts/replay_buffer.py:L152, but strict mode never reaches it).",
+          "targets_misconception": "old_logprobs are recomputed by the training engine before the update.",
+          "varies": "functional: the strict flag trips on a weight-version mismatch at generate time instead of a temperature setting at construction time",
+          "invariant": "force_strict_on_policy refuses to produce data whose stored sampler logprobs would not be the current policy's, because those logprobs become old_logprobs unchanged.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Where do the stored old_logprobs of a response token come from, and which SamplingParams field makes that possible?", "answer": "From vLLM's per-token sampled-token logprob, enabled by logprobs=1 in make_sampling_params."},
+          {"q": "Given prompt_len p and seq_len s, which prediction-aligned index range is marked valid (pred_masks == 1)?", "answer": "[p-1, s-1): logit position t predicts token t+1."}
+        ],
+        "self_explain": "Why does generate() refuse to run when policy_version differs from loaded_version under force_strict_on_policy?"
+      },
+      "presentations": [
+        {"type": "code", "action": "trace", "ref": "core/rl_engines.py:L108-L185"},
+        {"type": "code", "action": "trace", "ref": "rollouts/vllm_engine.py:L302-L343"},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--pipeline-sizes", "notice": "Engines = max(1, rollout_gpus // tensor_parallel_size): raising tp cuts the engine count, each engine takes tp GPUs, and GPUs left over by the floor sit unused."}
+      ]
+    },
+    {
+      "id": "mixed-dataset-sampling",
+      "label": "MixedDatasetSampler: fixed or multinomial per-dataset counts, with replacement",
+      "kind": "mechanism",
+      "statement": "The rollout dataloader draws each batch of local_batch_size prompts from concatenated datasets according to train_ratios: with dynamic_ratio_every_step False (and fewer datasets than the batch), per-dataset counts are fixed by largest-remainder rounding; otherwise they are multinomial each batch; indices are drawn with replacement.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "data_feeds/mixed_sampler.py:L50-L51", "role": "computation", "quote": "self.ratios_list = np.array([ratios[name] for name in self.dnames], dtype=np.float32)\n        self.probs = self.ratios_list / self.ratios_list.sum()"},
+          {"source": "feynrl_repo", "ref": "data_feeds/mixed_sampler.py:L70-L72", "role": "computation", "quote": "self.redo_ratio_every_step = (self.num_datasets > self.local_batch_size) or (dynamic_ratio_every_step == True)\n        if self.redo_ratio_every_step == False:\n            self.sample_per_dataset = self._fixed_sample_count()"},
+          {"source": "feynrl_repo", "ref": "data_feeds/mixed_sampler.py:L80-L90", "role": "computation", "quote": "raw_samples = self.probs * self.local_batch_size\n        base_samples = np.floor(raw_samples).astype(int) ... order = np.argsort(frac)[::-1] # descending order\n            base_samples[order[:remaining_samples]] += 1"},
+          {"source": "feynrl_repo", "ref": "data_feeds/mixed_sampler.py:L110", "role": "computation", "quote": "selected_datasets_ratio = self.rng.multinomial(self.local_batch_size, self.probs).tolist()"},
+          {"source": "feynrl_repo", "ref": "data_feeds/mixed_sampler.py:L127-L128", "role": "computation", "quote": "# self.rng.integers implies sampling with replacement.\n                local_indices = self.rng.integers(low=0, high=self.len_datasets[current_dataset_name], size=count)"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L197-L200", "role": "computation", "quote": "bsz = num_rollout_engines * params.rollout.rollout_batch_size_per_gpu\n    # Calculate number of batches from total samples\n    num_batches = (samples_per_epoch + bsz - 1) // bsz"},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L47", "role": "claim", "quote": "The data pipeline supports mixed-dataset sampling with configurable ratios"}
+        ],
+        "filtering_note": "The gsm8k recipe has a single dataset (train_ratios {gsm8k_train: 1.0}), so the mixing logic is exercised trivially there. set_epoch (L142-L148) reseeds per (seed, epoch, rank); the ordering inside a batch is shuffled when shuffle_within_batch."
+      },
+      "prerequisites": [
+        {"kp": "config-recipe-gsm8k", "basis": "call-order", "note": "create_rollout_dataloader (hop 26) passes params.data.train_ratios and the derived local batch size (hop 27-28)."}
+      ],
+      "misconceptions": [
+        {"belief": "One epoch visits every prompt exactly once.", "why_wrong": "Indices are drawn with replacement (L128) and the number of prompts per epoch is set by rollout_samples_per_epoch, not by dataset size; prompts can repeat or never appear."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "train_ratios {a: 0.5, b: 0.3, c: 0.2}, local batch 10, dynamic_ratio_every_step False. How many prompts per dataset in every batch?",
+          "format": "short",
+          "answer": "a=5, b=3, c=2 (identical every batch)",
+          "why": "probs x 10 = [5, 3, 2] with no fractional part; _fixed_sample_count is computed once (L72) and reused (L120)."
+        },
+        "transfer": {
+          "q": "Same ratios but local batch 7 (still fixed). Counts per dataset?",
+          "format": "short",
+          "answer": "a=4, b=2, c=1",
+          "why": "raw = [3.5, 2.1, 1.4] -> floor [3, 2, 1] = 6; one remaining slot goes to the largest fractional part (0.5, dataset a) (L84-L90).",
+          "targets_misconception": "One epoch visits every prompt exactly once."
+        },
+        "check": {
+          "q": "Three datasets with train_ratios {a: 0.6, b: 0.3, c: 0.1}, local batch size 7, dynamic_ratio_every_step False. Over 10 consecutive batches, how many prompts in total are drawn from dataset a? Type only the number.",
+          "format": "number",
+          "answer": "40",
+          "tolerance": 0.01,
+          "value": 40,
+          "why": "3 datasets <= 7 and dynamic False, so redo_ratio_every_step is False and _fixed_sample_count runs once (data_feeds/mixed_sampler.py:L70-L72). raw = probs x 7 = [4.2, 2.1, 0.7]; floor = [4, 2, 0], sum 6; one remaining slot goes to the largest fractional part, which is c (0.7 > 0.2 > 0.1) (L80-L90). Counts are a=4, b=2, c=1 in every batch (__iter__ reuses self.sample_per_dataset, L119), so a gets 4 x 10 = 40. Expected-value reasoning (4.2 x 10 = 42) or giving the leftover slot to the largest dataset (5 x 10 = 50) are both wrong.",
+          "varies": "domain: different ratios and batch size, and the question asks for a total over several batches, where the leftover goes to the smallest dataset",
+          "invariant": "Fixed counts by largest-remainder rounding: floor every share, then hand leftover slots to the largest fractional parts; the counts are identical in every batch.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Name the two conditions under which per-dataset counts are redrawn every batch instead of fixed.", "answer": "num_datasets > local_batch_size, or dynamic_ratio_every_step == True (L70).", "layer": "detail"},
+          {"q": "How is the local batch size of the rollout dataloader computed from the config?", "answer": "num_rollout_engines x rollout_batch_size_per_gpu (core/rl_engines.py:L198)."}
+        ],
+        "self_explain": "Why would the authors force per-batch redraws when there are more datasets than slots in a batch?"
+      },
+      "presentations": [
+        {"type": "code", "action": "compute", "ref": "data_feeds/mixed_sampler.py:L74-L112"},
+        {"type": "example", "action": "compute", "ref": "data_feeds/mixed_sampler.py:L80-L90", "faded": false, "steps": [{"tex": "\\text{probs} = \\frac{[0.5,\\ 0.3,\\ 0.2]}{1.0} = [0.5,\\ 0.3,\\ 0.2]", "do": "L50-L51: normalize train_ratios {a: 0.5, b: 0.3, c: 0.2}.", "why": "The ratios need not sum to 1; dividing by their sum turns them into a distribution."}, {"do": "L70-L72: 3 datasets ≤ local batch 10 and dynamic_ratio_every_step False, so redo_ratio_every_step is False and _fixed_sample_count runs once.", "why": "With fewer datasets than batch slots, every dataset can get a whole number of slots, so the counts are fixed once and reused for every batch."}, {"tex": "\\text{raw} = [0.5,\\ 0.3,\\ 0.2] \\times 10 = [5,\\ 3,\\ 2],\\quad \\lfloor \\text{raw} \\rfloor = [5,\\ 3,\\ 2]", "do": "L80-L81: scale by the batch size and floor.", "why": "Flooring never overshoots, so the counts sum to at most the batch size."}, {"do": "L84-L85: remaining = 10 − 10 = 0, so the largest-remainder branch is skipped: a = 5, b = 3, c = 2 in every batch.", "why": "Leftover slots exist only when raw has fractional parts; then L86-L90 give one each to the datasets with the largest fractional parts."}]},
+        {"type": "interactive", "action": "compute", "ref": "fixture:feynrl--mixed-sampler", "notice": "With fixed counts every batch gets the same integer split: each share is floored, and the leftover slots (outlined) go to the largest fractional parts, which need not belong to the largest dataset."}
+      ]
+    },
+    {
+      "id": "reward-interface",
+      "label": "The reward contract: compute_score -> (per-token tensor, is_per_token, correct_threshold)",
+      "kind": "definition",
+      "statement": "A reward module exposes compute_score(prompt_data, response_data) returning a float tensor of length len(response.token_ids), an is_per_token flag (must be False; per-token rewards are rejected by normalize_rewards) and a correct_threshold for pass@k; the scalar reward is placed on the last response token.",
+      "provenance": {
+        "status": "tested",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "rewards/gsm8k_reward_func.py:L19-L30", "role": "claim", "quote": "def compute_score(prompt_data: Dict[str, Any], response_data: Dict[str, Any]): ... r: torch.Tensor of length of response token ids\n        is_per_token: whether the reward is per token\n        correct_threshold: a response is counted as correct for pass@k when its scalar reward strictly exceeds this threshold."},
+          {"source": "feynrl_repo", "ref": "rewards/gsm8k_reward_func.py:L39-L47", "role": "computation", "quote": "r = torch.zeros((len(response_data.token_ids),), dtype=torch.float32)\n    answer = extract_solution(solution_str=solution_str) ... if answer == ground_truth:\n            r[-1] = score"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L180-L181", "role": "computation", "quote": "if rewards.numel() != len(response.token_ids):\n            raise ValueError(f\"score_response must return len={len(response.token_ids)} rewards, got {rewards.numel()}\")"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L144-L145", "role": "computation", "quote": "if is_per_token:\n            raise ValueError(\"per token rewards are not supported yet as normalization is done assuming per response rewards\")"},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L196-L198", "role": "computation", "quote": "reward_module = importlib.import_module(\"rewards.\" + reward_func_name)\n        reward_fnc = getattr(reward_module, \"compute_score\")"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L362-L366", "role": "computation", "quote": "if hasattr(self.reward_func, 'batch'):\n                    all_rewards = self.score_responses_batch(all_pairs)\n                else:\n                    all_rewards = [self.score_response(p, r) for p, r in all_pairs]"},
+          {"source": "feynrl_unit_tests", "ref": "unit_tests/unit/test_gsm8k_reward.py:L12-L38", "role": "computation", "quote": "def test_compute_score_correct ... def test_compute_score_incorrect ... def test_compute_score_no_format"}
+        ],
+        "filtering_note": "The gsm8k recipe actually uses math_verify_reward_func (train_sync.yaml:L66), which adds a .batch process-pool interface; the simpler gsm8k_reward_func is anchored because it shows the contract in 30 lines. reward.broadcast (YAML L65) is consumed later by normalize_rewards, not by the reward function."
+      },
+      "prerequisites": [
+        {"kp": "rollout-engine-generate", "basis": "call-order", "note": "generate() calls score_response/score_responses_batch (hops 56-57) after vLLM returns."}
+      ],
+      "misconceptions": [
+        {"belief": "Returning a scalar float reward is enough.", "why_wrong": "score_response wraps it in a 1-element tensor and raises because numel != len(token_ids) (L180-L181), except for one-token responses."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Your compute_score returns (1.0, False, 0.0) for a 37-token response. What happens?",
+          "format": "short",
+          "answer": "ValueError from score_response: must return len=37 rewards, got 1.",
+          "why": "Non-tensor returns are converted with torch.tensor (L178) and the length check at L180 fails.",
+          "targets_misconception": "Returning a scalar float reward is enough."
+        },
+        "transfer": {
+          "q": "compute_score returns r = [0.5, 0.5] for a 2-token response with is_per_token False. Which number does the group mean use, and which number does that sample's zscore numerator use?",
+          "format": "short",
+          "answer": "Group mean uses the sum 1.0 (vllm_engine.py:L416); the zscore uses only the last token 0.5 (base.py:L152). They disagree, so put the whole scalar on r[-1].",
+          "why": "group_stats['rewards'] appends rewards_resp.sum() while normalize_rewards reads token_rewards[-1]; the contract assumes all mass on the last token."
+        },
+        "check": {
+          "q": "One prompt, n_samples 2, both responses 3 tokens long. compute_score returns r = [0, 0.6, 0.4] for response A and r = [0, 0, 0] for response B, with is_per_token False. What zscore does normalize_rewards store on A's last token? Use Bessel's correction (divide by n-1) and ignore the 1e-8. Give the answer to three decimals.",
+          "format": "number",
+          "answer": "-0.141",
+          "tolerance": 0.05,
+          "value": -0.1414,
+          "why": "Group stats append rewards_resp.sum(): A contributes 1.0, B contributes 0.0 (rollouts/vllm_engine.py:L416). mean = 0.5; std = sqrt(((0.5)^2 + (0.5)^2)/1) = 0.7071 (rollouts/base.py:L131-L136). The numerator, however, reads only the last token: zscore[-1] = (token_rewards[-1] - mean)/(std + 1e-8) = (0.4 - 0.5)/0.7071 = -0.1414 (base.py:L152). If both sides used the sum, A would get +0.707; if both used the last token, the mean would be 0.2 and std 0.283, giving +0.707 again.",
+          "targets_misconception": "Spreading the reward over several tokens is harmless as long as the values sum to the intended scalar.",
+          "varies": "domain: three-token responses with mass split across two tokens, and the question asks for the resulting zscore value rather than naming which number each statistic uses",
+          "invariant": "The group mean/std use the sum of the reward tensor while the zscore numerator uses only its last element; the contract assumes all mass sits on r[-1].",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Name the three values a reward function returns, in order.", "answer": "reward tensor of length len(response.token_ids), is_per_token, correct_threshold."},
+          {"q": "How does run_rl_sync turn the YAML string reward_func into a callable?", "answer": "importlib.import_module('rewards.' + name) then getattr(module, 'compute_score').", "layer": "detail"}
+        ],
+        "self_explain": "Why is correct_threshold returned by the reward function rather than set in the config?"
+      },
+      "presentations": [
+        {"type": "code", "action": "restate", "ref": "rewards/gsm8k_reward_func.py:L19-L50"},
+        {"type": "code", "action": "trace", "ref": "rollouts/base.py:L165-L183"},
+        {"type": "interactive", "action": "compute", "ref": "fixture:feynrl--group-zscore", "notice": "The group mean is taken over each response's reward sum, but the z numerator reads only the last token; the two agree only when the whole reward sits on r[−1]."}
+      ]
+    },
+    {
+      "id": "group-relative-advantage",
+      "label": "Group-relative advantage: zscore over the n_samples of one prompt, at rollout time",
+      "kind": "mechanism",
+      "statement": "For each prompt, normalize_rewards computes mean and Bessel-corrected std over its n_samples scalar rewards, sets zscore = (r - mean)/(std + 1e-8) on the last token (broadcast to every response token when reward.broadcast is True), and stores it pred-aligned; a single sample keeps its raw reward; the trainer uses the stored zscore directly as the advantage.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L131-L136", "role": "computation", "quote": "denom = len(samples) # number of samples in the group\n        if len(samples) > 1:\n            rewards_array = np.array(stats['rewards'])\n            mean_scores = rewards_array.sum() / denom\n            # Bessel's correction (n-1) ... std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L138-L142", "role": "computation", "quote": "else:\n            # For a single sample, we don't normalize ... mean_scores = 0.0\n            std_scores  = 1.0"},
+          {"source": "feynrl_repo", "ref": "rollouts/base.py:L151-L155", "role": "computation", "quote": "zscore = torch.zeros_like(sample['token_rewards'], dtype=torch.float)\n            zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)\n            sample[\"token_zscores\"] = zscore\n            if self.reward_broadcast:\n                sample[\"token_zscores\"][prompt_len:] = zscore[-1]"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L491-L494", "role": "computation", "quote": "self.normalize_rewards(samples=group_samples, stats=group_stats, prompt_len=prompt_len, is_per_token=is_per_token)"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L313-L316", "role": "computation", "quote": "# zscore is normalized rewards using the number of samples for each proompt (X -mu) / (std + eps) ... advs      = micro_batch['zscore'][:, :-1].to(device, non_blocking=True)"},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L7", "role": "claim", "quote": "The group normalization still happens at rollout time and is baked into the stored zscore; only the training-time batching is decoupled from the group structure."}
+        ],
+        "filtering_note": "The README calls this GRPO's advantage; the same zscore is what PPO, CISPO and P3O in this repo read from the buffer (PPO adds a value baseline on top). Samples with response_len == 0 are dropped before normalization (vllm_engine.py:L414), so a group can have fewer than n_samples members."
+      },
+      "prerequisites": [
+        {"kp": "reward-interface", "basis": "call-order", "note": "normalize_rewards (hop 60) consumes the per-response scalars collected from score_response."}
+      ],
+      "misconceptions": [
+        {"belief": "The advantage is computed in the trainer from the batch it sees.", "why_wrong": "It is computed per prompt-group inside the rollout engine and stored; training micro-batches mix many prompts and never recompute it (grpo.py:L316 reads zscore)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One prompt, n_samples 4, rewards [1, 0, 0, 0]. normalize_rewards uses torch.std (unbiased, divides by n−1). What zscores are stored (ignore the 1e-8)?",
+          "format": "short",
+          "answer": "[1.5, -0.5, -0.5, -0.5]",
+          "why": "mean 0.25; std = sqrt((0.75^2 + 3 x 0.25^2)/3) = sqrt(0.75/3) = 0.5; (1-0.25)/0.5 = 1.5, (0-0.25)/0.5 = -0.5.",
+          "targets_misconception": "The advantage is computed in the trainer from the batch it sees."
+        },
+        "transfer": {
+          "q": "Same prompt but all four samples are correct, rewards [1, 1, 1, 1]. What zscores are stored, and what is that prompt's contribution to the policy gradient?",
+          "format": "short",
+          "answer": "All zero (numerator 0, divided by 0 + 1e-8); zero contribution to pi_sum.",
+          "why": "ratio x 0 = 0 for every token of the group; with kl_coeff 0 and entropy_coeff 0 the prompt is pure padding in the loss."
+        },
+        "check": {
+          "q": "A run sets n_samples: 1, so every prompt's group contains a single response. That response gets scalar reward 0.7 on its last token. What zscore does normalize_rewards store on that last token (ignore the 1e-8)? Type only the number.",
+          "format": "number",
+          "answer": "0.7",
+          "tolerance": 0.05,
+          "value": 0.7,
+          "why": "With len(samples) == 1 the else branch sets mean_scores = 0.0 and std_scores = 1.0 (rollouts/base.py:L138-L142), so zscore[-1] = (0.7 - 0)/(1 + 1e-8) = 0.7 (L152). The trainer then uses this stored value directly as the advantage (algs/GRPO/grpo.py:L316). Subtracting the group's own mean would give 0, which is exactly what the code avoids.",
+          "targets_misconception": "The advantage is centered over the batch the trainer sees, so a lone sample is normalized against its micro-batch.",
+          "varies": "functional: the group-size edge case n = 1 instead of a degenerate all-equal group of four",
+          "invariant": "Normalization statistics are computed per prompt group at rollout time; with one sample the code skips centering (mean 0, std 1) and stores the raw reward as the advantage.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "With reward.broadcast True, which prediction-aligned positions carry the zscore, and with False?", "answer": "True: every response position [prompt_len-1, seq_len-1); False: only the position predicting the last token.", "layer": "detail"},
+          {"q": "One prompt's four samples get rewards [1, 0, 0, 0]. What zscore does normalize_rewards give the correct sample, and why that value?", "answer": "1.5: mean 0.25 and Bessel-corrected std sqrt(0.75 / 3) = 0.5, so 0.75 / 0.5 (a population std would give about 1.73)."}
+        ],
+        "self_explain": "Why does the code keep the raw reward when n_samples is 1 instead of subtracting the mean?"
+      },
+      "presentations": [
+        {"type": "code", "action": "compute", "ref": "rollouts/base.py:L121-L163"},
+        {"type": "example", "action": "predict-number", "ref": "rollouts/base.py:L131-L136", "faded": false, "steps": [{"tex": "\\bar r = \\frac{1 + 0 + 0 + 0}{4} = 0.25", "do": "L131-L134: rewards [1, 0, 0, 0] for one prompt, denom = 4 samples, mean 0.25.", "why": "Each sample is compared with the other samples of the same prompt, not with the batch."}, {"tex": "s = \\sqrt{\\frac{0.75^2 + 3 \\times 0.25^2}{4 - 1}} = \\sqrt{\\frac{0.75}{3}} = 0.5", "do": "L136: Bessel-corrected std, dividing by n − 1 = 3.", "why": "With only 4 samples, dividing by n would understate the spread (the code's comment on L135)."}, {"tex": "z = \\frac{r - 0.25}{0.5 + 10^{-8}} \\;\\Rightarrow\\; [1.5,\\ -0.5,\\ -0.5,\\ -0.5]", "do": "L152: z-score each sample's last-token reward.", "why": "The one correct answer gets a large positive advantage and the three wrong ones a small negative one; the group's z-scores sum to 0."}, {"do": "L154-L155: when reward.broadcast is True, the last-token value is copied to every response token. The trainer later reads this stored zscore as the advantage (algs/GRPO/grpo.py L316).", "why": "The normalization is fixed at rollout time, so the way the trainer later batches samples cannot change it."}]},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--group-zscore", "notice": "z is computed per prompt group in the rollout engine and stored on the tokens; the trainer's micro-batch mixes prompts and only reads the stored values. An all-equal group gives all zeros; a group of one keeps its raw reward."}
+      ]
+    },
+    {
+      "id": "replay-batching",
+      "label": "Replay buffer to micro-batches: uniform shuffle, equal per-engine shards, global token denominator",
+      "kind": "mechanism",
+      "statement": "The replay buffer stores pred-aligned (input_ids, old_logps, masks, zscores, policy_version) per sample; prepare_training_batches shuffles the whole buffer uniformly into micro-batches, pads the count to a multiple of num_engines by repeating the last batch, shard_and_put deals them round-robin, and with normalize_loss the loss is divided by the all-reduced global valid-token count times dp_scale.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "rollouts/replay_buffer.py:L145-L152", "role": "computation", "quote": "self.items.append({\"input_ids\": input_ids.detach().cpu(), ..., \"old_logps\": old_logps.detach().cpu(), \"masks\": masks.detach().cpu(), ..., \"zscores\": zscores.detach().cpu(), \"policy_version\": int(policy_version),"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L457-L467", "role": "computation", "quote": "g.manual_seed(seed + epoch)\n    loader = DataLoader(dataset=replay_buffer, batch_size=batch_size, shuffle=True, ..., collate_fn=replay_buffer.collate_fn, generator=g)\n    train_batches = list(loader)"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L469-L477", "role": "computation", "quote": "# Pad to ensure equal batches per engine, unequal shard sizes across\n    # engines deadlock ZeRO-3 collectives. ... padding = [train_batches[-1]] * (total_needed - num_batches)"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L491-L493", "role": "computation", "quote": "# engine 0 gets [0, 2, 4, ...], engine 1 gets [1, 3, 5, ...]\n        shard = batches[eid::num_engines]"},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L227-L237", "role": "computation", "quote": "local_token_count = sum((mb['mask'][:, :-1] > 0.5).sum().item() for mb in micro_batches) ... torch.distributed.all_reduce(ga_denom_tensor, op=torch.distributed.ReduceOp.SUM) ... dp_scale   = ga_steps * world_size"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L380-L386", "role": "computation", "quote": "if self.normalize_loss:\n                if self.update_only_after_full_replay: ... pi_loss      = loss_total_sum * (dp_scale / ga_denom_adj)"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L396-L400", "role": "computation", "quote": "else:\n                # local per-micro-batch mean + manual GA scaling.\n                pi_loss = loss_total_sum / local_denom\n                if self.update_only_after_full_replay:\n                    pi_loss = pi_loss * (ga_pi / num_micro)"},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L12", "role": "claim", "quote": "With normalize_loss=True, the global valid-token count across all micro-batches and all ranks is computed before the training loop and used as the loss denominator, so every action token contributes equally"}
+        ],
+        "filtering_note": "The README's derivation of why 'mean of means != global mean' lives in algs/RL/README.md:L58-L85; only the resulting code path is anchored here. NaN-sanitised tokens are subtracted from the denominator per micro-batch (grpo.py:L384-L385)."
+      },
+      "prerequisites": [
+        {"kp": "group-relative-advantage", "basis": "call-order", "note": "add_batch_seqs (hop 81) stores the zscores produced by normalize_rewards; prepare_training_batches follows in run_epoch_sync."}
+      ],
+      "misconceptions": [
+        {"belief": "A micro-batch holds the n_samples completions of one prompt.", "why_wrong": "prepare_training_batches shuffles the whole buffer uniformly (L459-L465); groups are only used at rollout time for the zscore."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "2048 replay items, train_batch_size_per_gpu 8, 6 training engines. How many micro-batches does each engine receive, and how many of the total are padded duplicates?",
+          "format": "short",
+          "answer": "43 per engine; 2 duplicates (256 real micro-batches padded to 258)",
+          "why": "2048/8 = 256; ceil(256/6) = 43; 43 x 6 = 258; padding repeats train_batches[-1] twice (L472-L477).",
+          "targets_misconception": "A micro-batch holds the n_samples completions of one prompt."
+        },
+        "transfer": {
+          "q": "Set normalize_loss: False with update_after_full_replay: True, 43 micro-batches per engine and DeepSpeed gradient_accumulation_steps 1 (so one optimizer step per pass). By what factor is each micro-batch's mean loss multiplied before backward so that the step averages over the pass?",
+          "format": "number",
+          "answer": "0.02326",
+          "tolerance": 0.02,
+          "why": "pi_loss = loss_total_sum / local_denom, then x (ga_pi / num_micro) = 1/43 (grpo.py:L398-L400): one optimizer step at the end averages the 43 per-micro-batch means."
+        },
+        "retrieval": [
+          {"q": "Why does prepare_training_batches pad the number of micro-batches to a multiple of the engine count?", "answer": "Unequal shard sizes across engines deadlock ZeRO-3 collectives (L469-L470)."},
+          {"q": "With normalize_loss True, what is dp_scale and what does it cancel?", "answer": "ga_steps x world_size; it cancels DeepSpeed's internal averaging over accumulation steps and data-parallel ranks."}
+        ],
+        "self_explain": "Why does the global-token denominator matter more for RL than for SFT (hint: response lengths change every epoch)?"
+      },
+      "presentations": [
+        {"type": "code", "action": "compute", "ref": "core/rl_engines.py:L446-L505"},
+        {"type": "code", "action": "trace", "ref": "algs/GRPO/grpo.py:L379-L404"},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--pipeline-sizes", "notice": "Micro-batches per training engine = ceil(ceil(items / batch) / engines); the shortfall to an equal share is filled by repeating the last batch (orange), never by splitting one."}
+      ]
+    },
+    {
+      "id": "grpo-clipped-loss",
+      "label": "GRPO.compute_policy_loss: ratio = exp(logp - old_logp), min(ratio*A, clip(ratio)*A)",
+      "kind": "mechanism",
+      "statement": "In sync mode GRPO's policy term is pi_sum = -(min(ratio*adv, clamp(ratio, 1-clip_low, 1+clip_high)*adv) * mask).sum() with ratio = exp(logprobs - old_logprobs) in float32; total = pi_sum - ent_coeff*ent_sum + kl_coeff*kl_sum; clipfrac counts tokens whose ratio left the clip band.",
+      "provenance": {
+        "status": "tested",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L169-L176", "role": "computation", "quote": "raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio        = torch.exp(logratio)\n ... unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L188", "role": "computation", "quote": "loss_total_sum = pi_sum - self.ent_coeff * ent_sum + self.kl_coeff * kl_sum"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L194-L196", "role": "computation", "quote": "clipped_mask = (ratio > (1.0 + self.clip_high)) | (ratio < (1.0 - self.clip_low))\n            # fraction of masked tokens that ratio out of ranges\n            clipfrac = (clipped_mask.to(dtype=dtype) * mask).sum() / denom"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L363-L369", "role": "computation", "quote": "loss_total_sum, local_denom, pi_metrics = self.compute_policy_loss(logprobs=pi_logprobs, old_logprobs=old_logprobs, advantages=advs, mask=mask, entropies=pi_entropies, ref_logprobs=ref_logprobs, prox_logprobs=prox_lp_step)"},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L86-L97", "role": "claim", "quote": "Clipped policy loss (masked mean, using zscore): ... \\mathrm{clip}(\\rho,1-\\epsilon_\\ell,1+\\epsilon_h)\\,\\texttt{zscore}"},
+          {"source": "feynrl_unit_tests", "ref": "unit_tests/unit/test_grpo_loss.py:L43-L55", "role": "computation", "quote": "logprobs = torch.tensor([[10.0]]) # Ratio will be exp(10)\n    old_logprobs = torch.tensor([[0.0]]) ... # Loss = -min(VERY LARGE, 1.2) = -1.2\n    assert np.isclose(metrics['pi_loss'], -1.2)\n    assert np.isclose(metrics['clipfrac'], 1.0)"}
+        ],
+        "filtering_note": "The README writes a masked mean; the code returns a raw masked sum and normalises later in train_step (see replay-batching). Entropy enters with a minus sign (maximised), KL with a plus sign (penalised)."
+      },
+      "prerequisites": [
+        {"kp": "replay-batching", "basis": "call-order", "note": "train_step (hop 84) unpacks zscore/mask/old_logprobs from the micro-batch before calling compute_policy_loss (hop 117)."},
+        {"kp": "supp-importance-ratio", "basis": "author-inference"}
+      ],
+      "misconceptions": [
+        {"belief": "When a token is clipped its loss becomes zero.", "why_wrong": "The loss value is the clipped constant times the advantage; what vanishes is the gradient, because torch.clamp is flat outside the band."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "One token: logprobs 10.0, old_logprobs 0.0, advantage 1.0, clip_low = clip_high = 0.2, mask 1. What are pi_loss and clipfrac?",
+          "format": "short",
+          "answer": "pi_loss = -1.2, clipfrac = 1.0",
+          "why": "ratio = e^10; unclipped = e^10, clipped = 1.2; min = 1.2; pi_sum = -1.2; denom 1 (this is test_grpo_loss_clipping).",
+          "targets_misconception": "When a token is clipped its loss becomes zero."
+        },
+        "transfer": {
+          "q": "Now advantage = -1.0 and ratio = 0.5 (logprobs - old_logprobs = ln 0.5), same clip 0.2. What is pi_loss, and what is d(pi_loss)/d(logprobs) for this token?",
+          "format": "short",
+          "answer": "pi_loss = +0.8; gradient 0",
+          "why": "unclipped = 0.5 x -1 = -0.5; clipped = clamp(0.5, 0.8, 1.2) x -1 = -0.8; min = -0.8; loss = +0.8 and it came from the clamped branch, which is constant in logprobs."
+        },
+        "check": {
+          "q": "Sync-mode GRPO, two masked tokens, clip_low 0.2 and clip_high 0.28. Token 1 has ratio 1.5 and advantage -2; token 2 has ratio 1.5 and advantage +2. What pi_loss metric (pi_sum divided by the 2 valid tokens) does compute_policy_loss report? Type only the number.",
+          "format": "number",
+          "answer": "0.22",
+          "tolerance": 0.05,
+          "value": 0.22,
+          "why": "algs/GRPO/grpo.py:L174-L176: unclipped = ratio*adv, clip_adv = clamp(ratio, 0.8, 1.28)*adv, pi_sum = -sum(min(unclipped, clip_adv)). Token 1: min(1.5 x -2, 1.28 x -2) = min(-3.0, -2.56) = -3.0 (unclipped branch). Token 2: min(3.0, 2.56) = 2.56 (clipped branch). pi_sum = -(-3.0 + 2.56) = 0.44; pi_loss = pi_sum/denom = 0.44/2 = 0.22 (metrics, L211). Clipping both tokens gives 0; dropping the clipped token's loss to zero gives 1.5.",
+          "targets_misconception": "When a token is clipped its loss becomes zero.",
+          "varies": "domain: an asymmetric clip band and two tokens of opposite advantage sign at the same high ratio, instead of one low-ratio negative-advantage token",
+          "invariant": "The min picks the more pessimistic branch per token: with A > 0 a high ratio takes the constant clamped value, with A < 0 the same ratio stays unclipped; the clamped value still enters the loss.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Write the two code lines that produce ratio from the stored and current log-probabilities.", "answer": "raw_logratio = (logprobs - old_logprobs).to(torch.float32); ratio = torch.exp(logratio) (after masking with torch.where).", "layer": "detail"},
+          {"q": "In loss_total_sum, what sign does the entropy term carry and what sign does the KL term carry?", "answer": "minus ent_coeff x ent_sum; plus kl_coeff x kl_sum."}
+        ],
+        "self_explain": "Why does the code take min() over the two surrogates rather than always using the clipped one?"
+      },
+      "presentations": [
+        {"type": "interactive", "action": "predict-trend", "ref": "fixture:ratio-clip", "notice": "As the ratio slides past 1+clip_high with positive advantage (or below 1-clip_low with negative advantage), the loss curve goes flat: the gradient is exactly zero outside the band on that side, but not on the other side."},
+        {"type": "code", "action": "trace", "ref": "algs/GRPO/grpo.py:L165-L196"},
+        {"type": "interactive", "action": "compute", "ref": "fixture:feynrl--clip-loss", "notice": "Past the band in the advantage's direction the token's loss term stays at clamp·A (not 0) while its gradient drops to 0; on the other side the gradient stays −ratio·A however far the ratio goes."}
+      ]
+    },
+    {
+      "id": "cispo-vs-ppo-clip",
+      "label": "CISPO vs PPO/GRPO clipping: detached clipped ratio times log pi",
+      "kind": "comparison",
+      "statement": "CISPO replaces min(ratio*A, clip(ratio)*A) with -(clamp(ratio).detach() * logprobs * adv * mask).sum(): the clipped ratio is a stop-gradient weight, so every valid token keeps a gradient of magnitude clipped_ratio*|A|, whereas PPO/GRPO zero the gradient once the ratio crosses the band in the advantage's direction.",
+      "provenance": {
+        "status": "tested",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "algs/CISPO/cispo.py:L171-L175", "role": "computation", "quote": "# 3. CISPO loss as raw sum: clipped_ratio.detach() * log(pi) * advantage\n            # Unlike PPO, CISPO clips the importance ratio and uses it as a weighting\n            # coefficient for the policy's log-probability more like policy gradient.\n            clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high)\n            pi_sum = -(clipped_ratio.detach() * logprobs * adv * mask).sum()"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L174-L176", "role": "computation", "quote": "unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"},
+          {"source": "feynrl_readme_cispo", "ref": "algs/CISPO/README.md:L3", "role": "claim", "quote": "CISPO is a PPO-style policy optimization algorithm that clips the importance ratio but uses it as a stop-gradient weighting coefficient on the log-probability term ... Gradient flows through log π_θ on every valid token"},
+          {"source": "feynrl_readme_cispo", "ref": "algs/CISPO/README.md:L25-L30", "role": "claim", "quote": "Under standard PPO/GRPO clipping, the gradient is zeroed when the ratio moves outside the clip range in the direction the advantage would push further. CISPO instead always passes a gradient through log π_θ and weights it by the detached clipped ratio"},
+          {"source": "feynrl_unit_tests", "ref": "unit_tests/unit/test_cispo_loss.py:L43-L53", "role": "computation", "quote": "logprobs = torch.tensor([[-0.5]])\n    old_logprobs = torch.tensor([[-10.5]]) # Ratio = exp(10) ... # loss_pi = -(1.2 * -0.5 * 1.0) / 1 = 0.6\n    assert np.isclose(metrics['pi_loss'], 0.6)"},
+          {"source": "feynrl_unit_tests", "ref": "unit_tests/unit/test_cispo_loss.py:L66-L77", "role": "computation", "quote": "logprobs = torch.tensor([[-0.5]], requires_grad=True)\n    old_logprobs = torch.tensor([[-0.5]]) ... # loss = -(1.0 * logprobs * 1.0) -> grad = -1.0\n    assert np.isclose(logprobs.grad.item(), -1.0)"}
+        ],
+        "filtering_note": "CISPO's README attributes the stop-gradient clipped-ratio form to P3O (L19), which in this repo uses an ESS-derived one-sided cap instead of fixed bounds (algs/P3O/p3o.py). PPO in this repo adds a value network (algs/PPO/value_net.py) but uses the same min-clip surrogate as GRPO; neither P3O nor PPO is traced further here."
+      },
+      "prerequisites": [
+        {"kp": "grpo-clipped-loss", "basis": "author-inference", "note": "Both are candidates for the same ray-remote train_step hop; the recipe selects GRPO, so GRPO is the reference case."}
+      ],
+      "misconceptions": [
+        {"belief": "CISPO and GRPO give the same gradient inside the clip band.", "why_wrong": "Inside the band GRPO's gradient is ratio x A x d(logp) (ratio carries gradient); CISPO's is detach(ratio) x A x d(logp): same value at that point, but CISPO's ratio never contributes second-order terms and never switches branch."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "CISPO, one token: logprobs -0.5, old_logprobs -10.5 (ratio e^10), advantage 1.0, clip 0.2. What is pi_loss?",
+          "format": "number",
+          "answer": "0.6",
+          "tolerance": 0.01,
+          "why": "clipped_ratio = 1.2 (detached); pi_sum = -(1.2 x -0.5 x 1.0) = +0.6 (test_cispo_loss_clipping)."
+        },
+        "transfer": {
+          "q": "For that same token, compare d(pi_loss)/d(logprobs) under CISPO and under GRPO's min-clip.",
+          "format": "short",
+          "answer": "CISPO: -1.2 (nonzero); GRPO: 0",
+          "why": "CISPO's loss is linear in logprobs with detached weight 1.2 x A. GRPO picks the clamped branch (min(e^10, 1.2) = 1.2), which is constant in logprobs.",
+          "targets_misconception": "CISPO and GRPO give the same gradient inside the clip band."
+        },
+        "check": {
+          "q": "CISPO in sync mode, one masked token with ratio exp(logprobs - old_logprobs) = 0.6, advantage +1.0, clip_low = clip_high = 0.2, entropy and KL coefficients 0. What is d(pi_sum)/d(logprobs) for this token? Type only the number.",
+          "format": "number",
+          "answer": "-0.8",
+          "tolerance": 0.05,
+          "value": -0.8,
+          "why": "algs/CISPO/cispo.py:L174-L175: clipped_ratio = clamp(0.6, 0.8, 1.2) = 0.8, then pi_sum = -(clipped_ratio.detach() * logprobs * adv). The weight is a constant, so d(pi_sum)/d(logprobs) = -0.8 x 1.0 = -0.8. GRPO on the same token would take min(0.6 x 1, 0.8 x 1) = 0.6, the unclipped branch, with gradient d(-ratio*A)/d(logprobs) = -ratio x A = -0.6 (grpo.py:L174-L176).",
+          "targets_misconception": "CISPO and GRPO give the same gradient inside or near the clip band.",
+          "varies": "domain: a ratio below the band with positive advantage, where CISPO lifts the weight to the lower edge, instead of a ratio far above the band",
+          "invariant": "CISPO's gradient on log pi is the detached clamped ratio times A, so the clamp sets the magnitude on both sides of the band; GRPO's gradient follows whichever min branch is active.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In CISPO's pi_sum, which factor is wrapped in .detach() and which factor carries the gradient?", "answer": "clamp(ratio) is detached; logprobs carries the gradient."},
+          {"q": "State in one clause the practical difference the README claims between CISPO and PPO-style clipping.", "answer": "CISPO never fully turns off a token's gradient; it only bounds how much the importance weight can amplify it."}
+        ],
+        "self_explain": "Why might a bounded-but-never-zero gradient be preferable when the replay data is stale?"
+      },
+      "presentations": [
+        {"type": "code", "action": "compare", "ref": "algs/CISPO/cispo.py:L164-L175"},
+        {"type": "interactive", "action": "compare", "ref": "fixture:feynrl--clip-loss", "notice": "Switch alg_name: GRPO's gradient curve drops to 0 past the band on the advantage's side, while CISPO's stays at −clamp(ratio)·A on both sides and is never 0."}
+      ]
+    },
+    {
+      "id": "kl-reference-penalty",
+      "label": "KL to the reference model: loaded only if kl_coeff > 0, variance-reduced estimator",
+      "kind": "mechanism",
+      "statement": "A frozen reference model is loaded only when ref_model_path is set and kl_coeff > 0; then ref_forward runs under no_grad and compute_kl_distance returns log(pi/pi_ref) + exp(clamp(log pi_ref - log pi, -10, 10)) - 1 per token, masked and added to the loss as kl_coeff * kl_sum.",
+      "provenance": {
+        "status": "tested",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L98-L101", "role": "computation", "quote": "if self.ref_model_path and self.kl_coeff > 0.0:\n            ref_model = self.load_single_model(model_path=self.ref_model_path, dtype=self.model_dtype, model_name=\"ref\")\n        else:\n            ref_model = None"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L344-L348", "role": "computation", "quote": "if self.kl_coeff > 0.0 and self.ref_model_engine is not None:\n                ref_logprobs = self.ref_forward(input_ids=input_ids, att_mask=att_mask, pos_ids=pos_ids, mm_kwargs=mm_kwargs)"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L182-L186", "role": "computation", "quote": "if ref_logprobs is not None and self.kl_coeff > 0.0:\n            kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs)\n            # avoid calculating kl for padded tokens.\n            kl_dist = torch.where(mask_bool, kl_dist, torch.zeros_like(kl_dist))\n            kl_sum  = (kl_dist * mask).sum()"},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L131-L139", "role": "computation", "quote": "log_ratio = logprobs - ref_logprobs\n        # pi_ref/pi = exp(ref_logprobs - logprobs)\n        exponent = torch.clamp(ref_logprobs - logprobs, min=-10.0, max=10.0) ... ratio_inv = torch.exp(exponent)\n        kl_dist = log_ratio + ratio_inv - 1"},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L95-L104", "role": "computation", "quote": "with torch.no_grad(): ... output = self.ref_model_engine(input_ids=input_ids, attention_mask=att_mask, position_ids=pos_ids, use_cache=False, **(mm_kwargs or {}))"},
+          {"source": "feynrl_readme_rl", "ref": "algs/RL/README.md:L21-L27", "role": "claim", "quote": "uses the variance-reduced, always-non-negative sample-based KL estimator introduced by Schulman ... this form has the same expectation but is non-negative on every sample"},
+          {"source": "feynrl_unit_tests", "ref": "unit_tests/unit/test_kl_divergence.py:L9-L25", "role": "computation", "quote": "logprobs = torch.tensor([[-0.1, -0.2]])\n    ref_logprobs = torch.tensor([[-0.15, -0.25]]) ... expected = (0.05 + torch.exp(torch.tensor(-0.05)) - 1.0)"},
+          {"source": "feynrl_example_gsm8k", "ref": "train_sync.yaml:L43", "role": "claim", "quote": "kl_coeff: 0.0"},
+          {"source": "feynrl_repo", "ref": "configs/load.py:L779-L783", "role": "computation", "quote": "if config.model.ref_model is not None and (config.train.kl_coeff == 0 or config.train.kl_coeff is None):\n                raise ValueError(f\"kl_coeff must be > 0 if model.ref is not None\") ... if config.model.ref_model is None and (config.train.kl_coeff > 0):\n                raise ValueError(f\"model.ref must be not None if kl_coeff > 0\")"}
+        ],
+        "filtering_note": "The same estimator is reused for approx_kl between current and old policy (grpo.py:L198-L202), which is a diagnostic, not a loss term. The config validator (L779-L783) forces kl_coeff and ref_model to be set together (an empty ref_model string is normalised to None at L563), so the runtime gate at L344 is belt-and-braces."
+      },
+      "prerequisites": [
+        {"kp": "grpo-clipped-loss", "basis": "call-order", "note": "compute_kl_distance (hop 118) is called from inside compute_policy_loss after the ratio term."}
+      ],
+      "misconceptions": [
+        {"belief": "The reference model is always loaded so it can be turned on later.", "why_wrong": "load_model skips it unless ref_model_path and kl_coeff > 0 at construction (L98); the gsm8k recipe therefore holds no reference weights in memory."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "In the gsm8k sync recipe (kl_coeff 0.0, ref_model \"\"), how many forward passes per micro-batch does a training engine run, and what value does the kl_ref metric report?",
+          "format": "short",
+          "answer": "One (policy only); kl_ref = 0.0",
+          "why": "ref_model is None (L98-L101), ref_forward is skipped (L344), kl_sum stays at its 0.0 initialiser so kl_ref = 0/denom.",
+          "targets_misconception": "The reference model is always loaded so it can be turned on later."
+        },
+        "transfer": {
+          "q": "compute_kl_distance (the k3 estimator: exp(ref − logp) − (ref − logp) − 1) with logprobs -0.1 and ref_logprobs -0.15 for one token. Value?",
+          "format": "number",
+          "answer": "0.00123",
+          "tolerance": 0.05,
+          "why": "log_ratio = 0.05; ratio_inv = exp(-0.05) = 0.95123; 0.05 + 0.95123 - 1 = 0.00123 (test_kl_distance_correctness)."
+        },
+        "retrieval": [
+          {"q": "Which two conditions must both hold for ref_forward to run inside train_step?", "answer": "kl_coeff > 0.0 and ref_model_engine is not None.", "layer": "detail"},
+          {"q": "Write the per-token KL estimator used by compute_kl_distance.", "answer": "log(pi/pi_ref) + pi_ref/pi - 1, with the exponent clamped to [-10, 10]."}
+        ],
+        "self_explain": "Why does the estimator clamp the exponent at +-10 but not the log-ratio term?"
+      },
+      "presentations": [
+        {"type": "code", "action": "compute", "ref": "algs/RL/common.py:L120-L139"},
+        {"type": "code", "action": "trace", "ref": "algs/GRPO/grpo.py:L343-L351"},
+        {"type": "interactive", "action": "compute", "ref": "fixture:grpo--kl-estimators", "notice": "FeynRL's compute_kl_distance is the k3 curve, u − log u − 1 with u = π_ref/π: it is never negative and is 0 only where π = π_ref, unlike the plain log-ratio k1."}
+      ]
+    },
+    {
+      "id": "decoupled-loss-prox",
+      "label": "Overlap mode auto-enables the decoupled loss: clip on pi/pi_prox, weight by pi_prox/pi_old",
+      "kind": "mechanism",
+      "statement": "use_decoupled_loss = overlap.enabled; then train_step snapshots pi_prox log-probs under no_grad once per epoch (before any optimizer step), clips r_prox = exp(logp - prox) instead of pi/pi_old, and multiplies by a detached behaviour weight w = exp(prox - old_logp) clamped to behave_imp_weight_cap.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L58-L60", "role": "computation", "quote": "# decoupled loss when async overlap engine is used\n               'use_decoupled_loss': params.overlap.enabled if params.overlap else False,\n               'behave_imp_weight_cap': params.overlap.behave_imp_weight_cap if params.overlap else None,"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L145-L159", "role": "computation", "quote": "raw_logratio_prox = (logprobs - prox_logprobs).to(torch.float32) ... r_prox = torch.exp(logratio_prox) ... raw_log_w = (prox_logprobs - old_logprobs).to(torch.float32) ... behave_w  = torch.exp(log_w)\n            if self.behave_imp_weight_cap is not None:\n                behave_w = torch.clamp(behave_w, min=0.0, max=self.behave_imp_weight_cap) ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * behave_w * mask).sum()"},
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L245-L248", "role": "computation", "quote": "if self.use_decoupled_loss:\n            micro_batches, prox_logprobs, prox_nan_masks = self.snapshot_prox_for_epoch(micro_batches=micro_batches, engine_id=engine_id, device=device)"},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L326-L332", "role": "computation", "quote": "# Snapshot in original (pre-shuffle) order on the first call of each epoch.\n        if iter_in_epoch == 0 or self.cached_prox_logprobs is None:\n            self.policy_engine.eval()\n            self.cached_prox_logprobs, self.cached_prox_nan_masks = self.snapshot_prox_logprobs(..."},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L301-L310", "role": "computation", "quote": "with torch.no_grad(): ... curr_logprobs, _, _ = self.policy_forward(input_ids=input_ids, att_mask=att_mask, pos_ids=pos_ids, mm_kwargs=mm_kwargs) ... logprobs_prox.append(curr_logprobs.detach())"},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L57-L58", "role": "claim", "quote": "has drifted from the proximal policy. Tokens whose in-shard step is small are no longer clipped just because the replay data is stale. ... reweights rollout samples onto the proximal distribution. It is detached"},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L60", "role": "claim", "quote": "This codebase uses a simpler, memory-cheaper approximation: at the start of each training shard ... each training rank runs policy_forward under torch.no_grad() over every micro-batch and stores the resulting detached per-token logprobs"},
+          {"source": "feynrl_repo", "ref": "configs/load.py:L819-L820", "role": "computation", "quote": "if config.train.alg_name != \"p3o\" and config.overlap.behave_imp_weight_cap is not None and config.overlap.behave_imp_weight_cap <= 1.0:\n                    raise ValueError(f\"overlap.behave_imp_weight_cap must be > 1.0 when set"}
+        ],
+        "filtering_note": "The README (L60) states the paper's pi_prox is an EWMA of parameters and that this repo substitutes a shard-start logprob snapshot; that difference is documented, not derived. P3O ignores use_decoupled_loss (README L37). The prox cache is freed at epoch end (common.py:L342-L357)."
+      },
+      "prerequisites": [
+        {"kp": "grpo-clipped-loss", "basis": "author-inference", "note": "In call order snapshot_prox_for_epoch (hop 85) precedes compute_policy_loss (hop 117), but the decoupled branch is a modification of the standard branch and is easier to learn second."},
+        {"kp": "supp-on-off-policy", "basis": "author-inference"}
+      ],
+      "misconceptions": [
+        {"belief": "pi_prox is the model at the moment each micro-batch is processed.", "why_wrong": "It is one snapshot taken on the first train_step of the epoch before any optimizer step (common.py:L326-L332) and reused, pair-shuffled, for every later step of that epoch."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Running train_sync.yaml (overlap.enabled False, behave_imp_weight_cap 5.0). How many times per epoch is snapshot_prox_logprobs called, and what is behave_imp_weight_cap used for?",
+          "format": "short",
+          "answer": "Zero times; the cap is passed but unused",
+          "why": "use_decoupled_loss = overlap.enabled = False (rl_engines.py:L59), so train_step takes the else-branch at grpo.py:L250 and compute_policy_loss uses the standard ratio.",
+          "targets_misconception": "pi_prox is the model at the moment each micro-batch is processed."
+        },
+        "transfer": {
+          "q": "Overlap mode, one token with prox_logprobs - old_logprobs = 2.0, cap 5.0. What behave_w multiplies that token's clipped surrogate, and what if the cap were null?",
+          "format": "short",
+          "answer": "5.0 with the cap (e^2 = 7.39 clamped); 7.39 with cap null",
+          "why": "behave_w = exp(log_w) then torch.clamp(max=cap) (L152-L154); the token also counts toward behave_w_capfrac."
+        },
+        "check": {
+          "q": "Overlap-mode GRPO (decoupled loss on), one masked token with advantage +1, clip_low = clip_high = 0.2, behave_imp_weight_cap 5.0. Its log-probs satisfy logprobs - prox_logprobs = ln 1.5 and prox_logprobs - old_logprobs = ln 2. What pi_sum does compute_policy_loss return for this token? Type only the number.",
+          "format": "number",
+          "answer": "-2.4",
+          "tolerance": 0.05,
+          "value": -2.4,
+          "why": "algs/GRPO/grpo.py:L145-L159: r_prox = exp(logprobs - prox) = 1.5; behave_w = exp(prox - old) = 2.0, clamped at max 5.0 so unchanged. Surrogate: min(1.5 x 1, clamp(1.5, 0.8, 1.2) x 1) = 1.2; pi_sum = -(1.2 x 2.0) = -2.4. Clipping pi/pi_old = 3.0 without the behaviour weight (the sync formula) would give -1.2.",
+          "targets_misconception": "Overlap mode clips the same ratio pi/pi_old as sync mode.",
+          "varies": "functional: computes the whole decoupled surrogate (clip on pi/pi_prox times the behaviour weight) rather than only the capped weight",
+          "invariant": "Decoupled loss: the clip acts on r_prox = pi/pi_prox and the result is multiplied by the detached, capped behaviour weight pi_prox/pi_old.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "In the decoupled loss, which ratio is clipped and which ratio is the detached weight?", "answer": "Clip r_prox = pi/pi_prox; detached weight w = pi_prox/pi_old."},
+          {"q": "Which config field turns the decoupled loss on, and can it be set independently of overlap?", "answer": "overlap.enabled; no, use_decoupled_loss is wired directly to it in create_training_engines.", "layer": "detail"}
+        ],
+        "self_explain": "Why does clipping pi/pi_old become useless as the replay buffer mixes several policy versions?"
+      },
+      "presentations": [
+        {"type": "code", "action": "distinguish", "ref": "algs/GRPO/grpo.py:L140-L176"},
+        {"type": "code", "action": "trace", "ref": "algs/RL/common.py:L284-L340"},
+        {"type": "interactive", "action": "compute", "ref": "fixture:feynrl--clip-loss", "notice": "Tick the decoupled loss: the band now sits around π/π_prox, and the clipped term is multiplied by w = π_prox/π_old, capped at behave_imp_weight_cap; the sync formula would clip π/π_old instead."}
+      ]
+    },
+    {
+      "id": "weight-sync-direct",
+      "label": "Sync-mode weight sync: ZeRO-3 gather -> ray.put -> /dev/shm -> vLLM load_weights, disk fallback",
+      "kind": "procedure",
+      "statement": "sync_weights_direct gathers the policy state_dict from all training ranks (rank 0 returns it), puts it in the Ray object store, and each rollout engine pickles it to /dev/shm, calls collective_rpc('update_weights_from_state') on its TP workers, verifies every worker loaded the same non-zero count, bumps loaded_version and resets the prefix cache; if it raises, main() saves a checkpoint and refreshes engines from disk.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L537-L546", "role": "computation", "quote": "def sync_weights_direct(...):\n    ''' Transfer weights directly from deepspeed training engines to vllm rollout engines via ray object store. No disk I/O. '''\n    state_dict_ref, _ = gather_training_weights(training_engines, logger, sync_timeout=sync_timeout) ... return push_weights_to_rollout(rollout_engines, state_dict_ref, version, logger, ..."},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L555-L562", "role": "computation", "quote": "# All training engines must participate in gather_state_dict(). see common.py.\n    gather_futures = [engine.gather_state_dict.remote() for engine in training_engines] ... state_dict = gather_results[0]"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L226-L228", "role": "computation", "quote": "if self.loaded_version == version:\n            self.log(f\"Model already at version {version}, skipping weight update\")\n            return True"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L244-L256", "role": "computation", "quote": "shm_path = f\"/dev/shm/feynrl_weights_{os.getpid()}_v{version}.pkl\"\n        with open(shm_path, 'wb') as f:\n            pickle.dump(state_dict, f) ... results = self.vllm_engine.collective_rpc(\"update_weights_from_state\", args=(shm_path,))\n        finally:\n            os.remove(shm_path)"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L271-L282", "role": "computation", "quote": "if len(valid) < len(results):\n                # Some workers returned a count and some didn't — partial failure ... raise RuntimeError(f\"Weight sync verification failed: TP workers {failed} ... if len(set(valid)) > 1:\n                raise RuntimeError(f\"Weight sync verification failed: TP workers loaded different"},
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L284-L293", "role": "computation", "quote": "self.loaded_version = version\n        # Invalidate prefix cache so V+1 weights aren't mixed with V cached K/V. ... reset_fn(reset_running_requests=True)"},
+          {"source": "feynrl_repo", "ref": "rollouts/weight_sync.py:L41-L48", "role": "computation", "quote": "model_params = set(name for name, _ in model.named_parameters())\n        matched = sum(1 for k in state_dict if k in model_params)\n        if matched == 0 and num_params > 0:\n            raise RuntimeError(f\"Weight sync failed: none of the {num_params} state_dict keys ... matched model parameters."},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L427-L429", "role": "computation", "quote": "except Exception as e:\n                logger.warning(f\"[Epoch {epoch+1}] Direct sync raised {e}, falling back to disk\")\n                sync_success = False"},
+          {"source": "feynrl_repo", "ref": "run_rl_sync.py:L443-L445", "role": "computation", "quote": "no_sync_succeeded = not result['sync_performed'] and not sync_success\n        need_disk_for_rollout = (weight_sync_method == \"disk\" and not is_last_epoch) or ... (no_sync_succeeded and weight_sync_method in (\"nccl\", \"direct\", \"disk\") and not is_last_epoch)"},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L27-L28", "role": "claim", "quote": "Direct Sync: Weights are gathered from training engines via DeepSpeed's ZeRO gather and pushed to rollout workers through Ray's shared-memory object store. No disk I/O, but involves serialization. 3. Disk Sync: ... Slowest, but the most robust."}
+        ],
+        "filtering_note": "gather_state_dict itself (algs/RL/common.py:L945-L1015, ZeRO-3 GatheredParameters + PEFT merge + VLM key remap) is not traced. ARCHITECTURE.md:L30 cites configs/load.py:684-686 for the nccl-in-sync rejection; at this sha the check is at L722-L724."
+      },
+      "prerequisites": [
+        {"kp": "sync-epoch-loop", "basis": "call-order", "note": "sync_weights_direct is hop 180, called from run_rl_sync.main after run_epoch_sync returns."},
+        {"kp": "rollout-engine-generate", "basis": "author-inference", "note": "Understanding worker_extension_cls and loaded_version on the engine."}
+      ],
+      "misconceptions": [
+        {"belief": "Direct sync pushes the weights through collective_rpc arguments.", "why_wrong": "vLLM's collective_rpc serialises with msgspec, which cannot encode >4GB payloads, so only a ~50-byte /dev/shm path is passed and each TP worker reads the pickle itself (L230-L243)."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "During epoch 7 (not the last), sync_weights_direct raises inside push_weights_to_rollout. What does main() do before starting epoch 8?",
+          "format": "short",
+          "answer": "Logs the warning, sets sync_success False, saves a disk checkpoint, then refresh_rollout_engine reloads every rollout engine from that path and sets rollout_policy_version = policy_version.",
+          "why": "The except at L427 swallows the error; need_disk_for_rollout becomes True at L443-L445 because no sync succeeded and the method is 'direct'; L447-L471 run the save + refresh."
+        },
+        "transfer": {
+          "q": "An engine with tensor_parallel_size 2 gets collective_rpc results [150, 0] from update_weights_from_state. What happens on that engine and then in main()?",
+          "format": "short",
+          "answer": "update_weights_direct raises RuntimeError (partial failure: TP worker 1 returned 0); the actor error propagates through ray_get_with_timeout, sync_weights_direct raises, main() falls back to the disk save + refresh path.",
+          "why": "valid = [150] is shorter than results (L271-L276); loaded_version is not advanced on that engine, so the fallback is required to avoid mixed-version TP shards.",
+          "targets_misconception": "Direct sync pushes the weights through collective_rpc arguments."
+        },
+        "check": {
+          "q": "Sync mode, epoch 4 of 10, weight_sync_method \"direct\". One rollout engine with tensor_parallel_size 4 gets collective_rpc results [150, 150, 148, 150] from update_weights_from_state. What happens?",
+          "format": "choice",
+          "choices": ["The engine accepts since every worker loaded a non-zero count, and its loaded_version advances", "The engine raises on the mismatched counts, and main() falls back to a disk save and refresh", "The engine re-sends the state_dict to worker 2 alone, then advances loaded_version on success", "The engine raises on the mismatched counts, and main() aborts the run with that RuntimeError"],
+          "answer": "The engine raises on the mismatched counts, and main() falls back to a disk save and refresh",
+          "why": "rollouts/vllm_engine.py:L264-L282: valid = all four counts (none is None or 0), so the all-failed and partial-failure checks pass, but `if len(set(valid)) > 1: raise RuntimeError(\"... TP workers loaded different param counts ...\")`; loaded_version is not updated (L284 is never reached). The error propagates through push_weights_to_rollout/sync_weights_direct to main(), which catches it, logs 'falling back to disk' and sets sync_success False (run_rl_sync.py:L427-L429); need_disk_for_rollout is then True (L443-L445), so main saves a checkpoint and calls refresh_rollout_engine.",
+          "distractor_from": "Option 2: treats non-zero counts as success (only the zero/None checks). Option 3: invents a per-worker retry; the code has none. Option 4: right about the raise, but misses that main() catches direct-sync exceptions and falls back to disk.",
+          "varies": "domain: all workers return non-zero but unequal counts, hitting the third verification check instead of the partial-failure check",
+          "invariant": "update_weights_direct only advances loaded_version when every TP worker reports the same non-zero load count; any verification failure raises and main() recovers via the disk path.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Which two weight_sync_method values are legal in sync mode, and what is the fallback order?", "answer": "'direct' or 'disk'; direct, then disk save + refresh_rollout_engine if direct fails.", "layer": "detail"},
+          {"q": "After a successful weight load, what cache does the engine invalidate and why?", "answer": "The vLLM prefix cache (reset_prefix_cache), so new-version weights are not mixed with old-version cached K/V."}
+        ],
+        "self_explain": "Why must every training rank call gather_state_dict even though only rank 0's result is used?"
+      },
+      "presentations": [
+        {"type": "code", "action": "trace", "ref": "core/rl_engines.py:L537-L599"},
+        {"type": "code", "action": "trace", "ref": "rollouts/vllm_engine.py:L215-L300"},
+        {"type": "interactive", "action": "trace", "ref": "fixture:feynrl--epoch-ledger", "notice": "Any zero, missing or unequal TP count makes the direct sync raise; main() catches it, so that epoch gets a disk save and refresh (orange) and the run goes on."}
+      ]
+    },
+    {
+      "id": "weight-sync-nccl-async",
+      "label": "Async-mode weight sync: three-phase NCCL broadcast from training rank 0 to every TP worker",
+      "kind": "procedure",
+      "statement": "In overlap mode, after policy_version += 1, perform_inline_sync stops the producer, fires the ZeRO-3 gather while draining pull loops, then broadcast_and_finalize_nccl schedules receive_all_weights_nccl on every rollout engine and nccl_broadcast_gathered on training rank 0 over a dedicated group of world_size = 1 + num_engines * tp, and only advances rollout_policy_version if every engine's finalize reports a full load.",
+      "provenance": {
+        "status": "implemented",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "run_rl_async.py:L840-L847", "role": "computation", "quote": "# Step 4: Bump policy_version to reflect training drift, then sync.\n    policy_version += 1 ... if not is_last_epoch: ... sync_state = perform_inline_sync(epoch=epoch,"},
+          {"source": "feynrl_repo", "ref": "run_rl_async.py:L519-L525", "role": "computation", "quote": "# step 1: stop production, push pills, fire gather concurrently with drain.\n    producer.stop()\n    stop_engines_and_drain(...)\n    t_gather_start = time.time()\n    gather_futures = start_nccl_gather(training_engines)"},
+          {"source": "feynrl_repo", "ref": "run_rl_async.py:L577-L584", "role": "computation", "quote": "broadcast_and_finalize_nccl(training_engines=training_engines, rollout_engines=rollout_engines, param_metadata=param_metadata, version=policy_version, ...)\n        rollout_policy_version    = policy_version\n        sync_triggered_this_epoch = True"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L645-L654", "role": "claim", "quote": "Rank assignment:\n          rank 0: training engine rank 0\n          rank 1..tp: rollout engine 0, TP workers 0..tp-1\n          rank tp+1..2*tp: rollout engine 1, TP workers 0..tp-1 ... world_size = 1 + num_rollout_engines * tp_size"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L736-L744", "role": "computation", "quote": "# Phase 2: Fire receive on all engines, then training broadcast.\n    # No barrier needed — NCCL broadcast is the implicit synchronization point. ... rollout_refs = [eng.receive_all_weights_nccl.remote(param_metadata) for eng in rollout_engines]\n    broadcast_ref = training_engines[0].nccl_broadcast_gathered.remote()"},
+          {"source": "feynrl_repo", "ref": "core/rl_engines.py:L769-L774", "role": "computation", "quote": "if not all(bool(r) for r in finalize_results):\n        failed = [i for i, r in enumerate(finalize_results) if not r]\n        raise RuntimeError(f\"[broadcast_and_finalize_nccl] Partial weight load on engines {failed}"},
+          {"source": "feynrl_repo", "ref": "algs/RL/common.py:L1200-L1204", "role": "computation", "quote": "for i, name in enumerate(param_names):\n                param = state_dict[name]\n                if use_pynccl:\n                    send_buf = param.to(device=device, non_blocking=True) if not param.is_cuda else param.contiguous()\n                    self.weight_sync_pynccl.broadcast(send_buf, src=0, stream=torch.cuda.current_stream())"},
+          {"source": "feynrl_repo", "ref": "rollouts/weight_sync.py:L115-L117", "role": "computation", "quote": "tp_rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0\n        my_rank = rank_offset + tp_rank\n        self.weight_sync_rank = my_rank"},
+          {"source": "feynrl_repo", "ref": "rollouts/weight_sync.py:L191-L200", "role": "computation", "quote": "if not torch.isfinite(buffer).all():\n                num_bad = (~torch.isfinite(buffer)).sum().item()\n                corrupt_params.append((name, dtype, tuple(shape), num_bad))\n                del buffer\n                continue\n\n            self.model_runner.model.load_weights(weights=[(name, buffer)])"},
+          {"source": "feynrl_repo", "ref": "configs/load.py:L706-L709", "role": "computation", "quote": "if overlap_enabled and weight_sync_method != \"nccl\":\n                raise ValueError(f\"overlap.enabled=True requires weight_sync_method='nccl'"},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L26", "role": "claim", "quote": "NCCL Broadcast (fastest): Training rank 0 broadcasts weights directly to all rollout engine TP workers over a dedicated NCCL process group. Zero-copy, no serialization overhead."}
+        ],
+        "filtering_note": "The example train_async.yaml sets nccl_sync_backend: gloo (L19), so the recipe's 'NCCL broadcast' actually runs the CPU gloo branch of the same three-phase protocol (weight_sync.py:L181-L183). The async engine's pull loops and producer thread (run_rl_async.py:L63-L220) are treated as a black box. These anchors come from the default discovered.json trace (run_rl_async branch), not from discovered_sync.json."
+      },
+      "prerequisites": [
+        {"kp": "weight-sync-direct", "basis": "author-inference", "note": "Same gather_state_dict on the training side; the transport differs."},
+        {"kp": "sync-epoch-loop", "basis": "author-inference"}
+      ],
+      "misconceptions": [
+        {"belief": "Weights are broadcast to one process per rollout engine, which then shards them.", "why_wrong": "Every TP worker is its own rank in the weight-sync group (my_rank = rank_offset + tp_rank) and receives the full tensor; vLLM's load_weights does the TP slicing locally."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Overlap mode with 2 rollout engines and tensor_parallel_size 2. What is the weight-sync world_size, and which rank does TP worker 1 of rollout engine 1 get (both 0-indexed; the trainer holds rank 0)?",
+          "format": "short",
+          "answer": "world_size 5; rank 4",
+          "why": "world_size = 1 + 2 x 2; rank_offset for engine 1 = 1 + 1 x 2 = 3; plus tp_rank 1 = 4 (core/rl_engines.py:L654, L675; weight_sync.py:L116).",
+          "targets_misconception": "Weights are broadcast to one process per rollout engine, which then shards them."
+        },
+        "transfer": {
+          "q": "During phase 2 one engine receives a tensor containing NaN. Trace what that engine does, what the driver does, and whether rollout_policy_version advances.",
+          "format": "short",
+          "answer": "The engine skips load_weights for that tensor but keeps receiving so the collective completes; finalize returns False (num_loaded < expected); the driver raises RuntimeError 'Partial weight load'; rollout_policy_version is not advanced and the next round retries on stale weights (unless the error is NCCL-fatal).",
+          "why": "weight_sync.py:L191-L195 records and continues; core/rl_engines.py:L769-L774 raises; run_rl_async.py:L586-L599 catches, checks engine health and keeps the old rollout_policy_version."
+        },
+        "check": {
+          "q": "Overlap mode. Before this epoch's sync, rollout_policy_version is 6 and the trainer has just bumped policy_version to 7. During broadcast_and_finalize_nccl one engine's finalize returns False (a TP worker loaded fewer params than expected); the error is not NCCL-fatal and all engines answer the health check. With which rollout_policy_version are the pull loops relaunched? Type only the number.",
+          "format": "number",
+          "answer": "6",
+          "tolerance": 0.05,
+          "value": 6,
+          "why": "core/rl_engines.py:L769-L774 raises RuntimeError('Partial weight load on engines [...]') when any finalize result is falsy. In perform_inline_sync the assignment rollout_policy_version = policy_version (run_rl_async.py:L583) sits after broadcast_and_finalize_nccl inside the try, so it is skipped; the except branch checks is_nccl_fatal_error (not fatal), runs check_rollout_engines_health (none dead) and logs 'Engines resume with stale weights; next round retries' (L586-L599). Step 4 relaunches run_pull_loop with the unchanged rollout_policy_version = 6 (L613).",
+          "targets_misconception": "Once training rank 0 has broadcast the new weights, the rollout side is at the new version.",
+          "varies": "functional: asks for the version value the driver carries forward after a non-fatal partial load, rather than tracing a NaN tensor through the receive path",
+          "invariant": "rollout_policy_version advances only after every engine's finalize confirms a full load; a recoverable failure leaves the old version and stale weights in place.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Name the three phases of sync_weights_nccl in order.", "answer": "Gather (all training ranks, rank 0 keeps the state dict), broadcast (receives scheduled first, then rank-0 broadcast), finalize (each engine confirms a full load)."},
+          {"q": "Why is no barrier needed between scheduling the receives and firing the broadcast?", "answer": "The NCCL broadcast itself blocks until all participants enter; it is the synchronisation point."}
+        ],
+        "self_explain": "Why does the driver fire the ZeRO-3 gather before waiting for the rollout pull loops to drain?"
+      },
+      "presentations": [
+        {"type": "code", "action": "trace", "ref": "core/rl_engines.py:L722-L810"},
+        {"type": "animation", "action": "predict-trend", "ref": "fixture:rollout-train-timeline", "notice": "In overlap mode the rollout bar keeps running while training runs; it pauses only during the inline sync window, and the buffer's version histogram shifts by one at that moment."},
+        {"type": "animation", "action": "trace", "ref": "fixture:feynrl--overlap-rounds", "notice": "After a failed inline sync the trainer tag moves on but the rollout tag keeps its old version, and every new shard is stamped with that old version."},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--pipeline-sizes", "notice": "Tick overlap: world_size = 1 + engines × tp, because every TP worker of every engine is its own rank after training rank 0."}
+      ]
+    },
+    {
+      "id": "staleness-budget-max-lag",
+      "label": "overlap.max_lag: buffer capacity and version-based eviction bound off-policy drift",
+      "kind": "quantity",
+      "statement": "max_lag (>= 1, validated) sizes the async replay buffer as prompts_per_pass * n_samples * max_lag (a deque with that maxlen, FIFO on overflow) and, after each round, evict_stale drops items with policy_version < policy_version - max_lag, so the buffer holds at most max_lag + 1 versions.",
+      "provenance": {
+        "status": "tested",
+        "basis": "evidence",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "run_rl_async.py:L235-L238", "role": "computation", "quote": "# At policy version T with max_lag=N, the buffer holds data from versions {T-N+1, ..., T}\n    bsz_rollout        = num_rollout_engines * rollout_batch_size_per_gpu\n    prompt_per_pass    = math.ceil(rollout_samples_per_epoch / bsz_rollout) * bsz_rollout\n    replay_buffer_size = prompt_per_pass * n_samples * max_lag"},
+          {"source": "feynrl_repo", "ref": "run_rl_async.py:L700-L705", "role": "computation", "quote": "# enforce max_lag by versions, not FIFO. Keep items whose policy_version >= policy_version - overlap_max_lag. ... if overlap_max_lag is not None and overlap_max_lag > 0:\n        min_v   = policy_version - overlap_max_lag\n        evicted = replay_buffer.evict_stale(min_version=min_v)"},
+          {"source": "feynrl_repo", "ref": "rollouts/replay_buffer.py:L25-L26", "role": "computation", "quote": "if max_size is not None:\n            self.items: Any = deque(maxlen=max_size)"},
+          {"source": "feynrl_repo", "ref": "rollouts/replay_buffer.py:L277-L279", "role": "computation", "quote": "before = len(self.items)\n        if isinstance(self.items, deque):\n            self.items = deque((x for x in self.items if x[\"policy_version\"] >= min_version), maxlen=self.items.maxlen,)"},
+          {"source": "feynrl_repo", "ref": "configs/load.py:L812-L813", "role": "computation", "quote": "if config.overlap.max_lag is None or config.overlap.max_lag < 1:\n                    raise ValueError(f\"overlap.max_lag must be >= 1, got {config.overlap.max_lag}\")"},
+          {"source": "feynrl_unit_tests", "ref": "unit_tests/unit/test_replay_buffer.py:L142-L156", "role": "computation", "quote": "rb = ReplayBuffer(pad_token_id=0, max_seq_len=10, max_size=10) ... evicted = rb.evict_stale(min_version=5)\n    assert evicted == 5\n    assert len(rb) == 5 ... assert rb.items.maxlen == 10"},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L37", "role": "claim", "quote": "Off-policy drift is bounded by overlap.max_lag (max policy-version distance between the buffer's oldest and newest samples)."},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L33", "role": "claim", "quote": "In async / overlap mode, as the replay buffer mixes older policy versions, a larger fraction of tokens can fall outside the clip range and contribute no gradient (higher clipfrac)."}
+        ],
+        "filtering_note": "The comment at L235 says the buffer holds {T-N+1..T} while the eviction at L704 keeps versions >= T-N, i.e. N+1 versions; the code at L710-L711 acknowledges 'unique_versions up to K+1'. The animation fixture should show the L704 behaviour. Whether max_lag is binding also depends on the rollout/training speed ratio (comments at L908-L912)."
+      },
+      "prerequisites": [
+        {"kp": "weight-sync-nccl-async", "basis": "author-inference", "note": "Eviction happens right after the drain that precedes the inline sync; versions are stamped by the sync."},
+        {"kp": "decoupled-loss-prox", "basis": "author-inference", "note": "The loss that consumes the stale mixture."},
+        {"kp": "supp-on-off-policy", "basis": "author-inference"}
+      ],
+      "misconceptions": [
+        {"belief": "max_lag: 1 makes overlap mode on-policy.", "why_wrong": "Version-1 items survive eviction (>= T-1), so the buffer mixes two versions, and even same-version items are off-policy after the first optimizer step."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You set overlap.max_lag: 0 (a zero staleness budget) in train_async.yaml. What happens to the run?",
+          "format": "short",
+          "answer": "It never starts: load_and_verify raises ValueError 'overlap.max_lag must be >= 1, got 0'.",
+          "why": "configs/load.py:L812-L813 rejects it; there is no code path for a zero-capacity buffer (replay_buffer_size would be 0).",
+          "targets_misconception": "max_lag: 1 makes overlap mode on-policy."
+        },
+        "transfer": {
+          "q": "train_async.yaml with max_lag: 2 (2 engines x 64 prompts, 512 prompts/epoch, n_samples 4). replay_buffer_size is max_lag passes' worth of completions: what is it? And after the bump to policy_version 5, which versions may remain in the buffer?",
+          "format": "short",
+          "answer": "Capacity 4096; versions 3, 4 and 5 (min_v = 5 - 2 = 3).",
+          "why": "prompt_per_pass = ceil(512/128) x 128 = 512; 512 x 4 x 2 = 4096; evict_stale keeps policy_version >= 3."
+        },
+        "check": {
+          "q": "Overlap mode with 4 rollout engines, rollout_batch_size_per_gpu 32, rollout_samples_per_epoch 300, n_samples 8 and max_lag 3. What maxlen does the replay buffer deque get? Type only the number of completions.",
+          "format": "number",
+          "answer": "9216",
+          "tolerance": 0.02,
+          "value": 9216,
+          "why": "run_rl_async.py:L236-L238: bsz_rollout = 4 x 32 = 128; prompt_per_pass = ceil(300/128) x 128 = 3 x 128 = 384; replay_buffer_size = 384 x 8 x 3 = 9216, used as deque(maxlen=max_size) (rollouts/replay_buffer.py:L25-L26). Skipping the round-up gives 300 x 8 x 3 = 7200.",
+          "varies": "domain: different engine count, batch size and n_samples, with a prompts-per-epoch value that is not a multiple of the rollout batch, so the ceiling matters",
+          "invariant": "Buffer capacity = (prompts per pass, rounded up to whole rollout batches) x n_samples x max_lag.",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {"q": "Name the two mechanisms by which max_lag limits what the training engines see.", "answer": "deque maxlen = items_per_round x max_lag (FIFO overflow) and evict_stale(min_version = policy_version - max_lag) after each round."},
+          {"q": "Which metric would you watch to see the clip band starting to discard stale tokens?", "answer": "clipfrac (and behave_w_* in decoupled mode)."}
+        ],
+        "self_explain": "Why evict by version rather than rely on the FIFO capacity alone?"
+      },
+      "presentations": [
+        {"type": "code", "action": "compute", "ref": "run_rl_async.py:L222-L251"},
+        {"type": "animation", "action": "trace", "ref": "fixture:feynrl--overlap-rounds", "notice": "Two rules remove shards: a full deque drops its oldest shards as new ones arrive (FIFO), and evict_stale drops whatever is still stamped below T − max_lag. In between, training sees shards one or more versions behind the trainer."},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--pipeline-sizes", "notice": "Tick overlap: the deque's maxlen is the rounded-up prompts per pass × n_samples × max_lag, and max_lag 0 is rejected before anything runs."}
+      ]
+    },
+    {
+      "id": "supp-importance-ratio",
+      "label": "Supplement: the importance ratio pi(a|s)/pi_old(a|s) and why it is exp(logp - logp_old)",
+      "kind": "definition",
+      "statement": "When data was sampled from pi_old but the gradient is taken for pi, each token's contribution is reweighted by the importance ratio pi(a|s)/pi_old(a|s), computed as exp(log pi - log pi_old) because both policies are stored as log-probabilities; a ratio of 1 means the policy has not moved on that token.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "algs/GRPO/grpo.py:L120-L122", "role": "claim", "quote": "Compute policy loss:\n                1. ratio = exp(logprobs - old_logprobs)\n                2. loss = -(min(ratio * adv, clip_adv * adv)) * mask"},
+          {"source": "feynrl_readme_grpo", "ref": "algs/GRPO/README.md:L42", "role": "claim", "quote": "r = \\frac{\\pi_\\theta}{\\pi_{\\mathrm{old}}}"}
+        ],
+        "filtering_note": "The repo states the formula but never explains why a ratio appears; this KP supplies the sampling-correction reason. Not derived from the FeynRL paper (cited only)."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {"belief": "The ratio compares the policy to the reference model.", "why_wrong": "pi_old is the sampling (rollout) policy; the reference model enters only through the separate KL term."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A token had probability 0.10 under the rollout policy and 0.20 under the current policy. What is the importance ratio, and what log-ratio does the code compute first?",
+          "format": "short",
+          "answer": "ratio 2.0; log-ratio ln 2 = 0.693",
+          "why": "exp(log 0.2 - log 0.1) = 0.2/0.1."
+        },
+        "transfer": {
+          "q": "If the current policy assigns that token half the probability the rollout policy did, by what factor is its advantage scaled in the unclipped surrogate?",
+          "format": "number",
+          "answer": "0.5",
+          "tolerance": 0.0,
+          "why": "ratio = pi/pi_old = 0.5; unclipped = ratio x adv.",
+          "targets_misconception": "The ratio compares the policy to the reference model."
+        },
+        "retrieval": [
+          {"q": "Why compute exp(logp - logp_old) rather than dividing probabilities directly?", "answer": "Both policies are stored as per-token log-probabilities; subtracting logs avoids underflow and is what vLLM and the trainer both emit."}
+        ]
+      },
+      "presentations": [
+        {"type": "formula-step", "action": "restate", "ref": "algs/GRPO/README.md:L42", "steps": [{"tex": "\\mathbb{E}_{a\\sim\\pi}[A] = \\sum_a \\pi(a)\\,A = \\sum_a \\pi_{\\text{old}}(a)\\,\\frac{\\pi(a)}{\\pi_{\\text{old}}(a)}\\,A = \\mathbb{E}_{a\\sim\\pi_{\\text{old}}}[r\\,A]", "do": "Rewrite the expectation under π as one under π_old.", "why": "The tokens were sampled by π_old, so only expectations under π_old can be estimated from them; multiplying and dividing by π_old moves the correction into the weight r."}, {"tex": "\\log r = \\log 0.20 - \\log 0.10 = -1.609 + 2.303 = 0.693", "do": "grpo.py L121: ratio = exp(logprobs − old_logprobs). For a token with probability 0.10 under the rollout policy and 0.20 now, take the log-ratio first.", "why": "Both policies are stored as log-probabilities, and subtracting logs avoids dividing small probabilities."}, {"tex": "r = e^{0.693} = 2.0", "do": "Exponentiate: this token's advantage is weighted 2× in the surrogate r·A.", "why": "The current policy is twice as likely to emit this token as the policy that sampled it; r = 1 would mean the policy has not moved on it."}]}
+      ]
+    },
+    {
+      "id": "supp-on-off-policy",
+      "label": "Supplement: on-policy vs off-policy in FeynRL's terms (policy_version vs loaded_version)",
+      "kind": "definition",
+      "statement": "A sample is on-policy when the weights that generated it equal the weights being updated; FeynRL tracks this with integer versions (policy_version on the trainer, loaded_version on each rollout engine) and calls data off-policy as soon as an optimizer step has moved the trainer past the version stamped on the sample.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {"source": "feynrl_repo", "ref": "rollouts/vllm_engine.py:L318-L321", "role": "claim", "quote": "if self.force_strict_on_policy and int(policy_version) != int(self.loaded_version): ... Off-policy rollout: policy_version={int(policy_version)}"},
+          {"source": "feynrl_repo", "ref": "rollouts/replay_buffer.py:L152", "role": "claim", "quote": "\"policy_version\": int(policy_version),"},
+          {"source": "feynrl_arch_doc", "ref": "ARCHITECTURE.md:L37", "role": "claim", "quote": "PipelineRL stays as on-policy as possible; FeynRL deliberately works with older, off-policy data because controlled off-policy reuse can be a valuable training signal in itself."}
+        ],
+        "filtering_note": "The repo uses the terms freely; the definition here is the author's. The finer point that multiple passes over one buffer are already off-policy is implied by the existence of clipping, not stated."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {"belief": "Sync mode is on-policy for every optimizer step.", "why_wrong": "Only the first pass over the buffer has ratio 1; with train_steps_per_epoch > 1 or gradient accumulation boundaries inside the shard, later micro-batches see a moved policy."}
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Sync mode, train_steps_per_epoch 2. On the second run_training_step, is the importance ratio on a typical token exactly 1, or not?",
+          "format": "choice",
+          "choices": ["exactly 1 on every token", "not 1 in general", "exactly 1 only for clipped tokens"],
+          "answer": "not 1 in general",
+          "why": "The optimizer stepped at the end of the first pass; old_logprobs still come from the rollout policy, so pi/pi_old != 1.",
+          "targets_misconception": "Sync mode is on-policy for every optimizer step."
+        },
+        "transfer": {
+          "q": "In overlap mode with max_lag 1, the trainer has just bumped to policy_version 9. What is the oldest policy_version a sample in the buffer may carry, and what is the largest ratio pi/pi_old you would expect on a token: exactly 1, or not?",
+          "format": "short",
+          "answer": "8; not 1 in general (the sample was generated one update ago)",
+          "why": "evict_stale keeps policy_version >= T - 1 = 8 after the bump to T = 9, so the largest version gap is max_lag = 1; a version-8 sample's old_logprobs come from a policy one optimizer step behind, so pi/pi_old != 1 in general."
+        },
+        "check": {
+          "q": "Sync mode, direct sync succeeded, so at the start of the epoch the rollout engines held exactly the trainer's weights. Suppose train_steps_per_epoch is 2, each pass processes 4 micro-batches per rank, and the optimizer steps after every 2 micro-batches. Of the 8 micro-batches a rank processes this epoch, on how many are the trainer's weights still the ones that generated the samples? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "tolerance": 0.05,
+          "value": 2,
+          "why": "In FeynRL's terms a sample is on-policy only while the trainer's weights equal the version stamped on it (policy_version at generate time, rollouts/replay_buffer.py:L152). The first optimizer step happens after micro-batch 2; from micro-batch 3 on, the trainer has moved and old_logprobs no longer match pi. With optimizer steps after micro-batches 2, 4, 6 and 8, only micro-batches 1-2 are processed with the generating weights; 3-8 come after at least one update. So 2 of 8. policy_version itself is bumped only once at the end of the epoch (run_rl_sync.py:L90), which is why the integer label understates the drift.",
+          "targets_misconception": "Sync mode is on-policy for every optimizer step.",
+          "varies": "functional: counts on-policy micro-batches inside one sync epoch with gradient-accumulation boundaries, instead of the oldest version surviving async eviction",
+          "invariant": "On-policy means the updating weights equal the generating weights; any optimizer step taken on the batch makes the remaining data off-policy, whatever the integer version says.",
+          "transfer_distance": "far"
+        },
+        "retrieval": [
+          {"q": "Which two integers does force_strict_on_policy compare, and on which process does each live?", "answer": "policy_version (driver/trainer) and loaded_version (each rollout engine actor)."}
+        ]
+      },
+      "presentations": [
+        {"type": "code", "action": "distinguish", "ref": "rollouts/vllm_engine.py:L318-L321"},
+        {"type": "interactive", "action": "predict-number", "ref": "fixture:feynrl--epoch-ledger", "notice": "Only the micro-batches before the first optimizer step see the weights that generated them (green); policy_version keeps the same integer for the rest of the epoch."}
+      ]
+    }
+  ],
+  "path": {
+    "basis": "call-order",
+    "note": "Stops follow the first hop at which each KP's code is reached in discovered_sync.json (entry trace from main_rl.py with --skip run_rl_async): load_and_verify (hop 1) -> run_rl_sync.main (6) -> create_rollout_engines (23) -> create_rollout_dataloader/MixedDatasetSampler (26-28) -> score_response (57) -> normalize_rewards (60) -> add_batch_seqs/prepare_training_batches (81) -> compute_policy_loss for GRPO (117) then CISPO (100; alphabetical candidate order for the same ray-remote train_step hop, listed after GRPO because the recipe selects GRPO) -> compute_kl_distance (118) -> snapshot_prox_for_epoch (85; placed after the loss KPs by author choice, see its prerequisite note) -> sync_weights_direct (180). The last two stops come from the run_rl_async branch in discovered.json (default trace): run_round (hop 58) -> evict_stale (76) -> perform_inline_sync (178) -> start_nccl_gather (182) -> broadcast_and_finalize_nccl (209); they are not on the sync trace.",
+    "stops": [
+      "config-recipe-gsm8k",
+      "sync-epoch-loop",
+      "rollout-engine-generate",
+      "mixed-dataset-sampling",
+      "reward-interface",
+      "group-relative-advantage",
+      "replay-batching",
+      "grpo-clipped-loss",
+      "cispo-vs-ppo-clip",
+      "kl-reference-penalty",
+      "decoupled-loss-prox",
+      "weight-sync-direct",
+      "weight-sync-nccl-async",
+      "staleness-budget-max-lag"
+    ],
+    "supplements": ["supp-importance-ratio", "supp-on-off-policy"]
+  }
+}

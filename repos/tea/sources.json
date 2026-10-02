@@ -1,0 +1,29 @@
+{
+  "tea_repo": {
+    "title": "TheoremExplainAgent (TEA): agentic Manim pipeline (local clone)",
+    "kind": "repo",
+    "path": "external/TheoremExplainAgent-main",
+    "sha": "unversioned local copy",
+    "sha_source": "no .git directory in the local copy (discover_repo.py git_head() -> sha None); README News says generation + evaluation code released 2025 Mar 3; files dated 2025-07-26",
+    "anchor_convention": "src/core/code_generator.py:L337-L390  (repo-relative path, 1-based inclusive line range); README anchors use the full external/TheoremExplainAgent-main/README.md:L<n> form so the checker does not resolve them to cs336_enrich/README.md",
+    "note": "Line anchors refer to this local copy. discover_repo.py records a sha256 per module in discovered.json so anchors can be re-verified against a fresh clone. Prompt templates are anchored into task_generator/prompts_raw/__init__.py and eval_suite/prompts_raw/__init__.py (the generated Python constants), never into the raw .txt files, because that is what the code imports."
+  },
+  "tea_readme": {
+    "title": "README.md: TheoremExplainAgent (TEA)",
+    "kind": "doc",
+    "path": "external/TheoremExplainAgent-main/README.md",
+    "note": "Installation, CLI usage, evaluation usage, how to rebuild prompts (parse_prompt.py), TheoremExplainBench dataset info, FAQ. Anchors are external/TheoremExplainAgent-main/README.md:L<n> (full form, see tea_repo.anchor_convention)."
+  },
+  "tea_paper": {
+    "title": "TheoremExplainAgent: Towards Multimodal Explanations for LLM Theorem Understanding (arXiv 2502.19400, ACL 2025 oral)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2502.19400",
+    "note": "Cited only; not read for this thread. No anchors point into it. The five automatic metrics and the ~94% success-rate figure come from atlas/research/02, which summarises the paper."
+  },
+  "atlas_research_02": {
+    "title": "atlas/research/02: LLM education systems 2024-2026 (survey notes)",
+    "kind": "doc",
+    "path": "atlas/research/02-llm-education-systems-2024-2026.md",
+    "note": "Internal survey notes; used only for the KP that states what TEA's evaluator does not measure (layout faults behind render success; no learner data). Anchors are 02-llm-education-systems-2024-2026.md:L<n>."
+  }
+}

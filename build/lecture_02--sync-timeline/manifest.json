@@ -1,0 +1,71 @@
+{
+  "fixture": "lecture_02--sync-timeline",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "gpu-timing-synchronize"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "7.866667"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "no synchronize: the timer stops when the launch returns",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.933,
+      "caption": "synchronize after the op: the timer waits for the kernel",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.867,
+      "caption": "synchronize before and after: only this op is timed",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "With a synchronize after the op, the timer window stretches from the launch to the end of the GPU kernel instead of closing at the launch.",
+      "evidence": [
+        "lane.timer",
+        "lane.cpu"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s2",
+      "claim": "With a synchronize before the op as well, the timer window opens only after the earlier kernel has finished, so it covers this op alone.",
+      "evidence": [
+        "lane.timer",
+        "lane.gpu"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

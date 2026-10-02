@@ -1,0 +1,79 @@
+{
+  "fixture": "lecture_10--continuous-batching",
+  "family": "timeline",
+  "scene": "TimelineScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "continuous-batching"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "10.800000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "static, steps 1-9: B and C end early, their slots wait",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.933,
+      "caption": "static: the next batch starts only after A",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 5.867,
+      "caption": "iteration-level, steps 1-9: freed slots refill",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 8.8,
+      "caption": "iteration-level: the same six requests, done sooner",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "Under static batching the slots of B and C stay grey (idle) until A finishes at step 9, and D, E, F start only then.",
+      "evidence": [
+        "lane.slot2",
+        "lane.slot3"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s3",
+      "claim": "Under iteration-level scheduling D, E and F start in the step after a slot frees, so the same six requests finish at step 13 instead of 18.",
+      "evidence": [
+        "lane.slot2",
+        "lane.slot3",
+        "readout"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

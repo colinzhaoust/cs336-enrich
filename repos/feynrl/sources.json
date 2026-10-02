@@ -1,0 +1,63 @@
+{
+  "feynrl_repo": {
+    "title": "FeynRL: RL post-training library (local clone)",
+    "kind": "repo",
+    "path": "external/FeynRL",
+    "sha": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "sha_source": ".git/refs/heads/main (read from disk by discover_repo.py; no git invocation)",
+    "anchor_convention": "algs/GRPO/grpo.py:L40-L75  (repo-relative path, 1-based inclusive line range)",
+    "note": "Line anchors refer to the local clone at the sha above. discover_repo.py records a sha256 per module in discovered.json so anchors can be re-verified after a pull."
+  },
+  "feynrl_arch_doc": {
+    "title": "FeynRL Architecture Overview",
+    "kind": "doc",
+    "path": "external/FeynRL/docs/ARCHITECTURE.md",
+    "note": "Prose description of Ray orchestration, DeepSpeed training, vLLM rollout, the three weight-sync methods and the sync/overlap scheduling modes. Anchors are ARCHITECTURE.md:L<n>."
+  },
+  "feynrl_paper": {
+    "title": "FeynRL (arXiv 2605.12380)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2605.12380",
+    "note": "Cited only; not read for this thread. No anchors point into it."
+  },
+  "feynrl_readme_grpo": {
+    "title": "algs/GRPO/README.md: GRPO (Group Relative Policy Optimization)",
+    "kind": "doc",
+    "path": "external/FeynRL/algs/GRPO/README.md",
+    "note": "Contains the clipped-loss formula, the 'training batches are not group-structured' note, and the decoupled-loss (overlap mode) derivation shared by GRPO/PPO/CISPO."
+  },
+  "feynrl_readme_cispo": {
+    "title": "algs/CISPO/README.md: CISPO (Clipped Importance Sampling Policy Optimization)",
+    "kind": "doc",
+    "path": "external/FeynRL/algs/CISPO/README.md",
+    "note": "Contrasts the stop-gradient clipped-ratio weighting with PPO/GRPO min-clip."
+  },
+  "feynrl_readme_ppo": {
+    "title": "algs/PPO/README.md: PPO (Proximal Policy Optimization)",
+    "kind": "doc",
+    "path": "external/FeynRL/algs/PPO/README.md"
+  },
+  "feynrl_readme_p3o": {
+    "title": "algs/P3O/README.md: P3O (Policy-on Policy-off Policy Optimization)",
+    "kind": "doc",
+    "path": "external/FeynRL/algs/P3O/README.md"
+  },
+  "feynrl_readme_rl": {
+    "title": "algs/RL/README.md: RL Common (common.py)",
+    "kind": "doc",
+    "path": "external/FeynRL/algs/RL/README.md",
+    "note": "Shared forward passes, proximal snapshot, KL estimator, numerical safeguards, global token normalization."
+  },
+  "feynrl_example_gsm8k": {
+    "title": "examples/llm/rl/gsm8k/qwen2.5-1.5b-instruct/train_sync.yaml (and train_async.yaml)",
+    "kind": "config",
+    "path": "external/FeynRL/examples/llm/rl/gsm8k/qwen2.5-1.5b-instruct",
+    "note": "The one recipe traced in this thread. train_async.yaml differs from train_sync.yaml only in experiment_id/checkpoint_dir, weight_sync_method (nccl) and overlap.enabled (True)."
+  },
+  "feynrl_unit_tests": {
+    "title": "FeynRL unit and integration tests",
+    "kind": "tests",
+    "path": "external/FeynRL/unit_tests",
+    "note": "Used for status 'tested'. Anchors are unit_tests/<path>:L<range>."
+  }
+}

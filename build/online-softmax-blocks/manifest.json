@@ -1,0 +1,85 @@
+{
+  "fixture": "online-softmax-blocks",
+  "family": "block-pass",
+  "scene": "OnlineSoftmaxScene",
+  "quality": "720p30",
+  "knowledge_points": [
+    "online-softmax"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 1280,
+        "height": 720
+      }
+    ],
+    "format": {
+      "duration": "14.700000"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 0.0,
+      "caption": "scores arrive in blocks; softmax needs the global max",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 2.5,
+      "caption": "block 1: m = 3.0, l = \u03a3 exp(x \u2212 m)",
+      "frame": "frames/s1.png",
+      "notices": []
+    },
+    {
+      "id": "s2",
+      "time": 5.0,
+      "caption": "block 2: max unchanged, just add terms",
+      "frame": "frames/s2.png",
+      "notices": []
+    },
+    {
+      "id": "s3",
+      "time": 9.1,
+      "caption": "block 3: max rises to 4.0 \u2192 rescale l by exp(m_old \u2212 m_new)",
+      "frame": "frames/s3.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s4",
+      "time": 11.6,
+      "caption": "block 4: final l equals the one-pass \u03a3 exp(x \u2212 max)",
+      "frame": "frames/s4.png",
+      "notices": [
+        "n2"
+      ]
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s3",
+      "claim": "When a block raises the running max, the accumulated denominator is multiplied by exp(m_old \u2212 m_new) rather than recomputed from scratch.",
+      "evidence": [
+        "state.l",
+        "state.m",
+        "bars.block"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s4",
+      "claim": "The blockwise l matches the one-pass denominator exactly.",
+      "evidence": [
+        "state.l"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

@@ -1,0 +1,1897 @@
+{
+  "paper": "chinchilla",
+  "title": "Training Compute-Optimal Large Language Models (Hoffmann et al., 2022; Chinchilla)",
+  "version": "0.1.0",
+  "authoring_note": "Anchors follow sources.json: chinchilla:§x / chinchilla:eqN / chinchilla:tableN / chinchilla:figN for the paper (text = paper.txt, our own extraction of the arXiv HTML; equation numbers as in that HTML), lecture_09.pdf:pNN for the CS336 slides. Every chinchilla:* quote is a verbatim substring of paper.txt (checked by `python3 discover_paper.py --check`; atlas/tools/check_anchors.py skips non-line refs). Numbers appear only as printed; where the paper prints two values (MMLU 67.5/67.6, Table 3 vs §3.4 prose, Gopher FLOPs 5.76e23/6.3e23) the KP says so. Numeric prompt answers that are not printed are derived from printed constants with the arithmetic shown in `why`. Status 'said' marks prose claims, 'computed' equations and fits, 'shown' tables/figures, 'supplement' prerequisites the paper assumes. The IsoFLOP KP keeps id approach-2 because atlas/engine/fixtures/isoflop_sweep.json back-references chinchilla:approach-2. Cross-thread prerequisites live under external_prerequisites (lecture_02:six-nd, lecture_09:*); the validator only checks in-file ids.",
+  "knowledge_points": [
+    {
+      "id": "compute-optimal-question",
+      "label": "The question: given a FLOP budget C, how to split it between N and D",
+      "kind": "definition",
+      "statement": "Compute-optimal training asks for N_opt(C), D_opt(C) = argmin L(N,D) subject to FLOPs(N,D) = C: for a budget fixed in advance, the pair of model size and training tokens that gives the lowest final pre-training loss.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:eq1",
+            "role": "computation",
+            "quote": "N_{opt}(C),D_{opt}(C)=\\argmin_{N,D\\text{ s.t. }\\text{FLOPs}(N,D)=C}L(N,D)."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§1",
+            "role": "claim",
+            "quote": "Given a fixed FLOPs budget, ... how should one trade-off model size and the number of training tokens?"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§1",
+            "role": "claim",
+            "quote": "In practice, the allocated training compute budget is often known in advance: how many accelerators are available and for how long we want to use them."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§1",
+            "role": "claim",
+            "quote": "Specifically, given a $10\\times$ increase computational budget, they suggests that the size of the model should increase $5.5\\times$ while the number of training tokens should only increase 1.8 $\\times$ ."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table1",
+            "role": "figure",
+            "quote": "Other than LaMDA (Thoppilan et al., 2022), most models are trained for approximately 300 billion tokens."
+          }
+        ],
+        "filtering_note": "The paper optimises the smoothed training loss, not a held-out loss, and says why in footnote 2 (single epoch, so training loss is an unbiased estimate of test loss). Lecture 9 states the same question on p45 as a 'case study' and goes straight to Kaplan's exponents; it never writes Eq. 1. Basis: evidence (paper and slides)."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:kaplan-compute-optimal-allocation",
+          "basis": "author-inference",
+          "note": "The paper frames itself against Kaplan's N_opt ~ C^0.73, D_opt ~ C^0.27."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Compute-optimal means the model with the lowest loss you can reach.",
+          "why_wrong": "It is the lowest loss at a fixed C. A bigger model trained to convergence would reach lower loss but cost more FLOPs; Eq. 1 holds C constant and compares allocations."
+        },
+        {
+          "belief": "Compute-optimal also means cheapest to deploy.",
+          "why_wrong": "Eq. 1 counts training FLOPs only. Inference cost scales with N and is not in the objective; §4 notes smaller N as a side benefit, and Lecture 9 p54 says train-optimal is not deploy-optimal."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Kaplan et al. recommend that for 10x more compute the model grows 5.5x and the data 1.8x. Table 1 shows GPT-3, Jurassic, Gopher and MT-NLG at 175B-530B parameters. Before reading on: roughly how many training tokens does each of those models use, according to the paper's Table 1? Give billions.",
+          "format": "number",
+          "answer": "300 (billion)",
+          "tolerance": 0.15,
+          "why": "Table 1 lists 300B for GPT-3 and Jurassic, 300B for Gopher and 270B for MT-NLG: the field followed Kaplan and grew N while holding D near 300B. That fixed-D habit is the target of the paper's question."
+        },
+        "transfer": {
+          "q": "A lab has a budget C fixed by its accelerator reservation and compares three plans: (i) train the largest model that fits in memory for as many tokens as C allows, (ii) pick N and D together by minimising L(N,D) subject to FLOPs(N,D) = C, (iii) pick the largest N whose inference cost is acceptable. Which plan is what the paper calls compute-optimal, and which quantity is being held fixed?",
+          "format": "choice",
+          "choices": [
+            "(i); the model size is held fixed",
+            "(ii); the training FLOP budget C is held fixed",
+            "(iii); the inference cost is held fixed"
+          ],
+          "answer": "(ii); the training FLOP budget C is held fixed",
+          "distractor_from": "(i) is the 'largest model that fits' habit the paper argues against; (iii) is the deployment-cost confusion in the misconceptions list.",
+          "varies": "the decision rule used to choose N (domain: from the paper's definition to a lab's planning meeting)",
+          "invariant": "the objective is a constrained minimisation with FLOPs(N,D) = C as the constraint",
+          "surface_cue_broken": "the words 'largest' and 'budget' appear in the wrong options as well, so matching on them fails",
+          "transfer_distance": "near",
+          "why": "Eq. 1 is argmin over (N,D) with FLOPs(N,D) = C. Plan (i) fixes N by memory and lets D fall out; plan (iii) optimises a quantity that is not in Eq. 1."
+        },
+        "retrieval": [
+          {
+            "q": "Write the optimisation problem that defines N_opt(C) and D_opt(C) in the Chinchilla paper.",
+            "answer": "N_opt(C), D_opt(C) = argmin over N, D with FLOPs(N,D) = C of L(N,D)"
+          },
+          {
+            "q": "According to the paper's reading of Kaplan et al., for a 10x compute increase by what factors should model size and training tokens grow?",
+            "answer": "model 5.5x, tokens 1.8x",
+            "layer": "detail"
+          },
+          {
+            "q": "What training-token count do most of the large dense models before Chinchilla (GPT-3, Jurassic-1, Gopher, MT-NLG) share?",
+            "answer": "approximately 300 billion tokens"
+          }
+        ],
+        "self_explain": "Why does the paper insist the budget is known in advance, and what would change about the question if it were not?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "chinchilla:eq1"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:table1"
+        }
+      ]
+    },
+    {
+      "id": "supp-six-nd-budget",
+      "label": "Supplement: what the budget C = 6ND assumes",
+      "kind": "rule-of-thumb",
+      "statement": "The paper converts (N, D) to FLOPs with C ≈ 6ND, which assumes 2 FLOPs per multiply-accumulate, a backward pass costing twice the forward pass, and that per-token work is dominated by parameter matmuls; its own exact count (embeddings and attention logits included) differs from 6ND by at most 10% on its models (Table A4).",
+      "provenance": {
+        "status": "supplement",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "under the constraint ... (Kaplan et al., 2020)."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§F",
+            "role": "claim",
+            "quote": "We use a factor of 2 to describe the multiply accumulate cost."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§F",
+            "role": "claim",
+            "quote": "As in Kaplan et al. (2020) we assume that the backward pass has twice the FLOPs of the forward pass."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§F",
+            "role": "claim",
+            "quote": "We include all training FLOPs, including those contributed to by the embedding matrices, in our analysis. Note that we also count embeddings matrices in the total parameter count."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:tableA4",
+            "role": "figure",
+            "quote": "73M ... 1.03 ... 305M ... 1.10 ... 6.8B ... 0.99"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§F",
+            "role": "claim",
+            "quote": "We find the differences in FLOP calculation to be very small and they do not impact our analysis."
+          }
+        ],
+        "filtering_note": "The paper states 'FLOPs(N,D) ≈ 6ND (Kaplan et al., 2020)' in §3.3 without derivation and defers the per-layer count to Appendix F. Lecture 2 derives 6ND (forward 2ND, backward 4ND); this KP only records what Appendix F adds: embeddings counted in both N and FLOPs, exact-to-6ND ratio 0.99-1.10. Appendix F also recomputes Gopher's budget as 6.3e23 versus the 5.76e23 used elsewhere in the paper. Basis: evidence for the paper's statements; the prerequisite edge to lecture_02:six-nd is author inference."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:six-nd",
+          "basis": "author-inference",
+          "note": "Forward 2ND + backward 4ND; this KP adds what the paper's Appendix F checks about that approximation."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "6ND is exact for transformers, so the paper's FLOP axis is exact.",
+          "why_wrong": "Table A4 shows the exact-count to 6ND ratio ranges 0.99-1.10 across the paper's models (attention logits and embeddings are the difference); the paper calls this 'very small' rather than zero."
+        },
+        {
+          "belief": "Because C = 6ND, the two exponents a and b of N_opt and D_opt are independent.",
+          "why_wrong": "If N_opt ∝ C^a and D_opt ∝ C^b and 6 N_opt D_opt = C, then a + b = 1 exactly. Table 2's rows all sum to 1.00."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Under C = 6ND, compare the training FLOPs of Gopher (280B parameters, 300B tokens) and Chinchilla (70B parameters, 1.4T tokens). Give the ratio Chinchilla/Gopher to two decimals.",
+          "format": "number",
+          "answer": "1.17",
+          "tolerance": 0.05,
+          "why": "6 x 2.8e11 x 3e11 = 5.04e23; 6 x 7e10 x 1.4e12 = 5.88e23; ratio 1.17. The paper says both were trained for 'the same number of FLOPs' (§4) using its exact count, and Appendix F notes the exact count differs from 6ND by up to 10%; the two statements are consistent only because 6ND is an approximation."
+        },
+        "transfer": {
+          "q": "A colleague proposes an IsoFLOP study for a model family whose context length is 32k tokens instead of 2k, keeping C = 6ND as the FLOP axis. In which direction will the exact-FLOP to 6ND ratio move relative to Table A4's 0.99-1.10 (up or down), and why?",
+          "format": "trend",
+          "answer": "up (above 1.10): the attention-logit and softmax terms in Appendix F scale with seq_len squared, so at 16x the context they are no longer a small correction to the parameter matmuls",
+          "varies": "the sequence length (functional dimension: the same FLOP formula applied to a different architecture setting)",
+          "invariant": "the per-layer FLOP count of Appendix F, in which only the Key @ Query logits and Softmax @ query terms carry seq_len x seq_len",
+          "surface_cue_broken": "the prompt keeps the paper's framing (IsoFLOP, 6ND) so that reciting 'the difference is very small' gives the wrong answer",
+          "transfer_distance": "far",
+          "why": "Appendix F lists 2 x seq_len x seq_len x (key_size x num_heads) for the logits and the same again for the softmax @ query reduction; every other term is linear in seq_len. The 'very small' verdict was for the paper's own models and context length."
+        },
+        "retrieval": [
+          {
+            "q": "What two assumptions turn N parameters and D tokens into the training FLOP count 6ND?",
+            "answer": "2 FLOPs per multiply-accumulate (forward 2ND) and a backward pass costing twice the forward pass"
+          },
+          {
+            "q": "Between which values does the ratio of exactly counted FLOPs to 6ND fall for the paper's models?",
+            "answer": "0.99 to 1.10",
+            "layer": "detail"
+          },
+          {
+            "q": "Where does the paper count embedding matrices: in N, in the FLOPs, both, or neither?",
+            "answer": "It counts them in both: all training FLOPs including embeddings, and embeddings in the total parameter count",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why must a + b equal 1 if the budget is C = 6ND and both N_opt and D_opt are power laws in C?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "chinchilla:§F",
+          "faded": true,
+          "steps": [
+            {
+              "do": "Forward: §F counts 2 FLOPs per multiply-accumulate, so each parameter costs 2 FLOPs per token: 2ND.",
+              "why": "Each weight takes part in one multiply and one add per token, the forward count of lecture_02:six-nd."
+            },
+            {
+              "do": "Backward: twice the forward (§F, following Kaplan), so 4ND, and C ≈ 2ND + 4ND = 6ND.",
+              "why": "Each weight matrix needs one matmul for its own gradient and one to pass the gradient down."
+            },
+            {
+              "do": "N includes the embedding matrices, and so do the FLOPs; Table A4 puts the exact count at 0.99–1.10 times 6ND on the paper's models.",
+              "why": "Counting embeddings on both sides keeps N and C consistent, and Table A4 bounds what 6ND misses at the paper's own sizes."
+            },
+            {
+              "tex": "C_{\\text{Gopher}} = 6 \\times 2.8\\times10^{11} \\times 3\\times10^{11} = 5.04\\times10^{23}",
+              "do": "Gopher: N = 280B parameters, D = 300B tokens.",
+              "why": "Table 1's (N, D) go straight into C = 6ND."
+            },
+            {
+              "tex": "C_{\\text{Chinchilla}} = 6 \\times 7\\times10^{10} \\times 1.4\\times10^{12} = 5.88\\times10^{23}",
+              "do": "Chinchilla: N = 70B, D = 1.4T; the ratio is 5.88 / 5.04 = 1.17.",
+              "why": "Same rule with the other (N, D). Under 6ND the two budgets are 17% apart; the paper's 'same number of FLOPs' (§4) rests on its exact count, not on 6ND."
+            }
+          ]
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:tableA4"
+        }
+      ]
+    },
+    {
+      "id": "supp-power-law-fitting",
+      "label": "Supplement: fitting a power law is fitting a line in log-log space",
+      "kind": "mechanism",
+      "statement": "A power law y = k x^a is a straight line log y = log k + a log x; fitting one means estimating a slope from points spread over several orders of magnitude, and extrapolating it assumes the slope does not change beyond the fitted range.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3",
+            "role": "claim",
+            "quote": "We assume a power-law relationship between compute and model size as done in Clark et al. (2022); Kaplan et al. (2020), though future work may want to include potential curvature in this relationship for large model sizes."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:fig4",
+            "role": "figure",
+            "quote": "In the left plot, we show the efficient frontier in blue, which is a line in log-log space."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.1",
+            "role": "claim",
+            "quote": "At 1500 logarithmically spaced FLOP values, we find which model size achieves the lowest loss of all models along with the required number of training tokens."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§E",
+            "role": "claim",
+            "quote": "This means that projections from very small models lead to different predictions than those from larger models."
+          }
+        ],
+        "filtering_note": "The paper never explains what fitting N_opt ∝ C^a means operationally; it assumes the reader knows a power law is a log-log line (Fig. 4 caption says so in passing). Lecture 9 p14-p15 states 'a scaling law is a line on log-log axes' (lecture_09:scaling-law-definition). Appendix E is the paper's own warning that the slope changes along the range. Basis: inference that the paper assumes this."
+      },
+      "prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:scaling-law-definition",
+          "basis": "author-inference",
+          "note": "Lecture 9 defines a scaling law as a power law, a line on log-log axes."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Sampling FLOP values uniformly on a linear axis is fine for fitting the exponent.",
+          "why_wrong": "A linear grid over 1e18-1e21 puts almost all points in the top decade; the paper uses 1500 logarithmically spaced values so each decade contributes equally to the log-log slope."
+        },
+        {
+          "belief": "A good fit over 1e18-1e21 FLOPs guarantees the exponent at 1e25.",
+          "why_wrong": "Appendix E fits the first, middle and last third of the frontier separately and gets different slopes; the paper lists this curvature as a limitation that may make its large-model sizes overestimates."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Table 2 gives N_opt ∝ C^0.50 from Approach 1. If the compute budget is multiplied by 10, by what factor does the fitted optimal model size grow? Give one decimal.",
+          "format": "number",
+          "answer": "3.2",
+          "tolerance": 0.05,
+          "why": "10^0.50 = 3.16: on log-log axes a slope of 0.5 means one decade of C buys half a decade of N. Under Kaplan's 0.73 the factor would be 10^0.73 = 5.4, which the paper rounds to 5.5x."
+        },
+        "transfer": {
+          "q": "Two labs fit N_opt ∝ C^a to the same IsoFLOP minima. Lab X uses the minima from the four smallest budgets only, Lab Y the four largest. Appendix E reports concavity in log N_opt with increasing C. Which lab reports the larger exponent a, and what does that imply for extrapolating either fit to 1e25 FLOPs?",
+          "format": "choice",
+          "choices": [
+            "Lab X (small budgets) reports the larger a; extrapolating it overestimates N_opt at 1e25",
+            "Lab Y (large budgets) reports the larger a; extrapolating it overestimates N_opt at 1e25",
+            "Both report the same a because a power law has one slope"
+          ],
+          "answer": "Lab X (small budgets) reports the larger a; extrapolating it overestimates N_opt at 1e25",
+          "distractor_from": "Option 3 is the 'one slope everywhere' belief; option 2 inverts the direction of the concavity.",
+          "varies": "which part of the fitted range is used (functional: same data, different fitting window)",
+          "invariant": "concave log N_opt versus log C means the local slope falls as C grows",
+          "surface_cue_broken": "the question names Appendix E but the answer requires reading the direction of the curvature, not recalling that curvature exists",
+          "transfer_distance": "near",
+          "why": "Concavity means the slope decreases with C, so a fit on small budgets is steeper. §5: 'we may still be overestimating the optimal size of large models.'"
+        },
+        "retrieval": [
+          {
+            "q": "What does a power law N_opt = k C^a look like when both axes are logarithmic, and which quantity is the exponent a?",
+            "answer": "A straight line; a is its slope"
+          },
+          {
+            "q": "How many FLOP values does Approach 1 sample, and how are they spaced?",
+            "answer": "1500, logarithmically spaced",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would fitting a slope on log axes give a different exponent from fitting the same points on linear axes?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "chinchilla:table2",
+          "steps": [
+            {
+              "tex": "y = k\\,x^{a} \\;\\Longleftrightarrow\\; \\log y = \\log k + a\\log x",
+              "why": "Taking logs turns the exponent into a slope, so fitting a power law is fitting a straight line on log-log axes."
+            },
+            {
+              "do": "Approach 1 (Table 2): N_opt ∝ C^0.50, a slope of 0.50 for log N_opt against log C.",
+              "why": "The constant k only shifts the line up or down; the exponent alone says how N_opt responds to C."
+            },
+            {
+              "tex": "\\frac{N_{opt}(10C)}{N_{opt}(C)} = 10^{0.50} = 3.16",
+              "do": "One decade of C buys half a decade of N.",
+              "why": "A ratio of two points on a power law depends only on the exponent, because k cancels."
+            },
+            {
+              "do": "Kaplan's slope 0.73 gives 10^0.73 = 5.37 for the same tenfold budget, which the paper rounds to 5.5x.",
+              "why": "Same budget step, steeper line: the two papers disagree about the slope, not about how a fitted line is read."
+            },
+            {
+              "do": "Reading N_opt at a budget beyond the fitted points assumes the slope stays 0.50 there.",
+              "why": "A line fitted over a few decades says nothing by itself about the next decade; the paper names possible curvature as the caveat (§3)."
+            }
+          ]
+        },
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "chinchilla:figA5"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:chinchilla--allocation-table",
+          "notice": "Multiplying the budget by 10 multiplies N by 10^a: Approach 1's a = 0.50 gives x3.16 and Kaplan's 0.73 gives x5.37. On the top panel's log-log axes that exponent is the slope, which is why the Kaplan line is steeper."
+        }
+      ]
+    },
+    {
+      "id": "approach-1",
+      "label": "Approach 1: fix N, vary D; take the minimum-loss envelope over training curves",
+      "kind": "procedure",
+      "statement": "Train each model size (70M to over 10B) for 4 horizons spanning 16x, each with the learning rate decayed 10x over its horizon; smooth and interpolate every loss curve; at 1500 log-spaced FLOP values take whichever run has the lowest loss; fit power laws to the resulting (C, N, D) points, giving a = 0.50, b = 0.50.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.1",
+            "role": "claim",
+            "quote": "For each parameter count $N$ we train 4 different models, decaying the learning rate by a factor of 10 $\\times$ over a horizon (measured in number of training tokens) that ranges by a factor of $16\\times$ ."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.1",
+            "role": "claim",
+            "quote": "Then, for each FLOP count, we determine which run achieves the lowest loss."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:fig2",
+            "role": "figure",
+            "quote": "From these curves, we extracted the envelope of minimal loss per FLOP, and we used these points to estimate the optimal model size (center) for a given compute budget and the optimal number of training tokens (right)."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.1",
+            "role": "computation",
+            "quote": "We find that $a=0.50$ and $b=0.50$"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.1",
+            "role": "claim",
+            "quote": "Note that all selected points are within the last 15% of training."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table2",
+            "role": "figure",
+            "quote": "1. Minimum over training curves ... $0.50\\;({0.488},{0.502})$ ... $0.50\\;(0.501,0.512)$"
+          }
+        ],
+        "filtering_note": "The paper uses points from along the whole training curve (every FLOP count on every run), not only final losses; §3.2 says this explicitly in contrast to Approach 2. Footnote 4 is the detail that makes it work: every envelope point falls in the last 15% of a run, which is why the cosine length must match D (cosine-cycle-length). Lecture 9 p47 compresses all of this to 'the minimum over the union of all training curves is a power law'. Model sizes here reach only 10B (footnote 5), versus 16B in Approach 2."
+      },
+      "prerequisites": [
+        {
+          "kp": "compute-optimal-question",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-power-law-fitting",
+          "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:chinchilla-three-methods",
+          "basis": "author-inference",
+          "note": "Lecture 9 p47: 'Method 1 - minimum over runs'."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Approach 1 uses only the final loss of each run.",
+          "why_wrong": "It interpolates the whole smoothed curve and queries it at 1500 FLOP values; §3.2 says Approach 2 is the one that uses final loss only, 'in contrast with Approach 1 that considered points (N,D,L) along the entire training runs'."
+        },
+        {
+          "belief": "The envelope points could come from anywhere along a run.",
+          "why_wrong": "Footnote 4: all selected points are within the last 15% of training, because the cosine schedule has decayed the learning rate by then; mid-run points of a long schedule are never the cheapest way to reach their loss."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Approach 1 trains each model size for 4 horizons whose token counts span a factor of 16, with the learning rate decayed 10x over each horizon. When the envelope of minimal loss per FLOP is extracted, where along each selected run will the chosen point fall: early, mid-run, or near the end? Commit before reading footnote 4.",
+          "format": "choice",
+          "choices": [
+            "early (first 15%)",
+            "spread evenly along the run",
+            "near the end (last 15%)"
+          ],
+          "answer": "near the end (last 15%)",
+          "distractor_from": "'spread evenly' is the belief that any point of a run can be envelope-optimal; 'early' is a plain guess.",
+          "why": "A run's loss at an intermediate FLOP count is worse than a shorter run's final loss at the same FLOPs because the shorter run has already decayed its learning rate. So the envelope is traced by run endings; footnote 4 reports all selected points lie within the last 15% of training."
+        },
+        "transfer": {
+          "q": "You replicate Approach 1 but, to save runs, train each model size once for the longest horizon only and read the loss at 1/16, 1/8, 1/4, 1/2 of the way through to stand in for the four shorter runs. Compared with the paper's envelope, will the fitted optimal N for a given FLOP count come out larger or smaller, and why?",
+          "format": "trend",
+          "answer": "larger: the mid-run losses of a long-schedule run overestimate what a matched short schedule would reach, so small (N, short D) points look worse than they are, the envelope tilts toward bigger models, and the exponent a rises toward Kaplan's",
+          "varies": "how the short-horizon points are produced (functional: intermediate readings of one long run instead of separate matched-schedule runs)",
+          "invariant": "the envelope-and-fit procedure; the learning-rate schedule must be decayed over the horizon actually being evaluated",
+          "surface_cue_broken": "the shortcut preserves the '4 horizons spanning 16x' surface structure of the paper while breaking the matched-schedule requirement",
+          "transfer_distance": "near",
+          "why": "§2 describes exactly this failure in Kaplan et al.: with a fixed cosine schedule to 130B tokens, intermediate loss estimates 'are therefore overestimates of the loss of a model trained with a schedule length matching D'', which 'contributes to the conclusion that model size should increase faster than training data size'."
+        },
+        "retrieval": [
+          {
+            "q": "In Approach 1, how many horizons is each model size trained for, over what range of token counts, and by what factor is the learning rate decayed?",
+            "answer": "4 horizons spanning a factor of 16, learning rate decayed 10x over each horizon",
+            "layer": "detail"
+          },
+          {
+            "q": "What exponents a and b does Approach 1 report for N_opt ∝ C^a and D_opt ∝ C^b?",
+            "answer": "a = 0.50, b = 0.50"
+          },
+          {
+            "q": "Approach 1 trains every model size at 4 horizons. How does it turn all those runs into one optimal model size per FLOP budget?",
+            "answer": "It smooths and interpolates each whole loss curve and, at each of 1500 log-spaced FLOP values, takes the run with the lowest loss (the envelope)."
+          }
+        ],
+        "self_explain": "Why does training four separate runs with matched schedules give a different envelope from reading four points off one long run?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "trace",
+          "ref": "chinchilla:fig2"
+        },
+        {
+          "type": "formula-step",
+          "action": "restate",
+          "ref": "chinchilla:table2",
+          "steps": [
+            {
+              "do": "For each model size N (70M to over 10B), train 4 runs whose horizons span 16x, each decaying the learning rate 10x over its own horizon.",
+              "why": "Several horizons per model size give several D values for the same N, so splits of one budget can be compared."
+            },
+            {
+              "do": "Smooth and interpolate every training curve, so the loss is known at every FLOP count along every run.",
+              "why": "The envelope uses all points of all curves, not only final losses; this is what separates Approach 1 from Approach 2."
+            },
+            {
+              "do": "At each of 1500 log-spaced FLOP values, keep the run with the lowest loss: one (C, N, D) point per FLOP value. All selected points lie in the last 15% of their runs.",
+              "why": "At fixed C the lowest-loss run is the best split of that budget between N and D, which is exactly the question of Eq. 1."
+            },
+            {
+              "tex": "N_{opt} \\propto C^{a},\\quad D_{opt} \\propto C^{b}:\\qquad a = 0.50,\\; b = 0.50",
+              "do": "Fit straight lines in log-log space through the (C, N) and (C, D) points.",
+              "why": "Equal exponents mean N and D grow at the same rate with compute; a + b = 1 because C ≈ 6ND."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "approach-2",
+      "label": "Approach 2: IsoFLOP curves; fit a parabola, read off the minimum",
+      "kind": "procedure",
+      "statement": "For each of 9 FLOP budgets from 6e18 to 3e21, train models of many sizes (up to 16B) with D set by the budget, plot final loss against N, fit a parabola to each IsoFLOP curve, and take its minimum as N_opt(C); power laws through the minima give a = 0.49, b = 0.51.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.2",
+            "role": "claim",
+            "quote": "for a fixed set of 9 different training FLOP counts"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.2",
+            "role": "claim",
+            "quote": "The number of training tokens is determined by the model size and training FLOPs."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.2",
+            "role": "claim",
+            "quote": "We fit a parabola to each IsoFLOPs curve to directly estimate at what model size the minimum loss is achieved (Figure 3 (left))."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:fig3",
+            "role": "figure",
+            "quote": "We find a clear valley in loss, meaning that for a given FLOP budget there is an optimal model to train (left)."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.2",
+            "role": "computation",
+            "quote": "we find that $a=0.49$ and $b=0.51$"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.2",
+            "role": "claim",
+            "quote": "In all cases, we ensure that we have trained a diverse enough set of model sizes to see a clear minimum in the loss."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.2",
+            "role": "claim",
+            "quote": "ranging from $6\\times 10^{18}$ to $3\\times 10^{21}$ FLOPs"
+          }
+        ],
+        "filtering_note": "Each IsoFLOP curve uses final losses only, with the cosine length set to match the token count (footnote 7); the parabola is fit in the loss-vs-parameters plane (the paper does not state the axis transform; Fig. 3 plots parameters on a log axis). Lecture 9 p48 keeps the picture ('convex shapes. The minima form a power law') and p55 generalises it ('Isoflops everywhere'). The site's fixture isoflop-sweep draws the Approach-3 fitted function along IsoFLOP slices rather than the paper's measured points; with those constants the D_opt/N_opt ratio at the minimum rises from about 26 at 1e18 to about 49 at 1e21, which is Approach 3's b > a showing, not the parabola fits of this approach."
+      },
+      "prerequisites": [
+        {
+          "kp": "compute-optimal-question",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-six-nd-budget",
+          "basis": "author-inference",
+          "note": "An IsoFLOP curve varies N with D = C / 6N."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:chinchilla-three-methods",
+          "basis": "author-inference",
+          "note": "Lecture 9 p48: 'Method 2 - IsoFLOPS'."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Along one IsoFLOP curve, bigger models always have lower loss.",
+          "why_wrong": "D = C/6N falls as N rises; past the minimum the model is too undertrained to use its parameters and the loss turns up. The curves show 'a clear valley'."
+        },
+        {
+          "belief": "The IsoFLOP minima need many sizes near the optimum to be found.",
+          "why_wrong": "A parabola is fit to the whole curve and its vertex is read off; the paper only needs a diverse enough set of sizes to see a clear minimum."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "On an IsoFLOP curve with budget C = 1e21 FLOPs, a 1B-parameter model is one of the points. Using C = 6ND, how many training tokens does that point use? Give the answer in billions.",
+          "format": "number",
+          "answer": "167",
+          "tolerance": 0.03,
+          "why": "D = C / (6N) = 1e21 / (6 x 1e9) = 1.67e11 tokens. Doubling N to 2B halves D to 83B: along an IsoFLOP curve N and D trade off exactly, which is what makes the loss turn back up on the right."
+        },
+        "transfer": {
+          "q": "A replication on a code dataset trains 5 model sizes at a budget of 1e20 FLOPs and finds the final loss still falling at the largest size tried. Can a parabola fit on these 5 points be trusted for N_opt at this budget? Say which condition of Approach 2 is violated and what the fitted minimum would tend to do.",
+          "format": "short",
+          "answer": "No: the paper requires a diverse enough set of sizes to see a clear minimum, and here the minimum is not bracketed; a parabola fit to a monotone stretch puts its vertex at or beyond the largest size tried, biasing N_opt upward (or leaving it undetermined)",
+          "varies": "the dataset and the coverage of model sizes (domain and functional: same procedure, minimum not bracketed)",
+          "invariant": "the vertex of a fitted parabola is only meaningful if the data turn upward on both sides",
+          "surface_cue_broken": "the prompt mentions a parabola fit and a FLOP budget, inviting the recitation 'fit a parabola, read the minimum'; the correct answer refuses to read the minimum",
+          "transfer_distance": "far",
+          "why": "§3.2: 'In all cases, we ensure that we have trained a diverse enough set of model sizes to see a clear minimum in the loss.' Appendix C shows the same method on C4 and GitHub does recover minima (a = 0.50, 0.53), so the dataset is not the problem; the bracketing is."
+        },
+        "check": {
+          "q": "One IsoFLOP curve has three runs. With x = log10(N), the final losses are: x = 9.0 → 2.62, x = 9.5 → 2.50, x = 10.0 → 2.54. Fit a parabola L(x) through these three points and take its vertex as N_opt for this budget. What is N_opt? Give the answer in billions of parameters.",
+          "format": "number",
+          "answer": "4.22 billion",
+          "tolerance": 0.1,
+          "why": "Through the three points: L = 0.32x² − 6.16x + 32.14 (check: 2nd difference (2.54 − 2·2.50 + 2.62)/0.5² = 0.16/0.25 = 0.64 = 2·0.32). Vertex x* = 6.16/(2·0.32) = 9.625, so N_opt = 10^9.625 ≈ 4.22B. Picking the lowest sampled point gives 3.16B; picking the largest size (the 'bigger is better' reading) gives 10B; both rejected.",
+          "targets_misconception": "Along one IsoFLOP curve, bigger models always have lower loss (and the minimum is just the lowest sampled point).",
+          "varies": "actually performing the parabola-vertex step on given points instead of computing tokens or judging bracketing (functional)",
+          "invariant": "fit a parabola to the whole IsoFLOP valley in log N and read the vertex",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In Approach 2, what is held fixed along one curve and what is varied?",
+            "answer": "Training FLOPs are fixed; model size is varied, with the token count determined by size and budget"
+          },
+          {
+            "q": "How does Approach 2 locate the optimal model size on an IsoFLOP curve?",
+            "answer": "It fits a parabola to final loss versus model size and takes the minimum"
+          },
+          {
+            "q": "How many FLOP budgets does Approach 2 use, and what are the smallest and largest?",
+            "answer": "9 budgets, from 6e18 to 3e21 FLOPs",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the loss along an IsoFLOP curve rise again on the right even though those models have more parameters?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "trace",
+          "ref": "chinchilla:fig3"
+        },
+        {
+          "type": "animation",
+          "action": "predict-trend",
+          "ref": "fixture:isoflop-sweep",
+          "notice": "Along one IsoFLOP curve the loss has a single minimum; stepping to the next budget moves that minimum right and down, so both N_opt and D_opt grow with C."
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:chinchilla--isoflop-parabola",
+          "notice": "The parabola's vertex sits on the valley only when the lowest sampled loss has a higher neighbour on both sides. Slide the sampled sizes until the lowest loss is at the end of the range, and the vertex moves out past the largest size tried while the readout switches to 'not bracketed'."
+        }
+      ]
+    },
+    {
+      "id": "approach-3-parametric-fit",
+      "label": "Approach 3: fit L(N,D) = E + A/N^α + B/D^β to all final losses",
+      "kind": "mechanism",
+      "statement": "Approach 3 models every final loss from Approaches 1 and 2 as L̂(N,D) = E + A/N^α + B/D^β (irreducible entropy of text, finite-capacity term, finite-training term), fitting A, B, E, α, β by minimising a Huber loss (δ = 1e-3) between predicted and observed log loss with L-BFGS from a grid of initialisations; the paper reports E = 1.69, A = 406.4, B = 410.7, α = 0.34, β = 0.28.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:eq2",
+            "role": "computation",
+            "quote": "\\hat{L}(N,D)\\triangleq E+\\frac{A}{N^{\\alpha}}+\\frac{B}{D^{\\beta}}."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "The first term captures the loss for an ideal generative process on the data distribution, and should correspond to the entropy of natural text."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "The second term captures the fact that a perfectly trained transformer with $N$ parameters underperforms the ideal generative process."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "The final term captures the fact that the transformer is not trained to convergence, as we only make a finite number of optimisation steps, on a sample of the dataset distribution."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "we minimize the Huber loss (Huber, 1964) between the predicted and observed log loss using the L-BFGS algorithm (Nocedal, 1980)"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "We account for possible local minima by selecting the best fit from a grid of initialisations."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:eq10",
+            "role": "computation",
+            "quote": "L(N,D)=E+\\frac{A}{N^{0.34}}+\\frac{B}{D^{0.28}},"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.2",
+            "role": "computation",
+            "quote": "with $E=1.69$ , $A=406.4$ , $B=410.7$ ."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.2",
+            "role": "claim",
+            "quote": "We note that the parameter/data coefficients are both lower than $\\frac{1}{2}$"
+          }
+        ],
+        "filtering_note": "The main text (§3.3) gives the form and the fitting objective but prints no fitted constants; they appear only in Appendix D.2 (Eq. 10), where the paper also derives the three-term form from a risk decomposition (Eq. 9) and motivates α, β ≈ 1/2 from two-layer-network approximation and Robbins-Monro rates. Eq. 11 shows the fit is done in log space via log-sum-exp with A, B, E = exp(a), exp(b), exp(e). Lecture 9 p43-p44 presents the same additive form as Rosenfeld's joint law and p49 as 'Method 3 - Joint fits ... least squares', not Huber; p53 adds that later data forensics re-fit Approach 3 and got results closer to Approaches 1-2."
+      },
+      "prerequisites": [
+        {
+          "kp": "compute-optimal-question",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-power-law-fitting",
+          "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:joint-data-model-law",
+          "basis": "author-inference",
+          "note": "Lecture 9 p43: Error = m^-α + n^-β; the same additive form."
+        },
+        {
+          "kp": "lecture_09:chinchilla-three-methods",
+          "basis": "author-inference",
+          "note": "Lecture 9 p49: 'Method 3 - Joint fits'."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "E is the loss of the largest model trained.",
+          "why_wrong": "E is the asymptote as both N and D go to infinity: the paper identifies it with the entropy of natural text; every trained model sits above it by A/N^α + B/D^β."
+        },
+        {
+          "belief": "The fit minimises squared error on the loss itself.",
+          "why_wrong": "It minimises a Huber loss with δ = 1e-3 on the log of the loss (Eqs. 3 and 11); the paper says larger δ overfits the small-compute regime and predicts held-out large runs poorly."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Using Eq. 10 with E = 1.69, A = 406.4, B = 410.7, α = 0.34, β = 0.28, which of the two correction terms is larger for Chinchilla (N = 70B, D = 1.4T): the A/N^α term or the B/D^β term? Commit, then compute both to two decimals.",
+          "format": "choice",
+          "choices": [
+            "A/N^α is larger (about 0.16 vs 0.08)",
+            "B/D^β is larger (about 0.16 vs 0.08)",
+            "They are equal, because Chinchilla is compute-optimal"
+          ],
+          "answer": "B/D^β is larger (about 0.16 vs 0.08)",
+          "distractor_from": "Option 3 is the belief that optimality equalises the two terms (it equalises α·A/N^α and β·B/D^β, not the terms themselves); option 1 swaps them.",
+          "why": "A/N^α = 406.4 / (7e10)^0.34 = 0.083; B/D^β = 410.7 / (1.4e12)^0.28 = 0.163; L̂ = 1.69 + 0.08 + 0.16 = 1.94. At the Eq. 4 optimum the derivatives balance, α·A/N^α = β·B/D^β, so with α > β the data term is the larger of the two."
+        },
+        "transfer": {
+          "q": "A team fits Eq. 2 to their own runs and gets α = 0.28, β = 0.34 (the paper's values swapped), with E, A, B unchanged. Without computing Eq. 4 numerically, in which direction does the compute-optimal allocation move compared with the paper: more parameters per token or fewer, and why?",
+          "format": "trend",
+          "answer": "more parameters per token: a = β/(α+β) becomes 0.34/0.62 > 0.5, so N_opt now grows faster than D_opt with compute; the term that decays more slowly (now the N term, exponent 0.28) is the one worth spending more on",
+          "varies": "the fitted exponents α and β (functional: same formula, different fit)",
+          "invariant": "Eq. 4: a = β/(α+β), b = α/(α+β); the resource with the slower-decaying term receives the larger share",
+          "surface_cue_broken": "the numbers are the paper's own, so recalling '0.34 goes with N' gives the wrong direction",
+          "transfer_distance": "near",
+          "why": "Eq. 4 is derived by balancing marginal gains under C = 6ND. A smaller exponent means slower decay and so larger marginal gain from more of that resource at a given size."
+        },
+        "retrieval": [
+          {
+            "q": "Write the parametric loss form of Approach 3 and name what each of its three terms represents.",
+            "answer": "L(N,D) = E + A/N^α + B/D^β: E the entropy of natural text (ideal generative process), A/N^α the gap from finite parameters, B/D^β the gap from finite training tokens / not training to convergence"
+          },
+          {
+            "q": "What fitted values of E, A, B, α, β does the paper report for Approach 3's parametric loss?",
+            "answer": "E = 1.69, A = 406.4, B = 410.7, α = 0.34, β = 0.28",
+            "layer": "detail"
+          },
+          {
+            "q": "What loss function and optimiser fit the parametric form, and on what scale is the residual measured?",
+            "answer": "Huber loss (δ = 1e-3) on the log loss, minimised with L-BFGS from a grid of initialisations",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would fitting in log space with a Huber loss change which runs dominate the fit, compared with least squares on the raw loss?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "chinchilla:eq2",
+          "steps": [
+            {
+              "tex": "\\hat L(N,D) = E + \\frac{A}{N^{\\alpha}} + \\frac{B}{D^{\\beta}}",
+              "do": "E: the loss of an ideal generative process on the data, which should be the entropy of natural text.",
+              "why": "No model size or data amount removes it, so it is the floor that both other terms decay toward."
+            },
+            {
+              "do": "A/N^α: a perfectly trained transformer with N parameters still underperforms the ideal process.",
+              "why": "This is the finite-capacity gap; it vanishes only as N grows without bound."
+            },
+            {
+              "do": "B/D^β: the transformer is not trained to convergence, since it takes a finite number of steps on a sample of the data.",
+              "why": "This is the finite-training gap; keeping it separate from the N term is what lets Eq. 4 solve for N and D in closed form."
+            },
+            {
+              "do": "Fit A, B, E, α, β by minimising a Huber loss (δ = 10⁻³) between predicted and observed log loss, using L-BFGS from a grid of initialisations.",
+              "why": "Huber keeps outlying runs from dominating (§3.4: the fit treats low-compute points as outliers), and the grid guards against local minima."
+            },
+            {
+              "do": "Result (Appendix D.2): E = 1.69, A = 406.4, B = 410.7, α = 0.34, β = 0.28.",
+              "why": "These are the constants of Eq. 10; the main text prints none of them."
+            }
+          ]
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "chinchilla:eq10",
+          "faded": true,
+          "steps": [
+            {
+              "tex": "\\hat L = 1.69 + \\frac{406.4}{(7\\times10^{10})^{0.34}} + \\frac{410.7}{(1.4\\times10^{12})^{0.28}}",
+              "do": "Put Chinchilla's N = 70B and D = 1.4T into Eq. 10.",
+              "why": "E = 1.69 is the same for every model, so only the two correction terms need computing."
+            },
+            {
+              "do": "Parameter term: (7·10¹⁰)^0.34 = 4868, so A/N^α = 406.4 / 4868 = 0.083.",
+              "why": "Raise N to α through logs (0.34 × log₁₀(7·10¹⁰) = 3.69, and 10^3.69 ≈ 4868), then divide."
+            },
+            {
+              "do": "Data term: (1.4·10¹²)^0.28 = 2517, so B/D^β = 410.7 / 2517 = 0.163, and L̂ = 1.69 + 0.083 + 0.163 = 1.94.",
+              "why": "Same move with D and β; the data term comes out about twice the parameter term."
+            }
+          ]
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:fig4"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:chinchilla--parametric-frontier",
+          "notice": "At Chinchilla's 70B / 1.4T the data term B/D^β (0.163) is about twice the parameter term A/N^α (0.083). Sliding N along the IsoFLOP curve trades one term against the other, and the total is lowest where their ratio is β/α, not 1."
+        }
+      ]
+    },
+    {
+      "id": "approach-3-frontier",
+      "label": "Approach 3: the closed-form frontier, a = β/(α+β), b = α/(α+β)",
+      "kind": "mechanism",
+      "statement": "Minimising L̂(N,D) under FLOPs ≈ 6ND gives, by construction, power laws N_opt(C) = G (C/6)^a and D_opt(C) = G^-1 (C/6)^b with a = β/(α+β), b = α/(α+β) and G = (αA/(βB))^(1/(α+β)); the paper reports a = 0.46, b = 0.54, the only approach with b noticeably above a.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:eq4",
+            "role": "computation",
+            "quote": "G={\\left(\\frac{\\alpha A}{\\beta B}\\right)}^{\\frac{1}{\\alpha+\\beta}},\\hskip 10.00002pta=\\frac{\\beta}{\\alpha+\\beta},\\text{ and }b=\\frac{\\alpha}{\\alpha+\\beta}."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "claim",
+            "quote": "By construction, they have a power-law form:"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.3",
+            "role": "computation",
+            "quote": "we find that $a=0.46$ and $b=0.54$"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:fig4",
+            "role": "figure",
+            "quote": "We project the optimal model size given the Gopher FLOP budget to be 40B parameters."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.4",
+            "role": "claim",
+            "quote": "The third approach predicts even smaller models being optimal at larger compute budgets."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.4",
+            "role": "claim",
+            "quote": "The fitted model places increased weight on the points with more FLOPs—automatically considering the low-computational budget points as outliers due to the Huber loss."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:tableA3",
+            "role": "figure",
+            "quote": "1 Billion ... 1.20e+20 ... 20.0 Billion ... 1.62e+20 ... 27.1 Billion"
+          }
+        ],
+        "filtering_note": "The paper states Eq. 4 without the derivation (set d/dN of L̂(N, C/6N) to zero; the two correction terms' derivatives balance). Plugging the rounded Eq. 10 exponents into a = β/(α+β) gives 0.28/0.62 = 0.452, which rounds to 0.45, not the printed 0.46; the unrounded fit presumably differs in the third decimal, so prompts use a tolerance. Because b > a, Approach 3's tokens-per-parameter grows with scale (Table A3: 27.1 at 1B, 41 at 10B, about 61 at 67B), unlike Approaches 1-2; the isoflop-sweep fixture built from these constants shows the same drift (D_opt/N_opt about 26 at 1e18 to about 49 at 1e21). Lecture 9 p53 records that a later re-fit of Approach 3 brought it in line with Approaches 1-2."
+      },
+      "prerequisites": [
+        {
+          "kp": "approach-3-parametric-fit",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-six-nd-budget",
+          "basis": "author-inference",
+          "note": "The constraint FLOPs ≈ 6ND is what makes a + b = 1 and produces the C/6 in Eq. 4."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:six-nd",
+          "basis": "author-inference",
+          "note": "C = 6ND closes the system; a + b = 1."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "At the optimum the two correction terms A/N^α and B/D^β are equal.",
+          "why_wrong": "The first-order condition under 6ND = C equates α·A/N^α with β·B/D^β; the terms themselves stand in the ratio (A/N^α)/(B/D^β) = β/α ≈ 0.82 at every budget (at C = 5.76e23 with Chinchilla's constants, about 0.109 vs 0.132). The 0.08 vs 0.16 sometimes quoted are the terms at 70B parameters and 1.4T tokens, which is not the Approach-3 optimum."
+        },
+        {
+          "belief": "Approach 3 predicts the same optimal size for the Gopher budget as Approaches 1 and 2.",
+          "why_wrong": "Fig. 4 projects 40B for Approach 3 while Table 3 (Approach 1) has 67B at the Gopher budget; §3.4 explains that the Huber fit weights high-FLOP points and the frontier is concave, so Approach 3 'predicts even smaller models'."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Take the Eq. 10 exponents α = 0.34, β = 0.28. Using Eq. 4, compute a and b to two decimals and say which of N_opt or D_opt grows faster with compute.",
+          "format": "short",
+          "answer": "a = 0.28/0.62 ≈ 0.45, b = 0.34/0.62 ≈ 0.55; D_opt grows faster than N_opt (paper prints 0.46 and 0.54)",
+          "why": "a = β/(α+β) and b = α/(α+β). The exponent attached to each resource is the other resource's decay rate: the slower the loss falls in N (small α), the more of the budget should go to D. The printed 0.46/0.54 differ from 0.45/0.55 by rounding of α, β in Eq. 10."
+        },
+        "transfer": {
+          "q": "Suppose the FLOP accounting changed so that C = 12ND (for instance counting a second backward pass). With the same fitted E, A, B, α, β, what happens to (i) the exponents a and b, and (ii) N_opt at a fixed budget C? Answer with a direction for each and the factor if you can.",
+          "format": "short",
+          "answer": "(i) a and b are unchanged: they depend only on α and β; (ii) N_opt falls by (1/2)^a, i.e. by 2^-0.46 ≈ 0.73, because C/6 becomes C/12 inside the power",
+          "varies": "the constant in the FLOP constraint (functional: same loss model, different accounting)",
+          "invariant": "Eq. 4's exponents come only from the balance of α and β; the constant enters only through (C/k)^a",
+          "surface_cue_broken": "the prompt changes '6' to '12' in the one place the paper writes 6, so copying Eq. 4 literally gives no answer; the structure must be read",
+          "transfer_distance": "near",
+          "why": "N_opt(C) = G (C/k)^a. The optimum balances the two marginal gains; the constraint constant only rescales how much N and D a given C buys."
+        },
+        "check": {
+          "q": "Take the paper's fitted loss L̂(N, D) = E + A/N^α + B/D^β with α = 0.34, β = 0.28, and minimise it under the constraint 6ND = C. At the resulting compute-optimal (N, D), what is the ratio of the two correction terms, (A/N^α) / (B/D^β)? Type only the number, to 2 decimals.",
+          "format": "number",
+          "answer": "0.82",
+          "tolerance": 0.04,
+          "value": 0.8235,
+          "why": "Substitute D = C/(6N): L̂ = E + A N^−α + B (6N/C)^β. dL̂/dN = 0 gives α A N^−α = β B D^−β, so (A/N^α)/(B/D^β) = β/α = 0.28/0.34 ≈ 0.82, independent of C and of A, B (checked numerically with G = (αA/(βB))^{1/(α+β)} at C = 1e21 and 5.76e23). Answering 1 (equal terms) is rejected.",
+          "targets_misconception": "At the optimum the two correction terms A/N^α and B/D^β are equal.",
+          "varies": "asks for the term ratio at the optimum instead of the exponents a, b or the effect of the FLOP constant (functional)",
+          "invariant": "first-order condition under 6ND = C: α·A/N^α = β·B/D^β, the source of a = β/(α+β)",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Express the compute exponents a and b of Approach 3 in terms of the loss exponents α and β.",
+            "answer": "a = β/(α+β), b = α/(α+β)"
+          },
+          {
+            "q": "What compute exponents a and b does Approach 3 report, and what sets them apart from Approaches 1 and 2?",
+            "answer": "a = 0.46, b = 0.54; Approach 3 is the only one with b clearly above a, predicting smaller models at large budgets"
+          },
+          {
+            "q": "What optimal model size does Approach 3 project for the Gopher budget?",
+            "answer": "40B parameters",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the paper say the Huber loss makes the low-compute points behave like outliers, and how does that push Approach 3 toward smaller models?"
+      },
+      "presentations": [
+        {
+          "type": "formula-step",
+          "action": "trace",
+          "ref": "chinchilla:eq4",
+          "steps": [
+            {
+              "tex": "D = \\frac{C}{6N} \\;\\Rightarrow\\; \\hat L(N) = E + A N^{-\\alpha} + B\\left(\\frac{6N}{C}\\right)^{\\beta}",
+              "why": "The FLOP constraint C ≈ 6ND leaves N as the only free variable at a fixed budget."
+            },
+            {
+              "tex": "\\frac{d\\hat L}{dN} = -\\alpha A N^{-\\alpha-1} + \\beta B\\left(\\frac{6}{C}\\right)^{\\beta} N^{\\beta-1} = 0",
+              "do": "Set the derivative to zero.",
+              "why": "A bigger model lowers the parameter term but, at fixed C, leaves fewer tokens and raises the data term; the optimum is where the two slopes cancel."
+            },
+            {
+              "tex": "N^{\\alpha+\\beta} = \\frac{\\alpha A}{\\beta B}\\left(\\frac{C}{6}\\right)^{\\beta} \\;\\Rightarrow\\; N_{opt} = G\\left(\\frac{C}{6}\\right)^{\\frac{\\beta}{\\alpha+\\beta}},\\quad G = \\left(\\frac{\\alpha A}{\\beta B}\\right)^{\\frac{1}{\\alpha+\\beta}}",
+              "do": "Multiply through by N^(α+1) and solve for N.",
+              "why": "Taking the (α+β)-th root turns the balance into a power law in C, which is why §3.3 says the frontier has a power-law form 'by construction'."
+            },
+            {
+              "tex": "D_{opt} = \\frac{C}{6N_{opt}} = G^{-1}\\left(\\frac{C}{6}\\right)^{\\frac{\\alpha}{\\alpha+\\beta}}",
+              "do": "So a = β/(α+β) and b = α/(α+β), with a + b = 1.",
+              "why": "Whatever the budget does not buy in N it buys in D, so the two exponents must sum to 1 under C = 6ND."
+            },
+            {
+              "do": "With α = 0.34 and β = 0.28: a = 0.28 / 0.62 = 0.45 and b = 0.34 / 0.62 = 0.55 (the paper prints 0.46 and 0.54).",
+              "why": "Each resource's exponent is the other resource's decay rate, so α > β makes D_opt grow faster than N_opt. The printed values differ by the rounding of α and β in Eq. 10."
+            }
+          ]
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:chinchilla--parametric-frontier",
+          "notice": "At the Eq. 4 optimum the term ratio (A/N^α)/(B/D^β) reads 0.824 = β/α at every budget. D_opt/N_opt climbs as C^(b−a), from about 26 at 1e18 to about 50 at 1e21, only because α > β. Set α = β and the line goes flat."
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:tableA3"
+        }
+      ]
+    },
+    {
+      "id": "equal-scaling-rule",
+      "label": "The result: a ≈ b ≈ 0.5, so double the data whenever you double the model",
+      "kind": "rule-of-thumb",
+      "statement": "All three approaches put a and b near 0.5 (0.50/0.50, 0.49/0.51, 0.46/0.54 versus Kaplan's 0.73/0.27): for compute-optimal training 'for every doubling of model size the number of training tokens should also be doubled', and Approach 1's Table 3 puts the optimal token count at roughly 20 times the parameter count (1B to 20.2B, 10B to 205.1B, 67B to 1.5T).",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§abstract",
+            "role": "claim",
+            "quote": "for every doubling of model size the number of training tokens should also be doubled."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table2",
+            "role": "figure",
+            "quote": "Our analysis suggests a near equal scaling in parameters and data with increasing compute which is in clear contrast to previous work on the scaling of large models."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.4",
+            "role": "claim",
+            "quote": "All three approaches suggest that as compute budget increases, model size and the amount of training data should be increased in approximately equal proportions."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table3",
+            "role": "figure",
+            "quote": "1 Billion ... 1.21e+20 ... 20.2 Billion"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table3",
+            "role": "figure",
+            "quote": "10 Billion ... 1.23e+22 ... 205.1 Billion"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table3",
+            "role": "figure",
+            "quote": "67 Billion ... 5.76e+23 ... 1.5 Trillion"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.4",
+            "role": "claim",
+            "quote": "Unless one has a compute budget of $10^{26}$ FLOPs (over 250 $\\times$ the compute used to train Gopher), a 1 trillion parameter model is unlikely to be the optimal model to train."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:tableA2",
+            "role": "figure",
+            "quote": "C4 ... 0.50 ... 0.50 ... GitHub ... 0.53 ... 0.47"
+          }
+        ],
+        "filtering_note": "The paper never prints the phrase 'tokens per parameter' or the number 20; the ratio is read off Table 3 (20.2 at 1B, 20.5 at 10B, 22 at 67B, 21 at 1T). Lecture 9 p54 states it as 'Chinchilla - 20 tokens / param' and immediately qualifies it (train-optimal is not deploy-optimal). Table 3 and the §3.4 prose disagree for 175B and 280B (table: 3.85e24 FLOPs / 3.7T tokens and 9.90e24 / 5.9T; prose: 4.41e24 / over 4.2T and about 1e25 / 6.8T); this KP uses the table rows and flags the prose. Approach 3's own table (A3) gives higher and growing ratios (27 at 1B, 41 at 10B), so '20' is specifically Approaches 1-2 at the paper's scale."
+      },
+      "prerequisites": [
+        {
+          "kp": "approach-1",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "approach-2",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "approach-3-frontier",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:chinchilla-twenty-tokens-rule",
+          "basis": "author-inference",
+          "note": "Lecture 9 p54 states the rule as 20 tokens per parameter and lists later models that over-train past it."
+        },
+        {
+          "kp": "lecture_09:overtraining-for-inference",
+          "basis": "author-inference",
+          "note": "Why practitioners deliberately exceed the compute-optimal D/N."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "20 tokens per parameter is the best ratio for any model you deploy.",
+          "why_wrong": "It minimises loss for a fixed training budget only (Eq. 1). When inference dominates total cost, a smaller model trained on more tokens is cheaper overall; Lecture 9 p54 lists Llama 3 70B at 215 tokens/param for this reason."
+        },
+        {
+          "belief": "Equal scaling means N and D should be equal numbers.",
+          "why_wrong": "a ≈ b means they grow by the same factor with compute; the ratio D/N stays roughly constant at about 20 (Table 3), not 1."
+        },
+        {
+          "belief": "The rule says Gopher should have been 70B.",
+          "why_wrong": "Table 3 puts the Approach 1 optimum for Gopher's budget at 67B/1.5T; Approach 3 says 40B; §4 says 'somewhere between 40 and 70 billion' and picks 70B for 'dataset and computational efficiency considerations'."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Table 3 says a 1B-parameter compute-optimal model should see 20.2B tokens and a 10B model 205.1B. Before looking: how many tokens does Table 3 assign to the 67B model, and what is the corresponding FLOP budget in Gopher units?",
+          "format": "short",
+          "answer": "1.5 trillion tokens; exactly 1 Gopher unit (5.76e23 FLOPs)",
+          "why": "The ratio D/N stays near 20-22 down the table (a ≈ b ≈ 0.5), so 67B maps to about 1.5T; and 67B/1.5T is the Approach 1 optimum for exactly Gopher's budget, which is why Chinchilla was 70B/1.4T."
+        },
+        "transfer": {
+          "q": "Your budget is 4x Gopher's. Under Approach 1's exponents (a = b = 0.50), by what factor should N and D each change relative to the 67B/1.5T optimum, and what pair results? Then say how the pair would differ qualitatively under Approach 3 (a = 0.46, b = 0.54).",
+          "format": "short",
+          "answer": "Each grows by 4^0.5 = 2x: about 134B parameters on about 3T tokens (6ND = 4 x 5.76e23 checks). Under Approach 3, N grows by 4^0.46 ≈ 1.9x and D by 4^0.54 ≈ 2.1x, so a slightly smaller model on more tokens; the tokens-per-parameter ratio rises instead of staying at about 22.",
+          "varies": "the compute budget (near: same table, 4x the FLOPs) and then the approach (which changes the exponent split)",
+          "invariant": "N_opt ∝ C^a, D_opt ∝ C^b with a + b = 1 so that 6 N_opt D_opt = C",
+          "surface_cue_broken": "'4x' tempts a 4x model or a 4x token count; the answer needs the square root",
+          "transfer_distance": "near",
+          "why": "With a = b = 0.5 a 4x budget is split as 2x on each axis. Approach 3's b > a tilts the split toward data, which is why Table A3's Approach 3 column has tokens/parameter growing from 27 at 1B to about 61 at 67B."
+        },
+        "check": {
+          "q": "Table 3 (Approach 1) lists the compute-optimal 10B-parameter model at 1.23e22 FLOPs with 205.1B training tokens. Your budget is 9 times that (1.107e23 FLOPs). Using Approach 1's exponents a = b = 0.50, how many training tokens should the compute-optimal model use? Give the answer in billions.",
+          "format": "number",
+          "answer": "615.3 billion",
+          "tolerance": 0.05,
+          "why": "D_opt ∝ C^0.5, so 9x compute gives 9^0.5 = 3x tokens: 3 × 205.1B = 615.3B (with N = 30B; 6·30e9·615.3e9 ≈ 1.11e23 checks). Setting D equal to N (30B) or putting all 9x into tokens (1846B) is rejected.",
+          "targets_misconception": "Equal scaling means N and D should be equal numbers.",
+          "varies": "scales up from the 10B row by 9x instead of the Gopher row by 4x (domain)",
+          "invariant": "with a = b = 0.5, a k-fold budget multiplies N and D each by √k, keeping D/N ≈ 20",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "State the compute-optimal scaling rule in the form the abstract gives it.",
+            "answer": "For every doubling of model size the number of training tokens should also be doubled"
+          },
+          {
+            "q": "List the (a, b) pairs the three approaches report, and Kaplan's.",
+            "answer": "0.50/0.50, 0.49/0.51, 0.46/0.54; Kaplan 0.73/0.27",
+            "layer": "detail"
+          },
+          {
+            "q": "How many training tokens does a compute-optimal 10B model need, and what ratio of tokens to parameters does that imply?",
+            "answer": "205.1 billion tokens; about 20 tokens per parameter"
+          },
+          {
+            "q": "Below what compute budget does the paper say a 1-trillion-parameter model is unlikely to be optimal?",
+            "answer": "1e26 FLOPs (the paper calls this over 250x Gopher's compute; with Gopher at 5.76e23 FLOPs the ratio is about 174x)",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why do all three approaches land near a = b = 0.5 even though they use different data points and fitting methods, and what would it take for them to disagree?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compute",
+          "ref": "chinchilla:table3"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:table2"
+        },
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:chinchilla--allocation-table",
+          "notice": "Approach 1's tokens-per-parameter line stays flat near 20 across nine decades of budget, so k times the compute means √k times both N and D. Approach 3's printed rows climb from 23 to 143 and Kaplan's line falls."
+        }
+      ]
+    },
+    {
+      "id": "chinchilla-vs-gopher",
+      "label": "Chinchilla vs Gopher: 70B on 1.4T beats 280B on 300B at equal FLOPs",
+      "kind": "comparison",
+      "statement": "Chinchilla (70B parameters, 1.4T tokens) was trained for the same FLOPs as Gopher (280B, 300B) and beats it on every Pile subset, on Wikitext103 (perplexity 7.16 vs 7.75), on MMLU (67.6% vs 60.0% 5-shot, better on 51/57 tasks) and on all but four BIG-bench tasks, while being 4x smaller to serve.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table1",
+            "role": "figure",
+            "quote": "Gopher (Rae et al., 2021) ... 280 Billion ... 300 Billion ... Chinchilla ... 70 Billion ... 1.4 Trillion"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4",
+            "role": "claim",
+            "quote": "Both Chinchilla and Gopher have been trained for the same number of FLOPs but differ in the size of the model and the number of training tokens."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4",
+            "role": "claim",
+            "quote": "the optimal model size for the Gopher compute budget is somewhere between 40 and 70 billion parameters."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4.2.1",
+            "role": "claim",
+            "quote": "On Wikitext103 (Merity et al., 2017), Chinchilla achieves a perplexity of 7.16 compared to 7.75 for Gopher."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4.2.1",
+            "role": "claim",
+            "quote": "Chinchilla significantly outperforms Gopher on all evaluation subsets of The Pile"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4.2.2",
+            "role": "claim",
+            "quote": "with an average accuracy of 67.6% (improving upon Gopher by 7.6%)"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table6",
+            "role": "figure",
+            "quote": "Gopher 5-shot ... 60.0% ... Chinchilla 5-shot ... 67.6%"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:fig6",
+            "role": "figure",
+            "quote": "performing better on 51/57 individual tasks, the same on 2/57, and worse on only 4/57 tasks."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4",
+            "role": "claim",
+            "quote": "Due to being $4\\times$ smaller than Gopher, both the memory footprint and inference cost of Chinchilla are also smaller."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§4.2.1",
+            "role": "claim",
+            "quote": "Some caution is needed when comparing Chinchilla with Gopher on these language modelling benchmarks as Chinchilla is trained on 4 $\\times$ more data than Gopher and thus train/test set leakage may artificially enhance the results."
+          }
+        ],
+        "filtering_note": "The abstract says 67.5% on MMLU; Table 6, §4.2.2 and the Fig. 6 caption say 67.6%. The comparison is not clean: §4.1 and Appendix G list other changes (AdamW instead of Adam, a float32 weight copy in the optimiser state, a modified tokenizer, a different MassiveText mix), and Appendix G shows AdamW alone helps at 417M-1.4B. The paper itself flags leakage on language-modelling sets and leans on MMLU and BIG-bench. Lecture 9 does not present these results; it uses Chinchilla as the source of the rule."
+      },
+      "prerequisites": [
+        {
+          "kp": "equal-scaling-rule",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Chinchilla beat Gopher because it used more compute.",
+          "why_wrong": "§4: both 'have been trained for the same number of FLOPs'; the difference is the allocation (4x fewer parameters, 4x more tokens)."
+        },
+        {
+          "belief": "The Chinchilla-Gopher gap measures the allocation effect alone.",
+          "why_wrong": "Chinchilla also switched to AdamW, kept a higher-precision weight copy, changed the tokenizer and data mix (§4.1, Appendix G); Appendix G shows AdamW alone improves loss. The paper reports the bundle, not an ablation at 70B."
+        },
+        {
+          "belief": "Chinchilla's Pile and Wikitext103 wins are as trustworthy as its MMLU win.",
+          "why_wrong": "The paper warns that 4x more training data raises leakage risk on language-modelling sets and places 'more emphasis' on MMLU, BIG-bench, QA and common sense."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Gopher scored 60.0% 5-shot on MMLU. Chinchilla has 4x fewer parameters, trained on 4x more tokens at the same FLOPs. Commit to a number: Chinchilla's MMLU average as reported in Table 6.",
+          "format": "number",
+          "answer": "67.6",
+          "tolerance": 0.02,
+          "why": "Table 6 and §4.2.2 give 67.6% (the abstract rounds to 67.5%), a 7.6-point gain, above the 63.4% that forecasters expected for June 2023. The point is that the gain came from reallocating, not adding, compute."
+        },
+        "transfer": {
+          "q": "A report claims 'Chinchilla proves that a 4x smaller model always beats a 4x larger one at equal FLOPs'. Using §4.1 and Appendix G, name two confounds in the Chinchilla-Gopher comparison that the claim ignores, and name the result in the paper that is closest to a clean two-run test of the allocation prediction.",
+          "format": "short",
+          "answer": "Confounds: Chinchilla used AdamW instead of Adam and a float32 copy of the weights in the optimiser state (also a modified tokenizer and data mix), and Appendix G shows the optimiser changes alone improve loss. The cleanest two-run test is Appendix D.4: at 1e21 FLOPs a 2.80B model (this paper's prediction) beats a 4.74B model (Kaplan's) with the same batch size, learning rate and depth-to-width ratio.",
+          "varies": "the claim's scope (functional: from a reported comparison to a general law) and the evidence asked for (which experiment isolates allocation)",
+          "invariant": "a comparison supports the allocation claim only to the extent that everything except (N, D) is held fixed",
+          "surface_cue_broken": "the prompt repeats the paper's headline '4x smaller, 4x more data, same FLOPs' so that agreeing with the headline is the wrong move",
+          "transfer_distance": "far",
+          "why": "§4.1 lists four differences from Gopher; Appendix G isolates two of them at 680M and finds the Chinchilla setup 'clearly outperforms'. Appendix D.4 is a matched pair designed to test the allocation and nothing else."
+        },
+        "check": {
+          "q": "Chinchilla beats Gopher both on language-modelling sets (e.g. Wikitext103 perplexity 7.16 vs 7.75) and on MMLU (67.6% vs 60.0%). Which caveat does the paper raise specifically about the language-modelling wins, and not about MMLU?",
+          "format": "choice",
+          "choices": [
+            "Chinchilla saw 4x more tokens, raising train/test leakage risk",
+            "Chinchilla was given more training FLOPs than Gopher had used",
+            "Chinchilla used AdamW, which by itself lowers the training loss",
+            "Chinchilla was scored with fewer shots than Gopher on these sets"
+          ],
+          "answer": "Chinchilla saw 4x more tokens, raising train/test leakage risk",
+          "why": "§4.2.1: 'Chinchilla is trained on 4× more data than Gopher and thus train/test set leakage may artificially enhance the results', so the paper places 'more emphasis' on MMLU, BIG-bench, QA and common sense. Both models used the same FLOPs (§4). AdamW is a real confound (§4.1, Appendix G) but it applies to every benchmark, not specifically to language modelling. No shot-count difference is reported for the LM sets.",
+          "distractor_from": "'more training FLOPs' encodes 'Chinchilla beat Gopher because it used more compute'; 'AdamW' is the real optimiser confound but not benchmark-specific (misconception: the gap measures allocation alone, inverted); 'fewer shots' is an invented evaluation difference.",
+          "targets_misconception": "Chinchilla's Pile and Wikitext103 wins are as trustworthy as its MMLU win.",
+          "varies": "which evaluation family is weaker evidence, instead of training-setup confounds and the matched-pair test (domain)",
+          "invariant": "4x more training data raises leakage risk on LM test sets; MMLU/BIG-bench are weighted more",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Give Chinchilla's and Gopher's parameter counts and training token counts.",
+            "answer": "Chinchilla 70B parameters on 1.4T tokens; Gopher 280B on 300B"
+          },
+          {
+            "q": "What Wikitext103 perplexities does the paper report for Chinchilla and Gopher?",
+            "answer": "7.16 for Chinchilla, 7.75 for Gopher",
+            "layer": "detail"
+          },
+          {
+            "q": "On how many of the 57 MMLU tasks did Chinchilla beat Gopher, tie, and lose?",
+            "answer": "Better on 51, same on 2, worse on 4",
+            "layer": "detail"
+          },
+          {
+            "q": "Which evaluation family does the paper say to weight more heavily than language-modelling benchmarks when comparing Chinchilla to Gopher, and why?",
+            "answer": "MMLU, BIG-bench, closed-book QA and common sense, because 4x more training data raises train/test leakage risk on language-modelling sets"
+          }
+        ],
+        "self_explain": "Why does the paper choose 70B rather than the 40B or 67B its own fits suggest, and what does that choice say about the precision of the frontier?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:table6"
+        },
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:fig5"
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "chinchilla:§G"
+        }
+      ]
+    },
+    {
+      "id": "cosine-cycle-length",
+      "label": "The schedule must match the horizon: cosine decay 10x over about D tokens",
+      "kind": "rule-of-thumb",
+      "statement": "The paper's fits assume each run's cosine learning-rate schedule decays 10x over its actual training horizon; setting the cycle more than about 25% longer than the number of training steps clearly degrades the final loss, so the training length must be fixed before training starts.",
+      "provenance": {
+        "status": "shown",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§B",
+            "role": "claim",
+            "quote": "We find that setting the cosine cycle length too much longer than the target number of training steps results in sub-optimally trained models, as shown in Figure A1."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:figA1",
+            "role": "figure",
+            "quote": "We show 6 curves with the cosine cycle length set to 1, 1.1, 1.25, 1.5, 2, and 5 $\\times$ longer than the target number of training steps."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:figA1",
+            "role": "figure",
+            "quote": "We find that overestimating the number of training steps beyond 25% leads to clear drops in performance."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.1",
+            "role": "claim",
+            "quote": "We find that when the cosine cycle overshoots the number of training steps by more than 25%, performance is noticeably degraded"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§B",
+            "role": "claim",
+            "quote": "We find the difference between decaying by $10\\times$ and decaying to 0.0 (over the same number of steps) to be small, though decaying by a factor of $10\\times$ to be slightly more performant. Decaying by less ( $5\\times$ ) is clearly worse."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.1",
+            "role": "claim",
+            "quote": "This suggests that when training a model over $D$ tokens, we should pick a cosine cycle length that decays $10\\times$ over approximately $D$ tokens"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§2",
+            "role": "claim",
+            "quote": "we find that setting the learning rate schedule to approximately match the number of training tokens results in the best final loss regardless of model size"
+          }
+        ],
+        "filtering_note": "Appendix B is the methodological hinge of the paper: it justifies using separate runs per horizon (Approach 1) and matched schedules (Approach 2, footnote 7), and it is the first explanation of the Kaplan discrepancy (§2). The paper shows the effect only as curves (Fig. A1) for two step counts; no loss numbers are printed. Lecture 9 p51 touches this obliquely ('Decay itself is maybe not critical if batch / LR is properly tuned'), i.e. the course is more sceptical than the paper about how much the schedule explains."
+      },
+      "prerequisites": [
+        {
+          "kp": "approach-1",
+          "basis": "author-inference",
+          "note": "Footnote 4 of §3.1 is where the paper first draws the conclusion."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A longer cosine cycle is harmless: you can always stop early.",
+          "why_wrong": "Stopping early leaves the learning rate undecayed; Fig. A1 shows cycles 1.5x, 2x and 5x too long give clearly worse loss at the target step, and the paper puts the tolerance at about 25%."
+        },
+        {
+          "belief": "The schedule should decay to zero for best loss.",
+          "why_wrong": "Footnote 9: decaying 10x versus to 0.0 differs little, with 10x slightly better; decaying only 5x is clearly worse."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Fig. A1 trains the same model with the cosine cycle set to 1, 1.1, 1.25, 1.5, 2 and 5 times the target number of steps and reads the loss at the target step. Commit: at which multiplier does the paper say the loss starts to show clear drops in performance?",
+          "format": "choice",
+          "choices": [
+            "beyond 1.1x",
+            "beyond 1.25x",
+            "beyond 2x"
+          ],
+          "answer": "beyond 1.25x",
+          "distractor_from": "'beyond 2x' is the 'longer is harmless' belief; 'beyond 1.1x' overstates the sensitivity.",
+          "why": "Fig. A1 caption: overestimating the number of training steps beyond 25% leads to clear drops. D.1 repeats the 25% threshold. The learning rate at the target step is still too high when the cycle is much longer."
+        },
+        "transfer": {
+          "q": "A team plans one 300B-token run with a cosine cycle over 300B tokens and intends to extend to 600B tokens 'if the loss looks good'. Using Appendix B, will the loss at 600B be better or worse than that of a run whose cycle was set to 600B from the start?",
+          "format": "choice",
+          "answer": "worse",
+          "varies": "the direction of the mismatch (cycle shorter than the eventual horizon, where the paper's Fig. A1 studied cycles longer than the horizon) and the setting (a single production run instead of a sweep)",
+          "invariant": "the final loss depends on the schedule being calibrated to the number of steps actually taken",
+          "surface_cue_broken": "the paper's warning is phrased about cycles that are too long; the item asks about one that is too short, so recalling '25% overshoot' alone does not answer it",
+          "transfer_distance": "far",
+          "why": "worse: at 300B the learning rate has already decayed 10x, so continuing with a near-zero or restarted rate does not reproduce a 600B-cycle run; the paper's analysis assumes the cycle matches the final horizon, so D must be chosen before training (which is why N and D are set jointly from C) D.1 footnote 10: 'This further emphasises the point of not only determining model size, but also training length before training begins.' Approach 1 trains separate runs per horizon precisely because one run cannot stand in for several horizons.",
+          "choices": [
+            "better",
+            "worse"
+          ],
+          "distractor_from": "A longer run only adds tokens, so it cannot be worse."
+        },
+        "retrieval": [
+          {
+            "q": "By what factor does the paper decay the learning rate over a run, and over roughly how many tokens should that decay be spread?",
+            "answer": "10x, over approximately the D tokens the model will actually train on"
+          },
+          {
+            "q": "How far can the cosine cycle overshoot the real number of training steps before the paper sees clear degradation?",
+            "answer": "About 25%",
+            "layer": "detail"
+          },
+          {
+            "q": "Which gives the better final loss: decaying the learning rate 10x, to zero, or 5x?",
+            "answer": "10x slightly better than to zero; 5x clearly worse",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does reading an intermediate loss from a long-schedule run overestimate the loss a shorter, matched-schedule run would reach?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "chinchilla:figA1"
+        },
+        {
+          "type": "example",
+          "action": "restate",
+          "ref": "chinchilla:§B"
+        }
+      ]
+    },
+    {
+      "id": "why-kaplan-differed",
+      "label": "Why Kaplan got 0.73/0.27: fixed schedule and tokens, and much smaller models",
+      "kind": "comparison",
+      "statement": "The paper attributes Kaplan et al.'s steeper N_opt ∝ C^0.73 to two choices: a fixed training-token count and learning-rate schedule for all models (so intermediate losses of a cosine-to-130B schedule overestimate what matched shorter runs reach, undervaluing small-data training), and a model range mostly under 100M parameters, where the paper's own frontier is curved; a head-to-head at 1e21 FLOPs favours the paper's 2.80B model over Kaplan's 4.74B.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§2",
+            "role": "claim",
+            "quote": "First, the authors use a fixed number of training tokens and learning rate schedule for all models; this prevents them from modelling the impact of these hyperparameters on the loss."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§2",
+            "role": "claim",
+            "quote": "Using these intermediate losses results in underestimating the effectiveness of training models on less data than 130B tokens, and eventually contributes to the conclusion that model size should increase faster than training data size as compute budget increases."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§2",
+            "role": "claim",
+            "quote": "the majority of the models used in our analysis have more than 500 million parameters, in contrast the majority of runs in Kaplan et al. (2020) are significantly smaller—many being less than 100M parameters."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.4",
+            "role": "claim",
+            "quote": "From Kaplan et al. (2020), we find that the optimal model size should be 4.68 billion parameters."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.4",
+            "role": "claim",
+            "quote": "From our approach 1, we estimate a 2.86 billion parameter model should be optimal."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.4",
+            "role": "claim",
+            "quote": "We train a 4.74 billion parameter and a 2.80 billion parameter transformer to test this hypothesis"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§D.4",
+            "role": "claim",
+            "quote": "We find that our predicted model outperforms the model predicted by Kaplan et al. (2020) as shown in Figure A4."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:table2",
+            "role": "figure",
+            "quote": "Kaplan et al. (2020) ... 0.73 ... 0.27"
+          }
+        ],
+        "filtering_note": "The paper offers two explanations (schedule/tokens; model-size range and frontier curvature). Lecture 9 p50-p52 offers a partly different list: Kaplan removed the last-layer (embedding) parameters from the count, used too much warmup at small budgets, and 'Decay itself is maybe not critical if batch / LR is properly tuned'; the course therefore demotes the schedule explanation the paper leads with and promotes a parameter-counting one the paper does not raise (Appendix F says the paper counts embeddings in N). The D.4 comparison uses matched batch size (0.5M tokens), peak LR (1.5e-4, decayed 10x) and depth-to-width ratio; only the final-loss ordering is reported, no numbers."
+      },
+      "prerequisites": [
+        {
+          "kp": "cosine-cycle-length",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "approach-1",
+          "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:kaplan-chinchilla-discrepancy",
+          "basis": "author-inference",
+          "note": "Lecture 9 p50-p52 gives the course's explanations: parameter counting and small-scale tuning."
+        },
+        {
+          "kp": "lecture_09:kaplan-compute-optimal-allocation",
+          "basis": "author-inference"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Kaplan and Chinchilla disagree because they fit different functional forms.",
+          "why_wrong": "Both fit power laws N_opt ∝ C^a; the paper locates the difference in the data fed to the fit (fixed schedule and tokens, small models), not the form."
+        },
+        {
+          "belief": "A fixed long schedule makes small-data points look too good.",
+          "why_wrong": "The opposite: intermediate losses of a cosine-to-130B run are 'overestimates of the loss' a matched shorter run would reach, so small-data training looks worse than it is, tilting the fit toward bigger models."
+        },
+        {
+          "belief": "The paper's explanation is the same as Lecture 9's.",
+          "why_wrong": "Lecture 9 p51-p52 emphasises Kaplan's exclusion of embedding parameters and small-scale warmup, and doubts the decay explanation; the paper leads with the schedule and model-size range."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "At 1e21 FLOPs, Kaplan's fit says the optimal model is 4.68B parameters and Approach 1 says 2.86B. Under C = 6ND, how many tokens does each recommendation train on? Commit before checking which model won in Appendix D.4.",
+          "format": "short",
+          "answer": "Kaplan's 4.68B model: about 36B tokens (1e21 / (6 x 4.68e9)); Approach 1's 2.86B model: about 58B tokens. The 2.80B model trained (on about 60B tokens) outperformed the 4.74B model.",
+          "why": "Same FLOPs, so tokens scale inversely with parameters: 1e21/(6 x 4.68e9) = 3.6e10, 1e21/(6 x 2.86e9) = 5.8e10. D.4 reports that the smaller, longer-trained model wins at the end of training (Fig. A4)."
+        },
+        "transfer": {
+          "q": "Lecture 9 explains the Kaplan discrepancy mainly by parameter counting (Kaplan excluded embedding parameters) and by small-scale tuning, while the paper leads with the learning-rate schedule. Which explanation would you test with Appendix F's parameter convention, and which with Appendix B's cycle-length grid? Then say which of the two the paper's own text does not raise.",
+          "format": "short",
+          "answer": "Parameter counting is tested by Appendix F's convention (count embeddings in N and in FLOPs, as the paper does, versus excluding them); the schedule explanation is tested by Appendix B's grid of cosine lengths. The paper never raises parameter counting as a cause of the discrepancy; that is the course's addition.",
+          "varies": "the source of the explanation (domain: paper versus lecture) and the experiment each explanation maps to",
+          "invariant": "an explanation of a fit discrepancy must name the input to the fit that changed",
+          "surface_cue_broken": "the prompt lists both explanations side by side so the learner cannot answer by recalling only the paper's list",
+          "transfer_distance": "far",
+          "why": "§2 gives schedule/tokens and model-size range; Appendix F says embeddings are counted in N; Lecture 9 p51 says 'Kaplan removed last layer param from the count'. Mapping explanations to the experiment that would test them is the skill, not the list."
+        },
+        "check": {
+          "q": "A study trains every model with a cosine learning-rate schedule set to end at 300B tokens and records each model's loss after 30B tokens. Compared with the final loss of the same model trained with a schedule set to end at 30B tokens, how does the recorded loss compare, and what does that do to how short training looks?",
+          "format": "choice",
+          "choices": [
+            "Higher, so training on fewer tokens than 300B looks worse than it is",
+            "Lower, so training on fewer tokens than 300B looks better than it is",
+            "Equal, since schedule length only changes the loss at the final step",
+            "Lower, since the learning rate is still high and progress is faster"
+          ],
+          "answer": "Higher, so training on fewer tokens than 300B looks worse than it is",
+          "why": "§2: for a fixed cosine schedule to 130B tokens, intermediate losses at D′ ≪ 130B 'are therefore overestimates of the loss of a model trained with a schedule length matching D′', which 'results in underestimating the effectiveness of training models on less data'. Figure A1: matching the schedule to the token count gives the best final loss. Same logic with 300B/30B.",
+          "distractor_from": "'Lower ... looks better' encodes 'a fixed long schedule makes small-data points look too good'; 'Equal' denies any schedule effect; 'Lower, since the learning rate is still high' is the intuition that a high LR means faster progress.",
+          "targets_misconception": "A fixed long schedule makes small-data points look too good.",
+          "varies": "300B schedule read at 30B, framed as a generic study rather than Kaplan or Lecture 9 explanations (domain)",
+          "invariant": "intermediate losses of a long cosine schedule overestimate a matched-schedule run's loss",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Name the two ways the paper says its setup differs from Kaplan et al.'s.",
+            "answer": "Kaplan fixed the training tokens and learning-rate schedule for all models; Kaplan's models were mostly under 100M parameters while the paper's are mostly over 500M (up to 16B)"
+          },
+          {
+            "q": "In the paper's head-to-head test at 1e21 FLOPs, roughly what size was the model trained on Kaplan's prediction, what size the one on Approach 1's, and which did better?",
+            "answer": "About 4.7B (4.74B) for Kaplan and 2.8B (2.80B) for Approach 1; the smaller Approach 1 model reached the lower loss.",
+            "layer": "detail"
+          },
+          {
+            "q": "Why do intermediate losses read off one cosine schedule to 130B tokens overestimate what a run that stops at that token count reaches?",
+            "answer": "At an intermediate point the learning rate has not finished decaying; a run whose schedule ends there anneals fully and reaches a lower loss."
+          }
+        ],
+        "self_explain": "Why would undervaluing small-data training push a fit toward 'grow the model faster than the data'?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "compare",
+          "ref": "chinchilla:figA4"
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "chinchilla:§2"
+        },
+        {
+          "type": "formula-step",
+          "action": "compare",
+          "ref": "lecture_09.pdf:p51"
+        },
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:chinchilla--allocation-table",
+          "notice": "At 1e21 FLOPs Kaplan's line gives 4.68B parameters on about 36B tokens and Approach 1 gives about 2.86B on about 58B. The budget is the same and the split is opposite, and the gap widens with every decade because 0.73 ≠ 0.50."
+        }
+      ]
+    },
+    {
+      "id": "paper-limitations",
+      "label": "What the paper says it cannot show: two big runs, a bent frontier, one epoch",
+      "kind": "comparison",
+      "statement": "The authors list three limitations: only two comparable large-scale runs (Chinchilla and Gopher) with nothing at intermediate scales; the assumption of a power-law frontier despite observed concavity in log N_opt at high compute, so optimal sizes may still be overestimated; and all runs trained for less than one epoch, leaving the multi-epoch regime open.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§5",
+            "role": "claim",
+            "quote": "Due to the cost of training large models, we only have two comparable training runs at large scale (Chinchilla and Gopher), and we do not have additional tests at intermediate scales."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§5",
+            "role": "claim",
+            "quote": "Furthermore, we assume that the efficient computational frontier can be described by a power-law relationship between the compute budget, model size, and number of training tokens."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§5",
+            "role": "claim",
+            "quote": "This suggests that we may still be overestimating the optimal size of large models."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§5",
+            "role": "claim",
+            "quote": "Finally, the training runs for our analysis have all been trained on less than an epoch of data; future work may consider the multiple epoch regime."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§E",
+            "role": "claim",
+            "quote": "In this work, we do not take this in to account and we leave this as interesting future work as it suggests that even smaller models may be optimal for large FLOP budgets."
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§3.4",
+            "role": "claim",
+            "quote": "While there is significant uncertainty extrapolating out many orders of magnitude,"
+          },
+          {
+            "source": "chinchilla_paper",
+            "ref": "chinchilla:§C",
+            "role": "claim",
+            "quote": "This suggests that our results are independent of the dataset as long as one does not train for more than one epoch."
+          }
+        ],
+        "filtering_note": "The paper's own list (§5) is the evidence here. Two things the paper does not list but which later work and Lecture 9 raise: the sensitivity of Approach 3's fit (Lecture 9 p53: data forensics re-fit it closer to Approaches 1-2) and the train-versus-deploy objective (Lecture 9 p54). The single-epoch caveat connects to lecture_09:data-repetition-effective-data. Fig. A5's three-segment fits are the only quantitative evidence for the curvature, and no slopes are printed."
+      },
+      "prerequisites": [
+        {
+          "kp": "equal-scaling-rule",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "supp-power-law-fitting",
+          "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_09:data-repetition-effective-data",
+          "basis": "author-inference",
+          "note": "The multi-epoch regime the paper leaves open is what the data-repetition law addresses."
+        },
+        {
+          "kp": "lecture_09:overtraining-for-inference",
+          "basis": "author-inference",
+          "note": "A limitation the paper does not list: its objective ignores inference."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The frontier curvature means the paper overestimates how many tokens are needed.",
+          "why_wrong": "Concavity in log N_opt means the optimal model is smaller than the straight-line extrapolation; at fixed C that means more tokens, not fewer."
+        },
+        {
+          "belief": "The 400 runs give many independent checks of the large-scale prediction.",
+          "why_wrong": "The runs span 70M to 16B and under 3e21 FLOPs; the prediction at Gopher's 5.76e23 is an extrapolation checked by a single pair of large runs."
+        },
+        {
+          "belief": "The results apply when data is repeated for several epochs.",
+          "why_wrong": "§5 and Appendix C restrict the claim to under one epoch; the paper names the multi-epoch regime as future work."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Appendix E reports that the FLOP-loss frontier bends (concave log N_opt in log C). Before reading §5: does that bias make the paper's recommended model sizes at large budgets too large or too small, and what does it do to the recommended tokens at a fixed budget?",
+          "format": "choice",
+          "choices": [
+            "too large; tokens at fixed C should be higher still",
+            "too small; tokens at fixed C should be lower",
+            "unbiased; the bend averages out over the fit"
+          ],
+          "answer": "too large; tokens at fixed C should be higher still",
+          "distractor_from": "Option 2 inverts the direction of the concavity; option 3 is the 'one slope everywhere' belief from the fitting supplement.",
+          "why": "§5: 'we may still be overestimating the optimal size of large models.' Smaller N at the same C means D = C/6N is larger, so if anything the 20 tokens per parameter is a floor at scale, not a ceiling."
+        },
+        "transfer": {
+          "q": "A 2024 team has 500B tokens of a specialised corpus and a budget that, by Table 3, calls for a 67B model on 1.5T tokens. They propose training 67B for three epochs over their 500B tokens. Which of the paper's stated limitations does this plan run into, and which part of Table 3 can they still rely on?",
+          "format": "short",
+          "answer": "The single-epoch limitation: all of the paper's runs and its dataset-independence claim (Appendix C) hold only below one epoch, so Table 3's token counts cannot be assumed to carry over to repeated data. They can still rely on the FLOP budget to parameter mapping as an upper bound on model size (the frontier curvature says the optimum is, if anything, smaller), but the token recommendation needs a data-repetition law.",
+          "varies": "the data regime (domain: unique tokens are scarcer than the budget demands) and the year (PFL: the learner must connect to a later law)",
+          "invariant": "the paper's claims are conditional on less than one epoch and on a power-law frontier",
+          "surface_cue_broken": "the plan hits the exact Table 3 row (67B, 1.5T) so pattern-matching to 'that is compute-optimal' is wrong",
+          "transfer_distance": "far",
+          "why": "§5: 'the training runs for our analysis have all been trained on less than an epoch of data'. Appendix C: results are dataset-independent 'as long as one does not train for more than one epoch'. Lecture 9's data-repetition KP is the follow-on."
+        },
+        "check": {
+          "q": "Approach 2's largest IsoFLOP budget is 3e21 FLOPs, while the Gopher budget at which the paper makes its headline recommendation is 5.76e23 FLOPs. By what factor does that recommendation extrapolate beyond the largest IsoFLOP budget? Type only the number.",
+          "format": "number",
+          "answer": "192",
+          "tolerance": 0.05,
+          "value": 192,
+          "why": "5.76e23 / 3e21 = 192. The IsoFLOP runs (6e18 to 3e21) never reach Gopher scale; the prediction there is an extrapolation of about two orders of magnitude, checked by only 'two comparable training runs at large scale (Chinchilla and Gopher)' (§5).",
+          "targets_misconception": "The 400 runs give many independent checks of the large-scale prediction.",
+          "varies": "quantifies the extrapolation gap instead of the multi-epoch limitation (modality: number instead of judgement)",
+          "invariant": "the large-scale prediction is an extrapolation from runs far below Gopher compute, tested by one pair of large runs",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "List the three limitations the paper's authors state.",
+            "answer": "Only two comparable large-scale runs with no intermediate scales; a power-law frontier is assumed despite concavity in log N_opt at high compute; all runs are under one epoch"
+          },
+          {
+            "q": "What shape does the paper see in log N_opt at high compute, and what does it imply for its recommended sizes of large models?",
+            "answer": "Concavity (N_opt grows more slowly than the fitted power law), so the recommended optimal sizes of large models may still be overestimates."
+          },
+          {
+            "q": "Under what condition does the paper find that the training dataset does not change the scaling result?",
+            "answer": "As long as one does not train for more than one epoch"
+          }
+        ],
+        "self_explain": "Why can 400 training runs still amount to a single test of the headline claim?"
+      },
+      "presentations": [
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "chinchilla:figA5"
+        },
+        {
+          "type": "example",
+          "action": "restate",
+          "ref": "chinchilla:§5"
+        }
+      ]
+    }
+  ],
+  "path": {
+    "basis": "teaching-order",
+    "note": "Paper order: §1 poses Eq. 1 against Kaplan and the 300B-token habit; §3.1-§3.3 the three approaches (Approach 3's constants only in Appendix D.2, its frontier in Eq. 4); §3.4 the comparison and Table 3; §4 Chinchilla vs Gopher; §2 and Appendix B/D.4 explain the Kaplan gap (placed after the result here, as the paper's §2 is a related-work aside); §5 limitations. Supplements are the two prerequisites the paper uses without stating: C = 6ND and what fitting a power law means.",
+    "stops": [
+      "compute-optimal-question",
+      "approach-1",
+      "approach-2",
+      "approach-3-parametric-fit",
+      "approach-3-frontier",
+      "equal-scaling-rule",
+      "chinchilla-vs-gopher",
+      "cosine-cycle-length",
+      "why-kaplan-differed",
+      "paper-limitations"
+    ],
+    "supplements": [
+      "supp-six-nd-budget",
+      "supp-power-law-fitting"
+    ]
+  },
+  "course_path": {
+    "basis": "teaching-order",
+    "source": "lecture_09",
+    "note": "Lecture 9 order (slides 43-54): joint data-model law as a sum of power laws (p43-p44, the Approach 3 form), the question as a case study with Kaplan's exponents (p45), the three methods (p46-p49), why Kaplan differs (p50-p52, with the course's own explanations), the Approach 3 re-fit addendum (p53), and the 20 tokens/param table with the train-optimal versus deploy-optimal caveat (p54). The course never shows Chinchilla's evaluation results, Appendix B's schedule grid, or the paper's own limitations list; 6ND comes from Lecture 2. Fitting a power law on log-log axes is said on p14-p15, so it is a stop in the course path rather than a supplement.",
+    "stops": [
+      "supp-power-law-fitting",
+      "approach-3-parametric-fit",
+      "compute-optimal-question",
+      "approach-1",
+      "approach-2",
+      "approach-3-frontier",
+      "why-kaplan-differed",
+      "paper-limitations",
+      "equal-scaling-rule"
+    ],
+    "supplements": [
+      "supp-six-nd-budget"
+    ],
+    "not_covered": [
+      "chinchilla-vs-gopher",
+      "cosine-cycle-length"
+    ]
+  }
+}

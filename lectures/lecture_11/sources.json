@@ -1,0 +1,145 @@
+{
+  "lecture_11": {
+    "title": "CS336 Spring 2026, Lecture 11: Scaling - case study and details",
+    "kind": "slides",
+    "path": "official/lectures/lecture_11.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_11 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_11.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1; 58 content pages, p59 empty)",
+    "note": "Evidence is the text layer of the slides (lecture_11.txt), split page-by-page by discover_slides.py into discovered.json. The deck is a case-study tour of published scaling recipes (MiniCPM, DeepSeek, Qwen, Kimi K2, Hunyuan, LLaMA 3, MiniMax-01, StepFun, CerebrasGPT) followed by a derivation of muP and a replication of its robustness; nearly every quantitative result (optimal-LR curves, batch-vs-loss fits, WSD loss curves, IsoFLOP parabolas, fitted ratios other than 96-1 and 39-1, Muon speedrun gains, CerebrasGPT curves, muP replication sweeps, RMSNorm-gain and weight-decay failures) is a screenshot whose numbers are not in the text layer. Each KP's filtering_note says when a number is figure-only. The muP derivation on p46-p50 is mangled by layout extraction (stacked fractions, square roots and norm bars are lost; see `dropped` in discovered.json); KPs quote the surviving ASCII text verbatim and state the reconstructed formula."
+  },
+  "lecture_11_video": {
+    "title": "CS336 Spring 2026, Lecture 11: Scaling - case study and details (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=vTfEyOyzV9E",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_09": {
+    "title": "CS336 Spring 2026, Lecture 9: Scaling laws - basics",
+    "kind": "slides",
+    "path": "official/lectures/lecture_09.pdf",
+    "note": "Main prerequisite thread. Referenced only through external_prerequisites (lecture_09:scaling-law-definition, scaling-law-design-procedure, critical-batch-size, mup-scale-aware-lr, chinchilla-three-methods, chinchilla-twenty-tokens-rule, overtraining-for-inference, kaplan-chinchilla-discrepancy, architecture-optimizer-via-scaling); see atlas/lectures/lecture_09/knowledge_points.json. Lecture 11 assumes the three Chinchilla methods, the critical-batch idea and the one-slide muP claim from that deck."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:six-nd); see atlas/lectures/lecture_02/knowledge_points.json. Supplies C = 6ND, which every IsoFLOP-style analysis in this deck (DeepSeek p23, Hunyuan p27, LLaMA 3 p28) assumes when it converts a FLOP budget into a model-size / data-size trade-off."
+  },
+  "minicpm_2024": {
+    "title": "MiniCPM: Unveiling the Potential of Small Language Models with Scalable Training Strategies (Hu et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2404.06395",
+    "note": "p5-p18: 'MiniCPM (2024) - small, high-perf LM from Tsinghua group'. Source of the muP hyperparameters printed on p8 (scale_emb = 12, scale_depth = 1.4, init_std = 0.1, lr = 0.01), the optimal-batch sweep over 9m/30m/170m models (p11), the WSD schedule (p14-p15) and the Chinchilla method 1 + method 3 analysis (p16-p18). The deck names the model, not the paper; identification is the atlas author's (the printed hyperparameters match the paper's Table)."
+  },
+  "deepseek_llm_2024": {
+    "title": "DeepSeek LLM: Scaling Open-Source Language Models with Longtermism (DeepSeek-AI, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.02954",
+    "note": "p19-p24: 7B and 67B models; batch/LR fitted directly as functions of compute without muP ('near optimal' = within 0.25% of the minimum loss, p21); multi-step (WSD-style) schedule with two 10% decay steps (p22); IsoFLOP (Chinchilla method 2) model-size analysis (p23) and the loss prediction check (p24). Deck names the model, not the paper."
+  },
+  "hoffmann_2022": {
+    "title": "Training Compute-Optimal Large Language Models (Hoffmann et al., 2022; 'Chinchilla')",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2203.15556",
+    "note": "The 'chinchilla' of p2, p13, p16-p18, p23, p40, p45. Methods 1 (lower envelope), 2 (IsoFLOP) and 3 (joint fit) are named by number on p16-p18 and p23 and are defined in lecture_09:chinchilla-three-methods. Spelled 'Chinchlla' on p17."
+  },
+  "kaplan_2020": {
+    "title": "Scaling Laws for Neural Language Models (Kaplan et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2001.08361",
+    "note": "p12: 'follow the Kaplan 2020 analysis and plot optimal batch size vs final loss'. Also the 'OpenAI' view of p33 (critical batch as a function of loss), together with McCandlish et al. 2018."
+  },
+  "mccandlish_2018": {
+    "title": "An Empirical Model of Large-Batch Training (McCandlish, Kaplan, Amodei, 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1812.06162",
+    "note": "p33: 'Critical batch: batch as a function of loss (OpenAI)'. The deck does not name the paper; identification follows lecture_09:critical-batch-size."
+  },
+  "qwen25_2024": {
+    "title": "Qwen2.5 Technical Report (Qwen Team, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.15115",
+    "note": "p25: 'Qwen 2.5 - batch and hyper scaling fits'; p30: 'Qwen - Lr/batch (very few details..)'. Figure only."
+  },
+  "qwen3_2025": {
+    "title": "Qwen3 Technical Report (Qwen Team, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2505.09388",
+    "note": "p25: 'Qwen 3 - similar scaling for LR/batch'. Figure only."
+  },
+  "kimi_k2_2025": {
+    "title": "Kimi K2: Open Agentic Intelligence (Kimi Team, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2507.20534",
+    "note": "p26: 'sparsity scaling law to find the right sparsity levels'; p43: Kimi K2 as the large-scale evidence that Muon works. Figures only."
+  },
+  "hunyuan_large_2024": {
+    "title": "Hunyuan-Large: An Open-Source MoE Model with 52 Billion Activated Parameters by Tencent (Sun et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2411.02265",
+    "note": "p27: 'Hunyuan (2024) large scaling laws' - IsoFLOP scaling for MoE active-parameter sizes, printed optimal ratio 96-1 (data to active param)."
+  },
+  "llama3_2024": {
+    "title": "The Llama 3 Herd of Models (Grattafiori et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.21783",
+    "note": "p28: IsoFLOP scaling with printed 39-1 ratio, plus compute-to-downstream scaling (figure only)."
+  },
+  "minimax01_2025": {
+    "title": "MiniMax-01: Scaling Foundation Models with Lightning Attention (MiniMax, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.08313",
+    "note": "p29: 'Architecture scaling laws + Chinchilla method 1'; p30: 'Architecture choice / decision scaling'. Figures only."
+  },
+  "stepfun_step_law_2025": {
+    "title": "Predictable Scale: Part I - Optimal Hyperparameter Scaling Law in Large Language Model Pretraining (Li et al., StepFun, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2503.04715",
+    "note": "p32-p37: 'Large scale scaling law study from StepFun' - grid search over LR/batch, convexity of loss in LR/batch (p35), batch depending primarily on dataset size and optimal LR rising with D at fixed M (p36), robustness to MoEs and other datasets (p37). The deck names the lab, not the paper; identification is the atlas author's."
+  },
+  "zhou_2026": {
+    "title": "InternLM scaling law paper (Zhou+ 2026), cited on p36",
+    "kind": "paper",
+    "note": "Only the string 'InternLM scaling law paper (Zhou+ 2026)' appears in the text layer; the deck gives no title or link, so the exact paper is not identified here. Cited for the claim that the optimal-LR-rises-with-D trend 'is likely more fragile if swapping to WSD'."
+  },
+  "held_delphi_blog": {
+    "title": "William Held, 'delphi' blog post (oa.williamheld.com)",
+    "kind": "blog",
+    "url": "https://oa.williamheld.com/blog/delphi/",
+    "note": "p41: the only URL in the text layer. Source of the 'a good looking scaling can blow up' example (Cautious AdamC + sqrt batch-size scaling of learning rates), later 'fixed with some more careful parametrization / scaling / optimizer changes'."
+  },
+  "muon_2024": {
+    "title": "Muon: An optimizer for hidden layers in neural networks (Keller Jordan et al., 2024, blog) and Muon is Scalable for LLM Training (Liu et al., Moonshot, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2502.16982",
+    "note": "p42-p43: Muon as an optimizer for matrix-valued parameters whose Newton-Schulz iteration approximately orthogonalizes the update (U S V^T -> U V^T); the NanoGPT speedrun, a scaling study and Kimi K2 are shown as evidence. The deck names neither document; the blog is the original description and the Moonshot paper is the 'scaling study' most likely shown (inference)."
+  },
+  "cerebras_gpt_2023": {
+    "title": "Cerebras-GPT: Open Compute-Optimal Language Models Trained on the Cerebras Wafer-Scale Cluster (Dey et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2304.03208",
+    "note": "p45: '0.1 to 13B models trained with the Chinchilla recipe', core finding that muP makes scaling more stable. Curves are figure only."
+  },
+  "yang_2022": {
+    "title": "Tensor Programs V: Tuning Large Neural Networks via Zero-Shot Hyperparameter Transfer (Yang et al., 2022; muP / muTransfer)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2203.03466",
+    "note": "The 'maximum update parametrization' of p44-p57. The deck's derivation (p46-p50) follows an unnamed 'very accessible muP for babies paper' rather than this one; the per-layer table on p51 (embedding, attention params, input/output MLP, softmax linear) is a figure. Also the source of lecture_09:mup-scale-aware-lr."
+  },
+  "mup_for_babies": {
+    "title": "'muP for babies' paper (unnamed on p46)",
+    "kind": "paper",
+    "note": "p46 says only '(this is a very accessible muP for babies paper)' next to a screenshot. The spectral-norm derivation on p47-p49 (operator norm sqrt(n_{l-1}) + sqrt(n_l), condition on ||Delta W||_* sqrt(n_{l-1}) = Theta(sqrt(n_l))) matches Yang, Simon & Bernstein, 'A Spectral Condition for Feature Learning' (2023, https://arxiv.org/abs/2310.17813), but the deck does not say so; this identification is the atlas author's inference."
+  },
+  "lion_2023": {
+    "title": "Symbolic Discovery of Optimization Algorithms (Chen et al., 2023; 'Lion')",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2302.06675",
+    "note": "p53 lists 'Exotic optimizers (Lion)' among components that deviate from muP's theory; p55 calls these 'exotic optimizers based on just gradient signs'. Named only as 'Lion' in the text layer."
+  },
+  "mup_replication_unnamed": {
+    "title": "muP replication study behind p52-p57 ('Replicating muP', 'In our arch')",
+    "kind": "paper",
+    "note": "p52-p57 report a replication (optimal LR vs width, robustness to SwiGLU/squared ReLU, batch size, zero-attention init, RMSNorm gains, Lion, regularizers; failures for RMSNorm gains and 0.1 weight decay). The text layer gives no title, author or link ('In our arch' on p54 suggests the lecturer's own group); the study is not identified here and all its curves are figure only. Spoken (1:12:43-1:13:28): the lecturer attributes it to 'an independent researcher' ('he found'), so 'In our arch' is the paper's phrase, not the lecturer's group. A likely match is Lingle 2024 (arXiv:2404.05728, an independent researcher's muP learning-rate transfer study). That is the author's identification and is not checked against the figures."
+  }
+}

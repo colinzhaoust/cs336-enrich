@@ -1,0 +1,108 @@
+{
+  "lecture_07": {
+    "title": "CS336 Spring 2026, Lecture 7: Parallelism (Percy Liang)",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_07.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_07.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_07.json",
+    "note": "Line anchors refer to the local clone; discovered.json records sha256 7cdec6c6... so anchors can be re-verified. This version of the lecture covers collectives, hardware, NCCL/torch.distributed, two NCCL benchmarks, and forward-only toy implementations of data, tensor and pipeline parallelism on a deep MLP. ZeRO/FSDP is explicitly deferred to the next lecture (L387); the pipeline-bubble formula and ZeRO stage accounting are student-line supplements anchored to papers below."
+  },
+  "lecture_07_stdout": {
+    "title": "CS336 Lecture 7: recorded stdout of one Modal run (4 GPUs, CUDA 13.2)",
+    "kind": "trace",
+    "path": "official/lectures/var/traces/lecture_07_stdout.txt",
+    "upstream": "https://stanford-cs336.github.io/lectures/var/traces/lecture_07_stdout.txt",
+    "note": "Linked from lecture_07.py:L43. Used only as evidence for *relative* observations (which ranks differ, how the two benchmarks compare, that params agree after DDP). The millisecond durations and GB/s readouts are single-run, 4-GPU numbers on unspecified hardware and are deliberately not restated as facts in any KP."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json. Supplies dtype-bytes, optimizer-state-memory (16 bytes/param), six-nd, mixed-precision, gradient-accumulation, activation-checkpointing."
+  },
+  "lecture_05": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs",
+    "kind": "slides",
+    "path": "official/lectures/lecture_05.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_05:<kp-id>); see atlas/lectures/lecture_05/knowledge_points.json. Supplies the single-GPU memory hierarchy that this lecture extends across GPUs and nodes (lecture_07.py:L28-L32)."
+  },
+  "collective_ops_wikipedia": {
+    "title": "Collective operation (Wikipedia)",
+    "kind": "reading",
+    "url": "https://en.wikipedia.org/wiki/Collective_operation",
+    "note": "article_link at lecture_07.py:L76."
+  },
+  "pcie_wikipedia": {
+    "title": "PCI Express (Wikipedia)",
+    "kind": "reading",
+    "url": "https://en.wikipedia.org/wiki/PCI_Express",
+    "note": "article_link at lecture_07.py:L212; source of the 'v7.0, 16 lanes => 242 GB/s' figure."
+  },
+  "nccl_gtc_talk": {
+    "title": "NCCL: High-Speed Inter-GPU Communication for Large-Scale Training (NVIDIA GTC Spring 2021, S31880)",
+    "kind": "talk",
+    "url": "https://www.nvidia.com/en-us/on-demand/session/gtcspring21-s31880/",
+    "note": "link() at lecture_07.py:L233."
+  },
+  "nccl_docs": {
+    "title": "NVIDIA Collective Communications Library (NCCL) User Guide",
+    "kind": "docs",
+    "url": "https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/index.html",
+    "note": "Not linked in lecture_07.py; added by the student line for the definitions of the collectives NCCL implements (Collective Operations chapter)."
+  },
+  "nccl_tests_performance": {
+    "title": "nccl-tests: Performance reported by NCCL tests (PERFORMANCE.md, #allreduce)",
+    "kind": "docs",
+    "url": "https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md#allreduce",
+    "note": "link() at lecture_07.py:L297 ('How to reason about collective operations'). Source of the algorithm-bandwidth vs bus-bandwidth convention; the lecture's sent_bytes = 2·S·(n−1) and 'independent of world size / topology' notes (L325, L331-L333) follow this document's 2(n−1)/n factor."
+  },
+  "stas00_all_reduce_bench": {
+    "title": "ml-engineering: all_reduce_bench.py (Stas Bekman)",
+    "kind": "code",
+    "url": "https://github.com/stas00/ml-engineering/blob/master/network/benchmarks/all_reduce_bench.py",
+    "note": "link() at lecture_07.py:L298 ('Sample benchmarking code')."
+  },
+  "torch_distributed_docs": {
+    "title": "torch.distributed documentation (PyTorch)",
+    "kind": "docs",
+    "url": "https://pytorch.org/docs/stable/distributed.html",
+    "note": "link() at lecture_07.py:L240."
+  },
+  "levanter_release": {
+    "title": "Levanter 1.0 release (Stanford CRFM, 2023)",
+    "kind": "reading",
+    "url": "https://crfm.stanford.edu/2023/06/16/levanter-1_0-release.html",
+    "note": "link() at lecture_07.py:L63; the Jax/TPU 'define the sharding, compiler does the rest' contrast. Not made into a KP."
+  },
+  "zero_2019": {
+    "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models (Rajbhandari et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1910.02054",
+    "note": "Not linked in lecture_07.py (it appears in official/lectures/references.py as zero_2019). The lecture names ZeRO/FSDP at L68, L183 and L387 ('Next time'). Section 5 / Figure 1 of the paper give the per-device memory 2Ψ+2Ψ+KΨ with K=12 (fp32 master params + two Adam moments) and the stage-wise formulas 4Ψ+12Ψ/N, 2Ψ+14Ψ/N, 16Ψ/N used by the zero-sharding KP."
+  },
+  "gpipe_2018": {
+    "title": "GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism (Huang et al., 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1811.06965",
+    "note": "Not linked in lecture_07.py (references.py: gpipe_2018). Section 2.2 gives the bubble overhead O((K−1)/(M+K−1)) for K partitions and M micro-batches, used by the pipeline-bubble KP; the lecture only says 'break up into micro batches to minimize the bubble' (L508)."
+  },
+  "megatron_lm_2019": {
+    "title": "Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism (Shoeybi et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1909.08053",
+    "note": "Not linked in lecture_07.py (references.py: megatron_lm_2019). Section 3 pairs a column-split with a row-split so an MLP block needs one all-reduce in forward and one in backward; the lecture's toy TP instead all-gathers after every layer (L472). Cited in the tensor-parallelism filtering_note only."
+  },
+  "megatron_parallelism_2021": {
+    "title": "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM (Narayanan et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2104.04473",
+    "note": "Not linked in lecture_07.py (references.py: megatron_parallelism_2021). Composition of tensor, pipeline and data parallelism ('3D'); the lecture names combinations only at L62. Used by the parallelism-axes KP for the per-device parameter accounting under composition."
+  },
+  "lecture_07_video": {
+    "title": "CS336 Spring 2026, Lecture 7: Parallelism (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=SzpOcwdIL0Y",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

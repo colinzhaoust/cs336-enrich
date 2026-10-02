@@ -1,0 +1,47 @@
+{
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_02.py",
+    "viewer": "https://stanford-cs336.github.io/lectures/?trace=var/traces/lecture_02.json",
+    "note": "Line anchors refer to the local shallow clone dated 2026-08-31. The discover tool records the file sha256 so anchors can be re-verified."
+  },
+  "assignment1": {
+    "title": "CS336 Assignment 1: Basics",
+    "kind": "assignment",
+    "path": "official/assignments/assignment1-basics",
+    "note": "Resource accounting problems for the Transformer are deferred here by the professor (lecture_02.py:L653-L654)."
+  },
+  "h100_datasheet": {
+    "title": "NVIDIA H100 Tensor Core GPU datasheet",
+    "kind": "spec",
+    "url": "https://resources.nvidia.com/en-us-tensor-core/nvidia-tensor-core-gpu-datasheet"
+  },
+  "scaling_book_roofline": {
+    "title": "How to Scale Your Model: Rooflines (jax-ml)",
+    "kind": "reading",
+    "url": "https://jax-ml.github.io/scaling-book/roofline/"
+  },
+  "mixed_precision_2017": {
+    "title": "Mixed Precision Training (Micikevicius et al., 2017)",
+    "kind": "paper",
+    "url": "https://arxiv.org/pdf/1710.03740.pdf"
+  },
+  "transformer_memory_blog": {
+    "title": "Transformer memory usage (erees.dev)",
+    "kind": "reading",
+    "url": "https://erees.dev/transformer-memory/"
+  },
+  "transformer_flops_blog": {
+    "title": "Transformer FLOPs (adamcasson.com)",
+    "kind": "reading",
+    "url": "https://www.adamcasson.com/posts/transformer-flops"
+  },
+  "lecture_02_video": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=kuYAsz7zspQ",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "lecture_04": {
+    "title": "CS336 Spring 2026, Lecture 4: Attention alternatives and mixtures of experts",
+    "kind": "slides",
+    "path": "official/lectures/lecture_04.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_04 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_04.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1; 60 pages)",
+    "note": "Evidence is the text layer of the slides (lecture_04.txt), extracted page-by-page by discover_slides.py. The deck is figure-heavy: the context-cost plot (p2), the local/global attention and systems-engineering panels (p3), the hybrid-model result tables (p6, p8, p10, p11), the DSA diagram (p12-p13), every MoE scaling/ablation plot (p16-p23, p28, p33-p34, p43, p49), the routing diagrams (p27, p29-p31), the balancing-loss formulas (p40-p42), the parallelism diagrams (p44-p46), the stability plot (p48) and the DeepSeek architecture diagrams (p54-p59) have no numbers in the text layer; where a KP relies on such a figure its filtering_note says so. The only numbers in the text are: the linear-attention FLOP counts (p4), hybrid ratios 7-to-1 and 3-1 (p6, p8, p10), the k values and expert table (p29, p35), the per-expert derivative on p40, SFT size 1.4M (p50), upcycling configs (p52-p53) and the DeepSeek v1/v2/v3 sizes (p54-p56). Note that this deck does not cover MQA/GQA, sliding-window attention beyond the phrase 'local + global', or capacity factor by name; MQA/GQA are in lecture 3."
+  },
+  "lecture_04_video": {
+    "title": "CS336 Spring 2026, Lecture 4: Attention alternatives and mixtures of experts (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=cKSwj_qZ8Jg",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json."
+  },
+  "lecture_03": {
+    "title": "CS336 Spring 2026, Lecture 3: Everything you didn't want to know about LM architecture and hyperparameters",
+    "kind": "slides",
+    "path": "official/lectures/lecture_03.pdf",
+    "note": "Covers MQA/GQA, sliding-window interleaving and the output-softmax z-loss that this deck assumes. Referenced only through external_prerequisites (lecture_03:<kp-id>); see atlas/lectures/lecture_03/knowledge_points.json."
+  },
+  "meibel_context_windows": {
+    "title": "Understanding the impact of increasing LLM context windows (Meibel)",
+    "kind": "reading",
+    "url": "https://www.meibel.ai/post/understanding-the-impact-of-increasing-llm-context-windows",
+    "note": "Figure on slide p2: cost of attention rising with context size."
+  },
+  "shen_2018_efficient_attention": {
+    "title": "Efficient Attention: Attention with Linear Complexities (Shen et al., 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1812.01243",
+    "note": "Cited on p4 as 'Shen et al 2018' for the Q(K^T V) reassociation."
+  },
+  "katharopoulos_2020_linear_attention": {
+    "title": "Transformers are RNNs: Fast Autoregressive Transformers with Linear Attention (Katharopoulos et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2006.16236",
+    "note": "Cited on p4 as 'Katharopoulos 2020 for kernel version'; source of the recurrent form on p5."
+  },
+  "retnet_2023": {
+    "title": "Retentive Network: A Successor to Transformer for Large Language Models (Sun et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2307.08621",
+    "note": "p5: 'if one weights S_{t-1} by gamma, you get a RetNet'."
+  },
+  "minimax_m1": {
+    "title": "MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention (MiniMax, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2506.13585",
+    "note": "p6: 7-to-1 linear/full attention hybrid; minimax-text-01 is arXiv:2501.08313."
+  },
+  "mamba2_2024": {
+    "title": "Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality (Dao & Gu, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2405.21060",
+    "note": "p7: gated recurrence S_t = gamma_t S_{t-1} + k_t v_t^T, 'go read the mamba 2 paper'."
+  },
+  "nemotron_3": {
+    "title": "Nemotron 3 (NVIDIA), as named on slides p8 and p46",
+    "kind": "model-report",
+    "note": "Mamba-attention hybrid '3-1 ish' (p8) and down-projected MoE activations to reduce communication (p46). No URL or paper title is given on the slides; not resolved here."
+  },
+  "gated_deltanet_2024": {
+    "title": "Gated Delta Networks: Improving Mamba2 with Delta Rule (Yang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.06464",
+    "note": "p9: gated delta rule with the (I - beta_t k_t k_t^T) erase term."
+  },
+  "qwen3_next": {
+    "title": "Qwen 3.5 / Qwen3-Next (Alibaba), as named on slide p10",
+    "kind": "model-report",
+    "note": "3-1 Gated DeltaNet / attention hybrid. No URL on the slide."
+  },
+  "deepseek_sparse_attention": {
+    "title": "DeepSeek Sparse Attention (DSA) in DeepSeek-V3.2 (DeepSeek-AI, 2025)",
+    "kind": "model-report",
+    "note": "p12-p13: lightning indexer plus sparse attention, adapted post hoc after dense pretraining; the slide also lists GLM5 as a user. No URL on the slide."
+  },
+  "fedus_2022_switch": {
+    "title": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity (Fedus, Zoph & Shazeer, 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2101.03961",
+    "note": "Cited as '[Fedus et al 2022]' on p15, p16, p24, p27, p29, p30, p39, p40 (MoE layer diagram, same-FLOP scaling plot, routing taxonomy, balancing loss)."
+  },
+  "fedus_2022_review": {
+    "title": "A Review of Sparse Expert Models in Deep Learning (Fedus, Dean & Zoph, 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2209.01667",
+    "note": "The routing-taxonomy figures on p27, p29-p30 (token choice / expert choice / global optimization; hashing, RL, matching) match this review rather than the Switch Transformer paper; the slide only says '[Fedus et al 2022]'."
+  },
+  "zoph_2022_stmoe": {
+    "title": "ST-MoE: Designing Stable and Transferable Sparse Expert Models (Zoph et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2202.08906",
+    "note": "p24 (unstable objectives), p39 (jitter removed), p48-p49 (router z-loss, float32 router), p50 (finetune non-MoE MLPs); 64 routed / 2 active on p35."
+  },
+  "olmoe_2024": {
+    "title": "OLMoE: Open Mixture-of-Experts Language Models (Muennighoff et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2409.02060",
+    "note": "p17 (faster to train), p34 (fine-grained experts help, shared experts do not), p35 (64 routed / 8 active)."
+  },
+  "dai_2024_deepseekmoe": {
+    "title": "DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models (Dai et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.06066",
+    "note": "p22, p31 ('[Dai et al 2024]' router), p32-p33 (fine-grained + shared experts), p41 (expert and device balancing), p54 (v1: 16B, 2.8B active, 2 shared + 64 fine-grained, top-6)."
+  },
+  "deepseek_v2": {
+    "title": "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model (DeepSeek-AI, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2405.04434",
+    "note": "p55 (236B, 21B active, 160 routed / 2 shared, top-M device routing, communication balancing loss) and p57-p58 (MLA)."
+  },
+  "deepseek_v3": {
+    "title": "DeepSeek-V3 Technical Report (DeepSeek-AI, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.19437",
+    "note": "p23, p31 (softmax after top-k), p42-p43 (per-expert bias, 'auxiliary loss free balancing'), p56 (671B, 37B active, 1 shared + 256 routed, 8 active, sigmoid gate, seq-wise aux), p59 (MTP)."
+  },
+  "wang_2024_aux_loss_free": {
+    "title": "Auxiliary-Loss-Free Load Balancing Strategy for Mixture-of-Experts (Wang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2408.15664",
+    "note": "The per-expert-bias online update used by DeepSeek v3 (p42); not cited by name on the slide."
+  },
+  "shazeer_2017_moe": {
+    "title": "Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer (Shazeer et al., 2017)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1701.06538",
+    "note": "p38: noisy top-k gating with gaussian perturbations."
+  },
+  "clark_2022_routing_scaling": {
+    "title": "Unified Scaling Laws for Routed Language Models (Clark et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2202.01169",
+    "note": "p30 ('Clark 22', linear-assignment routing) and p37 (REINFORCE routing baseline; the slide says 'Clark et al 2020')."
+  },
+  "bengio_2013_conditional_computation": {
+    "title": "Estimating or Propagating Gradients Through Stochastic Neurons for Conditional Computation (Bengio et al., 2013)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1308.3432",
+    "note": "p30: 'RL to learn routes ... Bengio 2013, not common now'."
+  },
+  "gshard_2020": {
+    "title": "GShard: Scaling Giant Models with Conditional Computation and Automatic Sharding (Lepikhin et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2006.16668",
+    "note": "p29 (k=2) and p35 (2048 routed / 2 active)."
+  },
+  "mixtral_2024": {
+    "title": "Mixtral of Experts (Jiang et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.04088",
+    "note": "p29 (k=2), p31 (softmax after top-k), p35 (8 routed / 2 active)."
+  },
+  "deepspeed_moe_2022": {
+    "title": "DeepSpeed-MoE: Advancing Mixture-of-Experts Inference and Training to Power Next-Generation AI Scale (Rajbhandari et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2201.05596",
+    "note": "p32: shared experts 'originally from DeepSpeed MoE' (the paper's residual-MoE / PR-MoE design)."
+  },
+  "megablocks_2022": {
+    "title": "MegaBlocks: Efficient Sparse Training with Mixture-of-Experts (Gale et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2211.15841",
+    "note": "p45: block-sparse matmuls for MoE layers without token dropping."
+  },
+  "moduleformer_jetmoe": {
+    "title": "ModuleFormer (Shen et al., 2023, arXiv:2306.04640) and JetMoE (Shen et al., 2024, arXiv:2404.07413)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2404.07413",
+    "note": "p25: the 'less common' use of MoE for attention heads."
+  },
+  "minicpm_2024": {
+    "title": "MiniCPM: Unveiling the Potential of Small Language Models with Scalable Training Strategies (Hu et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2404.06395",
+    "note": "p52: MiniCPM-MoE upcycled with top-k=2, 8 experts, ~4B active parameters, ~520B tokens."
+  },
+  "qwen15_moe_blog": {
+    "title": "Qwen1.5-MoE: Matching 7B Model Performance with 1/3 Activated Parameters (Qwen team, 2024)",
+    "kind": "reading",
+    "url": "https://qwenlm.github.io/blog/qwen-moe/",
+    "note": "p53: upcycled from Qwen-1.8B, top-k=4, 60 experts with 4 shared; p35 row 'Qwen 1.5'."
+  },
+  "sparse_upcycling_2022": {
+    "title": "Sparse Upcycling: Training Mixture-of-Experts from Dense Checkpoints (Komatsuzaki et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2212.05055",
+    "note": "The 'upcycling' recipe on p51 (copy a dense FFN into every expert); not cited by name on the slide."
+  },
+  "eagle_2024": {
+    "title": "EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty (Li et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.15077",
+    "note": "p59: cited next to the DeepSeek v3 multi-token-prediction diagram."
+  }
+}

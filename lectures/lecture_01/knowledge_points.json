@@ -1,0 +1,2521 @@
+{
+  "lecture": "lecture_01",
+  "title": "Overview and tokenization",
+  "version": "0.1.0",
+  "authoring_note": "Anchors are line ranges in official/lectures/lecture_01.py (see sources.json). Status and anchors are evidence read from the executable lecture by atlas/tools/discover_lecture.py; every @inspect value quoted below was read from var/traces/lecture_01.json and re-derived locally. The overview half (course logistics, history, syllabus) contributes only the KPs that admit a changed-case question; the tokenization half contributes the rest. Prerequisite edges marked author-inference are hypotheses until a learner attempt confirms them. Spoken layer (2026-10-01): anchors with ref 'video:M:SS-M:SS' and role 'spoken' quote the human-made YouTube captions in transcript.json (source lecture_01_video; verified by tools/check_anchors.py, ±8 s). Filtering notes that begin 'Spoken evidence' record what the audio adds to or corrects in the written source. No KP has status 'spoken': every candidate either restated the code or failed the one-changed-case bar (research/12-spoken-layer-rollout.md). Top-level spoken_filtering lists every explicit skip, deferral and aside, read from the full transcript; spoken_map segments the whole talk by KP.",
+  "path": {
+    "basis": "teaching-order",
+    "note": "Order in which main() calls sections in lecture_01.py, mapped to KPs. welcome(), course_logistics(), the model/paper history list (L126-L185) and the syllabus bullets that only name later lectures are not KPs.",
+    "stops": [
+      "efficiency-framing",
+      "six-nd-preview",
+      "chinchilla-d-20n",
+      "tokenization-efficiency-lens",
+      "tokenizer-interface",
+      "gpt-tokenizer-observations",
+      "compression-ratio",
+      "vocab-size-vs-sequence-length",
+      "character-tokenizer",
+      "utf8-variable-length",
+      "byte-tokenizer",
+      "word-tokenizer",
+      "bpe-idea",
+      "bpe-merge-step",
+      "bpe-encode-apply-merges"
+    ],
+    "supplements": [
+      "supp-vocab-embedding-params"
+    ]
+  },
+  "knowledge_points": [
+    {
+      "id": "efficiency-framing",
+      "label": "Framing: best model under a fixed compute and data budget",
+      "kind": "rule-of-thumb",
+      "statement": "The course's organizing question is 'what is the best model one can build given a fixed compute and data budget', i.e. accuracy = efficiency × resources, so maximize efficiency; the bitter lesson means algorithms that scale matter, not that algorithms do not matter.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L115-L123",
+            "role": "claim",
+            "quote": "Right interpretation: algorithms that scale are what matter. ... accuracy = efficiency x resources ... Framing: what is the best model one can build given a certain compute and data budget?"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L242-L246",
+            "role": "claim",
+            "quote": "How do you train the best model given a fixed set of resources? Today, we are compute-constrained"
+          },
+          {
+            "source": "algorithmic_efficiency_2020",
+            "ref": "arXiv:2005.04305",
+            "role": "citation",
+            "quote": "showed 44x algorithmic efficiency on ImageNet between 2012 and 2019"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:9:21-9:53",
+            "role": "spoken",
+            "quote": "I think the wrong interpretation is that scale is all that matters. Algorithms don't matter. ... The right interpretation is that algorithms that scale are what that-- or what matters. ... efficiency is output over input, and resources is the input."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:9:53-10:22",
+            "role": "spoken",
+            "quote": "efficiency is actually, in some sense, way more important at larger scale ... if your run takes twice as long, maybe you just wait twice as long ... Even like a 5% improvement might be a big deal."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:10:59-11:29",
+            "role": "spoken",
+            "quote": "what is the best model one can build with a certain data and compute budget? ... we're going to assume that we have a lot more data than we have compute"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:04:30-1:04:46",
+            "role": "spoken",
+            "quote": "now tomorrow, we might become data-constrained, and the calculus of what design decisions you should take might change."
+          }
+        ],
+        "filtering_note": "The professor states 'accuracy = efficiency x resources' as a slogan, not a formula; the 44x ImageNet figure is cited without defining how efficiency was measured (it is the compute reduction to reach AlexNet-level accuracy in the cited paper; author inference). 'Tomorrow, we will become data-constrained' (L253) is left as a teaser. Spoken evidence (9:48): aloud the slogan gets definitions for its terms, 'efficiency is output over input, and resources is the input', so it is a little more than a slogan (the note's 'not a formula' still holds: nothing is measured). Spoken evidence (9:59-10:15): why efficiency matters more at scale, which the code states without a reason: at small scale a run that 'takes twice as long' means you 'just wait twice as long', at scale the same waste 'could be hundreds of millions of dollars', and 'Even like a 5% improvement might be a big deal'. Spoken evidence (11:09): pre-training is framed by the compute budget 'because we're going to assume that we have a lot more data than we have compute'; the data-constrained teaser (1:04:30) adds that 'the calculus of what design decisions you should take might change'."
+      },
+      "prerequisites": [],
+      "misconceptions": [
+        {
+          "belief": "The bitter lesson says scale is all that matters and algorithmic work is wasted.",
+          "why_wrong": "The professor calls that the wrong interpretation: the right one is that algorithms which scale are what matter, and efficiency matters more at larger scale because waste is unaffordable (L116-L119)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two teams get the same 1e25 FLOPs and the same data. Team A keeps the 2019 training recipe; team B uses one that is 4x more compute-efficient. Under the lecture's slogan accuracy = efficiency × resources, which team's result is equivalent to the other's at what multiple of compute?",
+          "format": "short",
+          "answer": "Team B's run is equivalent to team A at 4e25 FLOPs (4x the resources).",
+          "why": "Efficiency multiplies resources: a 4x more efficient recipe at the same budget behaves like the old recipe with 4x the budget. That is why the course optimizes efficiency, not just scale (L118-L123).",
+          "targets_misconception": "The bitter lesson says scale is all that matters and algorithmic work is wasted."
+        },
+        "transfer": {
+          "q": "The lecture says 'today we are compute-constrained' and lists five course topics as efficiency moves. For a lab that is instead data-constrained (plenty of GPUs, fixed small corpus), which of the lecture's five bullets (systems, tokenization, architecture, data filtering, scaling laws) changes its motivation the most, and to what?",
+          "format": "short",
+          "answer": "Data filtering: when compute is cheap and data is scarce, discarding data to save compute stops making sense; the goal becomes extracting more from each token (e.g. more epochs, rewriting/synthetic data) rather than 'avoid wasting compute on bad data'.",
+          "why": "L250 motivates filtering by not wasting compute on bad tokens. Remove the compute constraint and that motivation inverts; the other four bullets are still about running faster on fixed hardware (L246-L251, L253)."
+        },
+        "check": {
+          "q": "A lab moves from being compute-constrained (the lecture's 'today') to being data-constrained: far more GPUs than it can use, and a fixed 300B-token corpus with no new data coming. Under the lecture's framing that each efficiency move exists to make the most of the scarce resource, which way should the fraction of the corpus its quality filter discards move? Answer up, down or same.",
+          "format": "trend",
+          "answer": "down: the lecture motivates filtering as not wasting scarce compute on bad tokens; once compute is plentiful and tokens are scarce, throwing tokens away is the expensive move, so the filter should discard less.",
+          "value": "down",
+          "why": "L250 justifies data filtering by compute: do not spend FLOPs on low-value tokens. Swap which resource is scarce and the trade flips: discarding data now costs the scarce resource and saves the plentiful one (L246-L251, L253: 'tomorrow, we will become data-constrained').",
+          "varies": "which resource is the binding constraint (data instead of compute), asked as a direction for one knob",
+          "invariant": "each efficiency move is justified by the resource that is scarce; the filter's motivation follows the constraint",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "State the lecture's one-line framing question that organizes every design decision in the course.",
+            "answer": "What is the best model one can build given a fixed compute and data budget (maximize efficiency)."
+          },
+          {
+            "q": "The professor gives a 'wrong' and a 'right' reading of the bitter lesson. What is the right one?",
+            "answer": "Algorithms that scale are what matter (not: algorithms do not matter)."
+          },
+          {
+            "q": "Why does the professor say efficiency matters more at larger scale, not less?",
+            "answer": "At large scale you cannot afford to be wasteful: the same inefficiency costs proportionally more compute (L119)."
+          }
+        ],
+        "self_explain": "Why would the professor open a from-scratch course with an efficiency slogan rather than with the Transformer?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_01.py:L115-L123"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:9:53-10:22",
+          "notice": "listen for: why waste is tolerable at small scale (wait twice as long) but a 5% gain matters at scale"
+        }
+      ]
+    },
+    {
+      "id": "six-nd-preview",
+      "label": "Preview: training FLOPs ≈ 6·N·D",
+      "kind": "quantity",
+      "statement": "Training compute is approximately C = 6·N·D FLOPs for N parameters and D tokens; the lecture computes 6 × 70e9 × 1e12 = 4.2e23 FLOPs for a 70B model on 1T tokens.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L325",
+            "role": "computation",
+            "quote": "total_flops = 6 * 70e9 * 1e12  # Training 70B parameters on 1T tokens = 4.2e23 FLOPs @inspect total_flops"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L393",
+            "role": "claim",
+            "quote": "Question: given a FLOPs budget (C = 6 N D), use a bigger model (N) or train on more tokens (D)?"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:36:39-36:53",
+            "role": "spoken",
+            "quote": "how many flops does training SMDB on model on 1 trillion tokens? Well, it's six times n times D roughly. And where does that come from?"
+          }
+        ],
+        "filtering_note": "The constant 6 is used, not derived; Lecture 2 derives it (forward 2ND + backward 4ND). The lecture does not say which FLOPs are excluded (attention over sequence length, embeddings); author inference that 6ND counts only parameter-matmul FLOPs. Spoken evidence (36:12-36:53): the formula is posed and explicitly left open ('And where does that come from?'); the answer is deferred to lecture 2 ('the basics, which we're actually going to start on next lecture', 36:12). The captions render '70B' as 'SMDB'. The 4.2e23 product is not read aloud."
+      },
+      "prerequisites": [
+        {
+          "kp": "efficiency-framing",
+          "basis": "teaching-order",
+          "note": "6ND is introduced as the way to state the compute budget in the framing question."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Training FLOPs scale with parameters only; token count just changes wall-clock, not compute.",
+          "why_wrong": "C = 6·N·D is linear in both: doubling tokens doubles FLOPs exactly as doubling parameters does (L325, L393)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Using the lecture's formula, how many FLOPs does it take to train an 8B-parameter model on 15T tokens? Give the answer in scientific notation.",
+          "format": "number",
+          "answer": "7.2e23",
+          "tolerance": 0.05,
+          "why": "6 × 8e9 × 15e12 = 7.2e23. Note this is more than the 70B-on-1T example (4.2e23) even though the model is almost 9x smaller: D enters linearly (L325).",
+          "targets_misconception": "Training FLOPs scale with parameters only; token count just changes wall-clock, not compute."
+        },
+        "transfer": {
+          "q": "You have a fixed budget of 4.2e23 FLOPs (the lecture's example). You decide to halve the parameter count from 70B to 35B. By the 6ND rule, how many tokens can you now train on?",
+          "format": "number",
+          "answer": "2e12",
+          "tolerance": 0.05,
+          "why": "D = C / (6N) = 4.2e23 / (6 × 35e9) = 2e12 tokens. Halving N doubles the affordable D at fixed C (L393)."
+        },
+        "retrieval": [
+          {
+            "q": "Write the lecture's one-line estimate for training FLOPs in terms of N parameters and D tokens.",
+            "answer": "C ≈ 6·N·D"
+          },
+          {
+            "q": "The lecture's worked number: a 70B model on 1T tokens costs how many FLOPs?",
+            "answer": "4.2e23 (L325)",
+            "format": "number",
+            "tolerance": 0.05,
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does a formula with only N and D, and no sequence length, work as a first estimate of Transformer training compute?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_01--compute-napkin",
+          "notice": "C is linear in N and in D alike: an 8B model on 15T tokens costs more than the lecture's 70B model on 1T."
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_01.py:L325"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:36:39-36:53",
+          "notice": "listen for: 6·N·D posed as a question and deferred to the next lecture"
+        }
+      ]
+    },
+    {
+      "id": "chinchilla-d-20n",
+      "label": "Compute-optimal rule of thumb: D ≈ 20·N",
+      "kind": "rule-of-thumb",
+      "statement": "Classic compute-optimal scaling (Chinchilla) says roughly D = 20·N tokens per parameter, so a 70B model should see about 1.4T tokens; this ignores inference cost, which pushes toward smaller models trained longer.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L393-L399",
+            "role": "claim",
+            "quote": "TL;DR: D = 20 N is roughly optimal (e.g., 70B parameter model should be trained on ~1.4T tokens) ... Caveat: this doesn't take into account inference costs (want a smaller model)"
+          },
+          {
+            "source": "chinchilla_2022",
+            "ref": "arXiv:2203.15556",
+            "role": "citation",
+            "quote": "Classic compute-optimal scaling laws"
+          },
+          {
+            "source": "kaplan_scaling_laws_2020",
+            "ref": "arXiv:2001.08361",
+            "role": "citation"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:49:22-49:43",
+            "role": "spoken",
+            "quote": "how should you balance training a larger model versus training on more tokens? ... the classic compute optimal scaling laws from Kaplan et Al and the so-called Chinchilla scaling laws comes in."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:49:43-50:27",
+            "role": "spoken",
+            "quote": "for each FLOPs budget, so let's say 6e18 all the way to 3e21, you sweep across different model sizes and you choose the best one. ... if you're unlucky, it's going to be all over the place, which means that you should have no confidence"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:50:27-51:09",
+            "role": "spoken",
+            "quote": "this is quite crude, but a rule of thumb is, the 20 times the number of parameters is the number of data points you should train on. ... depending on the data set and architecture, this number will actually vary. ... A lot of models these days are small, but they're trained on way more tokens than is compute optimal"
+          }
+        ],
+        "filtering_note": "The lecture states the 20:1 ratio as a TL;DR without the ISOFLOP fitting that produces it (shown only as a figure, L395-L397); the full derivation is deferred to the scaling-laws lectures and Assignment 3 (L405-L411). PaLM is described as 'undertrained' (L150), which is this rule applied in hindsight. Spoken evidence (49:43-50:27): the ISOFLOP procedure is narrated, not only shown: for each budget (6e18 to 3e21, read off the figure) sweep model sizes, keep the best, fit a curve; if the optima do not fall on a line 'you should have no confidence' in the extrapolation. Correction to this note: 'without the ISOFLOP fitting that produces it (shown only as a figure)' is too strong; the code has the two ISOFLOP bullets (L395-L396) and the professor walks through them aloud; what is missing is the fitting arithmetic. Spoken evidence (50:27-51:09): the rule is called 'quite crude' and said to vary with dataset and architecture, and the inference caveat is explained: 'A lot of models these days are small, but they're trained on way more tokens than is compute optimal' because a smaller model is cheaper to serve."
+      },
+      "prerequisites": [
+        {
+          "kp": "six-nd-preview",
+          "basis": "teaching-order",
+          "note": "The question 'bigger N or more D' is posed in terms of C = 6ND."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Given more compute, the best move is always a bigger model.",
+          "why_wrong": "Compute-optimal scaling grows N and D together (D ≈ 20N); a model trained on far fewer than 20 tokens per parameter is undertrained, which is the lecture's description of PaLM (L150, L398)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "You are handed a budget of 1e25 FLOPs and follow the lecture's rule D = 20·N with C = 6·N·D. Roughly how many parameters should the model have? Give billions.",
+          "format": "number",
+          "answer": "290",
+          "tolerance": 0.1,
+          "why": "C = 6·N·(20N) = 120·N², so N = sqrt(1e25 / 120) ≈ 2.9e11 ≈ 290B parameters, trained on D ≈ 5.8T tokens.",
+          "targets_misconception": "Given more compute, the best move is always a bigger model."
+        },
+        "transfer": {
+          "q": "Same 1e25 FLOPs, but the lecture's caveat applies: the model will serve billions of queries, so you deliberately choose a 70B model instead of the compute-optimal size. How many tokens does the budget buy, and how does that compare to the 20·N rule?",
+          "format": "short",
+          "answer": "D = 1e25 / (6 × 70e9) ≈ 2.4e13 ≈ 24T tokens, about 340 tokens per parameter, far above 20·N. The model is 'overtrained' on purpose to be cheaper at inference.",
+          "why": "Fixing N below optimal at fixed C pushes all remaining compute into D. The lecture's caveat (L399) is exactly that inference cost makes this trade worthwhile."
+        },
+        "check": {
+          "q": "A team has a budget of 6e23 FLOPs and, for inference cost, fixes the model at N = 10B parameters instead of the compute-optimal size. Using C = 6·N·D, how many training tokens per parameter (D / N) does the budget buy? Type only the number.",
+          "format": "number",
+          "answer": "1000 tokens per parameter",
+          "value": 1000,
+          "tolerance": 0.05,
+          "why": "D = C / (6N) = 6e23 / (6 × 1e10) = 1e13 tokens; D / N = 1e13 / 1e10 = 1000, fifty times the 20·N rule. Fixing N below the compute-optimal size at fixed C pushes all the remaining compute into tokens, which is the lecture's inference-cost caveat (L393-L399).",
+          "targets_misconception": "Given more compute, the best move is always a bigger model.",
+          "varies": "the budget and the fixed model size; asks tokens per parameter rather than total tokens",
+          "invariant": "at fixed C = 6ND, choosing N determines D; a smaller-than-optimal N means many more tokens per parameter than 20",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Under the lecture's rule of thumb, how many training tokens for a 70B-parameter model?",
+            "answer": "About 1.4T (D = 20·N)",
+            "format": "number",
+            "tolerance": 0.1
+          },
+          {
+            "q": "What cost does the D = 20·N rule leave out, and in which direction does including it move the preferred model size?",
+            "answer": "Inference cost; including it favors a smaller model (trained on more tokens) (L399)."
+          }
+        ],
+        "self_explain": "Why does a 'compute-optimal' model stop being optimal once you count the compute spent after training?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_01--compute-napkin",
+          "notice": "With C fixed the run slides along the dashed iso-FLOP line; only one N meets D = 20·N, and every smaller N buys more than 20 tokens per parameter."
+        },
+        {
+          "type": "code",
+          "action": "predict-number",
+          "ref": "lecture_01.py:L393-L399"
+        },
+        {
+          "type": "figure",
+          "action": "predict-trend",
+          "ref": "official/lectures/images/chinchilla-isoflop.png"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:50:27-51:09",
+          "notice": "listen for: 'quite crude', varies with data and architecture, and why today's small models are over-trained"
+        }
+      ]
+    },
+    {
+      "id": "tokenization-efficiency-lens",
+      "label": "Why tokenization is an efficiency decision",
+      "kind": "mechanism",
+      "statement": "Tokenization matters for compute because it sets sequence length: attention is quadratic in sequence length, so compressing 1000 bytes into ~250 tokens cuts context cost, and raw bytes are 'elegant but compute-inefficient' with today's architectures.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L275-L277",
+            "role": "claim",
+            "quote": "Efficiency lens - Reduce context length (1000 bytes → ~250 tokens) - Adaptive computation (more modeling capacity on interesting parts of input)"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L248",
+            "role": "claim",
+            "quote": "Tokenization: working with raw bytes is elegant, but compute-inefficient with today's model architectures"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L672-L673",
+            "role": "claim",
+            "quote": "the sequences will be too long. Given that the context length of a Transformer is limited (since attention is quadratic), this is not looking great..."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L279-L280",
+            "role": "citation",
+            "quote": "The dream: tokenizer-free model architectures, which operate directly on bytes ... These are promising, but have not yet been scaled up to the frontier."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:28:41-29:15",
+            "role": "spoken",
+            "quote": "through an efficiency lens, tokenization is good because it takes a long sequence ... reduces it into a smaller number of tokens. But more subtly, but maybe more importantly, it allows you to do adaptive computation. ... some of the more rare or interesting parts of input should be left as multiple tokens."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:29:17-29:50",
+            "role": "spoken",
+            "quote": "the dream is to really have an end-to-end way that directly operates on bytes. ... so far, these have not been scaled to the frontier. And since the frontier models are still using tokenizers"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:03:33-1:03:46",
+            "role": "spoken",
+            "quote": "Tokenization, as I mentioned before, you can't just work with raw bytes, but that's going to be very compute inefficient, at least with today's model architectures."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:18:41-1:18:53",
+            "role": "spoken",
+            "quote": "chunks should be variable. You want adaptive computation. Not all bytes are treated the same."
+          }
+        ],
+        "filtering_note": "The professor says 'attention is quadratic' without separating attention FLOPs from the (linear-in-length) matmul FLOPs that dominate at short context; a 4x longer sequence costs 4x in the MLP/projection terms and 16x only in the score computation (author inference, see Lecture 2). The 'adaptive computation' bullet is asserted, not demonstrated. Tokenizer-free models (ByT5, MegaByte, BLT, H-Net) are cited as a dream, not taught. Spoken evidence (28:55-29:15): adaptive computation is ranked above sequence shortening ('more subtly, but maybe more importantly') and explained: a stretch of many bytes can become one token while 'rare or interesting parts of input should be left as multiple tokens', so the model spends more positions, and so more compute, on them. The code's bullet only names it. The reason for still teaching tokenizers is said aloud: 'since the frontier models are still using tokenizers' (29:42)."
+      },
+      "prerequisites": [
+        {
+          "kp": "efficiency-framing",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Tokenization is a preprocessing detail with no effect on training cost.",
+          "why_wrong": "Token count per byte sets sequence length, and attention cost grows with the square of sequence length; a 4x worse compression ratio means 4x more tokens for the same text (L276, L610, L673)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A document is 1000 bytes. Tokenizer A yields 250 tokens (the lecture's figure); tokenizer B is byte-level. If attention cost were purely quadratic in sequence length, by what factor is attention more expensive under B than under A?",
+          "format": "number",
+          "answer": "16",
+          "tolerance": 0.01,
+          "why": "B gives 1000 tokens vs 250: 4x the length, so (4)² = 16x the attention-score cost. The linear terms (projections, MLP) would be only 4x more (L276, L673).",
+          "targets_misconception": "Tokenization is a preprocessing detail with no effect on training cost."
+        },
+        "transfer": {
+          "q": "A tokenizer-free byte model (the lecture's 'dream') is proposed for a corpus of 8 KB-average documents, previously handled at ~4 bytes per token so that one document fills a 2048-token context. If nothing else changes, what context length in tokens would it need to see whole documents, and which lecture claim explains why that is a problem today?",
+          "format": "short",
+          "answer": "About 8192 bytes-as-tokens (4x longer); the problem is that Transformer context is limited because attention is quadratic, so 'raw bytes are elegant but compute-inefficient with today's architectures' (L248, L673).",
+          "why": "Bytes per token drops from ~4 to 1, multiplying sequence length by 4; the lecture frames byte-level models as not yet scaled to the frontier for exactly this cost reason (L279-L280)."
+        },
+        "check": {
+          "q": "A tokenizer averaging 3 bytes per token is replaced by one averaging 4.8 bytes per token on the same documents. Treating attention cost as purely quadratic in sequence length, the new attention cost for a document is what fraction of the old one? Give a decimal; type only the number.",
+          "format": "number",
+          "answer": "0.39",
+          "value": 0.390625,
+          "tolerance": 0.03,
+          "why": "Sequence length scales as bytes / (bytes per token), so it falls by 3 / 4.8 = 0.625. Quadratic attention cost falls by 0.625² ≈ 0.39. This is the lecture's reason tokenization is an efficiency decision: compression sets sequence length and attention is quadratic in it (L275-L277, L248).",
+          "targets_misconception": "Tokenization is a preprocessing detail with no effect on training cost.",
+          "varies": "direction (better compression instead of none) and the bytes-per-token values",
+          "invariant": "sequence length is inversely proportional to bytes per token, and attention cost is quadratic in sequence length",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "The lecture gives one concrete compression figure for why tokenization reduces context length. State it.",
+            "answer": "1000 bytes → ~250 tokens (L276).",
+            "layer": "detail"
+          },
+          {
+            "q": "Name the two benefits the lecture's 'efficiency lens' lists for tokenization.",
+            "answer": "Reduce context length; adaptive computation (more capacity on interesting parts of the input) (L276-L277)."
+          },
+          {
+            "q": "The professor calls byte-level modeling 'elegant but ...' what, and why?",
+            "answer": "Compute-inefficient with today's architectures, because sequences become too long for quadratic attention (L248, L673)."
+          }
+        ],
+        "self_explain": "Why does the lecture treat 'longer sequence' as a compute problem rather than a modeling problem?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_01--vocab-trade",
+          "notice": "Length scales as 1 ÷ bytes-per-token but attention as its square: 4× better compression shrinks the length bar 4× and the attention bar 16×."
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_01.py:L275-L280"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:28:55-29:15",
+          "notice": "listen for: adaptive computation called 'maybe more important' than shorter sequences, and what it means"
+        }
+      ]
+    },
+    {
+      "id": "tokenizer-interface",
+      "label": "Tokenizer = encode/decode between strings and integer indices",
+      "kind": "definition",
+      "statement": "A tokenizer is a pair of functions, encode: str → list[int] and decode: list[int] → str, and a language model places a probability distribution over the resulting integer sequences; a correct tokenizer round-trips (decode(encode(s)) == s).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L256-L262",
+            "role": "computation",
+            "quote": "class Tokenizer(ABC): ... def encode(self, string: str) -> list[int] ... def decode(self, indices: list[int]) -> str"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L580-L588",
+            "role": "claim",
+            "quote": "A language model places a probability distribution over sequences of tokens (usually represented by integer indices). ... So we need a procedure that *encodes* strings into tokens. We also need a procedure that *decodes* tokens back into strings."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L603-L606",
+            "role": "computation",
+            "quote": "Check that encode() and decode() roundtrip: ... assert string == reconstructed_string"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:28:08-28:30",
+            "role": "spoken",
+            "quote": "formally, a tokenizer converts between raw inputs, which are just bytes, and a sequence of integers, which represent the tokens. Conceptually, it's a segmentation of the text."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:05:21-1:05:50",
+            "role": "spoken",
+            "quote": "raw text is what is text? It's Unicode strings. ... the language model places a distribution over sequences of tokens usually represented as indices. ... a tokenizer is basically something that can do this round trip."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:07:14-1:07:25",
+            "role": "spoken",
+            "quote": "tokenizers should round trip. If you implement tokenizer, it doesn't round trip, you have a problem."
+          }
+        ],
+        "filtering_note": "The lecture asserts the round-trip on one string per tokenizer; it never shows a tokenizer that fails to round-trip (e.g. decoding an index sequence that splits a multi-byte UTF-8 character). Special tokens are deferred to Assignment 1 (L724)."
+      },
+      "prerequisites": [
+        {
+          "kp": "tokenization-efficiency-lens",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The model sees text; tokenization is just how text is stored.",
+          "why_wrong": "The model's distribution is over integer index sequences (L583-L584); it never sees characters, so two tokenizers give the model two different problems for the same text."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The lecture's example `indices = [15496, 11, 995, 0]` is the GPT-2 encoding of 'Hello, world!'. If you decode those same four integers with the GPT-5 (o200k) tokenizer, what do you expect to get, and why?",
+          "format": "short",
+          "answer": "Some unrelated string (or garbage), not 'Hello, world!': indices only mean something relative to the vocabulary of the tokenizer that produced them.",
+          "why": "encode and decode are a matched pair over one vocab (L256-L262). The GPT-5 tokenizer encodes the lecture's 'Hello, 🌍! 你好!' as [13225, 11, 130321, 235, 0, 220, 177519, 0], completely different ids for 'Hello' (13225 vs 15496).",
+          "targets_misconception": "The model sees text; tokenization is just how text is stored."
+        },
+        "transfer": {
+          "q": "You write a tokenizer whose encode lowercases the input before mapping to indices. Which of the lecture's two required procedures breaks, and which lecture check would catch it?",
+          "format": "short",
+          "answer": "decode cannot recover the original casing, so the round-trip assert `string == reconstructed_string` (L606) fails on any input with uppercase letters.",
+          "why": "The interface demands decode(encode(s)) == s; any lossy encode violates it even if the model trains fine (L603-L606)."
+        },
+        "check": {
+          "q": "Which of these encode designs keeps the lecture's round-trip check decode(encode(s)) == s true for every Unicode string?",
+          "format": "choice",
+          "choices": [
+            "replace every non-ASCII character with one shared id",
+            "collapse each run of spaces into a single space id",
+            "emit one id per UTF-8 byte of each character",
+            "map each word to the id of its lowercase form"
+          ],
+          "answer": "emit one id per UTF-8 byte of each character",
+          "distractor_from": [
+            "'one shared id for non-ASCII' <- misconception: 'The model sees text; tokenization is just how text is stored.' (treats a lossy mapping as a harmless storage detail)",
+            "'collapse runs of spaces' <- same misconception: whitespace looks like formatting, but it is part of the string",
+            "'lowercase form' <- the transfer's own failure (lossy casing), here as a distractor"
+          ],
+          "why": "Only the byte mapping is invertible: every string has a unique UTF-8 byte sequence and decode can concatenate and decode it. The other three map distinct strings to the same ids, so decode cannot recover which one it was and the assert at L606 fails (L603-L606).",
+          "targets_misconception": "The model sees text; tokenization is just how text is stored.",
+          "varies": "the learner picks the lossless encode among several instead of diagnosing one lossy encode",
+          "invariant": "a tokenizer must be invertible on every input: decode(encode(s)) == s",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Give the two method signatures of the lecture's abstract Tokenizer class.",
+            "answer": "encode(string: str) -> list[int]; decode(indices: list[int]) -> str (L258-L262)."
+          },
+          {
+            "q": "What single assertion does the lecture run on every tokenizer it builds?",
+            "answer": "assert string == reconstructed_string (decode(encode(s)) == s)."
+          }
+        ],
+        "self_explain": "Why does the lecture define the language model's domain as integer sequences rather than strings?"
+      },
+      "presentations": [
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_01.py:L256-L262"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L600-L606"
+        }
+      ]
+    },
+    {
+      "id": "gpt-tokenizer-observations",
+      "label": "What a production BPE tokenizer looks like (space-prefixed tokens, digits)",
+      "kind": "comparison",
+      "statement": "In GPT-style tokenizers, a word and its preceding space form one token (' world'), the same word at the start vs the middle of a string gets different ids, and numbers are split every few digits.",
+      "provenance": {
+        "status": "said",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L594-L597",
+            "role": "claim",
+            "quote": "A word and its preceding space are part of the same token (e.g., \" world\"). A word at the beginning and in the middle are represented differently (e.g., \"hello hello\"). Numbers are tokenized into every few digits."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L599-L604",
+            "role": "computation",
+            "quote": "tokenizer = get_gpt5_tokenizer() ... indices = tokenizer.encode(string)  # @inspect indices"
+          },
+          {
+            "source": "tiktokenizer",
+            "ref": "https://tiktokenizer.vercel.app/?encoder=gpt2",
+            "role": "citation",
+            "quote": "play with this interactive site"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:06:03-1:06:40",
+            "role": "spoken",
+            "quote": "you'll appreciate why tokenizers are kind of annoying and why people want to get rid of them. ... many tokens you'll actually see are space a word ... this hello and this hello is actually two completely different indices that have nothing to do with each other."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:06:40-1:06:57",
+            "role": "spoken",
+            "quote": "numbers are represented with-- every few digits is a token. Sometimes, it's predictable, and sometimes, it's not. Some tokenizers try to make every digit a token, but then you're blowing up the number of tokens you have."
+          }
+        ],
+        "filtering_note": "The three observations are stated for the learner to verify on the interactive site; the lecture does not explain their cause (the GPT-2 pre-tokenization regex attaches a leading space to each word and caps digit runs), which is deferred to Assignment 1 (L725). The GPT-5 trace value for 'Hello, 🌍! 你好!' is [13225, 11, 130321, 235, 0, 220, 177519, 0]: 8 tokens, where the emoji costs two tokens (130321, 235). Spoken evidence (1:06:47-1:06:57): the digit rule is given a trade-off the code lacks: digit chunking is 'sometimes predictable, sometimes not', and one-token-per-digit is the alternative, at the price of 'blowing up the number of tokens'. The first observation is garbled aloud ('a word conglomerate with its preceding space are different tokens', 1:06:14) but the next sentence agrees with L594-L595. The interactive site did not load in class (1:05:56), so the observations were stated, not demonstrated."
+      },
+      "prerequisites": [
+        {
+          "kp": "tokenizer-interface",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A tokenizer maps each word to one id, independent of where it appears.",
+          "why_wrong": "The leading space is part of the token, so 'hello' at the start and ' hello' after a space are two different ids (L595-L596)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Encode the string 'hello hello' with a GPT-style tokenizer. How many distinct token ids do you expect, and what explains the count?",
+          "format": "short",
+          "answer": "Two distinct ids: 'hello' and ' hello' (space attached to the second occurrence).",
+          "why": "The space before a word is part of its token, so the first and second 'hello' differ (L595-L596).",
+          "targets_misconception": "A tokenizer maps each word to one id, independent of where it appears."
+        },
+        "transfer": {
+          "q": "You fine-tune a model on prompts that always end with a trailing space before the answer ('Answer: '). At inference you send 'Answer:' with no trailing space. Using the lecture's observations, what changes in the token stream the model sees?",
+          "format": "short",
+          "answer": "During training the answer word was tokenized without its leading space (the space was consumed by the prompt); at inference the answer word now absorbs the space and becomes a different token (' word' vs 'word'), so the model sees ids it rarely saw after 'Answer:'.",
+          "why": "Space attachment makes token identity depend on the character before the word (L595)."
+        },
+        "check": {
+          "q": "A GPT-style tokenizer encodes 'red red' as the ids [a, b]. Using the lecture's observation about spaces, what does it produce for 'red red red'?",
+          "format": "choice",
+          "choices": [
+            "[a, a, a]",
+            "[a, b, b]",
+            "[a, b, a]",
+            "[a, b, c]"
+          ],
+          "answer": "[a, b, b]",
+          "distractor_from": [
+            "'[a, a, a]' <- misconception: 'A tokenizer maps each word to one id, independent of where it appears.'",
+            "'[a, b, a]' <- plausible: treats the id as alternating with position rather than depending on the preceding character",
+            "'[a, b, c]' <- plausible: treats every occurrence as a new token"
+          ],
+          "why": "The first 'red' has no preceding space (id a); every later one is ' red' with the space attached (id b). Token identity depends on the character before the word (L594-L597).",
+          "targets_misconception": "A tokenizer maps each word to one id, independent of where it appears.",
+          "varies": "a repeated-word encoding instead of a prompt-boundary scenario",
+          "invariant": "the preceding space is absorbed into the word's token, so position after a space changes the id",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In the lecture's example ' world', which character is part of the token that a naive word splitter would drop?",
+            "answer": "The leading space."
+          },
+          {
+            "q": "How does a GPT-style tokenizer handle a long number such as 1234567890, per the lecture?",
+            "answer": "It is split into several tokens of a few digits each (L597)."
+          }
+        ],
+        "self_explain": "Why would a tokenizer trained by merging frequent byte pairs naturally produce space-prefixed word tokens?"
+      },
+      "presentations": [
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_01.py:L594-L597"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L599-L604"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:06:40-1:06:57",
+          "notice": "listen for: the digit trade-off: chunks of digits vs one token per digit"
+        }
+      ]
+    },
+    {
+      "id": "compression-ratio",
+      "label": "Compression ratio = UTF-8 bytes per token",
+      "kind": "definition",
+      "statement": "The lecture's compression ratio is len(string.encode('utf-8')) / len(indices), i.e. bytes per token; higher means shorter sequences; the GPT-5 tokenizer gives 20 bytes / 8 tokens = 2.5 on 'Hello, 🌍! 你好!'.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L567-L571",
+            "role": "computation",
+            "quote": "num_bytes = len(bytes(string, encoding=\"utf-8\")) ... num_tokens = len(indices) ... return num_bytes / num_tokens"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L608-L610",
+            "role": "claim",
+            "quote": "Compression ratio: number of bytes per token ... The larger the compression ratio, the shorter the sequence (good since attention is quadratic in sequence length)."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L609",
+            "role": "computation",
+            "quote": "compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:07:25-1:07:56",
+            "role": "spoken",
+            "quote": "the compression ratio here is the number of bytes per token. ... the number of bytes of this string is 20. The number of tokens is 8. ... the compression ratio is 2.5. ... The larger the compression ratio, that means the shorter the sentence, which is good because attention is quadratic"
+          }
+        ],
+        "filtering_note": "The denominator is counted in UTF-8 bytes, not characters, so the same ratio means different things for ASCII and CJK text; the lecture does not flag this. The word tokenizer's ratio (5.5) is computed on a list of string chunks rather than ints (L689), which the function tolerates because it only takes len(). Spoken evidence (1:07:46): the reason a higher ratio is good is given here, 'because attention is quadratic'; the code gives that reason only later, for bytes (L672-L673)."
+      },
+      "prerequisites": [
+        {
+          "kp": "tokenizer-interface",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "utf8-variable-length",
+          "basis": "author-inference",
+          "note": "Counting the numerator correctly on non-ASCII text needs UTF-8 byte lengths; the lecture defines the ratio before teaching UTF-8."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Compression ratio is characters per token.",
+          "why_wrong": "The lecture's numerator is UTF-8 bytes (L569); 'Hello, 🌍! 你好!' has 13 characters but 20 bytes, so the character-based number would be 13/8 = 1.6, not 2.5."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "'Hello, 🌍! 你好!' is 13 characters and the GPT-5 tokenizer produces 8 tokens. What compression ratio does the lecture's function report?",
+          "format": "number",
+          "answer": "2.5",
+          "tolerance": 0.02,
+          "why": "The numerator is bytes, not characters: 20 UTF-8 bytes (🌍 is 4, each of 你 and 好 is 3) / 8 tokens = 2.5 (L569-L571, L609).",
+          "targets_misconception": "Compression ratio is characters per token."
+        },
+        "transfer": {
+          "q": "A 1000-byte English document is tokenized into 250 tokens (the lecture's rule of thumb). A 1000-byte Chinese document, with the same tokenizer, comes out at 500 tokens. What are the two compression ratios, and which document occupies more of the context window?",
+          "format": "short",
+          "answer": "4.0 and 2.0; the Chinese document uses twice the context (500 vs 250 tokens) for the same number of bytes.",
+          "why": "ratio = bytes / tokens; a lower ratio means more tokens per byte, hence a longer sequence (L608-L610)."
+        },
+        "check": {
+          "q": "A Hindi document is 2,000 characters long, which is 5,400 bytes in UTF-8, and a tokenizer turns it into 1,800 tokens. What compression ratio does the lecture's get_compression_ratio report? Type only the number.",
+          "format": "number",
+          "answer": "3.0",
+          "value": 3.0,
+          "tolerance": 0.02,
+          "why": "The lecture's function divides UTF-8 bytes by tokens: 5400 / 1800 = 3.0. Characters per token would be 2000 / 1800 ≈ 1.1, which is not what the function measures (L567-L571, L608-L610).",
+          "targets_misconception": "Compression ratio is characters per token.",
+          "varies": "script (multi-byte Devanagari) and the numbers; the character count is supplied as a lure",
+          "invariant": "compression ratio = UTF-8 bytes / tokens",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Write the lecture's compression ratio as a formula in terms of the string and its token indices.",
+            "answer": "len(string.encode('utf-8')) / len(indices), i.e. UTF-8 bytes per token (L569-L571)."
+          },
+          {
+            "q": "Which direction of compression ratio is good, and what cost does the lecture tie it to?",
+            "answer": "Larger is better: shorter sequence, and attention is quadratic in sequence length (L610)."
+          },
+          {
+            "q": "On 'Hello, 🌍! 你好!' (20 UTF-8 bytes), what compression ratios do the character tokenizer and the GPT-5 tokenizer get?",
+            "answer": "Character: 20 / 13 ≈ 1.54 (13 code points). GPT-5: 20 / 8 = 2.5 (8 tokens).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why did the professor choose bytes rather than characters as the numerator?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_01--tokenizer-lens",
+          "notice": "On the lecture string the byte row has 20 boxes but the character row only 13: the GPT-5 ratio 2.5 is 20 bytes ÷ 8 tokens, and dividing characters instead (13 ÷ 8) would give a different number."
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_01.py:L567-L571"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:07:25-1:07:56",
+          "notice": "listen for: 20 bytes / 8 tokens = 2.5, and why higher is better"
+        }
+      ]
+    },
+    {
+      "id": "vocab-size-vs-sequence-length",
+      "label": "Vocabulary size trades sequence length against sparsity",
+      "kind": "mechanism",
+      "statement": "Raising vocabulary size raises compression ratio (shorter sequences) but makes rare tokens sparse; GPT-5's vocab is 200,019, versus 256 for bytes and a lower bound of 127,758 for Unicode code points.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L611-L612",
+            "role": "claim",
+            "quote": "One could increase compression ratio by increasing **vocabulary size** (number of possible token values increases), leading to sparsity. ... vocabulary_size = tokenizer.n_vocab  # @inspect vocabulary_size"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L643-L648",
+            "role": "claim",
+            "quote": "Problem 1: this is a very large vocabulary. Problem 2: many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary. ... worst of both worlds (large vocabulary, low compression ratio)"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L667-L672",
+            "role": "claim",
+            "quote": "The vocabulary is nice and small: a byte can represent 256 values. ... The compression ratio is terrible, which means the sequences will be too long."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:07:56-1:08:22",
+            "role": "spoken",
+            "quote": "you could obviously increase the compression ratio by increasing the vocab size, but then, you get into sparsity where more and more-- because every element of vocab is treated like a distinct element. So these days, tokenizers, especially multilingual tokenizers, have 100k or 200k tokens"
+          }
+        ],
+        "filtering_note": "'Sparsity' is left undefined; author inference: each token id's embedding and output row is updated only when that id occurs, so a huge vocab of rare ids learns slowly and costs parameters (see supp-vocab-embedding-params). The lecture never states a recommended vocab size; it shows the trade-off by example (256 → ratio 1.0; 200,019 → ratio 2.5). Spoken evidence (1:07:56-1:08:22), correcting two claims in this note: 'sparsity' gets a partial gloss aloud, 'because every element of vocab is treated like a distinct element', which is the start of the author's reading above (each id is learned on its own); and although no size is recommended, a typical range is given: 'these days, tokenizers, especially multilingual tokenizers, have 100k or 200k tokens'. The vocabulary file is skipped 'in the interest of time' (1:08:25)."
+      },
+      "prerequisites": [
+        {
+          "kp": "compression-ratio",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A bigger vocabulary is strictly better because every token carries more text.",
+          "why_wrong": "The character tokenizer has a huge vocabulary (≥127,758) and still a poor ratio (1.538), and most of its ids are rare: large vocab alone buys nothing unless the entries are frequent (L643-L648)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Rank the lecture's three vocabularies by size: byte tokenizer, Unicode-character tokenizer (lower bound from the example string), GPT-5 tokenizer. Give the three numbers.",
+          "format": "short",
+          "answer": "256 < 127,758 < 200,019",
+          "why": "bytes: 256 (L668); characters: max(indices)+1 = 127,758 because ord('🌍') = 127,757 (L644); GPT-5: n_vocab = 200,019 (L612). Note the character vocab is almost as large as GPT-5's yet compresses far worse.",
+          "targets_misconception": "A bigger vocabulary is strictly better because every token carries more text."
+        },
+        "transfer": {
+          "q": "A team doubles their BPE vocabulary from 50K to 100K and observes the average compression ratio rise from 4.0 to 4.3. Using the lecture's trade-off, name one cost that rose and estimate how much shorter the sequences became.",
+          "format": "short",
+          "answer": "Sequences are about 7% shorter (4.0/4.3 ≈ 0.93x tokens). Costs: sparsity, since the 50K new ids are the rarest merges and get few gradient updates, and (inference) twice the embedding/output rows.",
+          "why": "Compression gains from extra vocab are diminishing because new merges are increasingly rare; the sparsity cost is linear in the added ids (L611)."
+        },
+        "check": {
+          "q": "Growing a BPE vocabulary from 32K to 64K raises the average compression ratio from 3.6 to 4.0 bytes per token. On a fixed corpus, the new token count is what fraction of the old one? Give a decimal; type only the number.",
+          "format": "number",
+          "answer": "0.9",
+          "value": 0.9,
+          "tolerance": 0.01,
+          "why": "Tokens = bytes / ratio, so the token count scales by 3.6 / 4.0 = 0.9: sequences are 10% shorter for twice the vocabulary, while 32K new, rare ids must each be learned (L611-L612).",
+          "targets_misconception": "A bigger vocabulary is strictly better because every token carries more text.",
+          "varies": "vocabulary sizes and ratios; asks the sequence-length side of the trade only",
+          "invariant": "token count is inversely proportional to compression ratio; added vocabulary gives diminishing length savings",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What single lever does the lecture name for increasing compression ratio, and what downside does it attach?",
+            "answer": "Increase vocabulary size; leads to sparsity (L611)."
+          },
+          {
+            "q": "The GPT-5 (o200k_base) vocabulary size the lecture inspects is what number?",
+            "answer": "200,019 (L612)",
+            "format": "number",
+            "tolerance": 0.001,
+            "layer": "detail"
+          },
+          {
+            "q": "The character tokenizer is called 'the worst of both worlds'. Which two worlds?",
+            "answer": "Large vocabulary and low compression ratio (L648)."
+          }
+        ],
+        "self_explain": "Why do the last tokens added to a BPE vocabulary contribute less to compression than the first ones?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_01--bpe-lab",
+          "notice": "Each merge adds one vocabulary entry; on the training text the curve falls fast at first and then flattens as the chosen pair's count drops to 1, while on a new text most of the added entries never fire."
+        },
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_01--vocab-trade",
+          "notice": "Token count is bytes ÷ bytes-per-token, so 3.6 → 4.0 shortens the sequence by only 10%, while the vocabulary bar grows with V."
+        },
+        {
+          "type": "code",
+          "action": "compare",
+          "ref": "lecture_01.py:L611-L612"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:07:56-1:08:22",
+          "notice": "listen for: what 'sparsity' means here and the typical 100k-200k vocabulary"
+        }
+      ]
+    },
+    {
+      "id": "character-tokenizer",
+      "label": "Character tokenizer: Unicode code points via ord/chr",
+      "kind": "mechanism",
+      "statement": "A character tokenizer maps each Unicode character to its code point with ord (ord('a') = 97, ord('🌍') = 127757) and back with chr; on 'Hello, 🌍! 你好!' it yields 13 tokens, a lower-bound vocab of 127,758, and compression ratio 20/13 ≈ 1.538.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L505-L511",
+            "role": "computation",
+            "quote": "class CharacterTokenizer(Tokenizer): ... return list(map(ord, string)) ... return \"\".join(map(chr, indices))"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L628-L634",
+            "role": "computation",
+            "quote": "assert ord(\"a\") == 97 ... assert ord(\"🌍\") == 127757 ... assert chr(127757) == \"🌍\""
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L643-L648",
+            "role": "computation",
+            "quote": "There are approximately 150K Unicode characters. ... vocabulary_size = max(indices) + 1  # This is a lower bound @inspect vocabulary_size ... Problem 1: this is a very large vocabulary. ... This tokenizer is the worst of both worlds (large vocabulary, low compression ratio)."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:08:34-1:09:05",
+            "role": "spoken",
+            "quote": "Unicode string, that's a sequence of Unicode characters. And each character is an integer, which you can call ord in Python ... there are 150k Unicode characters."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:09:05-1:09:41",
+            "role": "spoken",
+            "quote": "your vocab size could be 150k, which is a lot. I mean, it's not crazy, but I think the bigger problem is that many characters are actually rare ... So this is not a very good tokenizer."
+          }
+        ],
+        "filtering_note": "The '150K Unicode characters' figure is cited from Wikipedia (L643) and the code reports only a lower bound from the example string (max code point + 1). The lecture does not mention that code points go up to 0x10FFFF (1,114,112), so a true 'all code points' vocab is larger than 150K assigned characters. Spoken evidence (1:09:05-1:09:23): the code lists 'very large vocabulary' and 'rare characters' as Problem 1 and Problem 2; aloud they are ranked: 150k is 'not crazy', and rarity is 'the bigger problem'. GPT-5's 200k vocabulary is larger, so size alone cannot be the objection."
+      },
+      "prerequisites": [
+        {
+          "kp": "tokenizer-interface",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A character tokenizer has compression ratio exactly 1 since one character is one token.",
+          "why_wrong": "The ratio counts UTF-8 bytes per token, and non-ASCII characters are multi-byte; the lecture's string gives 20 bytes / 13 tokens = 1.538 (L647)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The lecture's character tokenizer on 'Hello, 🌍! 你好!' reports a compression ratio of 1.538. What ratio does it report on the two-character string '你好'?",
+          "format": "number",
+          "answer": "3",
+          "tolerance": 0.02,
+          "why": "Each CJK character is 3 UTF-8 bytes: 6 bytes / 2 tokens = 3.0. The character tokenizer looks better on CJK text purely because the numerator is in bytes (L569, L647).",
+          "targets_misconception": "A character tokenizer has compression ratio exactly 1 since one character is one token."
+        },
+        "transfer": {
+          "q": "You run the lecture's `vocabulary_size = max(indices) + 1` on the pure-ASCII string 'Hello, world!'. What number comes out, and why does the lecture call this quantity a lower bound?",
+          "format": "number",
+          "answer": "120",
+          "tolerance": 0.01,
+          "why": "The largest code point in 'Hello, world!' is 'w' = 119, so max+1 = 120. It is a lower bound because the real vocabulary must cover every character that could ever appear, not just those in one string (L644)."
+        },
+        "retrieval": [
+          {
+            "q": "Which two Python builtins implement the character tokenizer's encode and decode?",
+            "answer": "ord (encode) and chr (decode) (L508, L511)."
+          },
+          {
+            "q": "The lecture names two problems with the character tokenizer. State both.",
+            "answer": "Very large vocabulary; many characters are rare, so the vocabulary is used inefficiently (L645-L646)."
+          },
+          {
+            "q": "ord('🌍') equals what, and what vocabulary lower bound does that imply?",
+            "answer": "127,757, so the vocab is at least 127,758 (L631, L644).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why is 'rare characters waste vocabulary' a problem for a neural model but not for a lookup table?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_01--tokenizer-lens",
+          "notice": "The character row's ratio is above 1 only where a character spans several byte boxes ('你好': 6 bytes, 2 tokens); on ASCII it is exactly 1, and its vocabulary bound is the largest code point + 1."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L505-L511"
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_01.py:L636-L648"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:09:05-1:09:41",
+          "notice": "listen for: 150k is 'not crazy'; rarity is the bigger problem"
+        }
+      ]
+    },
+    {
+      "id": "utf8-variable-length",
+      "label": "UTF-8 is variable length: 1 to 4 bytes per character",
+      "kind": "definition",
+      "statement": "UTF-8 encodes each Unicode code point as 1 to 4 bytes, each in 0..255: 'a' is one byte, '你' is three (e4 bd a0), '🌍' is four (f0 9f 8c 8d), so 'Hello, 🌍! 你好!' is 13 characters but 20 bytes.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L652-L658",
+            "role": "computation",
+            "quote": "Unicode strings can be represented as a sequence of bytes, which can be represented by integers between 0 and 255. ... assert bytes(\"a\", encoding=\"utf-8\") == b\"a\" ... assert bytes(\"🌍\", encoding=\"utf-8\") == b\"\\xf0\\x9f\\x8c\\x8d\""
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L662-L663",
+            "role": "computation",
+            "quote": "string = \"Hello, 🌍! 你好!\"  # @inspect string ... indices = tokenizer.encode(string)  # @inspect indices"
+          },
+          {
+            "source": "utf8_wiki",
+            "ref": "https://en.wikipedia.org/wiki/UTF-8",
+            "role": "citation",
+            "quote": "The most common Unicode encoding is UTF-8"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:09:47-1:10:05",
+            "role": "spoken",
+            "quote": "Unicode has a UTF-8 encoding, which means that you can-- sometimes a string like \"a\" is just 1 byte, and sometimes, a string is multiple bytes."
+          }
+        ],
+        "filtering_note": "The lecture shows 1-byte and 4-byte examples only; the 2- and 3-byte cases (é, CJK) and the rule that trailing bytes always lie in 0x80-0xBF are not taught. That the CJK characters in the example take 3 bytes each is read from the trace (indices 228,189,160 and 229,165,189), not stated in prose."
+      },
+      "prerequisites": [
+        {
+          "kp": "character-tokenizer",
+          "basis": "teaching-order",
+          "note": "Bytes are introduced as the alternative to code points immediately after the character tokenizer."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "One character is one byte, so byte count equals character count.",
+          "why_wrong": "UTF-8 is variable length: the lecture's string has 13 characters and 20 bytes because 🌍 is 4 bytes and each of 你, 好 is 3 (L658, L663)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The lecture's string 'Hello, 🌍! 你好!' has 13 characters. How many UTF-8 bytes does it have?",
+          "format": "number",
+          "answer": "20",
+          "tolerance": 0.01,
+          "why": "10 ASCII characters (1 byte each) + 🌍 (4) + 你 (3) + 好 (3) = 20. The trace's byte indices are [72,101,108,108,111,44,32,240,159,140,141,33,32,228,189,160,229,165,189,33] (L663).",
+          "targets_misconception": "One character is one byte, so byte count equals character count."
+        },
+        "transfer": {
+          "q": "A byte-level tokenizer is fed the string 'héllo', where é is U+00E9. How many tokens come out, given that 2-byte UTF-8 characters cover U+0080 to U+07FF?",
+          "format": "number",
+          "answer": "6",
+          "tolerance": 0.01,
+          "why": "h, l, l, o are 1 byte each; é is in the 2-byte range (c3 a9), so 4 + 2 = 6 tokens for 5 characters. Same mechanism as the 4-byte 🌍 in the lecture (L658)."
+        },
+        "retrieval": [
+          {
+            "q": "What range of integers does a single UTF-8 byte occupy, and what is the maximum number of bytes one Unicode character can take in UTF-8?",
+            "answer": "0 to 255; up to 4 bytes (L652, L658)."
+          },
+          {
+            "q": "Write the UTF-8 bytes of 🌍 as the lecture asserts them.",
+            "answer": "f0 9f 8c 8d (four bytes) (L658).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does Python's ord give one integer for 🌍 while encode('utf-8') gives four?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "distinguish",
+          "ref": "fixture:lecture_01--tokenizer-lens",
+          "notice": "Each character box sits over 1 to 4 byte boxes: 🌍 over four (f0 9f 8c 8d), 你 over three, ASCII over one, so 13 characters become 20 bytes."
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_01.py:L652-L658"
+        },
+        {
+          "type": "example",
+          "action": "distinguish",
+          "ref": "lecture_01.py:L662-L663",
+          "steps": [
+            {
+              "do": "Split 'Hello, 🌍! 你好!' into its 13 characters: 10 are ASCII (H, e, l, l, o, the comma, two spaces, two '!'), plus 🌍, 你 and 好.",
+              "why": "UTF-8 length depends on the code point, so the characters have to be sorted by range before counting."
+            },
+            {
+              "do": "ASCII (U+0000-U+007F): 1 byte each, 10 bytes.",
+              "why": "UTF-8 keeps ASCII as single bytes, the 72, 101, 108, … at the start of the trace."
+            },
+            {
+              "do": "你 (U+4F60) and 好 (U+597D) are in the 3-byte range U+0800-U+FFFF: e4 bd a0 and e5 a5 bd, 6 bytes.",
+              "why": "Most CJK characters sit in that range, so each one costs three byte tokens (228, 189, 160 and 229, 165, 189 in the trace)."
+            },
+            {
+              "do": "🌍 (U+1F30D) is above U+FFFF, so it takes the 4-byte form f0 9f 8c 8d (asserted at L658).",
+              "why": "Code points beyond the 16-bit range need the longest UTF-8 form."
+            },
+            {
+              "do": "Total: 10 + 6 + 4 = 20 bytes for 13 characters, the length of the trace's index list.",
+              "why": "A byte tokenizer emits one token per byte, so non-ASCII text costs more tokens than characters."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "byte-tokenizer",
+      "label": "Byte tokenizer: vocab 256, compression ratio exactly 1",
+      "kind": "mechanism",
+      "statement": "A byte tokenizer encodes a string as its UTF-8 bytes (integers 0..255), giving a tiny fixed vocabulary of 256 but a compression ratio of exactly 1.0 for every input, so sequences are as long as the text's byte length.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L514-L524",
+            "role": "computation",
+            "quote": "class ByteTokenizer(Tokenizer): ... string_bytes = string.encode(\"utf-8\") ... indices = list(map(int, string_bytes))"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L667-L673",
+            "role": "computation",
+            "quote": "vocabulary_size = 256 ... compression_ratio = get_compression_ratio(string, indices) ... assert compression_ratio == 1 ... The compression ratio is terrible, which means the sequences will be too long."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:10:08-1:10:44",
+            "role": "spoken",
+            "quote": "notice that this is a longer sequence now, but all the numbers are between 0 and 255 ... And the compression ratio is 1, which is not great. So byte sequences can be very long, but the vocab size is small."
+          }
+        ],
+        "filtering_note": "The lecture asserts ratio == 1 on one string; that it is identically 1 for all strings follows from the definition (bytes / bytes) and is left for the learner to notice. The lecture does not discuss that decode can fail on an index sequence that is not valid UTF-8 (author inference)."
+      },
+      "prerequisites": [
+        {
+          "kp": "utf8-variable-length",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "compression-ratio",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "The byte tokenizer's compression ratio depends on the text (e.g. it is worse for emoji-heavy text).",
+          "why_wrong": "Ratio = bytes / tokens and each byte is one token, so it is exactly 1.0 for any string; the text only changes the sequence length, not the ratio (L670-L671)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "The byte tokenizer gives ratio 1.0 on 'Hello, 🌍! 你好!'. What ratio does it give on a 5,000-character Chinese document?",
+          "format": "number",
+          "answer": "1",
+          "tolerance": 0.001,
+          "why": "Every UTF-8 byte becomes exactly one token, so bytes / tokens = 1 regardless of script. The document would be ~15,000 tokens long, but the ratio is still 1 (L670-L671).",
+          "targets_misconception": "The byte tokenizer's compression ratio depends on the text (e.g. it is worse for emoji-heavy text)."
+        },
+        "transfer": {
+          "q": "You pass the index list [240, 159] (the first two bytes of 🌍) to ByteTokenizer.decode. Using the lecture's code at L521-L524, what happens and why?",
+          "format": "short",
+          "answer": "bytes([240,159]).decode('utf-8') raises a UnicodeDecodeError: the two bytes start a 4-byte sequence that is never completed, so they are not a valid UTF-8 string.",
+          "why": "Byte tokens are not characters; a language model emitting byte ids can produce sequences no character maps to, which a character-level tokenizer could not (L522-L523, L658)."
+        },
+        "check": {
+          "q": "'你' is the three UTF-8 bytes [228, 189, 160]. Which index list makes the lecture's ByteTokenizer.decode raise a UnicodeDecodeError?",
+          "format": "choice",
+          "choices": [
+            "[72, 105]",
+            "[228, 189, 160]",
+            "[228, 189]",
+            "[0, 127]"
+          ],
+          "answer": "[228, 189]",
+          "distractor_from": [
+            "'[228, 189, 160]' <- plausible: bytes above 127 look like non-text, but these three form one complete character",
+            "'[0, 127]' <- plausible: edge values look invalid, but both are single-byte ASCII code points",
+            "'[72, 105]' <- control option: plain ASCII ('Hi')"
+          ],
+          "why": "decode calls bytes(indices).decode('utf-8') (L521-L524). [228, 189] opens a three-byte sequence that is never completed, so it is not valid UTF-8. Byte ids are not characters, so a byte-level model can emit sequences no string maps to.",
+          "varies": "a different multi-byte character, truncated at a different point, chosen from a list",
+          "invariant": "a byte sequence decodes only if every multi-byte UTF-8 sequence in it is complete",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Give the byte tokenizer's vocabulary size and its compression ratio on any input.",
+            "answer": "256 and exactly 1.0 (L668, L671)."
+          },
+          {
+            "q": "What is the lecture's one-sentence verdict on the byte tokenizer, and what architectural fact backs it?",
+            "answer": "The compression ratio is terrible so sequences are too long; Transformer context is limited because attention is quadratic (L672-L673)."
+          }
+        ],
+        "self_explain": "Why does the lecture still start BPE from bytes, if the byte tokenizer is 'terrible'?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "predict-number",
+          "ref": "fixture:lecture_01--tokenizer-lens",
+          "notice": "The byte row is one token per byte box for any script: its ratio stays 1.0 while its token count grows with the byte count."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L514-L524"
+        },
+        {
+          "type": "code",
+          "action": "compute",
+          "ref": "lecture_01.py:L661-L673"
+        }
+      ]
+    },
+    {
+      "id": "word-tokenizer",
+      "label": "Word tokenizer: good compression, unbounded vocabulary, UNK",
+      "kind": "comparison",
+      "statement": "Splitting with the regex \\w+|. gives meaningful word tokens and a high compression ratio (5.5 on the lecture's example) but a vocabulary that is the set of distinct chunks in the training data: unbounded, full of rare words, and forcing an UNK token for unseen words.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L678-L681",
+            "role": "computation",
+            "quote": "string = \"I'll say supercalifragilisticexpialidocious!\" ... chunks = regex.findall(r\"\\w+|.\", string)  # @inspect chunks"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L688-L690",
+            "role": "computation",
+            "quote": "vocabulary_size = \"Number of distinct chunks in the training data\" ... compression_ratio = get_compression_ratio(string, chunks) ... Compression ratio is good, but vocabulary size can be huge."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L692-L695",
+            "role": "claim",
+            "quote": "Many words are rare and the model won't learn much about them. This doesn't obviously provide a fixed vocabulary size. New words we haven't seen during training get a special UNK token, which is ugly and can mess up perplexity calculations."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:10:50-1:11:25",
+            "role": "spoken",
+            "quote": "this is what actually people used to do in NLP ... each token is meaningful because humans invented words, and words tend to have a stable semantic meaning. But your vocab size is the number of distinct chunks in the training data"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:11:32-1:11:55",
+            "role": "spoken",
+            "quote": "the vocabulary could be actually unbounded, right? Because at test time, you might get some sequence and you tokenize, and then you have a token you've never seen before. ... UNK token, but that's really ugly and can mess up your perplexity calculations."
+          }
+        ],
+        "filtering_note": "The chunks are ['I', \"'\", 'll', ' ', 'say', ' ', 'supercalifragilisticexpialidocious', '!']: 8 chunks over 44 bytes = 5.5. The lecture never actually builds the chunk→int mapping (vocabulary_size is a string). How UNK 'messes up perplexity' (the model can get easy credit for predicting UNK) is asserted, not shown. Spoken evidence (1:11:32-1:11:47): why 'no fixed vocabulary size' (L694) bites: the training set fixes the vocabulary, but at test time 'you have a token you've never seen before', which is what forces UNK. The appeal of words is also given: 'words tend to have a stable semantic meaning' (1:11:09)."
+      },
+      "prerequisites": [
+        {
+          "kp": "compression-ratio",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Word tokenization fails mainly because words are too long to be useful tokens.",
+          "why_wrong": "Long tokens are the good part (ratio 5.5). It fails because the vocabulary is unbounded and open-ended: rare words are learned poorly and unseen words collapse to UNK (L690-L695)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Apply the lecture's regex \\w+|. to \"I'll say supercalifragilisticexpialidocious!\" (44 bytes). How many chunks result, and what is the compression ratio?",
+          "format": "short",
+          "answer": "8 chunks; 44 / 8 = 5.5",
+          "why": "\\w+ grabs runs of alphanumerics (I, ll, say, supercali...), and '.' grabs each remaining single character (', two spaces, !) as its own chunk (L680, L689).",
+          "targets_misconception": "Word tokenization fails mainly because words are too long to be useful tokens."
+        },
+        "transfer": {
+          "q": "A word tokenizer is trained on English news, then evaluated on a chemistry corpus full of names like 'tetrahydrocannabinol'. Which of the lecture's three 'moreover' problems bites first, and what happens to the token stream?",
+          "format": "short",
+          "answer": "The UNK problem: unseen words map to a single UNK id, so most chemical names become identical UNK tokens and the text (and the perplexity) loses information.",
+          "why": "Vocabulary is 'the number of distinct chunks in the training data'; anything outside it has no id (L688, L695). BPE avoids this because its base vocab (bytes) covers everything."
+        },
+        "check": {
+          "q": "A word tokenizer uses the lecture's regex \\w+|. (so each space and the period is its own chunk), and its vocabulary is every distinct chunk of the training text 'the cat sat on the mat.'. It then encodes 'the dog sat on the rug.'. How many of the output ids are UNK? Type only the number.",
+          "format": "number",
+          "answer": "2",
+          "value": 2,
+          "tolerance": 0.01,
+          "why": "Training chunks: 'the', ' ', 'cat', 'sat', 'on', 'mat', '.'. In the test sentence 'dog' and 'rug' are not in that set, so both become UNK; every other chunk, including the spaces and the period, is known (L688-L695).",
+          "varies": "a tiny explicit vocabulary instead of a domain shift, so the count can be traced",
+          "invariant": "the vocabulary is exactly the set of training chunks; any other chunk has no id and maps to UNK",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "What is the vocabulary size of the lecture's word tokenizer, in the lecture's own words?",
+            "answer": "The number of distinct chunks in the training data (L688)."
+          },
+          {
+            "q": "Name the three problems the lecture lists under 'Moreover' for word tokenization.",
+            "answer": "Many words are rare so the model learns little about them; no fixed vocabulary size; unseen words become an UNK token that messes up perplexity (L693-L695)."
+          }
+        ],
+        "self_explain": "Why can an UNK token make a perplexity number look better than the model deserves?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:lecture_01--tokenizer-lens",
+          "notice": "\\w+|. keeps letter runs whole but makes every space, apostrophe and punctuation mark its own chunk, so the 44-byte example is 8 chunks."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L676-L695"
+        }
+      ]
+    },
+    {
+      "id": "bpe-idea",
+      "label": "BPE: a data-driven vocabulary of frequent byte sequences",
+      "kind": "definition",
+      "statement": "Byte Pair Encoding (Gage 1994 for compression; Sennrich et al. 2016 for NMT; used by GPT-2) trains a tokenizer on raw text: start with each byte as a token and repeatedly merge the most common adjacent pair, so common byte sequences become single tokens and rare ones stay as many tokens.",
+      "provenance": {
+        "status": "cited",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L699-L703",
+            "role": "citation",
+            "quote": "The BPE algorithm was introduced by Philip Gage in 1994 for data compression. ... It was adapted to NLP for neural machine translation. ... BPE was then used by GPT-2."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L705-L708",
+            "role": "claim",
+            "quote": "Basic idea: *train* the tokenizer on raw text to construct a vocabulary tailored to the data. Intuition: common sequences of bytes are represented by a single token, rare sequences are represented by many tokens. Sketch: start with each byte as a token, and successively merge the most common pair of adjacent tokens."
+          },
+          {
+            "source": "sennrich_2016",
+            "ref": "arXiv:1508.07909",
+            "role": "citation"
+          },
+          {
+            "source": "gage_1994",
+            "ref": "CUJ 1994",
+            "role": "citation"
+          },
+          {
+            "source": "karpathy_tokenization",
+            "ref": "youtube:zduSFxRajkE",
+            "role": "citation",
+            "quote": "This unit was inspired by Andrej Karpathy's video on tokenization"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:11:58-1:12:27",
+            "role": "spoken",
+            "quote": "byte pair encoding. And this was introduced a long time ago for data compression. ... It was first introduced to NLP for doing neural machine translation. And the first paper that used BPE for LLMs was GPT-2."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:12:27-1:12:54",
+            "role": "spoken",
+            "quote": "train the tokenizer on raw text to construct a vocabulary that's tailored to the data. ... If it's rare, then it just breaks up into smaller units rather than having this UNK token. ... Rare sequences are going to be split into multiple tokens."
+          }
+        ],
+        "filtering_note": "Sennrich's original BPE merged characters within words (word-level pre-tokenization); the byte-level variant with a 256-byte base vocab is GPT-2's contribution. The lecture collapses the two. 'Most common' is a greedy choice; the lecture does not claim optimality for compression (summary: 'an effective heuristic', L497). Spoken evidence (1:12:36-1:12:46): BPE is tied explicitly to the word tokenizer's failure: everything 'can be tokenized', because a rare string 'just breaks up into smaller units rather than having this UNK token'. The code's intuition line (L706) gives the common/rare split but not the no-UNK consequence."
+      },
+      "prerequisites": [
+        {
+          "kp": "byte-tokenizer",
+          "basis": "teaching-order",
+          "note": "BPE's base vocabulary is the byte tokenizer's 256 values."
+        },
+        {
+          "kp": "word-tokenizer",
+          "basis": "teaching-order",
+          "note": "BPE is presented as the fix for the word tokenizer's unbounded vocabulary."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "BPE is a fixed algorithmic mapping like UTF-8: the same string always gives the same tokens regardless of training data.",
+          "why_wrong": "BPE is trained; its merges depend on which pairs were frequent in the training corpus, so two BPE tokenizers trained on different text tokenize the same string differently (L705-L706)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Two BPE tokenizers with the same vocab size are trained, one on English Wikipedia and one on Python source code. Which gives the higher compression ratio on a Python file, and which lecture sentence predicts this?",
+          "format": "short",
+          "answer": "The code-trained one; 'train the tokenizer on raw text to construct a vocabulary tailored to the data' / 'common sequences of bytes are represented by a single token'.",
+          "why": "Merges are chosen by frequency in the training corpus, so sequences common in code (e.g. 'def ', '    ') become single tokens only if the training text contained them often (L705-L706).",
+          "targets_misconception": "BPE is a fixed algorithmic mapping like UTF-8: the same string always gives the same tokens regardless of training data."
+        },
+        "transfer": {
+          "q": "A string contains a byte sequence that never appeared in BPE training. Contrast what the word tokenizer and the byte-level BPE tokenizer each produce for it.",
+          "format": "short",
+          "answer": "The word tokenizer emits an UNK id; byte-level BPE falls back to the individual bytes (ids 0..255), so the text is still represented exactly, just with many tokens.",
+          "why": "The base vocabulary is every byte, so there is no out-of-vocabulary input; rarity costs tokens rather than information (L706-L708, contrast L695)."
+        },
+        "check": {
+          "q": "A byte-level BPE tokenizer was trained only on English text, and none of its merges involve bytes above 127. How many tokens does it produce for '你好' (two Chinese characters, 3 UTF-8 bytes each)? Type only the number.",
+          "format": "number",
+          "answer": "6",
+          "value": 6,
+          "tolerance": 0.01,
+          "why": "No merge applies, so encode leaves the 6 raw bytes as 6 tokens. Nothing becomes UNK because the base vocabulary already contains every byte; rarity costs tokens rather than information (L705-L708, contrast the word tokenizer at L695).",
+          "targets_misconception": "BPE is a fixed algorithmic mapping like UTF-8: the same string always gives the same tokens regardless of training data.",
+          "varies": "the unseen input is a non-Latin script, and the question asks for a count instead of a contrast",
+          "invariant": "byte-level BPE falls back to raw bytes, so unseen text is represented exactly with more tokens",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Give the three-step history of BPE as the lecture tells it (year or paper for each).",
+            "answer": "Gage 1994 for data compression; Sennrich et al. 2016 adapted it for neural machine translation; GPT-2 (2019) used it (L700-L703).",
+            "layer": "detail"
+          },
+          {
+            "q": "State the lecture's one-sentence sketch of BPE training.",
+            "answer": "Start with each byte as a token, and successively merge the most common pair of adjacent tokens (L708)."
+          },
+          {
+            "q": "What kind of algorithm does the lecture's summary call BPE, and where do its merges come from?",
+            "answer": "An effective heuristic (not an optimal algorithm) that is data-driven: the merges come from pair counts in the training text."
+          }
+        ],
+        "self_explain": "Why does 'train on the data' fix the word tokenizer's vocabulary problem but not the byte tokenizer's one?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compare",
+          "ref": "fixture:lecture_01--bpe-lab",
+          "notice": "Train on English and encode '你好': no merge fires, so the new text falls back to its 6 raw bytes; more tokens, never UNK."
+        },
+        {
+          "type": "code",
+          "action": "restate",
+          "ref": "lecture_01.py:L699-L708"
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:12:27-1:12:54",
+          "notice": "listen for: rare strings split into smaller units instead of UNK"
+        }
+      ]
+    },
+    {
+      "id": "bpe-merge-step",
+      "label": "BPE training step: count adjacent pairs, merge the max, add one vocab entry",
+      "kind": "procedure",
+      "statement": "Each BPE training step counts every adjacent token pair, picks the most frequent, assigns it the next index 256+i, records vocab[new] = vocab[a] + vocab[b], and replaces every occurrence of the pair in the sequence; on 'the cat in the hat' the three merges are (116,104)→256 'th', (256,101)→257 'the', (257,32)→258 'the ', shrinking 18 bytes to 12 tokens (ratio 1.5).",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L711-L712",
+            "role": "computation",
+            "quote": "string = \"the cat in the hat\"  # @inspect string ... params = train_bpe(string, num_merges=3)"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L729-L750",
+            "role": "computation",
+            "quote": "counts = count_adjacent_pairs(indices) ... pair = max(counts, key=counts.get) ... new_index = 256 + i ... vocab[new_index] = vocab[pair[0]] + vocab[pair[1]] ... indices = merge(indices, pair, new_index)"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L527-L538",
+            "role": "computation",
+            "quote": "Return `indices`, but with all instances of `pair` replaced with `new_index`."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L753-L758",
+            "role": "computation",
+            "quote": "for index1, index2 in zip(indices, indices[1:]): counts[(index1, index2)] += 1"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L748",
+            "role": "computation",
+            "quote": "compression_ratio = get_compression_ratio(string, indices)  # @inspect compression_ratio"
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:13:02-1:13:16",
+            "role": "spoken",
+            "quote": "Let's assume it's one long sequence. You get a byte sequence. Each byte starts as a token. And then we're going to merge successive pairs of adjacent tokens that occur the most frequently."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:13:42-1:14:01",
+            "role": "spoken",
+            "quote": "116, 104 shows up twice, so we get this. And then we're going to find the pair that happens the most number of times. So that's 116, 104. I guess there's a few ties, but we'll just take the first one."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:14:42-1:15:07",
+            "role": "spoken",
+            "quote": "the next time we do this, we're going to find 256 and 101. ... now we have 257. And then we're going to merge that one more time, and we're going to get 258. So over time, the sequence is shrinking and the vocabulary size is growing."
+          }
+        ],
+        "filtering_note": "Trace values: start indices [116,104,101,32,99,97,116,32,105,110,32,116,104,101,32,104,97,116] (18). Step 0 counts: (116,104):2, (104,101):2, (101,32):2, (97,116):2, all others 1; max() returns the first-inserted maximal key, so the tie is broken by first occurrence in the string, giving (116,104) 't','h' → 256, indices length 16. Step 1: (256,101):2 ties with (101,32):2 and (97,116):2 → (256,101) 'the' → 257, length 14. Step 2: (257,32):2 ties with (97,116):2 → (257,32) 'the ' → 258, length 12. Ratio 18/12 = 1.5. The lecture never remarks that every pick was a tie, nor that Python's max tie-break is insertion order; Assignment 1 specifies its own tie-break rule (inference; check the handout). Counting is over the whole flat byte sequence with no pre-tokenization, so merges may cross word boundaries (258 = 'the ' includes a space). Spoken evidence (1:13:57), correcting this note: 'The lecture never remarks that every pick was a tie' is wrong for step 0. Aloud: 'I guess there's a few ties, but we'll just take the first one.' He does not say that steps 1 and 2 were ties too, or that 'the first one' is Python's insertion-order max. 'Let's assume it's one long sequence' (1:13:02) is the spoken version of the no-pre-tokenization simplification."
+      },
+      "prerequisites": [
+        {
+          "kp": "bpe-idea",
+          "basis": "teaching-order"
+        },
+        {
+          "kp": "byte-tokenizer",
+          "basis": "teaching-order",
+          "note": "The starting sequence is the byte tokenizer's output."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "A merge replaces only the first occurrence of the chosen pair, and a merged token cannot itself be part of a later pair.",
+          "why_wrong": "merge() replaces every occurrence (both 'th' in 'the cat in the hat' become 256 at once), and later counts include the new id, which is how 256 'th' becomes 257 'the' then 258 'the ' (L528, L737-L746)."
+        },
+        {
+          "belief": "Each merge adds two or more entries to the vocabulary.",
+          "why_wrong": "Exactly one entry is added per merge: vocab[256+i] = vocab[a] + vocab[b]; after 3 merges the vocab has 259 entries (L743-L745)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Starting from the 18 bytes of 'the cat in the hat', the first merge is (116,104) → 256. How many tokens are in the sequence after this one merge, and how many entries are in the vocabulary?",
+          "format": "short",
+          "answer": "16 tokens; 257 vocabulary entries (256 bytes + 1 merge).",
+          "why": "'th' occurs twice and merge() replaces every occurrence, removing one token each time: 18 − 2 = 16. One merge adds exactly one vocab entry (L533-L534, L745).",
+          "targets_misconception": "A merge replaces only the first occurrence of the chosen pair, and a merged token cannot itself be part of a later pair."
+        },
+        "transfer": {
+          "q": "Run the lecture's train_bpe on 'the cat in the hat' with num_merges=4 instead of 3. After the three merges shown in the lecture the sequence is [258,99,97,116,32,105,110,32,258,104,97,116]. Which pair is merged fourth, what bytes does vocab[259] hold, and what is the final token count?",
+          "format": "short",
+          "answer": "Pair (97,116) = 'at' (count 2, the only pair occurring more than once) → vocab[259] = b'at'; sequence becomes [258,99,259,32,105,110,32,258,104,259], 10 tokens (ratio 1.8).",
+          "why": "After 'the ' is merged, 'at' (in cat and hat) is the unique most frequent pair; replacing both occurrences removes two tokens: 12 − 2 = 10 (L737-L746)."
+        },
+        "check": {
+          "q": "Run the lecture's train_bpe on 'aaabdaaabac' (11 bytes) with num_merges = 3. How many tokens are in the sequence after the third merge? Type only the number.",
+          "format": "number",
+          "answer": "5",
+          "value": 5,
+          "tolerance": 0.01,
+          "why": "Merge 1: (a,a) has the top count (4, counting overlaps); merge() replaces non-overlapping occurrences left to right: [256,a,b,d,256,a,b,a,c], 9 tokens. Merge 2: (256,a), count 2, first in insertion order on a tie with (a,b): [257,b,d,257,b,a,c], 7. Merge 3: (257,b): [258,d,258,a,c], 5. Every merge replaces all occurrences, and merged tokens take part in later pairs (L729-L750, L527-L538).",
+          "targets_misconception": "A merge replaces only the first occurrence of the chosen pair, and a merged token cannot itself be part of a later pair.",
+          "varies": "a different training string where merged tokens chain and pairs overlap",
+          "invariant": "each step merges the most frequent adjacent pair everywhere, and new tokens can join later pairs",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "List the three merges (pair → new index → bytes) that the lecture's train_bpe produces on 'the cat in the hat'.",
+            "answer": "(116,104) → 256 'th'; (256,101) → 257 'the'; (257,32) → 258 'the ' (L740-L745).",
+            "layer": "detail"
+          },
+          {
+            "q": "What formula gives the new token index at BPE training step i, and why does it start where it does?",
+            "answer": "new_index = 256 + i, because indices 0..255 are already taken by the byte vocabulary (L733, L743)."
+          },
+          {
+            "q": "After 3 merges, the 18-byte training string is how many tokens, and what compression ratio does the trace show?",
+            "answer": "12 tokens; 18 / 12 = 1.5 (L746, L748).",
+            "format": "short",
+            "layer": "detail"
+          },
+          {
+            "q": "In step 0, four pairs tie at count 2. Which one does `max(counts, key=counts.get)` return, and by what rule?",
+            "answer": "(116,104) 'th': Python's max returns the first key that attains the maximum, and counts is filled in order of first occurrence in the string (L740, L753-L758).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why does the second merge produce 'the' rather than some pair involving the space, given that (101,32) 'e ' also had count 2?"
+      },
+      "presentations": [
+        {
+          "type": "animation",
+          "action": "trace",
+          "ref": "fixture:bpe-merge-tree",
+          "notice": "each merge replaces every occurrence of the most frequent adjacent pair and adds exactly one vocabulary entry"
+        },
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:lecture_01--bpe-lab",
+          "notice": "Pair counts overlap ('aaa' counts (a,a) twice) but merge() replaces left to right without overlap, and a merged id joins the next step's pairs."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L729-L750"
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L527-L538"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "lecture_01.py:L753-L758",
+          "faded": false,
+          "steps": [
+            {
+              "do": "Bytes of 'the cat in the hat': 18 tokens. count_adjacent_pairs zips the list with itself shifted by one: (116,104) 't h', (104,101) 'h e', (101,32) 'e ␣' and (97,116) 'a t' occur twice; every other pair once.",
+              "why": "Pairs are counted over every adjacent position of the current sequence, so a pair inside both 'the's counts twice."
+            },
+            {
+              "do": "Tie at count 2: max(counts, key=counts.get) returns the first pair inserted, (116,104).",
+              "why": "Python's max keeps the first maximum it meets, and the dict is in first-occurrence order (the tie the professor breaks by taking 'the first one')."
+            },
+            {
+              "do": "new_index = 256 + 0 = 256, vocab[256] = b't' + b'h' = b'th'. merge() replaces both occurrences: 18 − 2 = 16 tokens.",
+              "why": "Indices 0-255 are the bytes, so merge i gets 256 + i; replacing every occurrence removes one token per occurrence."
+            },
+            {
+              "do": "Step 2: recount on the new sequence. (256,101) and (101,32) both have count 2; the first inserted, (256,101), becomes 257 = b'the'. 16 − 2 = 14 tokens.",
+              "why": "The merged token 256 now takes part in pairs like any byte, so merges can chain."
+            },
+            {
+              "do": "Step 3: (257,32) wins the tie with (97,116) and becomes 258 = b'the '. 14 − 2 = 12 tokens: [258, 99, 97, 116, 32, 105, 110, 32, 258, 104, 97, 116], compression ratio 18 / 12 = 1.5.",
+              "why": "Each merge adds one vocabulary entry and shortens the sequence by the pair's count."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "trace",
+          "ref": "video:1:13:42-1:14:01",
+          "notice": "listen for: the tie at step 0, broken by taking 'the first one'"
+        }
+      ]
+    },
+    {
+      "id": "bpe-encode-apply-merges",
+      "label": "BPE encoding applies the learned merges, in order, to new text",
+      "kind": "procedure",
+      "statement": "To encode new text, BPE converts it to bytes and applies every learned merge in training order; 'the quick brown fox' (19 bytes) becomes [258,113,117,105,99,107,32,98,114,111,119,110,32,102,111,120] (16 tokens) because only 'the ' matches a merge, and decode concatenates vocab[id] bytes and UTF-8-decodes.",
+      "provenance": {
+        "status": "computed",
+        "basis": "evidence",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L554-L559",
+            "role": "computation",
+            "quote": "indices = list(map(int, string.encode(\"utf-8\"))) ... for pair, new_index in self.params.merges.items(): ... indices = merge(indices, pair, new_index)"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L561-L564",
+            "role": "computation",
+            "quote": "bytes_list = list(map(self.params.vocab.get, indices)) ... string = b\"\".join(bytes_list).decode(\"utf-8\")"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L716-L720",
+            "role": "computation",
+            "quote": "string = \"the quick brown fox\"  # @inspect string ... indices = tokenizer.encode(string)  # @inspect indices ... reconstructed_string = tokenizer.decode(indices) ... assert string == reconstructed_string"
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L722-L726",
+            "role": "assignment",
+            "quote": "encode() currently loops over all merges. Only loop over merges that matter. Detect and preserve special tokens ... Use pre-tokenization (e.g., the GPT-2 tokenizer regex)."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:15:21-1:15:56",
+            "role": "spoken",
+            "quote": "how do you tokenize new text? ... you basically go through the set of merges that you've made, and then you just apply the merges to your string. OK, let me actually not step through that code."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:16:06-1:16:44",
+            "role": "spoken",
+            "quote": "This is a full-blown BPE implementation. It's extremely slow. ... currently, encode loops over all the merges, which is very slow because you might have-- the number of merges you have is essentially the vocab size minus 256."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:16:52-1:17:08",
+            "role": "spoken",
+            "quote": "you break it up into-- your text into chunks, and then you apply tokenizer on each chunk. So that's going to be much faster."
+          }
+        ],
+        "filtering_note": "The lecture's encode is 'a very slow implementation' (L556): it scans the whole sequence once per merge. Pre-tokenization (the GPT-2 regex that prevents merges across words and attaches leading spaces) is named but not shown; it is deferred to Assignment 1 (L725). Because merges are a dict, 'in order' relies on Python dict insertion order. Spoken evidence (1:16:22-1:16:37): the cost of the slow encoder is quantified aloud: it makes one pass per merge, and 'the number of merges you have is essentially the vocab size minus 256', so a 200k-entry vocabulary means about 200k passes over the text. Spoken evidence (1:16:52-1:17:08): pre-tokenization is justified by speed ('that's going to be much faster'), not only by keeping merges inside words; 'Python is just not very fast' and Rust or C is suggested (1:17:16). The encode() call itself was not stepped through (1:15:44)."
+      },
+      "prerequisites": [
+        {
+          "kp": "bpe-merge-step",
+          "basis": "teaching-order"
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Encoding looks up the longest vocabulary entry that matches at each position (greedy longest match).",
+          "why_wrong": "The lecture's encode replays the merges in training order; a vocab entry is only reached by applying its chain of merges, so 'the' in 'the quick' becomes 258 'the ' via 256 → 257 → 258, not by dictionary lookup (L557-L558)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "Using the three merges learned from 'the cat in the hat' (th→256, the→257, 'the '→258), encode 'the quick brown fox' (19 bytes). How many tokens result?",
+          "format": "number",
+          "answer": "16",
+          "tolerance": 0.01,
+          "why": "Only the leading 'the ' matches: th→256, then 256+e→257, then 257+space→258, saving 3 tokens; the other 15 bytes have no merges. 19 − 3 = 16, trace value [258, 113, 117, 105, 99, 107, 32, 98, 114, 111, 119, 110, 32, 102, 111, 120] (L718).",
+          "targets_misconception": "Encoding looks up the longest vocabulary entry that matches at each position (greedy longest match)."
+        },
+        "transfer": {
+          "q": "Same three merges. Encode 'hat the' (7 bytes, no trailing space). Give the token count and say which learned merge fails to fire.",
+          "format": "short",
+          "answer": "5 tokens: [104, 97, 116, 32, 257]. The third merge (257,32) → 258 'the ' never fires because 'the' is at the end with no following space.",
+          "why": "Merges match exact adjacent pairs in the current sequence; 'the' reaches 257 via the first two merges but there is no 32 after it, so the chain stops (L532, L557-L558)."
+        },
+        "check": {
+          "q": "Use the three merges learned from 'the cat in the hat' (t,h → 256; 256,e → 257; 257,space → 258). Encode 'bathe the' (9 bytes, no trailing space). How many tokens result? Type only the number.",
+          "format": "number",
+          "answer": "4",
+          "value": 4,
+          "tolerance": 0.01,
+          "why": "Merges apply to adjacent pairs anywhere, not to whole words: 'th' inside 'bathe' merges to 256, then 257, and since a space follows it, 258. The final 'the' has no space after it and stops at 257. Result [98, 97, 258, 257], 4 tokens (L554-L559).",
+          "varies": "the merge fires inside a longer word and the chain stops at the end of the string",
+          "invariant": "encoding applies the learned merges in order to exact adjacent pairs of the current sequence",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "In what order does the lecture's BPETokenizer.encode apply merges, and why does the order matter?",
+            "answer": "In training (insertion) order; later merges reference ids created by earlier ones (e.g. (256,101) needs 256 to exist first) (L557-L558)."
+          },
+          {
+            "q": "Describe decode in one line as the lecture implements it.",
+            "answer": "Map each id to its bytes via vocab, concatenate the bytes, UTF-8-decode (L562-L563)."
+          },
+          {
+            "q": "Name the three things Assignment 1 adds to the lecture's toy BPE encoder.",
+            "answer": "Only loop over merges that matter (speed); special tokens like <|endoftext|>; pre-tokenization with the GPT-2 regex (L723-L725).",
+            "layer": "detail"
+          }
+        ],
+        "self_explain": "Why would a pre-tokenization regex that never lets a merge cross a space have changed the lecture's third merge?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "trace",
+          "ref": "fixture:lecture_01--bpe-lab",
+          "notice": "Encoding replays the training merges in order on the new text's bytes; a merge fires only on an exact adjacent pair, so the 'the' at the end of 'hat the' stops at 257."
+        },
+        {
+          "type": "code",
+          "action": "trace",
+          "ref": "lecture_01.py:L554-L564"
+        },
+        {
+          "type": "example",
+          "action": "compute",
+          "ref": "lecture_01.py:L716-L720",
+          "faded": true,
+          "steps": [
+            {
+              "do": "Encode 'the quick brown fox' to bytes: 19 tokens, [116, 104, 101, 32, 113, …, 120].",
+              "why": "Encoding starts from the same byte sequence the byte tokenizer gives (L555)."
+            },
+            {
+              "do": "Merge 1, (116,104) → 256: only the 'th' at the start matches, 18 tokens.",
+              "why": "encode() replays the learned merges in training order, each as merge() over the whole current sequence."
+            },
+            {
+              "do": "Merge 2, (256,101) → 257: 'the' becomes one token, 17 tokens.",
+              "why": "This merge refers to 256, so it can only fire after merge 1; that is why the order matters."
+            },
+            {
+              "do": "Merge 3, (257,32) → 258: 'the ' becomes one token. Result [258, 113, 117, 105, 99, 107, 32, 98, 114, 111, 119, 110, 32, 102, 111, 120], 16 tokens.",
+              "why": "A space follows 'the', so the pair (257, 32) exists; no other learned pair occurs in 'quick brown fox', so its 15 bytes stay as they are."
+            }
+          ]
+        },
+        {
+          "type": "video-span",
+          "action": "restate",
+          "ref": "video:1:16:06-1:16:44",
+          "notice": "listen for: one pass per merge, and merges = vocab size − 256"
+        }
+      ]
+    },
+    {
+      "id": "supp-vocab-embedding-params",
+      "label": "Supplement: vocabulary size sets embedding and output parameters (V × d each)",
+      "kind": "quantity",
+      "statement": "A vocabulary of V tokens with model width d costs V·d parameters in the input embedding and another V·d in the untied output projection, so GPT-5's 200,019-entry vocab at d = 4096 is about 0.82B parameters per matrix versus about 1M for a 256-byte vocab.",
+      "provenance": {
+        "status": "supplement",
+        "basis": "inference",
+        "anchors": [
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L611-L612",
+            "role": "claim",
+            "quote": "One could increase compression ratio by increasing **vocabulary size** (number of possible token values increases), leading to sparsity."
+          },
+          {
+            "source": "lecture_01",
+            "ref": "lecture_01.py:L646",
+            "role": "claim",
+            "quote": "many characters are quite rare (e.g., 🌍), which is inefficient use of the vocabulary."
+          },
+          {
+            "source": "lecture_01_video",
+            "ref": "video:1:07:56-1:08:10",
+            "role": "spoken",
+            "quote": "you get into sparsity where more and more-- because every element of vocab is treated like a distinct element."
+          }
+        ],
+        "filtering_note": "Not in the lecture. The professor names 'sparsity' and 'inefficient use of the vocabulary' as the cost of a large vocab but never states the parameter cost; the student line adds it because it is the concrete form of that cost and is needed to reason about the vocab-size trade-off quantitatively. Whether input and output embeddings are tied is architecture-dependent (author inference). Spoken evidence (1:07:56-1:08:10): the nearest the audio comes is 'every element of vocab is treated like a distinct element'; no parameter count is said aloud, so this stays a supplement."
+      },
+      "prerequisites": [
+        {
+          "kp": "vocab-size-vs-sequence-length",
+          "basis": "author-inference",
+          "note": "Quantifies the 'sparsity' downside the lecture names."
+        }
+      ],
+      "misconceptions": [
+        {
+          "belief": "Vocabulary size only affects the tokenizer, not the model's parameter count.",
+          "why_wrong": "Every token id owns a row of the embedding matrix (and of the output projection); doubling V doubles those matrices, and rows for rare ids are updated rarely, which is the lecture's 'sparsity' (L611)."
+        }
+      ],
+      "prompts": {
+        "predict": {
+          "q": "A model has width d = 4096. Compare the input-embedding parameter count for the byte vocabulary (256) and the GPT-5 vocabulary (200,019). Give both in parameters.",
+          "format": "short",
+          "answer": "256 × 4096 ≈ 1.05M versus 200,019 × 4096 ≈ 819M (about 780x more).",
+          "why": "Embedding parameters are V × d; the tokenizer's vocab size is a model hyperparameter in disguise.",
+          "targets_misconception": "Vocabulary size only affects the tokenizer, not the model's parameter count."
+        },
+        "transfer": {
+          "q": "A 1B-parameter model with d = 2048 and untied embeddings uses a 256K vocab. What fraction of its parameters sit in the two vocabulary matrices, and how does that fraction change if the model is scaled to 70B with d = 8192?",
+          "format": "short",
+          "answer": "2 × 256K × 2048 ≈ 1.05B, i.e. essentially all of a '1B' model; at 70B with d = 8192 it is 2 × 256K × 8192 ≈ 4.2B, about 6%.",
+          "why": "Vocabulary parameters grow with V·d while the rest of the model grows with layers × d², so a large vocab is proportionally far more expensive for small models."
+        },
+        "check": {
+          "q": "A 7B-parameter model has width d = 4096, untied input and output embeddings, and a vocabulary of 128,000 tokens. What fraction of its total parameters sits in the two vocabulary matrices? Give a decimal; type only the number.",
+          "format": "number",
+          "answer": "0.15",
+          "value": 0.1498,
+          "tolerance": 0.05,
+          "why": "2 × 128,000 × 4096 ≈ 1.05e9 parameters; 1.05e9 / 7e9 ≈ 0.15. The vocabulary matrices grow as V·d while the rest of the model grows as layers × d², which is why they are a large share of small models (L611-L612).",
+          "targets_misconception": "Vocabulary size only affects the tokenizer, not the model's parameter count.",
+          "varies": "model size, width and vocabulary; one fraction instead of a comparison across sizes",
+          "invariant": "each vocabulary matrix holds V·d parameters, independent of depth",
+          "transfer_distance": "near"
+        },
+        "retrieval": [
+          {
+            "q": "Write the parameter count of a (untied) input embedding table in terms of vocabulary size V and model width d.",
+            "answer": "V × d (and another V × d for the output projection if untied)."
+          },
+          {
+            "q": "Why does the lecture's word 'sparsity' translate into a training problem for the embedding table?",
+            "answer": "A token id's embedding row receives gradient only when that id occurs; rare ids (most of a huge vocab) are updated rarely and stay poorly trained."
+          }
+        ],
+        "self_explain": "Why is a huge vocabulary a bigger problem for a small model than for a large one?"
+      },
+      "presentations": [
+        {
+          "type": "interactive",
+          "action": "compute",
+          "ref": "fixture:lecture_01--vocab-trade",
+          "notice": "The vocabulary bars depend only on V and d: the same 2·V·d is a large share of a small model and a small share of a large one."
+        },
+        {
+          "type": "formula-step",
+          "action": "compute",
+          "ref": "V*d"
+        }
+      ]
+    }
+  ],
+  "spoken_filtering": [
+    {
+      "at": "2:44",
+      "kind": "aside",
+      "quote": "we don't actually build everything up from scratch because that wouldn't fit in the quarter",
+      "what_was_filtered": "'From scratch' is qualified: only the highest-value pieces are built.",
+      "kp": null
+    },
+    {
+      "at": "6:01",
+      "kind": "defer-later",
+      "quote": "If we're going to spend more time on flop counting and looking at where the compute is being spent.",
+      "what_was_filtered": "Why the MLP share of FLOPs grows with scale (44% to 80% in the Roller table) is left to the FLOP-counting lectures.",
+      "kp": null
+    },
+    {
+      "at": "8:06",
+      "kind": "aside",
+      "quote": "the intuitions about what modeling decisions and what data decisions do work might not necessarily transfer across scales. For that, you actually have to go somewhere where you can do things at scale.",
+      "what_was_filtered": "Scale-dependent intuitions are declared out of the course's reach.",
+      "kp": null
+    },
+    {
+      "at": "17:52",
+      "kind": "skip",
+      "quote": "OK, I guess I don't have internet.",
+      "what_was_filtered": "The agent-trace link could not be opened; agents are described, not shown.",
+      "kp": null
+    },
+    {
+      "at": "22:20",
+      "kind": "skip",
+      "quote": "We don't do multimodality. We don't talk about agents in any depth.",
+      "what_was_filtered": "Multimodality and agents are outside the course.",
+      "kp": null
+    },
+    {
+      "at": "29:15",
+      "kind": "defer-later",
+      "quote": "OK, we'll talk more about this.",
+      "what_was_filtered": "Tokenization details are deferred to the end of this lecture.",
+      "kp": "tokenization-efficiency-lens"
+    },
+    {
+      "at": "30:18",
+      "kind": "defer-later",
+      "quote": "And Tatsu is going to talk more about this in a bit.",
+      "what_was_filtered": "Transformer refinements go to Tatsu's architecture lectures.",
+      "kp": null
+    },
+    {
+      "at": "33:42",
+      "kind": "defer-later",
+      "quote": "OK, I'll come back to that point when we talk about scaling loss.",
+      "what_was_filtered": "Principled hyperparameter setting is deferred to the scaling-laws unit.",
+      "kp": null
+    },
+    {
+      "at": "33:45",
+      "kind": "defer-assignment",
+      "quote": "So then in Assignment 1, what you're going to do is you're going to implement the BPE tokenizer, implement the transformer, the loss function, the optimizer, the whole training step.",
+      "what_was_filtered": "The full training stack, including the BPE tokenizer and resource accounting, goes to Assignment 1.",
+      "kp": null
+    },
+    {
+      "at": "36:12",
+      "kind": "defer-later",
+      "quote": "So the basics, which we're actually going to start on next lecture, I mentioned resource accounting",
+      "what_was_filtered": "Resource accounting, including where 6ND comes from, starts next lecture.",
+      "kp": "six-nd-preview"
+    },
+    {
+      "at": "37:35",
+      "kind": "defer-later",
+      "quote": "I think when we-- I think I'll do this next lecture.",
+      "what_was_filtered": "What the B200's 2.25 PFLOP/s and 8 TB/s imply (roofline) is deferred to lecture 2.",
+      "kp": null
+    },
+    {
+      "at": "40:03",
+      "kind": "defer-later",
+      "quote": "And I'm not sure how many of these details we'll have time to get into",
+      "what_was_filtered": "GPU peculiarities (warp divergence, coalescing, bank conflicts, occupancy) may not all be covered.",
+      "kp": null
+    },
+    {
+      "at": "41:34",
+      "kind": "defer-later",
+      "quote": "And we'll talk about the trade offs that come with each of these.",
+      "what_was_filtered": "Trade-offs between parallelism strategies go to the parallelism lectures.",
+      "kp": null
+    },
+    {
+      "at": "42:16",
+      "kind": "skip",
+      "quote": "So we're probably not going to spend as much time as I like on this because the course is already kind of filled up",
+      "what_was_filtered": "Inference gets less time than the professor would like.",
+      "kp": null
+    },
+    {
+      "at": "42:26",
+      "kind": "aside",
+      "quote": "There was some discussion around whether we should make you write inference from scratch, but we'll see.",
+      "what_was_filtered": "Whether inference is implemented from scratch is undecided.",
+      "kp": null
+    },
+    {
+      "at": "44:02",
+      "kind": "defer-assignment",
+      "quote": "So in Assignment 2, there's going to be implementing kernels in Triton and doing some of parallel training.",
+      "what_was_filtered": "Kernels and parallel training go to Assignment 2.",
+      "kp": null
+    },
+    {
+      "at": "44:33",
+      "kind": "aside",
+      "quote": "there's this wonderful book out of some Google people called How to Scale Your Model",
+      "what_was_filtered": "Roofline analysis and transformer math are pointed to an external book (TPU-centred).",
+      "kp": null
+    },
+    {
+      "at": "51:37",
+      "kind": "defer-later",
+      "quote": "So maybe on Wednesday I'll report back on how we did",
+      "what_was_filtered": "The Marin pre-registered loss result is promised for a later lecture.",
+      "kp": null
+    },
+    {
+      "at": "52:00",
+      "kind": "defer-assignment",
+      "quote": "So in Assignment 3, I think this is either fun or actually, it's a fun-- let's just say it's a fun assignment.",
+      "what_was_filtered": "Fitting scaling laws and extrapolating (the work behind D = 20N) goes to Assignment 3.",
+      "kp": "chinchilla-d-20n"
+    },
+    {
+      "at": "54:30",
+      "kind": "defer-later",
+      "quote": "One thing we'll talk about is, evaluation is a fairly deep topic.",
+      "what_was_filtered": "Evaluation is previewed and left to the data unit.",
+      "kp": null
+    },
+    {
+      "at": "59:40",
+      "kind": "defer-assignment",
+      "quote": "So in Assignment 4, we're going to make you start with a very raw corpus",
+      "what_was_filtered": "Filtering and deduplicating a raw crawl goes to Assignment 4.",
+      "kp": null
+    },
+    {
+      "at": "1:02:28",
+      "kind": "defer-later",
+      "quote": "It's a big, wonderful mess, which, hopefully, we'll talk more about when we come to that.",
+      "what_was_filtered": "RL systems (rollouts, off-policy lag) are left to the alignment unit.",
+      "kp": null
+    },
+    {
+      "at": "1:02:33",
+      "kind": "defer-assignment",
+      "quote": "So Assignment 5, we're still deciding what exactly we want to do.",
+      "what_was_filtered": "Assignment 5's content is undecided (last year: DPO and GRPO).",
+      "kp": null
+    },
+    {
+      "at": "1:05:15",
+      "kind": "aside",
+      "quote": "So Andrej Karpathy has this really good video on tokenization. You should check it out.",
+      "what_was_filtered": "Deeper tokenization material is pointed to Karpathy's video.",
+      "kp": null
+    },
+    {
+      "at": "1:05:54",
+      "kind": "skip",
+      "quote": "Actually, I should have tried to get in there earlier. So this is not going to work.",
+      "what_was_filtered": "The interactive tokenizer site did not load; the observations were read out instead of demonstrated.",
+      "kp": "gpt-tokenizer-observations"
+    },
+    {
+      "at": "1:08:22",
+      "kind": "skip",
+      "quote": "I think we'll skip it in the interest of time.",
+      "what_was_filtered": "Browsing the GPT-5 vocabulary file (L614) is skipped.",
+      "kp": "vocab-size-vs-sequence-length"
+    },
+    {
+      "at": "1:08:30",
+      "kind": "aside",
+      "quote": "So I'm going to go through this fast.",
+      "what_was_filtered": "The character, byte and word tokenizers are covered quickly.",
+      "kp": null
+    },
+    {
+      "at": "1:13:57",
+      "kind": "aside",
+      "quote": "I guess there's a few ties, but we'll just take the first one.",
+      "what_was_filtered": "How ties between equally frequent pairs are broken is waved past.",
+      "kp": "bpe-merge-step"
+    },
+    {
+      "at": "1:15:44",
+      "kind": "skip",
+      "quote": "OK, let me actually not step through that code.",
+      "what_was_filtered": "Stepping through BPETokenizer.encode() is skipped; only its output is shown.",
+      "kp": "bpe-encode-apply-merges"
+    },
+    {
+      "at": "1:16:00",
+      "kind": "aside",
+      "quote": "So I went through this a bit fast, just in the interest of time.",
+      "what_was_filtered": "The BPE unit was compressed for time.",
+      "kp": null
+    },
+    {
+      "at": "1:16:15",
+      "kind": "defer-assignment",
+      "quote": "So in Assignment 1, we're going to ask you to, basically, make it faster.",
+      "what_was_filtered": "A fast encoder, special tokens and pre-tokenization go to Assignment 1.",
+      "kp": "bpe-encode-apply-merges"
+    },
+    {
+      "at": "1:17:16",
+      "kind": "aside",
+      "quote": "At some point you might realize that Python is just not very fast.",
+      "what_was_filtered": "Implementing the tokenizer in Rust or C is suggested, not covered.",
+      "kp": "bpe-encode-apply-merges"
+    },
+    {
+      "at": "1:19:01",
+      "kind": "defer-later",
+      "quote": "Next time, on Wednesday, we're going to start the unit on resource accounting.",
+      "what_was_filtered": "Resource accounting is next lecture.",
+      "kp": null
+    }
+  ],
+  "spoken_map": [
+    {
+      "from": "0:04",
+      "to": "2:18",
+      "kp": null,
+      "what": "welcome and staff introductions"
+    },
+    {
+      "from": "2:18",
+      "to": "3:23",
+      "kp": null,
+      "what": "what is new in this offering"
+    },
+    {
+      "from": "3:23",
+      "to": "5:49",
+      "kp": null,
+      "what": "why the course exists; industrialization of language models"
+    },
+    {
+      "from": "5:49",
+      "to": "7:09",
+      "kp": null,
+      "what": "small models may not represent frontier models: MLP FLOP share (Roller table) and emergence"
+    },
+    {
+      "from": "7:09",
+      "to": "9:15",
+      "kp": null,
+      "what": "mechanics, mindset and intuitions; SwiGLU 'divine benevolence'"
+    },
+    {
+      "from": "9:15",
+      "to": "11:36",
+      "kp": "efficiency-framing"
+    },
+    {
+      "from": "11:36",
+      "to": "14:52",
+      "kp": null,
+      "what": "history: n-grams to GPT-3 and Chinchilla"
+    },
+    {
+      "from": "14:52",
+      "to": "17:32",
+      "kp": null,
+      "what": "history: open-model ecosystem"
+    },
+    {
+      "from": "17:32",
+      "to": "19:26",
+      "kp": null,
+      "what": "what a language model is today (agents); fundamentals unchanged; questions"
+    },
+    {
+      "from": "19:26",
+      "to": "20:03",
+      "kp": null,
+      "what": "what an executable lecture is"
+    },
+    {
+      "from": "20:03",
+      "to": "23:29",
+      "kp": null,
+      "what": "course logistics: units, workload, who should take it, following at home"
+    },
+    {
+      "from": "23:29",
+      "to": "27:17",
+      "kp": null,
+      "what": "assignments, AI policy, compute"
+    },
+    {
+      "from": "27:17",
+      "to": "28:06",
+      "kp": null,
+      "what": "syllabus overview; basics unit"
+    },
+    {
+      "from": "28:06",
+      "to": "29:50",
+      "kp": "tokenization-efficiency-lens"
+    },
+    {
+      "from": "29:50",
+      "to": "31:48",
+      "kp": null,
+      "what": "syllabus: architecture refinements"
+    },
+    {
+      "from": "31:48",
+      "to": "33:45",
+      "kp": null,
+      "what": "syllabus: training and hyperparameters"
+    },
+    {
+      "from": "33:45",
+      "to": "35:53",
+      "kp": null,
+      "what": "Assignment 1 and the expressivity/stability/efficiency balance"
+    },
+    {
+      "from": "35:53",
+      "to": "36:39",
+      "kp": null,
+      "what": "systems unit; resource accounting preview"
+    },
+    {
+      "from": "36:39",
+      "to": "36:53",
+      "kp": "six-nd-preview"
+    },
+    {
+      "from": "36:53",
+      "to": "38:28",
+      "kp": null,
+      "what": "hardware preview: memory vs compute, B200 numbers, roofline, DGX"
+    },
+    {
+      "from": "38:28",
+      "to": "40:25",
+      "kp": null,
+      "what": "syllabus: kernels, fusion, tiling"
+    },
+    {
+      "from": "40:25",
+      "to": "41:38",
+      "kp": null,
+      "what": "syllabus: parallelism"
+    },
+    {
+      "from": "41:38",
+      "to": "44:02",
+      "kp": null,
+      "what": "syllabus: inference (prefill/decode, speculative decoding, batching)"
+    },
+    {
+      "from": "44:02",
+      "to": "45:12",
+      "kp": null,
+      "what": "Assignment 2; How to Scale Your Model"
+    },
+    {
+      "from": "45:12",
+      "to": "48:15",
+      "kp": null,
+      "what": "scaling unit: scaling recipes, predicting loss"
+    },
+    {
+      "from": "48:15",
+      "to": "49:17",
+      "kp": null,
+      "what": "hyperparameter transfer; predictability vs optimality"
+    },
+    {
+      "from": "49:17",
+      "to": "51:09",
+      "kp": "chinchilla-d-20n"
+    },
+    {
+      "from": "51:09",
+      "to": "52:00",
+      "kp": null,
+      "what": "Marin pre-registered scaling prediction"
+    },
+    {
+      "from": "52:00",
+      "to": "53:28",
+      "kp": null,
+      "what": "Assignment 3 (training API)"
+    },
+    {
+      "from": "53:28",
+      "to": "56:45",
+      "kp": null,
+      "what": "data unit: evaluation"
+    },
+    {
+      "from": "56:45",
+      "to": "59:40",
+      "kp": null,
+      "what": "data unit: curation, processing, mid- and post-training data"
+    },
+    {
+      "from": "59:40",
+      "to": "1:00:20",
+      "kp": null,
+      "what": "Assignment 4"
+    },
+    {
+      "from": "1:00:20",
+      "to": "1:02:33",
+      "kp": null,
+      "what": "alignment unit: weak supervision, RL, RL systems"
+    },
+    {
+      "from": "1:02:33",
+      "to": "1:02:54",
+      "kp": null,
+      "what": "Assignment 5"
+    },
+    {
+      "from": "1:02:54",
+      "to": "1:04:46",
+      "kp": "efficiency-framing"
+    },
+    {
+      "from": "1:04:46",
+      "to": "1:05:06",
+      "kp": null,
+      "what": "questions"
+    },
+    {
+      "from": "1:05:06",
+      "to": "1:05:50",
+      "kp": "tokenizer-interface"
+    },
+    {
+      "from": "1:05:50",
+      "to": "1:07:00",
+      "kp": "gpt-tokenizer-observations"
+    },
+    {
+      "from": "1:07:00",
+      "to": "1:07:25",
+      "kp": "tokenizer-interface"
+    },
+    {
+      "from": "1:07:25",
+      "to": "1:07:56",
+      "kp": "compression-ratio"
+    },
+    {
+      "from": "1:07:56",
+      "to": "1:08:28",
+      "kp": "vocab-size-vs-sequence-length"
+    },
+    {
+      "from": "1:08:28",
+      "to": "1:09:45",
+      "kp": "character-tokenizer"
+    },
+    {
+      "from": "1:09:45",
+      "to": "1:10:08",
+      "kp": "utf8-variable-length"
+    },
+    {
+      "from": "1:10:08",
+      "to": "1:10:48",
+      "kp": "byte-tokenizer"
+    },
+    {
+      "from": "1:10:48",
+      "to": "1:11:58",
+      "kp": "word-tokenizer"
+    },
+    {
+      "from": "1:11:58",
+      "to": "1:12:55",
+      "kp": "bpe-idea"
+    },
+    {
+      "from": "1:12:55",
+      "to": "1:15:21",
+      "kp": "bpe-merge-step"
+    },
+    {
+      "from": "1:15:21",
+      "to": "1:17:29",
+      "kp": "bpe-encode-apply-merges"
+    },
+    {
+      "from": "1:17:29",
+      "to": "1:18:01",
+      "kp": null,
+      "what": "tokenization summary"
+    },
+    {
+      "from": "1:18:01",
+      "to": "1:18:58",
+      "kp": "tokenization-efficiency-lens"
+    },
+    {
+      "from": "1:18:58",
+      "to": "1:19:17",
+      "kp": null,
+      "what": "wrap-up; next lecture"
+    }
+  ]
+}

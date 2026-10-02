@@ -1,0 +1,94 @@
+{
+  "fixture": "lecture_02--checkpoint-sweep",
+  "family": "checkpoint-strip",
+  "scene": "CheckpointStripScene",
+  "quality": "480p15",
+  "knowledge_points": [
+    "activation-checkpointing"
+  ],
+  "video": "video.mp4",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "width": 854,
+        "height": 480
+      }
+    ],
+    "format": {
+      "duration": "21.466667"
+    }
+  },
+  "steps": [
+    {
+      "id": "s0",
+      "time": 4.467,
+      "caption": "forward: keep every 4th layer, free the rest",
+      "frame": "frames/s0.png",
+      "notices": []
+    },
+    {
+      "id": "s1",
+      "time": 6.933,
+      "caption": "backward, last segment: recompute 13-16 from its checkpoint",
+      "frame": "frames/s1.png",
+      "notices": [
+        "n1"
+      ]
+    },
+    {
+      "id": "s2",
+      "time": 10.333,
+      "caption": "next segment: refill 9-12 from checkpoint 9",
+      "frame": "frames/s2.png",
+      "notices": [
+        "n2"
+      ]
+    },
+    {
+      "id": "s3",
+      "time": 13.733,
+      "caption": "segment 5-8",
+      "frame": "frames/s3.png",
+      "notices": []
+    },
+    {
+      "id": "s4",
+      "time": 17.133,
+      "caption": "segment 1-4",
+      "frame": "frames/s4.png",
+      "notices": []
+    },
+    {
+      "id": "s5",
+      "time": 19.467,
+      "caption": "peak 4 + 4 = 8 of 16 \u00b7 recompute 16 = one extra forward",
+      "frame": "frames/s5.png",
+      "notices": []
+    }
+  ],
+  "notices": [
+    {
+      "id": "n1",
+      "at_step": "s1",
+      "claim": "Backward refills only the current segment from its checkpoint: 4 checkpoints + 4 recomputed = 8 resident, half of store-all's 16.",
+      "evidence": [
+        "strip.recomp",
+        "resident",
+        "counters"
+      ]
+    },
+    {
+      "id": "n2",
+      "at_step": "s2",
+      "claim": "The next segment refills from the next checkpoint down while the used checkpoint is freed, so the resident count falls to 7 and the peak stays at 8.",
+      "evidence": [
+        "strip.recomp",
+        "strip.kept",
+        "counters"
+      ]
+    }
+  ],
+  "lint_worst": "OK"
+}

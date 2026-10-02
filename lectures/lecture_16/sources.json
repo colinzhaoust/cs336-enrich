@@ -1,0 +1,112 @@
+{
+  "lecture_16": {
+    "title": "CS336 Spring 2026, Lecture 16: Post-training 2, reinforcement learning from verifiable rewards",
+    "kind": "slides",
+    "path": "official/lectures/lecture_16.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_16 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_16.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1; p62 is an empty trailing page)",
+    "note": "Evidence is the text layer of the slides (lecture_16.txt), extracted page-by-page by discover_slides.py (sha256 of txt in discovered.json). The deck is screenshot-heavy: the PPO objective (p7), the AlpacaFarm loss/rollout code (p11-p13), the GAE formula (p15), the GRPO objective and the nano-aha-moment advantage code (p18-p20), the Dr. GRPO objective (p23), every results table/plot (p21, p29-p30, p36, p47-p48, p53-p54) and the Kimi RL setup (p46) are images; only their captions survive in the text layer. Numbers visible only in those images are recorded in filtering_note, never in statements or prompts."
+  },
+  "lecture_16_video": {
+    "title": "CS336 Spring 2026, Lecture 16: Post-training 2, reinforcement learning from verifiable rewards (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=dIFAi87Ws4E",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  },
+  "lecture_15": {
+    "title": "CS336 Spring 2026, Lecture 15: Post-training 1 (SFT, RLHF, DPO)",
+    "kind": "slides",
+    "path": "official/lectures/lecture_15.pdf",
+    "note": "Prerequisite deck: reward models, RLHF, DPO and the overoptimization warning (p62-p63 of lecture_15.pdf). No atlas thread exists for it yet, so external_prerequisites of the form lecture_15:<topic> are placeholders (basis author-inference) and no quotes are anchored into it."
+  },
+  "feynrl_repo": {
+    "title": "FeynRL: RL post-training library (local clone; atlas thread atlas/repos/feynrl)",
+    "kind": "repo",
+    "path": "external/FeynRL",
+    "note": "The repo thread implements the mechanisms these slides describe: feynrl:grpo-clipped-loss (ratio = exp(logp - old_logp), min/clip), feynrl:group-relative-advantage (z-score within a prompt's n_samples), feynrl:kl-reference-penalty (reference model loaded only if kl_coeff > 0), feynrl:supp-importance-ratio, feynrl:cispo-vs-ppo-clip, feynrl:sync-epoch-loop and feynrl:staleness-budget-max-lag. Referenced through external_prerequisites and see_also (ids are feynrl:<kp-id>); no line anchors are placed from this thread."
+  },
+  "ppo_paper": {
+    "title": "Proximal Policy Optimization Algorithms (Schulman, Wolski, Dhariwal, Radford, Klimov, 2017)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1707.06347",
+    "note": "Slide p6 shows the 2017 PPO announcement blog and OpenAI Five (2019); p5 names TRPO (Schulman et al. 2015, arXiv:1502.05477) as 'Attempt 2'."
+  },
+  "spinningup_ppo": {
+    "title": "OpenAI Spinning Up: Proximal Policy Optimization",
+    "kind": "reading",
+    "url": "https://spinningup.openai.com/en/latest/algorithms/ppo.html",
+    "note": "Slide p7 reproduces the PPO-Clip objective figure from this page; the objective itself is image-only in the deck."
+  },
+  "alpaca_farm_ppo": {
+    "title": "AlpacaFarm PPO trainer (tatsu-lab/alpaca_farm, src/alpaca_farm/rl/ppo_trainer.py @30717dd)",
+    "kind": "repo",
+    "url": "https://github.com/tatsu-lab/alpaca_farm/blob/30717ddae735365de756ee2085191b491a71788d/src/alpaca_farm/rl/ppo_trainer.py",
+    "note": "Slides p10-p16 walk through this implementation (outer loop, loss with Cliprange=0.2, rollouts, per-token KL reward shaping, GAE). Code is shown as screenshots."
+  },
+  "zheng_2023_secrets_rlhf": {
+    "title": "Secrets of RLHF in Large Language Models Part I: PPO (Zheng et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2307.04964",
+    "note": "Slide p9 ('From Zheng et al 2023'): the token-level MDP picture for PPO on language models."
+  },
+  "deepseekmath_grpo": {
+    "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (Shao et al., 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2402.03300",
+    "note": "Origin of GRPO. Slide p18 shows its PPO-vs-GRPO figure; p21 its results against RFT with and without process supervision; p27 and p38 cite it for R1's choice of GRPO and for the PRM negative results."
+  },
+  "nano_aha_moment": {
+    "title": "nano-aha-moment: a single-file GRPO implementation (McGill-NLP)",
+    "kind": "repo",
+    "url": "https://github.com/McGill-NLP/nano-aha-moment",
+    "note": "Slides p19-p20 walk through its reward, per-group mean/var normalization (with a 1e-4 stability term in the std), KL term and gradient update."
+  },
+  "sutton_barto": {
+    "title": "Reinforcement Learning: An Introduction (Sutton and Barto, 2nd ed., 2018)",
+    "kind": "reading",
+    "url": "http://incompleteideas.net/book/the-book-2nd.html",
+    "note": "Slide p22 shows the baseline-subtraction passage: any state-dependent term may be subtracted from the reward without biasing the policy gradient."
+  },
+  "dr_grpo": {
+    "title": "Understanding R1-Zero-Like Training: A Critical Perspective (Dr. GRPO; Liu et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2503.20783",
+    "note": "Slide p23 ('Liu et al 2025') shows the unbiased GRPO objective (drops the std division and the per-response length normalizer); p24 the length-bias analysis; p30 the follow-up analyses that the R1-Zero length growth is partly due to the biased objective and that the base model already shows 'aha' behaviour."
+  },
+  "deepseek_r1": {
+    "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning (DeepSeek-AI, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.12948",
+    "note": "Case study p26-p38: R1-Zero (accuracy + format rewards on DeepSeek-V3 base), R1 (reasoning SFT, GRPO with language-consistency reward, SFT/RLHF), distillation into Qwen 2.5, and the unsuccessful-attempts section (PRMs, MCTS)."
+  },
+  "s1_simple_test_time_scaling": {
+    "title": "s1: Simple test-time scaling (Muennighoff et al., 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.19393",
+    "note": "Inferred source of slide p33 ('1k Math and science questions + Long CoTs from Gemini / r1'); the slide does not name the paper (basis: inference)."
+  },
+  "prm800k_lets_verify": {
+    "title": "Let's Verify Step by Step (Lightman et al., 2023; PRM800K)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2305.20050",
+    "note": "Slide p38 names PRM800k alongside DeepSeekMath under 'unsuccessful attempts' (process reward models)."
+  },
+  "kimi_k15": {
+    "title": "Kimi k1.5: Scaling Reinforcement Learning with LLMs (Kimi Team, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2501.12599",
+    "note": "Case study p39-p48: difficulty filtering (fail on best-of-8, no multiple choice), long-CoT SFT, DPO-derived squared-loss policy gradient, length reward with lambda in [0.5, -0.5], curriculum by (1 - success_rate), RL infra, scaling results and the expert-iteration ablation."
+  },
+  "qwen3_report": {
+    "title": "Qwen3 Technical Report (Qwen Team, 2025)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2505.09388",
+    "note": "Case study p49-p54: difficulty filtering by best-of-n, GRPO on only 3995 examples, thinking-mode fusion, test-time scaling, and the stage-composition table where math/STEM drops slightly after general RLHF."
+  },
+  "qwen3_coder_next": {
+    "title": "Qwen3-Coder-Next (Qwen Team, 2026)",
+    "kind": "reading",
+    "url": "https://qwenlm.github.io/blog/qwen3-coder-next/",
+    "note": "Slides p55-p60 (agentic RL, mid-training sources, expert models, 800k SWE-bench-style environments). Frontier material; not made into KPs, recorded in rl-infra-cost's filtering_note."
+  }
+}

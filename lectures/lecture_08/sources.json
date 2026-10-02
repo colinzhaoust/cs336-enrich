@@ -1,0 +1,137 @@
+{
+  "lecture_08": {
+    "title": "CS336 Spring 2026, Lecture 8: Parallelism basics",
+    "kind": "slides",
+    "path": "official/lectures/lecture_08.pdf",
+    "upstream": "https://github.com/stanford-cs336/spring2025-lectures (lecture_08 slides, Tatsu Hashimoto)",
+    "anchor_convention": "lecture_08.pdf:p<page>, page numbers from `pdftotext -layout` form feeds (title slide = p1, 73 pages)",
+    "note": "Evidence is the text layer of the slides (lecture_08.txt), extracted page-by-page by discover_slides.py (txt sha256 in discovered.json). Many numbers live only in pasted figures/tables with no text layer: the SuperPOD bisection-bandwidth table (p9), the GB200 NVL72 vs CloudMatrix 384 table (p12), the batch-size vs pipeline-depth throughput plot (p36), the activation-memory formulas' coefficients 34 and 24/t (p46-p47; only '5 as/h', '10 term', '4sbh', '2sbh' are text), the TPU-book batch-size plot (p56), the Narayanan 2021 scaling table (p59; only the DP-size column 32..6 is text), the PTD-P vs ZeRO-3 plot (p60), the (PP,TP) sweep plot (p61), the recomputation plot (p62) and the Llama 3 405B configuration table (p66). Those are recorded in filtering_notes as figure-only and are not used as answer keys unless the deck restates them in text (p59 notes, p61 caption, p72 table)."
+  },
+  "lecture_07": {
+    "title": "CS336 Spring 2026, Lecture 7: Parallelism (executable, Percy Liang)",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_07.py",
+    "upstream": "https://github.com/stanford-cs336/lectures/blob/main/lecture_07.py",
+    "note": "Covers the same topic from the code side; see atlas/lectures/lecture_07/knowledge_points.json (16 KPs: interconnect-hierarchy, collective-taxonomy, all-gather, reduce-scatter, all-reduce-decomposition, all-to-all, rdma-nccl, torch-distributed-setup, benchmark-method, collective-bytes, data-parallelism-ddp, zero-sharding, tensor-parallelism, pipeline-sharding, pipeline-bubble, parallelism-axes). Referenced only through external_prerequisites (lecture_07:<kp-id>). This deck adds what the executable lecture does not: the bandwidth hierarchy between GPUs/nodes, communication/compute ratios per parallelism type, ZeRO stages 1-3 vs FSDP accounting, activation memory under TP/SP, expert/context parallelism, the 3D-parallelism recipe and what recent LMs actually run."
+  },
+  "lecture_02": {
+    "title": "CS336 Spring 2026, Lecture 2: Resource accounting",
+    "kind": "executable-lecture",
+    "path": "official/lectures/lecture_02.py",
+    "note": "Referenced only through external_prerequisites (lecture_02:<kp-id>); see atlas/lectures/lecture_02/knowledge_points.json (dtype-bytes, mixed-precision, optimizer-state-memory, gradient-accumulation, activation-checkpointing, napkin-max-model-size)."
+  },
+  "lecture_05": {
+    "title": "CS336 Spring 2026, Lecture 5: GPUs",
+    "kind": "slides",
+    "path": "official/lectures/lecture_05.pdf",
+    "note": "Referenced only through external_prerequisites (lecture_05:<kp-id>); see atlas/lectures/lecture_05/knowledge_points.json (gpu-memory-hierarchy, memory-wall-roofline, recomputation-memory-traffic, flash-attention-forward)."
+  },
+  "megatron_lm_2019": {
+    "title": "Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism (Shoeybi et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1909.08053",
+    "note": "Source of the column/row tensor-parallel MLP figure on slide p40 (f identity / g all-reduce) and the QKV-columnwise, output-rowwise split on p41."
+  },
+  "megatron_ptd_p_2021": {
+    "title": "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM (Narayanan et al., 2021)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2104.04473",
+    "note": "Cited by name on slide p59 ('Scaling strategies from Narayanan 2021'); source of the scaling table (p59), Figure 10 PTD-P vs ZeRO-3 (p60), Figure 13 (PP,TP) sweep on 64 A100s (p61), the recomputation-vs-batch-size plot (p62), and the batch-size vs pipeline-depth plot (p36)."
+  },
+  "zero_2020": {
+    "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models (Rajbhandari et al., 2020)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1910.02054",
+    "note": "ZeRO stages 1-3 (slides p18-p28). The deck's '(4+K)*#params' memory notation on p21 follows the paper's K bytes of optimizer state per parameter."
+  },
+  "fsdp_pytorch_2023": {
+    "title": "PyTorch FSDP: Experiences on Scaling Fully Sharded Data Parallel (Zhao et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2304.11277",
+    "note": "Linked on slide p26 (https://arxiv.org/pdf/2304.11277.pdf); the all-gather / reduce-scatter overlap timeline figure."
+  },
+  "fsdp_tutorial": {
+    "title": "Getting Started with Fully Sharded Data Parallel (PyTorch tutorial)",
+    "kind": "reading",
+    "url": "https://pytorch.org/tutorials/intermediate/FSDP_tutorial.html",
+    "note": "Linked on slide p25 for the 'baby version' of ZeRO-3: 2 all-gathers + 1 reduce-scatter per step."
+  },
+  "gpipe_2018": {
+    "title": "GPipe: Efficient Training of Giant Neural Networks using Pipeline Parallelism (Huang et al., 2018)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1811.06965",
+    "note": "Source of the micro-batch pipeline schedule figure on slides p33-p34 (F_{i,j} / B_{i,j} grid with the bubble)."
+  },
+  "pipedream_2019": {
+    "title": "PipeDream: Generalized Pipeline Parallelism for DNN Training (Narayanan et al., 2019)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/1806.03377",
+    "note": "1F1B scheduling, referenced indirectly via '1F1B A2A Overlap' on slide p64 and the Megatron recommendations on p58."
+  },
+  "zero_bubble_2023": {
+    "title": "Zero Bubble Pipeline Parallelism (Qi et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.10241",
+    "note": "Slide p38: split the backward pass into activation-gradient and weight-gradient halves; the second 'can be done whenever'. Frontier material, folded into pipeline-bubble's filtering_note."
+  },
+  "sequence_parallel_2022": {
+    "title": "Reducing Activation Recomputation in Large Transformer Models (Korthikanti et al., 2022)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2205.05198",
+    "note": "Cited on slide p45 as '[Korthikanti et al 2022]'. Source of the per-layer activation-memory formulas sbh(34 + 5as/h) (p46) and sbh(10 + 24/t + 5as/(ht)) under tensor parallel (p47), the sequence-parallel block figure (p48) and the fully-sharded version (p49). The coefficients 34 and 24 are figure-only in the deck."
+  },
+  "ring_attention_2023": {
+    "title": "Ring Attention with Blockwise Transformers for Near-Infinite Context (Liu et al., 2023)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2310.01889",
+    "note": "Slide p54: context parallel / ring attention, one line only."
+  },
+  "megatron_core_moe_docs": {
+    "title": "Megatron Core developer guide: MoE features (parallelism guidelines)",
+    "kind": "reading",
+    "url": "https://docs.nvidia.com/megatron-core/developer-guide/latest/user-guide/features/moe.html",
+    "note": "Linked on slides p53 (TP/CP/DP vs ETP/EP/EDP decoupling) and p58 (Guidelines 1-5: minimise model parallelism, keep EP/TP inside the NVLink domain, PP for multi-node, prefer EP over TP for expert layers, CP for long sequences). Also the source of the Mixtral 8x22B and Qwen 3 rows on p69, p71, p72."
+  },
+  "semianalysis_cloudmatrix": {
+    "title": "Huawei AI CloudMatrix 384: China's answer to Nvidia GB200 NVL72 (SemiAnalysis)",
+    "kind": "reading",
+    "url": "https://newsletter.semianalysis.com/p/huawei-ai-cloudmatrix-384-chinas-answer-to-nvidia-gb200-nvl72",
+    "note": "Slide p12 table (scale-up domain size 72 vs 384 GPUs); figure-only numbers."
+  },
+  "scaling_book_training": {
+    "title": "How to Scale Your Model: Training (jax-ml)",
+    "kind": "reading",
+    "url": "https://jax-ml.github.io/scaling-book/training/",
+    "note": "Slide p56 'Model vs Tensor parallel (TPU book)': compute-vs-comm per layer table and the batch-size-per-chip plot; figure-only."
+  },
+  "deepseek_v3_2024": {
+    "title": "DeepSeek-V3 Technical Report (DeepSeek-AI, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2412.19437",
+    "note": "Slide p64 line 'V3 - PP (16), EP (64-way, 8 nodes), ZeRO stage 1 ... EP uses 1F1B A2A Overlap' and the p72 table row."
+  },
+  "deepseek_llm_2024": {
+    "title": "DeepSeek LLM: Scaling Open-Source Language Models with Longtermism (DeepSeek-AI, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2401.02954",
+    "note": "Slide p64 screenshot of section 2.4 'Infrastructures' (HAI-LLM: data, tensor, sequence and 1F1B pipeline parallelism, ZeRO-1)."
+  },
+  "llama3_2024": {
+    "title": "The Llama 3 Herd of Models (Meta, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2407.21783",
+    "note": "Slides p66-p67: 405B parallelism table (TP/CP/PP/DP per training stage) and the 'order [TP, CP, PP, DP] is optimized for network communication' paragraph; figure-only in the deck, restated in the p72 table as 128/8/0/16/1."
+  },
+  "gemma2_2024": {
+    "title": "Gemma 2: Improving Open Language Models at a Practical Size (Google DeepMind, 2024)",
+    "kind": "paper",
+    "url": "https://arxiv.org/abs/2408.00118",
+    "note": "Slide p68: ZeRO-3-like optimizer sharding with model sharding (TP+SP) and data replication on TPU; p72 row 768/8/0/0/0."
+  },
+  "lecture_08_video": {
+    "title": "CS336 Spring 2026, Lecture 8: Parallelism basics (lecture video)",
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=6-cXp-aOmdg",
+    "note": "human-made YouTube captions; anchors video:M:SS-M:SS"
+  }
+}

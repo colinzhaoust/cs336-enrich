@@ -1,0 +1,749 @@
+{
+  "lecture": "lecture_05",
+  "source_path": "official/lectures/lecture_05.pdf",
+  "anchor_convention": "lecture_05.pdf:p<page>",
+  "txt_sha256": "a6b21ff193001a12174fb77d3cc6690e1b073d868de362fef39fe8a6b7a7e0ee",
+  "page_count": 56,
+  "empty_pages": [
+    56
+  ],
+  "summary": {
+    "pages_with_content": 55,
+    "claims": 176,
+    "figures_mentioned": 3,
+    "cites": 23,
+    "dropped": 7
+  },
+  "pages": [
+    {
+      "page": 1,
+      "title": "Lecture 5",
+      "claims": [
+        "GPUS",
+        "CS336",
+        "Tatsu H"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 2,
+      "title": "Outline and goals",
+      "claims": [
+        "Make CUDA and GPUs less magic",
+        "Understand when GPUs get slow",
+        "Understand how to make fast algorithms"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://www.thonking.ai/p/what-shapes-do-matrix-multiplications",
+        "Dao et al, Flash Attention"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 3,
+      "title": "Before we start..",
+      "claims": [
+        "Substantial credit goes to a few sources that I’d like to highlight..",
+        "Horace He’s blog",
+        "CUDA Mode group",
+        "TPU (and now GPU) book (!!)",
+        "And other sources including"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://nichijou.co/",
+        "https://jonathan-hui.medium.com/"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 4,
+      "title": "Organization today:",
+      "claims": [
+        "Part 1: GPUs in depth – how they work and important parts",
+        "Part 2: Understanding GPU performance",
+        "Part 3: Putting it together – unpacking FlashAttention"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 5,
+      "title": "Setting the stage: compute leads to predictable perf",
+      "claims": [
+        "Often times, compute leads to predictable performance gains for language models",
+        "Faster hardware, better utilization, improved parallelization alone can drive progress (for now..)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "Kaplan et al, Neural Scaling Laws"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 6,
+      "title": "How do we get compute scaling? Early on – Dennard scaing",
+      "claims": [
+        "But the traditional form of scaling (Dennard scaling) from 1980-2000s has tapped out.",
+        ".. How do we feed LLMs’ insatiable appetite for compute?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 7,
+      "title": "Parallel scaling continues",
+      "claims": [
+        "Parallel scaling with GPUs has scaled > 1000x in 10 years.",
+        "There is no LLM scaling without GPU scaling"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "Bill dally, HotChips keynote"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 8,
+      "title": "How is a GPU different from a CPU?",
+      "claims": [
+        "CPUs optimize for a few, fast threads while GPUs optimize for many many threads",
+        "Many tiny compute units (ALUs).",
+        "CPUs optimize for latency (each thread finishes quickly)",
+        "Much less support for branching (control, cache)",
+        "GPUs optimize for throughput (total processed data)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://developer.nvidia.com/blog/cuda-refresher-reviewing-the-origins-of-gpu-computing/"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 9,
+      "title": "Anatomy of a GPU (execution units)",
+      "claims": [
+        "Each SM further contains many SPs",
+        "GPUs have many SM (streaming",
+        "(streaming processor) that can",
+        "multiprocessors) that independently",
+        "execute ‘threads’ in parallel",
+        "execute ‘blocks’ (jobs)."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 10,
+      "title": "Anatomy of a GPU (memory)",
+      "claims": [
+        "The closer the memory to the SM, the faster it is – L1 and shared memory is inside",
+        "the SM. L2 cache is on die, and global memory are the memory chips next to the GPU",
+        "SRAM (shared/cache memory) is much more expensive (100x) but ~ 8x faster than DRAM (Global memory)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 11,
+      "title": "Execution model of a GPU",
+      "claims": [
+        "There are 3 important players in the execution model",
+        "Threads: Threads ‘do the work’ in parallel – all threads execute the same instructions but with",
+        "different inputs (SIMT).",
+        "Blocks: Blocks are groups of threads. Each block runs on a SM w/ its own shared memory.",
+        "Warp: Threads always execute in a ‘warp’ of 32 consecutively numbered threads each."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 12,
+      "title": "Memory model of a GPU",
+      "claims": [
+        "Each thread can access its own register, and shared memory within the block.",
+        "Information that goes across blocks need to be read/written to global memory (slow)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 13,
+      "title": "Side thread – What about TPUs?",
+      "claims": [
+        "GPUs, TPUs, and many other accelerators are at a high level, similar",
+        "A GPU has more SMs",
+        "TPUs has fewer TCs",
+        "(but similar matmul perf)",
+        "Core structure – lightweight control, fast (big) matmul unit, fast memory.",
+        "Differences - how the accelerators are networked (in the parallelism lecture)",
+        "no warps (just blocks – tradeoffs in matmul vs non-matmul)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 14,
+      "title": "Side thread – What about TPUs?",
+      "claims": [
+        "Core structure – lightweight control, fast (big) matmul unit, fast memory."
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://jax-ml.github.io/scaling-book/gpus/"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 15,
+      "title": "Strengths of the GPU model",
+      "claims": [
+        "Easily scales up hard workloads (by adding more SMs)",
+        "Easy (?) to program due to the SIMT model",
+        "Threads are ‘lightweight’ and can be stopped and started"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 16,
+      "title": "GPUs as fast matrix multipliers",
+      "claims": [
+        "Early days of NVIDIA GPUs – programmable shaders. Researchers hacked this to do matmuls"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 17,
+      "title": "New matmul hardware means matmuls are fast and special",
+      "claims": [
+        "Tensor cores (introduced in V, T series) are specialized matrix multiplication circuits.",
+        "Matmuls are >10x faster than other floating point ops!"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 18,
+      "title": "Compute scaling is faster than memory scaling",
+      "claims": [
+        "FLOPs scale faster than memory – it’s hard to keep our compute units fed with data!"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://medium.com/riselab/ai-and-memory-wall-2cb4265cb0b8"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 19,
+      "title": "Recap: GPUs – what are they and how do they work",
+      "claims": [
+        "GPUs are massively parallel – same instructions",
+        "applied across many workers",
+        "Compute (and esp matmuls) have scaled faster",
+        "than memory",
+        "We have to respect the memory hierarchy to",
+        "make things go fast."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 20,
+      "title": "Part 2: Making ML workloads fast on a GPU",
+      "claims": [
+        "Performance on a GPU can be complex, even for something as simple as a square matmul"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 21,
+      "title": "What makes ML workloads fast?",
+      "claims": [
+        "The roofline model",
+        "Key to this section: how do we avoid being memory bound?"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 22,
+      "title": "How do we make GPUs go fast?",
+      "claims": [
+        "1. Control divergence (not a memory bottleneck..)",
+        "2. Low precision computation",
+        "3. Operator fusion",
+        "4. Recomputation",
+        "5. Coalescing memory",
+        "6. Tiling"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 23,
+      "title": "Control divergence (not a memory issue)",
+      "claims": [
+        "GPUs operate in a SIMT model – every thread in a warp is executing the same instruction",
+        "Conditionals are fine, but lead to significant overhead from the execution model"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 24,
+      "title": "Trick 1: Low precision computation",
+      "claims": [
+        "If you have fewer bits, you have fewer bits to move"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 25,
+      "title": "Low precision improves arithmetic intensity",
+      "claims": [
+        "Example: elementwise ReLU (𝑥 = max(0, 𝑥)) on a vector of size 𝑛.",
+        "(Float 32 case)",
+        "Memory access: 1 read (x), 1 write (if x < 0), float 32 = 4 bytes per op",
+        "Operations: 1 comparison op, 1 FLOP.",
+        "Intensity: 8 bytes / FLOP",
+        "(Float 16)",
+        "Memory access: 1 read (x), 1 write (if x < 0), float 16 = 2 bytes per op",
+        "Operations: 1 comparison op, 1 FLOP.",
+        "Intensity: 4 bytes / FLOP"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 26,
+      "title": "Low precision drives faster matrix multiplies",
+      "claims": [
+        "Lots of operations in modern GPUs are accelerated via low / mixed precision operations",
+        "Tensor cores"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://nvlabs.github.io/eccv2020-mixed-precision-tutorial/files/dusan_stosic-training-neural-networks-with-tensor-cores.pdf"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 27,
+      "title": "Frontiers in low precision",
+      "claims": [
+        "Very low precision (FP8) with different tradeoffs",
+        "Multiple scaling factors MXFP8 (Blackwell)",
+        "MXFP8 has many interesting things about it",
+        "Uses E4M3 (more mantissa) due to more scale factors",
+        "Scale factors themselves are FP8 (E8M0), 1 per 32",
+        "Transposes are now nontrivial!"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 28,
+      "title": "MXFP8 training in practice",
+      "claims": [
+        "Notice – not all weights in MXFP8, transposes also separately quantized"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://arxiv.org/html/2506.08027v2"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 29,
+      "title": "Frontiers in low precision",
+      "claims": [
+        "MXFP4..",
+        "This is all the values you can represent! 1 per 16 scaling, E4M3 scaling factors."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 30,
+      "title": "Trick 2: Operator fusion",
+      "claims": [
+        "Think of a GPU like a factory – inputs come from a warehouse (memory) and is",
+        "processed at a factory",
+        "Compute scales up, memory doesn’t"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://horace.io/brrr_intro.html"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 31,
+      "title": "Operator fusion to minimize memory access",
+      "claims": [
+        "What if we have to do many operations? Shipping back and forth is somewhat silly",
+        "Naïve (non-fused)",
+        "Fused kernel"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 32,
+      "title": "Example – sines and cosines",
+      "claims": [
+        "Computing sin 2 𝑥 + cos 2 𝑥 naively launches 5 CUDA kernels (back and forth)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://towardsdatascience.com/how-pytorch-2-0-accelerates-deep-learning-with-operator-fusion-and-cpu-gpu-code-generation-35132a85bd26"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 33,
+      "title": "Fusion example",
+      "claims": [
+        "All 5 pointwise operations can be fused into a single CUDA kernel call.",
+        "‘Easy’ fusions like this can be done automatically by compilers (torch.compile)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 34,
+      "title": "Trick 3: recomputation",
+      "claims": [
+        "In backpropagation, we store the activations (yellow) and compute Jacobians (green)"
+      ],
+      "figures_mentioned": [
+        "[From cs221]"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 35,
+      "title": "Storing (and retrieving) activations can be expensive!",
+      "claims": [
+        "Let’s say we stack 3 sigmoids on top of each other.",
+        "This is really terrible for perf – 8 mem read/writes, very low arithmetic intensity."
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://dev-discuss.pytorch.org/t/min-cut-optimal-recomputation-i-e-activation-checkpointing-with-aotautograd/467"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 36,
+      "title": "Throw away the activations, re-compute them!",
+      "claims": [
+        "Throwing away computation can actually be optimal, w/ 5/8 th the memory accesses!"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://dev-discuss.pytorch.org/t/min-cut-optimal-recomputation-i-e-activation-checkpointing-with-aotautograd/467"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 37,
+      "title": "Trick (?) 4: Memory coalescing and DRAM",
+      "claims": [
+        "DRAM (global memory) is read in ‘burst mode’ – each read gives you many bytes!",
+        " Burst mode comes from the slow per-row copy to the sense amplifier"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://blog.csdn.net/xll_bit/article/details/117702476",
+        "https://www.youtube.com/watch?v=9BjVUmaXaCQ"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 38,
+      "title": "Memory coalescing",
+      "claims": [
+        "Memory accesses are coalesced if all the threads (in a warp) fall within the same burst",
+        "Reminder: a warp is a set of 32 consecutively",
+        "numbered threads that execute together in a",
+        "block. Memory accesses happen together"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 39,
+      "title": "Coalescing for matrix multiplication",
+      "claims": [
+        "For row-major matrices – threads that move along rows are not coalesced"
+      ],
+      "figures_mentioned": [
+        "Note how the second diagram reads the entire vector at each step!"
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 40,
+      "title": "Trick 5 (the big one): tiling",
+      "claims": [
+        "Tiling is the idea of grouping and ordering threads to minimize global memory access.",
+        "Let’s go back to matrix multiplication..",
+        "Note that memory access is not coalesced, and repeated (M0,0 and N1,0)"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 41,
+      "title": "Tiling – store and reuse information in shared memory",
+      "claims": [
+        "Cut up the matrix into smaller ‘tiles’, and load this into shared memory",
+        "Compute the matrix multiply in ‘phases’",
+        "1. Load 𝑀0,0 and 𝑁0,0 tiles into SHM",
+        "2. Compute partial sums for 𝑃",
+        "(Done with one tile)",
+        "3. Load the 𝑀0,0 and 𝑁2,0 tile into SHM",
+        "Advantages: repeated reads now access shared, not global memory",
+        "and memory access can be coalesced"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "4. …"
+      ]
+    },
+    {
+      "page": 42,
+      "title": "Tiling math",
+      "claims": [
+        "Non-tiled matrix multiply: each input is read 𝑁 times from global memory",
+        "Tiled matrix multiply: each input is read times from global memory, and 𝑇 times",
+        "within each tile. This is a factor of 𝑇 reduction in global memory access"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "𝑁",
+        "𝑇"
+      ]
+    },
+    {
+      "page": 43,
+      "title": "Complexities with tiling",
+      "claims": [
+        "Tile sizes may not divide the matrix size and lead to low utilization",
+        "Factors affecting tile sizes",
+        "Coalesced memory access",
+        "Shared memory size",
+        "Divisibility of the matrix dim"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#tile-quant"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 44,
+      "title": "Complexities with tiling 2 – memory alignment",
+      "claims": [
+        "Memory comes in bursts",
+        "Loading tiles are fast if",
+        "bursts align with the matrix",
+        "Coalesced accesses may be impossible depending on the dimension of the matrix..",
+        "(have to do padding)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://www.thonking.ai/p/what-shapes-do-matrix-multiplications"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 45,
+      "title": "Putting it together: understanding a matrix mystery",
+      "claims": [
+        "Why is it faster to have bigger matrices?",
+        "This section is from"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "https://www.thonking.ai/p/what-shapes-do-matrix-multiplications"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 46,
+      "title": "Matrix mystery",
+      "claims": [
+        "We understand some of this (compute intensity, tiling). Let’s take a closer look.."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 47,
+      "title": "Part 1: tiling",
+      "claims": [
+        "Tiling has a major impact through alignment."
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 48,
+      "title": "Part 2: wave quantization",
+      "claims": [
+        "What’s with the periodic behavior?",
+        "This happens at 1792 to 1793 size.",
+        "Why? Using a tile size of 256 × 128, there are",
+        "= 7 × 14 = 98",
+        "tiles. If we increase this to 1793, we have",
+        "8 × 15 = 120",
+        "tiles.",
+        "An A100 has 108 SMs, so it cannot execute all 120"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": [
+        "1792 1792",
+        "×",
+        "256",
+        "128"
+      ]
+    },
+    {
+      "page": 49,
+      "title": "Recap of part 2: making ML workloads go fast",
+      "claims": [
+        "Reduce memory accesses",
+        "Coalescing",
+        "Fusion",
+        "Move memory to shared memory",
+        "Tiling",
+        "Trade memory for compute/accuracy",
+        "Quantization",
+        "Recomputation"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 50,
+      "title": "Part 3: Using what we know to understand Flash Attention",
+      "claims": [
+        "Technique from paper:"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "Flash attention [Dao et al] dramatically accelerates attention.. But how?"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 51,
+      "title": "Recap of attention computation",
+      "claims": [
+        "Attention computation: 3 matrix multiplies (K, Q, V) with a softmax in between"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 52,
+      "title": "Tiling part 1: tiling for the KQV matrix multiply",
+      "claims": [
+        "But what do we do about the softmax?"
+      ],
+      "figures_mentioned": [
+        "This figure 1 from the paper is literally just tiling for a KQV matrix multiply.."
+      ],
+      "cites": [],
+      "dropped": []
+    },
+    {
+      "page": 53,
+      "title": "Tiling part 2: incremental computation of the softmax",
+      "claims": [
+        "Normal softmax",
+        "Online softmax",
+        "To keep track of the max, incrementally update the max, and set up a telescoping sum",
+        "This lets you compute the softmax tile-by-tile"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "From Mikailov and Gimelshein 2018,"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 54,
+      "title": "Putting it all together – the forward pass of flash attention",
+      "claims": [
+        "Tile-wise computation of the inner products, (𝑆)",
+        "Fusion of the exponential operator",
+        "Tile-wise computation of the softmax via the online, telescoping sum trick",
+        "(We won’t cover the backward pass – but they recompute tile-by-tile..)"
+      ],
+      "figures_mentioned": [],
+      "cites": [
+        "From Dao 2023, we see"
+      ],
+      "dropped": []
+    },
+    {
+      "page": 55,
+      "title": "Recap for the whole lecture",
+      "claims": [
+        "Hardware powers scale, and low-level details",
+        "determine what scales or doesnt",
+        "Curent GPU based compute strongly",
+        "encourages thinking about matmul + data",
+        "movement",
+        "Thinking carefully about the GPU (coalescing,",
+        "tiling, fusion) leads us to good performance"
+      ],
+      "figures_mentioned": [],
+      "cites": [],
+      "dropped": []
+    }
+  ]
+}
