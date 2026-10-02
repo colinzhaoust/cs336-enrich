@@ -112,3 +112,53 @@ ol.worked { margin: 6px 0 8px 18px; padding: 0; }
 ol.worked li { margin: 6px 0; }
 ol.worked .why { margin-top: 2px; }
 ol.worked .faded-step { list-style-type: "? "; }
+/* layered course map */
+.mapview .crumbs { margin: 4px 0 8px; color: var(--muted); }
+.mapview .crumbs a { text-decoration: none; }
+.unitgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-top: 16px; }
+.unitcard { display: grid; grid-template-columns: 34px 1fr; gap: 10px; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; color: var(--ink); text-decoration: none; }
+.unitcard:hover { border-color: var(--accent); }
+.unitcard h3, .threadcard h3 { text-transform: none; letter-spacing: 0; color: var(--ink); }
+.unitcard h3 { margin: 0 0 2px; font-size: 17px; }
+.unitcard p { margin: 2px 0 8px; }
+.unum { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.tnames { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tname { font-size: 12px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--rule); color: var(--muted); }
+.tname.paper { border-style: dashed; } .tname.repo { border-color: #c9b58f; }
+.pbar { display: flex; height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; margin: 6px 0 4px; }
+.pbar span { display: block; height: 100%; }
+.threadlist { max-width: 760px; margin-top: 12px; }
+.threadlist .arrow { text-align: center; margin: 2px 0; }
+.threadcard { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 16px; }
+.threadcard.paper { border-style: dashed; }
+.threadcard .kind { text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-size: 11px; }
+.threadcard h3 { margin: 2px 0; font-size: 17px; } .threadcard h3 a { color: var(--ink); text-decoration: none; }
+.threadcard p { margin: 2px 0 6px; }
+.threadcard .chips { margin: 6px 0; }
+.tlink { margin-left: 8px; font-size: 13px; }
+.threadcard .actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { display: inline-block; font-size: 14px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--rule); color: var(--ink); text-decoration: none; background: var(--card); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.kppath { max-width: 760px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); overflow: hidden; }
+.kprow { display: grid; grid-template-columns: 28px 14px 1fr auto; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--rule); color: var(--ink); text-decoration: none; }
+.kprow:last-child { border-bottom: none; }
+.kprow:hover { background: rgba(36,102,141,.06); }
+.kprow .n { color: var(--muted); font-size: 13px; text-align: right; }
+.kprow .dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--accent); background: transparent; }
+.kprow .dot.mastered { background: var(--ok); border-color: var(--ok); } .kprow .dot.secured { background: #2f6f45; border-color: #2f6f45; } .kprow .dot.seen { background: var(--hilite); border-color: var(--hilite); }
+.kprow.locked .lbl { color: var(--muted); }
+.kprow .needs { display: block; }
+.kprow .icons { font-size: 13px; white-space: nowrap; }
+.animstrip { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-width: 900px; }
+.animcard { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 6px; color: var(--ink); text-decoration: none; }
+.animcard img { width: 100%; border-radius: 4px; display: block; margin-bottom: 4px; }
+.animcard:hover { border-color: var(--accent); }
+.toc { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.tocrow { display: grid; grid-template-columns: 44px 1fr 150px 150px; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.tocrow:last-child { border-bottom: none; }
+.tocrow .tnum { font-weight: 700; color: var(--accent); text-align: center; }
+.tocrow .ttitle { font-weight: 600; color: var(--ink); }
+.tocrow .tmeta .pbar { margin: 0 0 4px; }
+.tocrow .tmeta .icons { margin-left: 8px; }
+.tocrow .tlinks { display: flex; gap: 10px; justify-content: flex-end; }
+@media (max-width: 760px) { .tocrow { grid-template-columns: 36px 1fr; } .tocrow .tmeta, .tocrow .tlinks { grid-column: 2; justify-content: flex-start; } }

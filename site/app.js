@@ -73,7 +73,7 @@ function route() {
   if (a === "review") return renderReview(app);
   if (a === "data") return renderData(app);
   if (a === "session") return renderSession(app, b);
-  if (a === "map") return renderMap(app);
+  if (a === "map") return b === "all" ? renderMapAll(app) : renderMap(app, b, c);
   if (a === "t" && state.data[b]) return renderThread(app, b, c);
   renderHome(app);
 }
@@ -81,30 +81,27 @@ function updateDue() { const n = dueCards(state.cards).length; $("#due-pill").te
 
 function renderHome(app) {
   app.className = "";
-  const main = el("div", { class: "main", style: "max-width:1100px;margin:0 auto" },
+  const main = el("div", { class: "main", style: "max-width:1000px;margin:0 auto" },
     el("h1", {}, "Atlas"),
-    el("p", { class: "muted" }, "One pipeline, four inputs. Each thread is a graph of knowledge points with provenance back to the source and a commit-before-reveal learning loop. Pick a thread; the side list is the professor's (or paper's, or call graph's) order; the page is one knowledge point."),
-    el("p", { class: "small" }, el("a", { href: "#/map" }, "Course map"), " — all lecture threads in course order with cross-lecture prerequisite edges."),
-    ...["lecture", "paper", "repo"].flatMap(kind => [el("h2", {}, { lecture: "Lectures", paper: "Papers", repo: "Repositories" }[kind]), el("div", { class: "threads" }, ...state.threads.threads.filter(t => t.kind === kind).map(t => {
-      const d = state.data[t.id]; const n = d ? d.kp.knowledge_points.length : 0; const mastered = d ? d.kp.knowledge_points.filter(k => masteryOf(t.id, k.id) === "mastered").length : 0;
-      return el("div", { class: `tcard ${t.missing ? "missing" : ""}`, onclick: () => { if (!t.missing) location.hash = `#/t/${t.id}`; } }, el("div", { class: "kind" }, t.kind), el("div", { style: "font-weight:700" }, t.title), el("div", { class: "small muted" }, t.subtitle), el("div", { class: "small", style: "margin-top:8px" }, t.missing ? "not built yet" : `${n} knowledge points · ${mastered} mastered`));
-    }))]),
-    el("div", { class: "threads", style: "display:none" }, ...state.threads.threads.map(t => {
-      const d = state.data[t.id];
-      const n = d ? d.kp.knowledge_points.length : 0;
-      const mastered = d ? d.kp.knowledge_points.filter(k => masteryOf(t.id, k.id) === "mastered").length : 0;
-      return el("div", { class: `tcard ${t.missing ? "missing" : ""}`, onclick: () => { if (!t.missing) location.hash = `#/t/${t.id}`; } },
-        el("div", { class: "kind" }, t.kind), el("div", { style: "font-weight:700" }, t.title), el("div", { class: "small muted" }, t.subtitle),
-        el("div", { class: "small", style: "margin-top:8px" }, t.missing ? "not built yet" : `${n} knowledge points · ${mastered} mastered`));
-    })),
-    el("h2", {}, "Sessions"), el("p", { class: "small" }, el("a", { href: "#/session" }, "Guided sessions"), " — a fixed sequence for one sitting, with strict gating and a participant id. Use these for a real learner."),
-    el("h2", {}, "How to read a thread"),
-    el("ul", { class: "small" },
-      el("li", {}, el("b", {}, "Teacher line: "), "the ", el("i", {}, "filtering"), " tab compares everything the source touched (discovered evidence) with what became a knowledge point, so you can see what was said, computed, cited, shown, deferred, or dropped."),
-      el("li", {}, el("b", {}, "Student line: "), "each knowledge point opens with a prediction you must commit before anything is revealed; then the mechanism (code, formula, interactive, or a steppable animation with one ", el("i", {}, "notice"), "), then a changed-case transfer question, then retrieval prompts that are scheduled with FSRS and come back in ", el("a", { href: "#/review" }, "reviews"), "."),
-      el("li", {}, el("b", {}, "Evidence discipline: "), "every anchor links to a source line or page; dashed chips are author inference, solid chips are evidence from the source.")),
-  );
+    el("p", { class: "muted" }, "CS336 lecture by lecture, the papers it rests on, and codebases traced end to end. Each one is a path of knowledge points: predict, see the mechanism, answer a changed case closed book, come back to it later."),
+    el("div", { class: "actions", style: "margin:10px 0 4px" }, el("a", { class: "btn", href: "#/map" }, "Course map by unit"), el("a", { class: "btn", href: "#/session" }, "Guided sessions"), el("a", { class: "btn", href: "#/review" }, "Reviews")),
+    tocSection("CS336, lecture by lecture", "lecture"), tocSection("Papers", "paper"), tocSection("Codebases", "repo"),
+    el("p", { class: "small muted", style: "margin-top:16px" }, "▶ animations · ⚙ widget uses · 🎙 knowledge points only in the lecture audio. Each title opens that lecture's page: what it builds on, its animations, its knowledge points in teaching order."));
   app.append(main);
+}
+function tocSection(title, kind) {
+  const ts = state.threads.threads.filter(t => t.kind === kind && state.data[t.id]);
+  const rows = ts.map(t => {
+    const s = threadStats(t.id), links = threadLinks(t.id), nk = nextKP(t.id), started = s.st.secured + s.st.mastered + s.st.seen > 0;
+    const num = kind === "lecture" ? t.id.replace("lecture_", "L").replace("L0", "L") : kind === "paper" ? "📄" : "⌘";
+    const after = kind !== "lecture" && links.on.length ? el("div", { class: "small muted" }, "read after ", links.on.map(x => shortTitle(state.threads.threads.find(y => y.id === x)).split(" · ")[0]).join(", ")) : null;
+    return el("div", { class: "tocrow" },
+      el("div", { class: "tnum" }, num),
+      el("div", {}, el("a", { class: "ttitle", href: `#/t/${t.id}` }, shortTitle(t).replace(/^L\d+ · /, "")), t.subtitle ? el("div", { class: "small muted" }, t.subtitle) : null, after),
+      el("div", { class: "tmeta small muted" }, progressBar(s.st, s.n), `${s.n} KPs`, el("span", { class: "icons" }, [s.anim ? `▶${s.anim}` : "", s.widgets ? `⚙${s.widgets}` : "", s.spoken ? `🎙${s.spoken}` : ""].filter(Boolean).join("  "))),
+      el("div", { class: "tlinks small" }, el("a", { href: `#/t/${t.id}/${nk}` }, started ? "continue" : "start"), kind === "lecture" ? el("a", { href: `#/t/${t.id}/_spoken` }, "video") : null, el("a", { href: `#/t/${t.id}/_gallery` }, "widgets")));
+  });
+  return el("div", {}, el("h2", {}, title), el("div", { class: "toc" }, ...rows));
 }
 
 function masteryOf(tid, kid) {
@@ -143,7 +140,7 @@ function renderThread(app, tid, kid) {
   );
   const main = el("div", { class: "main" });
   app.append(side, main);
-  if (!kid) kid = stops.find(id => masteryOf(tid, id) !== "mastered") || stops[0];
+  if (!kid) return threadOverview(main, tid);
   if (kid === "_filter") return renderFilter(main, tid);
   if (kid === "_graph") return renderGraph(main, tid);
   if (kid === "_paths") return renderPaths(main, tid);
@@ -632,9 +629,9 @@ function renderGraph(main, tid) {
 }
 
 // ------------------------------------------------------------ course map --
-function renderMap(app) {
+function renderMapAll(app) {
   app.className = "";
-  const main = el("div", { class: "main", style: "max-width:1200px;margin:0 auto" }, el("h1", {}, "Course map"),
+  const main = el("div", { class: "main", style: "max-width:1200px;margin:0 auto" }, mapCrumbs([["all dependencies"]]), el("h1", {}, "All knowledge points and their dependencies"),
     el("p", { class: "muted small" }, "Lecture threads as columns in course order, then papers and repos; a dot per knowledge point; solid edges are same-thread prerequisites, dashed edges cross threads (external prerequisites). Dark green = secured (changed case plus a retrieval remembered two days later), green = mastered (changed case answered), yellow = seen, white = ready (prerequisites mastered), grey = locked. Click a dot to open it."));
   const lectures = [...state.threads.threads.filter(t => t.kind === "lecture" && state.data[t.id]).sort((a, b) => a.id.localeCompare(b.id)),
     ...state.threads.threads.filter(t => t.kind === "paper" && state.data[t.id]), ...state.threads.threads.filter(t => t.kind === "repo" && state.data[t.id])];
@@ -665,6 +662,139 @@ function renderMap(app) {
   }
   main.append(svg);
   app.append(main);
+}
+
+
+// ---------------------------------------------------------- layered map --
+// Level 1: units of the course. Level 2: the threads in a unit. Level 3: one thread's path of knowledge
+// points. Level 4 is the knowledge point page. The dense all-edges view stays at #/map/all.
+const UNITS = [
+  { id: "foundations", title: "Foundations", blurb: "Tokens, FLOPs and memory accounting, the Transformer block, attention alternatives and mixtures of experts.", threads: ["lecture_01", "lecture_02", "lecture_03", "lecture_04", "rope"] },
+  { id: "systems", title: "Systems", blurb: "Why kernels are memory-bound, how tiling and fusion help, collectives and the parallelism budget.", threads: ["lecture_05", "lecture_06", "flashattention", "lecture_07", "lecture_08"] },
+  { id: "scaling", title: "Scaling", blurb: "Where power laws come from, compute-optimal allocation, and how labs run a scaling study.", threads: ["lecture_09", "chinchilla", "lecture_11"] },
+  { id: "inference", title: "Inference", blurb: "Why decode is memory-bound: arithmetic intensity, the KV cache, batching and speculative decoding.", threads: ["lecture_10"] },
+  { id: "data", title: "Evaluation and data", blurb: "What a benchmark number can mean, where the tokens come from, and what every filter does to them.", threads: ["lecture_12", "lecture_13", "lecture_14"] },
+  { id: "posttraining", title: "Post-training", blurb: "SFT and RLHF, RL from verifiable rewards, the GRPO family in papers and in a working RL library, and multimodal models.", threads: ["lecture_15", "lecture_16", "grpo", "feynrl_paper", "feynrl", "lecture_17"] },
+  { id: "codebases", title: "Reading codebases", blurb: "Two hard repositories traced end to end: the tracer behind the CS336 lecture pages, and an agentic Manim pipeline.", threads: ["edtrace", "tea"] },
+];
+const unitOf = tid => UNITS.find(u => u.threads.includes(tid));
+const shortTitle = t => t.title.replace("CS336 ", "").replace("Paper · ", "").replace("Repo · ", "");
+function threadStats(tid) {
+  const d = state.data[tid]; const kps = d.kp.knowledge_points;
+  const st = { secured: 0, mastered: 0, seen: 0, new: 0 };
+  for (const k of kps) { const m = masteryOf(tid, k.id); st[m in st ? m : "new"]++; }
+  const pres = kps.flatMap(k => k.presentations || []);
+  return { n: kps.length, st, anim: pres.filter(p => p.type === "animation").length, widgets: pres.filter(p => p.type === "interactive").length,
+    worked: pres.filter(p => p.steps?.length).length, spoken: kps.filter(k => k.provenance?.status === "spoken").length };
+}
+function progressBar(st, n) {
+  const seg = (v, c) => v ? el("span", { style: `width:${100 * v / n}%;background:${c}` }) : null;
+  return el("div", { class: "pbar", title: `${st.secured + st.mastered} mastered · ${st.seen} seen · ${st.new} new` },
+    seg(st.secured, "#2f6f45"), seg(st.mastered, "#3c8d5a"), seg(st.seen, "#e3b23c"));
+}
+function threadLinks(tid) {
+  // other threads this one builds on (its KPs' external prerequisites), and threads that build on it
+  const on = new Set(), by = new Set();
+  for (const k of state.data[tid].kp.knowledge_points) for (const e of k.external_prerequisites || []) { const t2 = String(e.kp || e).split(":")[0]; if (t2 !== tid && state.data[t2]) on.add(t2); }
+  for (const t of state.threads.threads) if (t.id !== tid && state.data[t.id]) for (const k of state.data[t.id].kp.knowledge_points) for (const e of k.external_prerequisites || []) if (String(e.kp || e).split(":")[0] === tid) by.add(t.id);
+  return { on: [...on], by: [...by] };
+}
+function threadPath(tid) {
+  const kps = state.data[tid].kp.knowledge_points, stops = state.data[tid].kp.path?.stops || kps.map(k => k.id);
+  return { stops: stops.filter(id => kps.find(k => k.id === id)), supps: kps.map(k => k.id).filter(id => !stops.includes(id)) };
+}
+function nextKP(tid) { const { stops } = threadPath(tid); return stops.find(id => !["mastered", "secured"].includes(masteryOf(tid, id))) || stops[0]; }
+const mapCrumbs = parts => el("div", { class: "crumbs small" }, el("a", { href: "#/map" }, "Course map"), ...parts.flatMap(([label, href]) => [" / ", href ? el("a", { href }, label) : el("span", {}, label)]));
+const chip = (txt, cls = "") => el("span", { class: `chip ${cls}` }, txt);
+const mediaChips = s => [s.anim ? chip(`${s.anim} animation${s.anim > 1 ? "s" : ""}`) : null, s.widgets ? chip(`${s.widgets} widget uses`) : null, s.worked ? chip(`${s.worked} worked`) : null, s.spoken ? chip(`${s.spoken} from the audio`) : null];
+
+function renderMap(app, unitId, tid) {
+  app.className = "";
+  const main = el("div", { class: "main mapview", style: "max-width:1080px;margin:0 auto" });
+  app.append(main);
+  const unit = UNITS.find(u => u.id === unitId);
+  if (unit && tid && state.data[tid]) return renderMapThread(main, unit, tid);
+  if (unit) return renderMapUnit(main, unit);
+  // level 1: units
+  main.append(el("h1", {}, "Course map"),
+    el("p", { class: "muted" }, "Seven units, in the order the course builds them. Open a unit to see its lectures, papers and codebases; open one of those to see its knowledge points in teaching order."));
+  const grid = el("div", { class: "unitgrid" });
+  UNITS.forEach((u, i) => {
+    const ts = u.threads.filter(t => state.data[t]); if (!ts.length) return;
+    const stats = ts.map(threadStats), n = stats.reduce((a, s) => a + s.n, 0);
+    const st = stats.reduce((a, s) => ({ secured: a.secured + s.st.secured, mastered: a.mastered + s.st.mastered, seen: a.seen + s.st.seen, new: a.new + s.st.new }), { secured: 0, mastered: 0, seen: 0, new: 0 });
+    const kinds = ts.map(t => state.threads.threads.find(x => x.id === t)).map(t => el("span", { class: `tname ${t.kind}` }, shortTitle(t).split(" · ")[0]));
+    grid.append(el("a", { class: "unitcard", href: `#/map/${u.id}` },
+      el("div", { class: "unum" }, u.id === "codebases" ? "+" : String(i + 1)),
+      el("div", {}, el("h3", {}, u.title), el("p", { class: "small muted" }, u.blurb), el("div", { class: "tnames" }, ...kinds),
+        progressBar(st, n), el("div", { class: "small muted" }, `${n} knowledge points · ${st.secured + st.mastered} mastered`))));
+  });
+  main.append(grid, el("p", { class: "small muted", style: "margin-top:20px" }, "Dark green: secured (a retrieval remembered two days after the changed case). Green: mastered. Yellow: seen. ", el("a", { href: "#/map/all" }, "Show all knowledge points and their dependencies at once"), " (dense)."));
+}
+
+function renderMapUnit(main, unit) {
+  main.append(mapCrumbs([[unit.title]]), el("h1", {}, unit.title), el("p", { class: "muted" }, unit.blurb));
+  const list = el("div", { class: "threadlist" });
+  unit.threads.filter(t => state.data[t]).forEach((tid, i, arr) => {
+    const t = state.threads.threads.find(x => x.id === tid), s = threadStats(tid), links = threadLinks(tid), nk = nextKP(tid);
+    const kpOf = id => state.data[tid].kp.knowledge_points.find(k => k.id === id);
+    const started = s.st.secured + s.st.mastered + s.st.seen > 0;
+    const linkChips = (label, ids) => ids.length ? el("div", { class: "small" }, el("span", { class: "muted" }, label), ...ids.map(x => { const tt = state.threads.threads.find(y => y.id === x); const u2 = unitOf(x); return el("a", { class: "tlink", href: u2 ? `#/map/${u2.id}/${x}` : `#/t/${x}` }, shortTitle(tt)); })) : null;
+    list.append(el("div", { class: `threadcard ${t.kind}` },
+      el("div", { class: "kind small" }, t.kind === "lecture" ? "lecture" : t.kind === "paper" ? "paper" : "codebase"),
+      el("h3", {}, el("a", { href: `#/map/${unit.id}/${tid}` }, shortTitle(t))),
+      t.subtitle ? el("p", { class: "small muted" }, t.subtitle) : null,
+      progressBar(s.st, s.n),
+      el("div", { class: "small muted" }, `${s.n} knowledge points · ${s.st.secured + s.st.mastered} mastered`),
+      el("div", { class: "chips" }, ...mediaChips(s)),
+      linkChips("builds on: ", links.on), linkChips("used by: ", links.by),
+      el("div", { class: "actions" }, el("a", { class: "btn primary", href: `#/t/${tid}/${nk}` }, started ? `Continue: ${kpOf(nk)?.label.split(":")[0]}` : "Start"),
+        el("a", { class: "btn", href: `#/map/${unit.id}/${tid}` }, "See its knowledge points"))));
+    if (i < arr.length - 1) list.append(el("div", { class: "arrow muted" }, "↓"));
+  });
+  main.append(list);
+}
+
+function renderMapThread(main, unit, tid) {
+  const t = state.threads.threads.find(x => x.id === tid);
+  main.append(mapCrumbs([[unit.title, `#/map/${unit.id}`], [shortTitle(t)]]));
+  threadOverview(main, tid);
+}
+
+// One thread's own page: what it is, what it builds on, its animations, and its knowledge points in
+// teaching order. Shown at #/t/<thread> and as the third level of the course map.
+function threadOverview(main, tid) {
+  const t = state.threads.threads.find(x => x.id === tid), d = state.data[tid], s = threadStats(tid), { stops, supps } = threadPath(tid);
+  const byId = Object.fromEntries(d.kp.knowledge_points.map(k => [k.id, k])), links = threadLinks(tid), nk = nextKP(tid);
+  const started = s.st.secured + s.st.mastered + s.st.seen > 0, unit = unitOf(tid);
+  const linkList = (label, ids) => ids.length ? el("div", { class: "small" }, el("span", { class: "muted" }, label), ...ids.map(x => el("a", { class: "tlink", href: `#/t/${x}` }, shortTitle(state.threads.threads.find(y => y.id === x))))) : null;
+  main.append(el("div", { class: "small muted" }, (t.kind === "repo" ? "codebase" : t.kind) + (unit ? ` · ${unit.title}` : "")), el("h1", {}, shortTitle(t)), t.subtitle ? el("p", { class: "muted" }, t.subtitle) : null,
+    progressBar(s.st, s.n), el("div", { class: "small muted" }, `${s.n} knowledge points · ${s.st.secured + s.st.mastered} mastered`),
+    el("div", { class: "chips", style: "margin:8px 0" }, ...mediaChips(s)),
+    linkList("builds on: ", links.on), linkList("used by: ", links.by),
+    el("div", { class: "actions", style: "margin:12px 0" }, el("a", { class: "btn primary", href: `#/t/${tid}/${nk}` }, started ? `Continue: ${byId[nk]?.label.split(":")[0]}` : "Start at the first knowledge point"),
+      el("a", { class: "btn", href: `#/t/${tid}/_gallery` }, "widgets"), t.kind === "lecture" ? el("a", { class: "btn", href: `#/t/${tid}/_spoken` }, "video index") : null,
+      el("a", { class: "btn", href: `#/t/${tid}/_graph` }, "prerequisite graph"), el("a", { class: "btn", href: `#/t/${tid}/_filter` }, "what the source filtered")));
+  // animations of this thread, as thumbnails that open their knowledge point
+  const anims = []; for (const id of [...stops, ...supps]) for (const p of byId[id].presentations || []) if (p.type === "animation" && !anims.find(a => a.ref === p.ref)) anims.push({ ref: p.ref, kid: id });
+  if (anims.length) {
+    const strip = el("div", { class: "animstrip" }); main.append(el("h2", {}, "Animations"), strip);
+    for (const a of anims) { const fid = a.ref.replace("fixture:", ""); loadBuild(fid).then(m => { if (!m) return; const s0 = m.steps[Math.min(1, m.steps.length - 1)];
+      strip.append(el("a", { class: "animcard", href: `#/t/${tid}/${a.kid}` }, el("img", { src: `${state.threads.builds}${fid}/${s0.frame}`, alt: s0.caption, loading: "lazy" }), el("div", { class: "small" }, byId[a.kid].label))); }); }
+  }
+  const row = (id, i) => {
+    const k = byId[id]; const m = masteryOf(tid, id), rd = readiness(tid, k, d.kp.knowledge_points); const ps = k.presentations || [];
+    const icons = [ps.some(p => p.type === "animation") ? "▶" : "", ps.some(p => p.type === "interactive") ? "⚙" : "", ps.some(p => p.steps?.length) ? "✎" : "", k.provenance?.status === "spoken" ? "🎙" : ""].filter(Boolean).join(" ");
+    const needs = (k.prerequisites || []).map(p => byId[p.kp]?.label.split(":")[0]).filter(Boolean);
+    const ext = (k.external_prerequisites || []).map(e => String(e.kp || e).split(":")[0]).filter(x => state.data[x]);
+    return el("a", { class: `kprow ${rd}`, href: `#/t/${tid}/${id}` },
+      el("span", { class: "n" }, i === null ? "+" : String(i + 1)), el("span", { class: `dot ${m}` }),
+      el("span", { class: "lbl" }, k.label, (needs.length || ext.length) ? el("span", { class: "needs small muted" }, " needs ", [...needs.slice(0, 2), ...new Set(ext.map(x => shortTitle(state.threads.threads.find(y => y.id === x)).split(" · ")[0]))].join(", ")) : null),
+      el("span", { class: "icons muted" }, icons));
+  };
+  main.append(el("h2", {}, "Knowledge points, in teaching order"), el("div", { class: "kppath" }, ...stops.map((id, i) => row(id, i))));
+  if (supps.length) main.append(el("h3", { style: "margin-top:20px" }, "Supplements"), el("div", { class: "kppath" }, ...supps.map(id => row(id, null))));
+  main.append(el("p", { class: "small muted", style: "margin-top:16px" }, "▶ animation · ⚙ widget · ✎ worked steps · 🎙 only in the lecture audio"));
 }
 
 // -------------------------------------------------------------- session --
