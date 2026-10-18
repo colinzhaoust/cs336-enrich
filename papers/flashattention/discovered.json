@@ -4199,5 +4199,15 @@
     "failed": 0,
     "unchecked": 0,
     "problems": []
-  }
+  },
+  "inconsistencies": [
+    {
+      "what": "Figure 2 (left) GFLOPs",
+      "a": "table: 66.6 (standard) / 75.2 (FlashAttention) GFLOPs, forward + backward",
+      "b": "caption setting (N=1024, d=64, 16 heads, batch 64): attention matmuls alone are 4·N²·d·H·B ≈ 275 GFLOPs forward, ~825 forward + backward",
+      "refs": [
+        "fa:fig2"
+      ]
+    }
+  ]
 }
