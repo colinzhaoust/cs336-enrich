@@ -177,7 +177,7 @@
       "id": "bandwidth-hierarchy",
       "label": "Bandwidth hierarchy: intra-node interconnect vs inter-node network",
       "kind": "rule-of-thumb",
-      "statement": "GPUs inside a node talk over high-speed interconnects (all-to-all, up to 8 GPUs per node on GPUs; TPUs use a toroidal mesh), nodes talk over a slower network, and the whole datacenter is the new unit of compute; which link a parallelism scheme stresses decides where it is placed.",
+      "statement": "GPUs inside a node talk over high-speed interconnects (an 8-GPU node is the tensor-parallel domain; the deck's GPU networks are all-to-all fabrics of up to 256 GPUs, fully NVLink-connected on the H100 SuperPOD; TPUs use a toroidal mesh), traffic that leaves the fast domain crosses a slower network, and the whole datacenter is the new unit of compute; which link a parallelism scheme stresses decides where it is placed.",
       "provenance": {
         "status": "shown",
         "basis": "evidence",
@@ -277,8 +277,8 @@
       ],
       "misconceptions": [
         {
-          "belief": "A cluster of 256 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed.",
-          "why_wrong": "Only GPUs inside a node share the high-speed all-to-all interconnect (up to 8 on standard GPU nodes); crossing nodes drops to the network, which is why the deck says to tensor-parallel within a node and pipeline across nodes."
+          "belief": "A cluster of 1,024 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed.",
+          "why_wrong": "Only GPUs inside the fast domain share the high-speed interconnect: 8 on a standard GPU node (p42), at most 256 on the deck's NVLink SuperPOD (p9). Past it traffic drops to the slower network (on the A100 SuperPOD the reduce bandwidth falls from 150 GB/s inside one box to 100 GB/s across 32), which is why the deck says to tensor-parallel within a node and pipeline across nodes."
         }
       ],
       "prompts": {
@@ -291,8 +291,8 @@
             "equally everywhere"
           ],
           "answer": "between the two nodes",
-          "why": "Intra-node GPUs sit on a high-speed interconnect (all-to-all, up to 8); inter-node traffic crosses the slower network. That asymmetry is the whole reason parallelism types are assigned to levels.",
-          "targets_misconception": "A cluster of 256 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed."
+          "why": "Intra-node GPUs sit on a high-speed interconnect (8 GPUs per node); inter-node traffic crosses the slower network. That asymmetry is the whole reason parallelism types are assigned to levels.",
+          "targets_misconception": "A cluster of 1,024 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed."
         },
         "transfer": {
           "q": "Slide 10 says a mesh is good when 'you just do tensor parallel' and a tree / all-to-all is 'better for less structured communications (expert parallel)'. A new MoE training job routes tokens to arbitrary experts on arbitrary chips. Which topology does the deck's reasoning favour, and what property of the traffic drives the choice?",
@@ -314,9 +314,9 @@
           "invariant": "the structure of the traffic, not the model, decides which topology fits",
           "distractor_from": [
             "'a tree / all-to-all' <- plausible: carries the MoE answer over without checking the traffic pattern",
-            "'no difference: all links equal' <- misconception: 'A cluster of 256 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed.'"
+            "'no difference: all links equal' <- misconception: 'A cluster of 1,024 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed.'"
           ],
-          "targets_misconception": "A cluster of 256 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed.",
+          "targets_misconception": "A cluster of 1,024 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed.",
           "transfer_distance": "near"
         },
         "retrieval": [
@@ -540,7 +540,7 @@
             "quote": "If you look at the accounting, this is most of the cost memory wise of doing an SGD update."
           }
         ],
-        "filtering_note": "The deck labels the two Adam moments '\"Optimizer state\"' and groups the master weights separately, but in the ZeRO memory formula (p21) K counts everything beyond the 2+2 bytes of parameters and gradients, so K = 12 for the p17 ledger. Activation memory is explicitly excluded until p44. Kahan summation (p28) is named but not explained. Spoken evidence (14:21-15:04): whether the Adam moments need FP32 depends on 'your stability characteristics' (the slide gives '4 (or 2)' without a reason), and the optimizer state (accumulator plus two moments, 12 of the 16 bytes) is 'most of the cost memory wise'. He calls the FP32 master copy an accumulator that 'might be temporary' (14:26)."
+        "filtering_note": "The deck brackets the FP32 master weights and the two Adam moments together as '\"Optimizer state\"' (12 of the 16 bytes), which is K = 12 in the ZeRO memory formula (p21), where K counts everything beyond the 2+2 bytes of parameters and gradients. Activation memory is explicitly excluded until p44. Kahan summation (p28) is named but not explained. Spoken evidence (14:21-15:04): whether the Adam moments need FP32 depends on 'your stability characteristics' (the slide gives '4 (or 2)' without a reason), and the optimizer state (accumulator plus two moments, 12 of the 16 bytes) is 'most of the cost memory wise'. He calls the FP32 master copy an accumulator that 'might be temporary' (14:26)."
       },
       "prerequisites": [
         {
@@ -1539,7 +1539,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_08--batch-budget",
-          "notice": "Adding stages at a fixed batch adds bubble units to the pipeline bar without adding useful work; only more micro-batches per pipeline shrink (PP − 1)/n_micro."
+          "notice": "At a fixed GPU count and global batch, adding stages leaves fewer data-parallel replicas, so each pipeline gets more micro-batches and (PP − 1)/n_micro barely moves; extra stages grow the bubble only when DP is held fixed (raise G together with PP), and only more micro-batches per pipeline shrink it."
         }
       ]
     },
@@ -1968,7 +1968,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "A model with 32 layers is split either as 8-way tensor parallel or 8-way pipeline parallel (4 layers per stage). Per forward+backward of one micro-batch, roughly how many times more activation-sized traffic does TP move than PP, using the slide-43 formulas (TP: 8bsh(n−1)/n per layer; PP: one bsh hop per stage boundary)?",
+          "q": "A model with 32 layers is split either as 8-way tensor parallel or 8-way pipeline parallel (4 layers per stage). Per forward+backward of one micro-batch, roughly how many times more activation-sized traffic does TP move than PP, using the slide-43 formulas (TP: 8bsh(n−1)/n per layer, which already counts forward and backward; PP: one bsh activation forward and one bsh gradient backward at each stage boundary)?",
           "format": "number",
           "answer": "16",
           "tolerance": 0.15,
@@ -2014,7 +2014,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:parallelism-comm",
-          "notice": "For fixed b, s, h the tensor-parallel bar (8bsh(n-1)/n per layer, repeated for every layer) stays about an order of magnitude above the single pipeline hop (bsh per micro-batch) however n changes, while the FSDP bar (3x #params per step) is the only one that moves when the model's parameter count changes."
+          "notice": "For fixed b, s, h the tensor-parallel bar (8bsh(n-1)/n per layer, repeated for every layer) stays about an order of magnitude above the single pipeline hop (bsh per micro-batch) however n changes, while the data-parallel bar (2x #params per step for DDP, 3x for ZeRO-3) is the only one that moves when the model's parameter count changes."
         },
         {
           "type": "formula-step",
@@ -2164,8 +2164,7 @@
           "q": "Per layer, with s = 2048, b = 1, h = 4096, a = 32 and everything stored, the deck's formula gives sbh(34 + 5as/h). In units of sbh, what is the coefficient, and how much of it is the attention (quadratic) part?",
           "format": "short",
           "answer": "34 + 5 x 32 x 2048 / 4096 = 34 + 80 = 114 sbh; 80 of the 114 is the quadratic attention part.",
-          "why": "5as/h grows with sequence length and head count; at s = 2048 it already dominates, which is why recomputation of the attention scores ('as with flash attention') is the first thing to drop.",
-          "targets_misconception": "Tensor parallel over t GPUs divides all activation memory by t, just like it divides the weights."
+          "why": "5as/h grows with sequence length and head count; at s = 2048 it already dominates, which is why recomputation of the attention scores ('as with flash attention') is the first thing to drop."
         },
         "transfer": {
           "q": "Same layer (s = 2048, b = 1, h = 4096, a = 32), now with tensor parallel t = 8 and the slide-47 formula sbh(10 + 24/t + 5as/(ht)). What is the per-GPU coefficient in sbh, and what fraction of it is the un-shardable 10 term?",
@@ -2636,6 +2635,11 @@
           "kp": "lecture_07:all-to-all",
           "basis": "author-inference",
           "note": "EP dispatch is an all-to-all."
+        },
+        {
+          "kp": "lecture_04:expert-parallelism-communication",
+          "basis": "author-inference",
+          "note": "L4 introduces the same token-to-expert all-to-all from the model side."
         }
       ],
       "misconceptions": [
@@ -3221,18 +3225,26 @@
       ],
       "prompts": {
         "predict": {
-          "q": "From the slide-72 table, Llama 3 405B runs DP 128, TP 8, PP 16, CP 1. How many GPUs does that configuration use?",
-          "format": "number",
-          "answer": "16384",
-          "tolerance": 0.001,
-          "why": "Parallel degrees multiply: 128 x 8 x 16 x 1 = 16,384 GPUs. TP = 8 is exactly one node's worth, consistent with 'TP generally <= 8'.",
+          "q": "DeepSeek-V3 trains with 16-way pipeline and 64-way expert parallelism, which already split the model across GPUs. Does it still use ZeRO on its data-parallel axis, and if so which stage?",
+          "format": "choice",
+          "choices": [
+            "yes, ZeRO stage 1",
+            "no: with PP and EP splitting the model, ZeRO is dropped",
+            "yes, ZeRO stage 3 (FSDP)"
+          ],
+          "answer": "yes, ZeRO stage 1",
+          "distractor_from": [
+            "'no: ... ZeRO is dropped' <- misconception: 'Frontier labs replace ZeRO with model parallelism; once you have TP and PP you drop ZeRO entirely.'",
+            "'yes, ZeRO stage 3 (FSDP)' <- plausible: Llama 3 and Gemma 2 do shard with FSDP / ZeRO-3, but DeepSeek reports stage 1"
+          ],
+          "why": "Slide 64: 'V3 – PP (16), EP (64-way, 8 nodes), ZeRO stage 1'. DeepSeek's dense LLM and Yi do the same with tensor and pipeline parallelism. Stage 1 moves the same 2x #params as plain DDP, so sharding the optimizer state over the data-parallel replicas is free and is kept alongside model parallelism.",
           "targets_misconception": "Frontier labs replace ZeRO with model parallelism; once you have TP and PP you drop ZeRO entirely."
         },
         "transfer": {
-          "q": "For a long-context phase you keep Llama 3's 16,384 GPUs, TP 8 and PP 16 but set CP = 16. What DP degree remains, and which of the deck's p72 'patterns' does this illustrate?",
+          "q": "For a long-context phase you keep Llama 3's 16,384 GPUs, TP 8 and PP 16 but push context parallelism to CP = 64. What DP degree remains, and which of the deck's p72 'patterns' does this illustrate?",
           "format": "short",
-          "answer": "DP = 16384 / (8 x 16 x 16) = 8; it illustrates 'Long context phases use large CP' (context parallel trades data-parallel replicas for sequence-side activation / KV sharding).",
-          "why": "The product of degrees is fixed by the GPU count, so raising CP for a 131K-token sequence must come out of DP; the batch in sequences shrinks while each sequence is spread over 16 GPUs."
+          "answer": "DP = 16384 / (8 x 16 x 64) = 2; it illustrates 'Long context phases use large CP' (context parallel trades data-parallel replicas for sequence-side activation / KV sharding).",
+          "why": "The product of degrees is fixed by the GPU count, so raising CP for very long sequences must come out of DP; the batch in sequences shrinks while each sequence is spread over 64 GPUs. Llama 3's own long-context stage (CP 16, DP 8) is the same trade at a smaller CP."
         },
         "check": {
           "q": "A long-context phase runs on 8,192 GPUs with TP = 8, PP = 16 and DP = 4. Assuming the product of the four degrees equals the GPU count, what CP (context parallel) degree fills the GPUs?",
@@ -3259,7 +3271,7 @@
             "layer": "detail"
           }
         ],
-        "self_explain": "Why would a 7B model (Dolma) use plain FSDP while a 405B model needs TP and PP, if FSDP's communication is only 1.5x DDP's?"
+        "self_explain": "Why would a 7B model (OLMo, trained on Dolma) use plain FSDP while a 405B model needs TP and PP, if FSDP's communication is only 1.5x DDP's?"
       },
       "presentations": [
         {

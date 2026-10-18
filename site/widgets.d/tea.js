@@ -28,8 +28,9 @@ const prov = s => `<span class="muted small">${s}</span>`;
 //   parameters (L800 vs L291-L297): TypeError at the call, nothing renders; elif --check_status prints the P/C/R table and exits
 //   (L810-L885); else per theorem: --only_combine -> combine_videos only (L896-L897), otherwise generate_video_pipeline(only_plan,
 //   specific_scenes=args.scenes) then combine_videos unless --only_plan or --only_render (L899-L907).
-// Topic branch (L917-L951, needs --topic AND --context): --only_gen_vid calls the async render_video_fix_code without await and
-//   exits (L937-L939): a coroutine is created and dropped, nothing renders; --only_combine -> combine only (L941-L942); otherwise
+// Topic branch (L917-L951, needs --topic AND --context): --only_gen_vid calls render_video_fix_code(topic, context, max_retries=...)
+//   with the same 2 of 4 required positional parameters (L938 vs L291-L297): TypeError at the call, before exit() and before any
+//   coroutine exists (the missing await would matter only after that), nothing renders; --only_combine -> combine only (L941-L942); otherwise
 //   generate_video_pipeline(only_plan) (no --scenes passed, L944-L949) then combine unless --only_plan or --only_render (L950-L951).
 // --only_render is read inside generate_video_pipeline through the module-global args (L561, L584), so it acts in both branches.
 // The shipped data/thb_easy/math.json has 20 entries (repos/tea/knowledge_points.json, task-generation-prompts filtering note).
@@ -73,7 +74,7 @@ function cliDispatch(a) {
   let tstop = !topicMode;
   const tstep = (ln, code, key) => { if (tstop) { row(ln, code, "skip", 1); return false; } read.add(key); const t = f(key); row(ln, code, t ? "true" : "false", 1); if (t) tstop = true; return t; };
   if (topicMode) { read.add("topic"); read.add("context"); o.branch = 2; o.nTopics = 1; }
-  if (tstep("L937", "if args.only_gen_vid: render_video_fix_code(…)  # no await; exit()", "only_gen_vid")) o.outcome = "the async render_video_fix_code is called without await: a coroutine object is created and dropped, exit() follows, nothing renders (L937-L939)";
+  if (tstep("L937", "if args.only_gen_vid: render_video_fix_code(topic, context, max_retries=…)", "only_gen_vid")) { o.crash = 1; o.outcome = "TypeError: render_video_fix_code() missing 2 required positional arguments: 'scene_outline' and 'implementation_plans' (L938 vs L291-L297); exit() is never reached, nothing renders (the missing await would matter only after that)"; }
   if (tstep("L941", "if args.only_combine: combine_videos(args.topic)", "only_combine")) { o.combine = 1; o.outcome = "combine_videos for the one topic; no planning or rendering (L941-L942)"; }
   if (topicMode && !tstop) {
     ["only_plan", "only_render"].forEach(k => read.add(k));
@@ -105,7 +106,8 @@ MODELS["fixture:tea--cli-dispatch"] = {
     { args: { topic: 1, context: 1, check_status: 1 }, pick: "nIgnored", expect: 1 },           // ... --check_status ignored
     { args: { topic: 1 }, pick: "branch", expect: 3 },                                          // topic without context: usage message
     { args: { theorems_path: 1, sample_size: 50 }, pick: "nTopics", expect: 20 },               // slice past the end keeps all 20
-    { args: { topic: 1, context: 1, only_gen_vid: 1 }, pick: "renders", expect: 0 },            // silent-degradation: un-awaited coroutine
+    { args: { topic: 1, context: 1, only_gen_vid: 1 }, pick: "renders", expect: 0 },            // silent-degradation: nothing renders
+    { args: { topic: 1, context: 1, only_gen_vid: 1 }, pick: "crash", expect: 1 },              // ... because L938 raises TypeError too
     { args: { theorems_path: 1, only_gen_vid: 1 }, pick: "crash", expect: 1 },                  // silent-degradation: TypeError at L800
     { args: { topic: 1, context: 1, only_plan: 1 }, pick: "combine", expect: 0 },               // silent-degradation check: --only_plan skips combine
     { args: { theorems_path: 1, check_status: 1, only_gen_vid: 1 }, pick: "crash", expect: 1 }, // only_gen_vid is tested before check_status

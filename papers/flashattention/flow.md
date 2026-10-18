@@ -19,6 +19,8 @@ The goal follows directly: never write the $N \times N$ attention matrix to HBM,
 
 The paper answers each with an established technique. **Tiling** splits the inputs into blocks and computes the softmax incrementally, block by block. **Recomputation** saves only the softmax's normalization statistics and rebuilds the attention matrix on chip during the backward pass. Everything runs inside a single CUDA kernel, so the intermediate values never leave the chip.
 
+::predict fa-io-aware-framing
+
 ::slide lecture_05:50 | left, the paper's Fig. 1 (right): PyTorch's GPT-2 attention, about 17 ms, split into matmul, mask, softmax, dropout, matmul, against about 2 ms for the fused kernel; middle, Fig. 2 (left); right, Fig. 2 (middle), which returns in the IO-complexity section
 
 Look at the left bar first. The two matrix multiplies, where the FLOPs are, are thin slices. Most of the 17 ms goes to masking, softmax and dropout, operations that do almost no arithmetic but each read and write a full $N \times N$ matrix. The fused kernel's caption claims a 7.6× speedup on the attention computation.
@@ -32,8 +34,6 @@ The table in the middle of the slide is the whole paper in three rows. It measur
 | GFLOPs | 66.6 | 75.2 |
 | HBM reads/writes (GB) | 40.3 | 4.4 |
 | Runtime (ms) | 41.7 | 7.3 |
-
-::predict fa-io-aware-framing
 
 FlashAttention does 75.2 / 66.6 ≈ 1.13, so 13% *more* arithmetic (the recomputation in the backward pass) and still runs 41.7 / 7.3 ≈ 5.7× faster, because it moves 40.3 / 4.4 ≈ 9.2× fewer bytes through HBM. Runtime follows the bytes, not the FLOPs. The speedup is smaller than 9.2× because not all of the runtime was HBM traffic to begin with.
 
@@ -160,11 +160,11 @@ Read lines 5–8 again. The **outer** loop walks over the K/V blocks, and each $
 ::animation fixture:flashattention--alg1-loop | the paper's order on a 4 × 3 grid of tiles (T_r = 4, T_c = 3): when the outer loop moves to K₂, V₂, Q₁ and O₁ cross HBM a second time; at the end K and V show 1 load each, every Q_i and O_i show 3, and "S written to HBM" stays at 0
 
 ::note warning | This is the reverse of the picture most lectures draw. L5's slide 54, and the animation below, hold one Q block on chip and stream the K and V blocks past it, so each output block is finished before the next starts. That diagram comes from the FlashAttention-2 paper (Dao, 2023). The paper we are reading prints K/V outer and Q inner, which is why $O_i$ round-trips through HBM $T_c$ times here. Both orders compute the same exact result, and both keep $S$ off HBM. They differ in which matrices are re-read. Hold on to the printed order: the IO count in Theorem 2 is read straight off it.
-::animation fixture:flash-forward-tiles | for contrast, the lecture's order: one Q block stays put while K tiles stream past; HBM traffic grows by one K tile per step and never by an S tile
+::animation fixture:flash-forward-tiles | for contrast, the lecture's order: one Q block stays put while K tiles stream past; HBM traffic grows by one K tile and one V tile per step, never by an S tile, and ends with one O block write
 
 ::predict fa-forward-loop-structure
 
-Take the predict's setting, $d = 128$, $M = 32{,}768$, $N = 2048$. Then $B_c = B_r = 64$ and there are 32 K/V blocks and 32 Q blocks. The K/V blocks are loaded 32 times in total, once each. The Q blocks are loaded 32 × 32 = 1,024 times, and every one of those loads also reads and writes an $O_i$. Now keep $M$ and shrink the head to $d = 32$: $\lceil M/4d \rceil = 256$ exceeds $d$, so the cap binds. $B_c = 256$ but $B_r = 32$, and the score tile is 32 × 256 = 8,192 elements instead of a 64 × 64 square.
+Take the predict's setting, $d = 128$, $M = 32{,}768$, $N = 2048$. Then $B_c = B_r = 64$ and there are 32 K/V blocks and 32 Q blocks. The K/V blocks are loaded 32 times in total, once each. Each of the 32 Q blocks is loaded once per K/V block, 32 times, and every one of those loads also reads and writes an $O_i$. Now keep $M$ and shrink the head to $d = 32$: $\lceil M/4d \rceil = 256$ exceeds $d$, so the cap binds. $B_c = 256$ but $B_r = 32$, and the score tile is 32 × 256 = 8,192 elements instead of a 64 × 64 square.
 
 ::kp fa-forward-loop-structure
 
@@ -183,8 +183,8 @@ Here $\mathrm{diag}(\ell)$ is just "multiply row $r$ by $\ell_r$". Read the form
 
 One row with $d = 1$, continuing the softmax example ($m_i = 1.0$, $\ell_i = 2.0$, new block max 3.0):
 
-::worked fa-output-rescale-update
 ::predict fa-output-rescale-update
+::worked fa-output-rescale-update
 
 The earlier keys' share of this output row fell from all of it to 0.1353 / 1.0353 ≈ 13%, because the new block holds a much larger score. If an implementation forgets $\mathrm{diag}(\ell_i)$, it divides the old part by a normalizer twice and undercounts it by exactly $\ell_i$. If it forgets the factor on $\tilde P_{ij} V_j$, the new block is overweighted whenever the running max is larger than the block's own.
 
@@ -231,13 +231,13 @@ Algorithm 1's traffic can be counted straight off its loops. **Theorem 2**: with
 
 $$ \text{standard attention: } \Theta(Nd + N^2), \qquad \text{FlashAttention: } \Theta\!\left(\frac{N^2 d^2}{M}\right) \text{ HBM accesses.} $$
 
+::predict fa-io-complexity
+
 The proof has two counts. $K$ and $V$ are loaded once each, $2Nd$ elements, because the outer loop visits each block once. $Q$ and $O$ are swept once per outer iteration, $T_c$ passes of $\Theta(Nd)$ elements each. The number of passes comes from the block size: K/V blocks of $B_c \times d$ must fit in $M$, so $B_c = \Theta(M/d)$ and $T_c = N/B_c = \Theta(Nd/M)$. Multiplying:
 
 ::worked fa-io-complexity
 
 No $N^2$ term appears, because $S$ never reaches HBM. The $N^2$ in the result comes from re-reading $Q$ and $O$, and it is divided by $M/d^2$. With the proof's constants the two quadratic terms compare as $4N^2$ against $8N^2 d^2/M$, a ratio of $M/2d^2$. For $d = 64$ that is 6 at $M = 49{,}152$ (96 KB of fp16) and 12 at $M = 98{,}304$ (192 KB). Hence the paper's condition: for typical $d$ (64–128) and $M$, $d^2$ is many times smaller than $M$, and FlashAttention makes many times fewer HBM accesses. The measured 9.2× in Fig. 2 is the same order.
-
-::predict fa-io-complexity
 
 Three consequences are worth seeing move.
 - **Traffic is still quadratic in N.** For a fixed chip, doubling $N$ quadruples FlashAttention's accesses too. What is linear in $N$ is its *extra memory* (Theorem 1), not its traffic. It reaches $\Theta(Nd)$ only at $M = \Theta(Nd)$, when all of $K$ and $V$ fit on chip at once.
@@ -303,6 +303,8 @@ The experiments test two claims: the same models train faster, and longer contex
 
 **BERT-large** (sequence length 512), trained from the MLPerf initialization to 72.0% masked-language-modelling accuracy, averaged over 10 runs: 17.4 ± 1.4 minutes against 20.0 ± 1.5 for Nvidia's MLPerf 1.1 record, 20.0 / 17.4 ≈ 1.15, so 15% faster. Table 1 is the only result in the paper that reports run-to-run spread.
 
+::predict supp-exact-vs-approximate
+
 **GPT-2** on OpenWebText, sequence length 1K, Table 2 as printed:
 
 | Model | Implementation | Perplexity | Training time (speedup) |
@@ -325,12 +327,13 @@ Against Megatron-LM, already an optimized implementation, the gain is 4.7 / 2.7 
 ### Why "exact" is what makes these numbers easy to read
 An exact kernel is a drop-in replacement. It computes the same function, so the same checkpoint, the same gradients and the same perplexity at the same context follow (Table 2), and its speedup composes with everything else. Linformer's 2.5× is a different kind of number: it comes from changing the model, and its 4.4-point accuracy loss has to be re-measured on every task. FlashAttention's 59.8 against 59.3 is the same model run twice.
 
-::predict supp-exact-vs-approximate
 ::figure fa:table3 | compare the speedup column with the average column: only the exact kernel gets its speedup without moving the accuracy
 ::kp supp-exact-vs-approximate
 
 ## Better models from longer context, and what the benchmarks show {#longer}
 source: fa:§4.2 · fa:§4.3 · Tables 4–6 · Fig. 3 · fa:§E.5 · fa:§5
+
+::predict fa-experimental-claims
 
 Speed is also a budget. Spend it on context instead:
 
@@ -342,8 +345,6 @@ Speed is also a budget. Spend it on context instead:
 | FlashAttention | 4K | 17.5 | 3.6 days (1.3×) |
 
 At 4K context, 4× longer, FlashAttention still trains 4.7 / 3.6 ≈ 1.3× faster than Megatron at 1K and reaches 0.7 lower perplexity. Because the 1K rows match exactly, the gain is attributable to context alone.
-
-::predict fa-experimental-claims
 
 **Long documents.** A pretrained RoBERTa is fine-tuned at longer sequence lengths on MIMIC-III (ICU discharge summaries) and ECtHR (European Court of Human Rights cases). Micro-F1 rises from 52.8 at 512 tokens to 57.1 at 16K on MIMIC (+4.3) and from 72.2 to 80.7 at 8K on ECtHR (+8.5). The abstract's "6.4 points of lift" is the average of the two, (4.3 + 8.5) / 2. The curves are not monotone, though. MIMIC dips to 50.7 at 1K before rising, and ECtHR falls back to 79.2 at 16K. The paper suggests distribution shift in document length as the cause.
 

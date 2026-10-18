@@ -544,8 +544,7 @@
             "the epsilon and the bias term beta are removed"
           ],
           "answer": "mean subtraction and the bias term beta are removed",
-          "why": "RMSNorm 'does not subtract mean or add a bias term'; it keeps the scale normalisation (by root-mean-square) and the learned gain gamma.",
-          "targets_misconception": "RMSNorm is faster because it removes a meaningful fraction of the model's FLOPs."
+          "why": "RMSNorm 'does not subtract mean or add a bias term'; it keeps the scale normalisation (by root-mean-square) and the learned gain gamma."
         },
         "transfer": {
           "q": "A profiler shows normalisation is under 1% of a model's FLOPs but about 10% of its step time. Using slides 15-16, which quantity explains the gap, and why would RMSNorm reduce the 10% more than the 1%?",
@@ -687,7 +686,7 @@
         "predict": {
           "q": "A layer has W1 of shape 4096 x 16384 and a bias b1 of length 16384. What fraction of the layer's parameters is the bias? Give the answer as a percentage.",
           "format": "number",
-          "answer": "0.0244",
+          "answer": "0.0244%",
           "tolerance": 0.1,
           "why": "16384 / (4096 x 16384 + 16384) = 1/4097 = 0.024%. The bias is negligible as a parameter count, which is why the lecture's reason is movement and stability rather than size.",
           "targets_misconception": "Biases are dropped because they add a large number of parameters."
@@ -1159,22 +1158,22 @@
       "external_prerequisites": [
         {
           "kp": "rope:rope-position-goal",
-          "basis": "teaching-order",
+          "basis": "author-inference",
           "note": "p31's <f(x,i), f(y,j)> = g(x, y, i-j) is the RoPE paper's goal equation."
         },
         {
           "kp": "rope:rope-relative-position",
-          "basis": "teaching-order",
+          "basis": "author-inference",
           "note": "Why a rotation makes the score depend only on i - j."
         },
         {
           "kp": "rope:rope-multiplicative-vs-additive",
-          "basis": "teaching-order",
+          "basis": "author-inference",
           "note": "p34: 'not additive, no cross terms'."
         },
         {
           "kp": "rope:rope-per-layer-application",
-          "basis": "teaching-order",
+          "basis": "author-inference",
           "note": "p35: RoPE is applied at every attention operation, not once at the input."
         }
       ],
@@ -1625,7 +1624,7 @@
           },
           {
             "q": "Which organisation's models does the lecture single out as the notable exceptions to ratio 1?",
-            "answer": "Google's (T5 at 16, LaMDA at 2, PaLM above 1).",
+            "answer": "Google's (T5 at 16, LaMDA at 2; PaLM is also off 1, at 0.67, which the slide prints inverted as 1.48).",
             "layer": "detail"
           }
         ],
@@ -1874,12 +1873,12 @@
           "q": "Model X (2025, English only) uses a 32,000-token vocabulary; model Y (2019, 100 languages) uses 250,000. Per slide 47, what explains the difference?",
           "format": "choice",
           "choices": [
-            "language coverage, not release year",
+            "language coverage",
             "release year: newer means bigger",
             "parameter count of each model",
             "context length of each model"
           ],
-          "answer": "language coverage, not release year",
+          "answer": "language coverage",
           "distractor_from": [
             "'release year: newer means bigger' <- misconception: 'Newer models always use bigger vocabularies because bigger is better.'",
             "'parameter count of each model' <- plausible: vocabulary is assumed to scale with model size",
@@ -2107,8 +2106,7 @@
             "T5 v1.1"
           ],
           "answer": "Qwen 14B",
-          "why": "Slide 49: LLaMA, PaLM and T5 v1.1 have dropout 0; Qwen 14B is listed at 0.1, and the slide says newer models 'except Qwen' rely only on weight decay.",
-          "targets_misconception": "LLMs use weight decay to prevent overfitting to the training corpus."
+          "why": "Slide 49: LLaMA, PaLM and T5 v1.1 have dropout 0; Qwen 14B is listed at 0.1, and the slide says newer models 'except Qwen' rely only on weight decay."
         },
         "transfer": {
           "q": "A run with weight decay 0.1 and one with 0 show identical training loss for most of training, then the decayed run pulls ahead near the end of the cosine schedule. Which claim on slide 50 does this pattern support, and which does it rule out?",
@@ -2330,7 +2328,7 @@
       "id": "qk-norm",
       "label": "QK-norm: normalise queries and keys before the attention softmax",
       "kind": "mechanism",
-      "statement": "QK-norm applies a LayerNorm/RMSNorm to the query and key vectors before their dot product enters the attention softmax, bounding the attention logits so the second softmax in the network cannot blow up; it came from vision and multimodal models (ViT-22B, Idefics, Chameleon) and is now used by DCLM, OLMo 2, Gemma 2, Qwen 3, OLMo 3 and Gemma 4.",
+      "statement": "QK-norm applies a LayerNorm/RMSNorm to the query and key vectors before their dot product enters the attention softmax, bounding the attention logits so the second softmax in the network cannot blow up; it came from vision and multimodal models (ViT-22B, Idefics, Chameleon) and is now used by DCLM, OLMo 2, Qwen 3, OLMo 3 and Gemma 4 (the slide also lists Gemma 2, which soft-capped its logits instead).",
       "provenance": {
         "status": "said",
         "basis": "evidence",
@@ -2377,7 +2375,7 @@
             "quote": "And QK norm is here. ... And it does slightly better due to the fact that you can crank up the learning rate a little bit."
           }
         ],
-        "filtering_note": "p55's figure is an equation image showing the norms inside the attention score; the text layer names the operation only. The lecture does not say whether the norm has a learned gain, whether it is per-head, or how it interacts with the 1/sqrt(d_k) scale; ViT-22B's motivation (uncontrolled growth of attention logits leading to near one-hot attention and divergence) is not stated on the slide. Spoken evidence (1:11:28-1:11:43, 1:13:14-1:13:28): QK-norm 'doesn't seem to affect performance' across many runs, and in the systematic comparison of stability interventions he attributes to 'some NVIDIA folks' (paper not named; Slide image audit (p56): its perplexity table is printed on the soft-capping slide, ±0.1 at 95%: bf16 baseline 11.19, soft_cap 11.24, QKV_norm 10.85, QK_norm_cap 11.00, QK_norm 10.84, QK_FC_norm 10.87) it does slightly better than the baseline 'due to the fact that you can crank up the learning rate a little bit'. He frames it as the 'throw a layer norm in there' heuristic (1:09:48-1:10:04; see non-residual-double-norm) and says it keeps the attention logits at a scale of roughly one (1:10:31-1:10:55). Still not said: learned gain, per-head application, interaction with 1/sqrt(d_k)."
+        "filtering_note": "p55's figure is an equation image showing the norms inside the attention score; the text layer names the operation only. The lecture does not say whether the norm has a learned gain, whether it is per-head, or how it interacts with the 1/sqrt(d_k) scale; ViT-22B's motivation (uncontrolled growth of attention logits leading to near one-hot attention and divergence) is not stated on the slide. Spoken evidence (1:11:28-1:11:43, 1:13:14-1:13:28): QK-norm 'doesn't seem to affect performance' across many runs, and in the systematic comparison of stability interventions he attributes to 'some NVIDIA folks' (paper not named; Slide image audit (p56): its perplexity table is printed on the soft-capping slide, ±0.1 at 95%: bf16 baseline 11.19, soft_cap 11.24, QKV_norm 10.85, QK_norm_cap 11.00, QK_norm 10.84, QK_FC_norm 10.87) it does slightly better than the baseline 'due to the fact that you can crank up the learning rate a little bit'. He frames it as the 'throw a layer norm in there' heuristic (1:09:48-1:10:04; see non-residual-double-norm) and says it keeps the attention logits at a scale of roughly one (1:10:31-1:10:55). Still not said: learned gain, per-head application, interaction with 1/sqrt(d_k). Our correction to p55's list, not imported: the slide names Gemma 2 among the QK-norm models, but Gemma 2 used logit soft-capping (see logit-soft-capping); Gemma 3 is the Gemma model whose report says it replaced soft-capping with QK-norm."
       },
       "prerequisites": [
         {

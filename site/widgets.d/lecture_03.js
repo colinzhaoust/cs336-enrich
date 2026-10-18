@@ -209,6 +209,7 @@ function normRuntime({ timeShare = 0.25, flopShare = 0.0017, fx = 1, bx = 1, nor
 }
 MODELS["fixture:lecture_03--norm-runtime"] = {
   fn: normRuntime,
+  untied: "rmsnorm-vs-layernorm grades a direction (check: up) and short/choice text with no graded number; the 0.17% / 25% baseline is spoken, not a prompt answer",
   cases: [
     { args: {}, pick: "share", expect: 0.25 },                               // spoken baseline: 0.17% of FLOPs, 25% of runtime
     { args: {}, pick: "flopShareNow", expect: 0.0017 },
@@ -252,10 +253,10 @@ WIDGETS["fixture:lecture_03--norm-runtime"] = (root) => {
 
 // ============================================================ 4. logit guards ==
 // Two output-side stability tricks on the same logits.
-//   z-loss: lecture_03.pdf:p53-p54 (L636-L655): softmaxes are ill-behaved through exponentials; the z-loss (Devlin 2014, PaLM)
+//   z-loss: lecture_03.pdf:p53-p54 (L638-L655): softmaxes are ill-behaved through exponentials; the z-loss (Devlin 2014, PaLM)
 //   penalises log Z, Z = Σ exp(z_i); PaLM's form α·log²Z with α = 1e-4 is from the PaLM anchor (arXiv:2204.02311 §2), not the slide.
 //   Shift invariance: video 1:08:14-1:08:55 ("if I add a constant ... I can manipulate the z's without" changing the probabilities).
-//   Soft-capping: p56 (L667-L670): "soft-capping the logits to some maximum value via Tanh ... might have perf issues?";
+//   Soft-capping: p56 (L667-L673): "soft-capping the logits to some maximum value via Tanh ... might have perf issues?";
 //   z -> c·tanh(z/c) and the caps 50 (attention) / 30 (final logits) are from the Gemma 2 anchor (arXiv:2408.00118 §2).
 //   The base logits 5,5,5,5 are the z-loss check's own case; the spread pattern around them is a free control.
 const lse = xs => { const m = Math.max(...xs); return m + Math.log(xs.reduce((p, x) => p + Math.exp(x - m), 0)); };
@@ -273,9 +274,11 @@ function logitGuards({ logits = [5, 5, 5, 5], shift = 0, c = 50, z1 = 0, z2 = 0 
 MODELS["fixture:lecture_03--z-loss"] = {
   fn: logitGuards,
   cases: [
-    { args: {}, pick: "logZAtZero", expect: 0, from: "lecture_03:z-loss:predict" },   // the penalty's minimum sits at log Z = 0
-    { args: { shift: 0 }, pick: "penalty", expect: 40.78, tol: 0.005 },               // z-loss check: (5 + ln 4)² ≈ 40.8 ...
-    { args: { shift: -5 }, pick: "penalty", expect: 1.922, tol: 0.005 },              // ... falls to (ln 4)² ≈ 1.92 ("down")
+    { args: {}, pick: "logZAtZero", expect: 0 },                                      // the penalty's minimum sits at log Z = 0 (true by construction, so not a tie)
+    { args: { shift: 0 }, pick: "logZ", expect: 6.39, tol: 0.005, from: "lecture_03:z-loss:check#3" },     // z-loss check: log Z = 5 + ln 4 ≈ 6.39 ...
+    { args: { shift: 0 }, pick: "penalty", expect: 40.78, tol: 0.005, from: "lecture_03:z-loss:check#6" }, // ... penalty (5 + ln 4)² ≈ 40.8 ...
+    { args: { shift: -5 }, pick: "logZ", expect: 1.386, tol: 0.005, from: "lecture_03:z-loss:check#5" },   // ... log Z falls to ln 4 ≈ 1.39 ...
+    { args: { shift: -5 }, pick: "penalty", expect: 1.922, tol: 0.005 },              // ... penalty (ln 4)² ≈ 1.92 ("down"; the answer's "about 1.9" is too coarse to tie)
     { args: { shift: -5 }, pick: "p0", expect: 0.25 },                                // ... with the probabilities still 1/4
   ],
 };
@@ -313,7 +316,7 @@ const logitGuardsWidget = (mode) => (root) => {
     pic.innerHTML = svg(W, H, b);
     read.innerHTML = `logits ${zs.map(z => fmt(z, 2)).join(", ")} · log Z = log Σ exp(z) = <b>${fmt(m.logZ, 4)}</b> · penalty (log Z)² = <span class="big">${fmt(m.penalty, 4)}</span> (PaLM adds 1e-4 × this = ${fmt(m.palmTerm, 6)})<br>
       probabilities ${m.probs.map(p => fmt(p, 4)).join(", ")} <span class="muted">(the shift never changes them)</span> · the shift that makes log Z = 0: ${fmt(m.zeroShift, 4)}<br>
-      <span class="muted small">provenance: fixture:lecture_03--z-loss · lecture_03.pdf:p53 (L637-L638, softmaxes "ill-behaved due to exponentials"), p54 (L640-L655, the output-softmax z-loss, Devlin 2014, PaLM); video 1:07:32-1:08:55 (log Z "might not be so OK"; adding a constant to every logit moves Z without changing the probabilities); α = 1e-4 from the PaLM paper anchor (§2), not the slide.</span>`;
+      <span class="muted small">provenance: fixture:lecture_03--z-loss · lecture_03.pdf:p53 (L638-L639, softmaxes "ill-behaved due to exponentials"), p54 (L640-L655, the output-softmax z-loss, Devlin 2014, PaLM); video 1:07:32-1:08:55 (log Z "might not be so OK"; adding a constant to every logit moves Z without changing the probabilities); α = 1e-4 from the PaLM paper anchor (§2), not the slide.</span>`;
   };
   const drawCap = () => {
     const m = logitGuards({ c: s.c, z1: s.z1, z2: s.z2 }), H = 230, py = 22, ph = 170, zmax = 600, ymax = 110;
@@ -332,7 +335,7 @@ const logitGuardsWidget = (mode) => (root) => {
     const hi = Math.max(s.z1, s.z2), lo = Math.min(s.z1, s.z2), regime = hi / s.c < 0.5 ? "both logits in the near-linear part: capping changes almost nothing" : lo / s.c > 2 ? "both logits saturated: the cap erases most of their gap" : "the larger logit is being squashed";
     read.innerHTML = `c = ${s.c}: z₁ ${s.z1} → <b>${fmt(m.y1, 4)}</b>, z₂ ${s.z2} → <b>${fmt(m.y2, 4)}</b> · gap ${fmt(m.rawGap, 2)} → <span class="big">${fmt(m.capGap, 4)}</span> (hard clip: ${fmt(m.clipGap, 4)}) · slope at z₂ ${fmt(m.slope2, 5)}<br>
       ${regime} · two-token softmax P(z₂): raw ${fmt(m.pTopRaw, 6)}, capped ${fmt(m.pTopCap, 6)}<br>
-      <span class="muted small">provenance: fixture:lecture_03--soft-cap · lecture_03.pdf:p56 (L667-L670, soft-cap "via Tanh"; "prevents logits from blowing up, but also might have perf issues?"); video 1:13:28-1:13:41 (soft-capping alone loses quality: confident signals cannot be expressed); the form c·tanh(z/c) and caps 50 / 30 from the Gemma 2 anchor (arXiv:2408.00118 §2).</span>`;
+      <span class="muted small">provenance: fixture:lecture_03--soft-cap · lecture_03.pdf:p56 (L667-L673, soft-cap "via Tanh"; "prevents logits from blowing up, but also might have perf issues?"); video 1:13:28-1:13:41 (soft-capping alone loses quality: confident signals cannot be expressed); the form c·tanh(z/c) and caps 50 / 30 from the Gemma 2 anchor (arXiv:2408.00118 §2).</span>`;
   };
   const draw = () => (s.mode === "zloss" ? drawZ : drawCap)();
   zc.append(slider("shift every logit by", -12, 6, s.shift, 0.5, v => { s.shift = v; draw(); }), slider("spread (0 = all equal to 5)", 0, 3, s.spread, 0.5, v => { s.spread = v; draw(); }));

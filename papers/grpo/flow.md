@@ -83,7 +83,7 @@ The code and general text are there to keep what the starting model already knew
 
 ::figure grpo:table2 | DeepSeekMath-Base 7B's row beats every open base model on all eight benchmarks, and Minerva 540B on GSM8K and MATH; Minerva 540B stays ahead on OCW (17.6% vs 15.4%) and MMLU-STEM (63.9% vs 56.5%)
 
-The same base model also writes Python to solve problems (66.9% on GSM8K+Python, 31.4% on MATH+Python) and drafts formal proofs in the Isabelle proof assistant (25.8% and 24.6% on the Olympiad-level miniF2F, valid and test), both above Llemma 34B (Table 3). Math training lifted general reasoning too: MMLU (exam questions in 57 subjects) rises from 49.1% to 54.9% and BBH (23 hard multi-step reasoning tasks) from 55.2% to 59.5% over the code model it started from (Table 4).
+The same base model also writes Python to solve problems (66.9% on GSM8K+Python, 31.4% on MATH+Python) and drafts formal proofs in the Isabelle proof assistant (25.8% and 24.6% on the Olympiad-level miniF2F, valid and test), both above Llemma 34B (Table 3). Math training lifted general reasoning too: MMLU (exam questions in 57 subjects) rises from 42.9% to 54.9% and BBH (23 hard multi-step reasoning tasks) from 42.9% to 59.5% over the code checkpoint it started from (Table 4; the released, fully decayed code model scores 49.1% and 55.2%, still below).
 
 ::note slip | §2.3 says the code tokens let DeepSeekMath-Base "maintain" the code model's coding scores. Against the checkpoint it was actually trained from (taken just before learning-rate decay) that holds: HumanEval 40.2% → 40.9%, MBPP 52.6% → 52.6%. Against the released, fully decayed DeepSeek-Coder-Base-v1.5 it is a drop: 43.2% → 40.9% and 60.4% → 52.6%.
 
@@ -131,15 +131,15 @@ The clip stops a token's probability from moving more than a factor $1\pm\vareps
 
 $$ r_t = r_\varphi(q, o_{\le t}) - \beta\log\frac{\pi_\theta(o_t\mid q,o_{<t})}{\pi_{ref}(o_t\mid q,o_{<t})} \qquad (2) $$
 
+::predict ppo-value-model-cost
+
 The paper's objection is to $V_\psi$, for two reasons. It is "typically another model of comparable size as the policy" (§4.1.1), so it doubles the trained weights, gradients and optimizer state. And it must be accurate at *every* token, although the reward model scores only the last one; learning a per-token value from one number at the end is hard.
 
 ::figure grpo:fig4 | top, PPO: policy, reference, reward and value models, with GAE combining reward and value into advantages; bottom, GRPO: the value model is gone, the policy samples a group o₁…o_G, and "group computation" turns the G rewards into advantages
 
 GRPO's replacement uses something cheap in language modelling: you can sample the same question many times. For each question it samples a group of $G$ answers and uses their *average reward* as the baseline. The question is shared by all $G$ answers, so the baseline depends on the question and not on any one answer's luck: the identity above says it does not bias the direction (up to one detail in the next part).
 
-::predict ppo-value-model-cost
-
-Counting models makes the saving concrete. PPO holds four 7B-class networks: the trained policy and critic, the frozen reference and reward models. GRPO holds three. If a trained network costs 16 bytes per parameter (weights, gradients, Adam states) and a frozen one 2, PPO needs $112 + 112 + 14 + 14 = 252$ GB of model state for 7B models, GRPO $140$ GB. The 112 GB saved is exactly the critic; the reference model stays because GRPO keeps a KL term.
+Counting models makes the saving concrete. PPO holds four 7B-class networks: the trained policy and critic, the frozen reference and reward models. GRPO holds three. If a trained network costs 16 bytes per parameter (weights, gradients, Adam states) and a frozen one 2, PPO's four same-size networks need $16 + 16 + 2 + 2 = 36$ bytes of model state per policy parameter, GRPO's three $20$. The 16 bytes saved per parameter are exactly the critic; the reference model stays because GRPO keeps a KL term.
 
 ::note warning | The paper quantifies neither reason: there is no memory measurement and no PPO-versus-GRPO comparison at equal compute anywhere in it. Its saving is in memory and critic passes, not in generation (see the recipe below).
 ::kp supp-policy-gradient
@@ -177,15 +177,15 @@ $$ \mathcal{J}_{GRPO}(\theta) = \mathbb{E}_{q,\;\{o_i\}_{i=1}^{G}\sim\pi_{\theta
 
 Read it from the inside out. Each token gets PPO's clipped term with the group advantage. The KL penalty to the reference model is subtracted *per token, in the objective*. The token terms are averaged over each answer's length, then over the $G$ answers of the group.
 
+::predict grpo-objective-clip-kl
 ::worked grpo-objective-clip-kl
 
 **Why move the KL out of the reward?** In PPO's Eq. 2 the penalty changes every token's reward, so it flows through GAE into the advantages and the value targets. GRPO's advantages are a pure function of the group's rewards; putting the KL anywhere else would mean re-normalizing a mix of task reward and penalty. In the paper's words, the change avoids "complicating the calculation of $\hat A_{i,t}$". The two terms now act separately: $\beta$ changes the KL term and never the advantage.
 
-::predict grpo-objective-clip-kl
+::predict supp-importance-ratio
 
 **When does the clip act?** At the moment the first gradient is taken after sampling, $\pi_\theta = \pi_{\theta_{old}}$, so every $\rho_{i,t} = 1$. One is inside the band $[1-\varepsilon, 1+\varepsilon]$, so the min picks the unclipped term. Its value is $\hat A_{i,t}$, and its gradient is $\hat A_{i,t}\,\nabla\rho = \hat A_{i,t}\,\nabla_\theta\log\pi_\theta$ (the ratio is constant in value but not in slope). The clip only starts to matter on a second, third... update of the same samples, once ratios have drifted out of the band.
 
-::predict supp-importance-ratio
 ::widget fixture:grpo--token-coefficient | set log π_θ equal to log π_old: the point sits at ρ = 1 in the shaded band and the ratio part of the coefficient equals Â; drag log π_θ until ρ leaves the band on the side Â's sign favours and only then does that part drop to 0
 
 ::note why | The training recipe below uses "a single update following each exploration stage". Put together with the above (our inference, which the course states in one line on L16's slide 18): in the runs the paper reports, the clip never bound, and GRPO was a plain policy gradient with group-normalized rewards plus a KL term. The paper never even prints a value for $\varepsilon$.
@@ -247,7 +247,9 @@ The reward-to-go can flip a step's sign. In the widget's "one bad middle step" p
 ## Iterative GRPO: what if the reward model falls behind? {#iterative}
 source: grpo:§4.1.4 · grpo:algorithm1 · Fig. 6
 
-A learned reward model was trained on answers from the SFT model. As RL moves the policy, its answers drift into territory the reward model never saw, and its scores become less trustworthy: "the old reward model may not be sufficient to supervise the current policy model" (§4.1.4). The paper's fix wraps GRPO in an outer loop, Algorithm 1:
+A learned reward model was trained on answers from the SFT model. As RL moves the policy, its answers drift into territory the reward model never saw, and its scores become less trustworthy: "the old reward model may not be sufficient to supervise the current policy model" (§4.1.4). The paper's fix wraps GRPO in an outer loop, Algorithm 1.
+
+::predict iterative-grpo
 
 ::figure grpo:algorithm1 | read lines 3, 6 and 12 together: the reference model is reset once per outer iteration, the old policy once per step, and the reward model at the end of each iteration
 
@@ -262,8 +264,6 @@ A learned reward model was trained on answers from the SFT model. As RL moves th
 ::worked iterative-grpo
 
 So the KL anchor moves. Inside one iteration, $\pi_{ref}$ is fixed and the KL term restrains drift from where the iteration began. Across iterations the policy can travel arbitrarily far from the SFT model, as long as each hop is small. The paper motivates only the reward-model refresh; the reference reset is stated without a reason.
-
-::predict iterative-grpo
 
 The experiment runs two outer iterations from DeepSeekMath-Instruct 7B. Iterative RL "significantly improves the performance, especially at the first iteration" (§5.2.1).
 
@@ -290,6 +290,8 @@ The RL run starts from DeepSeekMath-Instruct 7B and uses a deliberately narrow q
 The batch arithmetic shows where GRPO spends its compute. A batch of 1,024 questions with $G = 64$ is 65,536 sampled answers, up to $65{,}536 \times 1{,}024 \approx 67$M generated tokens, for *one* policy update. Generation, not the missing critic, dominates the cost; this is why efficient inference ([L10](#/read/lecture_10)) is part of RL. The paper does not print the number of RL steps.
 
 ::note warning | $G$ is answers per question, not questions per batch; and with one update per sampling stage, $\varepsilon$ would not act even if it were given. A reproduction has to choose it, and it does not matter for this recipe.
+
+::predict rl-findings-maj-not-pass
 
 **Results.** Against the Instruct model it started from (Table 5):
 
@@ -322,6 +324,8 @@ Every method imitates some token sequences with some weight. They differ in thre
 - the **reward function** $\pi_{rf}$: where the signal comes from. Human selection, a correctness *rule*, or a learned reward *model*;
 - the **algorithm** $\mathcal{A}$: how data and signal become the **gradient coefficient** $GC$, the per-token weight that decides how hard each token is reinforced or penalized.
 
+::predict unified-paradigm
+
 ::figure grpo:table10 | six rows, three columns; read down the gradient-coefficient column: 1 for SFT, a 0/1 indicator for both RFTs, a sigmoid for DPO, the GAE advantage for PPO, the group advantage plus a KL term for GRPO
 
 | Method | Data source | Reward | Gradient coefficient |
@@ -339,18 +343,17 @@ $$ GC_{RFT}(q,o,t) = \mathbb{I}(o) = \begin{cases}1 & \text{the answer of } o \t
 
 Online RFT is the same with answers sampled from the live policy. DPO ([L15](#/read/lecture_15)) has two data terms, the preferred answer pushed up and the rejected one down, both weighted by a sigmoid of how far the policy already prefers the wrong one. PPO and GRPO fit only after assuming one update per sampling stage, so that the ratio is 1 and the min and clip disappear, exactly as in the objective part above.
 
-::predict unified-paradigm
-
 The paradigm's use is that it isolates one difference at a time. Fig. 5 trains DeepSeekMath-Instruct 1.3B further with four methods.
 
 ::figure grpo:fig5 | GSM8K and MATH accuracy over training steps for RFT, Online RFT, GRPO with outcome supervision and GRPO with process supervision: the online methods pull away from RFT late in training, and both GRPO curves sit above Online RFT
 
 **Data source, holding the coefficient fixed.** RFT and Online RFT share $GC = \mathbb{I}(o)$ and differ only in where answers come from. Online RFT is comparable early but "gains an absolute advantage in the later stage" (§5.2.1). The paper's explanation: at first the policy is still close to the SFT model, so the two sample sets look alike; later the policy has drifted, and samples from the frozen SFT model describe a model that no longer exists.
 
+::predict gradient-coefficient-comparison
+
 **Coefficient, holding the online data fixed.** Online RFT and GRPO differ in the coefficient. $\mathbb{I}(o)$ is absolute and never negative: every correct answer gets the same push and wrong answers are ignored. $\hat A$ is relative: answers above the group mean are pushed up by how far above they are, answers below are pushed *down*. GRPO beats Online RFT, which the paper credits to "altering positive and negative gradient coefficients", and process-supervised GRPO beats outcome-supervised GRPO, credited to finer, step-aware coefficients.
 
 ::worked gradient-coefficient-comparison
-::predict gradient-coefficient-comparison
 
 The relative coefficient has a blind spot that the indicator does not. On a question the policy always solves, Online RFT keeps putting weight 1 on every answer, while GRPO's $\hat A$ is 0 for all of them. On a question it never solves, both give zero. GRPO's negative gradients exist only in mixed groups.
 
@@ -371,11 +374,9 @@ The RL model gained about 5 points on GSM8K and MATH from a subset of the very q
 
 ::figure grpo:fig7 | Maj@K and Pass@K against K for the Instruct and RL 7B models on GSM8K and MATH, at temperature 0.7; compare the gap between the two models on each metric
 
-The finding, in the caption's words: "RL enhances Maj@K but not Pass@K." The authors' reading: RL makes "the output distribution more robust", boosting the correct response from the top-K rather than enhancing "fundamental capabilities" (§5.2.2). A toy case shows the mechanism. A model solves one problem in 10 of 64 samples before RL and 40 of 64 after. Pass@64 is 1 both times. Maj@64 can flip from wrong to right, because the correct answer now wins the vote.
+The finding, in the caption's words: "RL enhances Maj@K but not Pass@K." The authors' reading: RL makes "the output distribution more robust", boosting the correct response from the top-K rather than enhancing "fundamental capabilities" (§5.2.2). A toy case shows the mechanism. A model solves one problem in 12 of 64 samples before RL and 44 of 64 after. Pass@64 is 1 both times. Maj@64 can flip from wrong to right, because the correct answer now wins the vote.
 
-::predict rl-findings-maj-not-pass
-
-The same pattern over five problems, 8 samples each (our example). Correct samples before RL: 0, 2, 3, 6, 1; after: 0, 5, 7, 8, 3. Pass@8 is 4 of 5 = 80% both times: the problem with 0 correct stays unsolved. Maj@8, counting a problem solved when at least 5 of its 8 samples are correct, goes from 1 of 5 (20%) to 3 of 5 (60%). (Counting "at least 5 of 8" is a simplification: if the wrong answers disagree with each other, fewer correct samples can win the vote.)
+The same pattern over five problems, 8 samples each (our example). Correct samples before RL: 0, 1, 4, 6, 2; after: 0, 3, 7, 8, 5. Pass@8 is 4 of 5 = 80% both times: the problem with 0 correct stays unsolved. Maj@8, counting a problem solved when at least 5 of its 8 samples are correct, goes from 1 of 5 (20%) to 3 of 5 (60%). (Counting "at least 5 of 8" is a simplification: if the wrong answers disagree with each other, fewer correct samples can win the vote.)
 
 This fits the gradient-coefficient analysis (our connection; the paper does not draw it). GRPO's coefficient is zero on a question whose $G$ samples all fail, so a problem the model never solves gives no signal to learn from. What RL can do is shift probability toward answers the model already produces sometimes, which is what Maj@K rewards.
 

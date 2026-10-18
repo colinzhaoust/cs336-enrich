@@ -193,7 +193,7 @@
           "why": "6 x 2.8e11 x 3e11 = 5.04e23; 6 x 7e10 x 1.4e12 = 5.88e23; ratio 1.17. The paper says both were trained for 'the same number of FLOPs' (§4) using its exact count, and Appendix F notes the exact count differs from 6ND by up to 10%; the two statements are consistent only because 6ND is an approximation."
         },
         "transfer": {
-          "q": "A colleague proposes an IsoFLOP study for a model family whose context length is 32k tokens instead of 2k, keeping C = 6ND as the FLOP axis. In which direction will the exact-FLOP to 6ND ratio move relative to Table A4's 0.99-1.10 (up or down), and why?",
+          "q": "A colleague proposes an IsoFLOP study for a model family whose context length is 32k tokens instead of 2k, keeping C = 6ND as the FLOP axis. In which direction will the exact-FLOP to 6ND ratio move relative to Table A4's 0.99-1.10: up or down?",
           "format": "trend",
           "answer": "up (above 1.10): the attention-logit and softmax terms in Appendix F scale with seq_len squared, so at 16x the context they are no longer a small correction to the parameter matmuls",
           "varies": "the sequence length (functional dimension: the same FLOP formula applied to a different architecture setting)",
@@ -480,7 +480,7 @@
           "why": "A run's loss at an intermediate FLOP count is worse than a shorter run's final loss at the same FLOPs because the shorter run has already decayed its learning rate. So the envelope is traced by run endings; footnote 4 reports all selected points lie within the last 15% of training."
         },
         "transfer": {
-          "q": "You replicate Approach 1 but, to save runs, train each model size once for the longest horizon only and read the loss at 1/16, 1/8, 1/4, 1/2 of the way through to stand in for the four shorter runs. Compared with the paper's envelope, will the fitted optimal N for a given FLOP count come out larger or smaller, and why?",
+          "q": "You replicate Approach 1 but, to save runs, train each model size once for the longest horizon only and read the loss at 1/16, 1/8, 1/4, 1/2 of the way through to stand in for the four shorter runs. Compared with the paper's envelope, will the fitted optimal N for a given FLOP count come out larger or smaller?",
           "format": "trend",
           "answer": "larger: the mid-run losses of a long-schedule run overestimate what a matched short schedule would reach, so small (N, short D) points look worse than they are, the envelope tilts toward bigger models, and the exponent a rises toward Kaplan's",
           "varies": "how the short-horizon points are produced (functional: intermediate readings of one long run instead of separate matched-schedule runs)",
@@ -590,7 +590,7 @@
             "quote": "ranging from $6\\times 10^{18}$ to $3\\times 10^{21}$ FLOPs"
           }
         ],
-        "filtering_note": "Each IsoFLOP curve uses final losses only, with the cosine length set to match the token count (footnote 7); the parabola is fit in the loss-vs-parameters plane (the paper does not state the axis transform; Fig. 3 plots parameters on a log axis). Lecture 9 p48 keeps the picture ('convex shapes. The minima form a power law') and p55 generalises it ('Isoflops everywhere'). The site's fixture isoflop-sweep draws the Approach-3 fitted function along IsoFLOP slices rather than the paper's measured points; with those constants the D_opt/N_opt ratio at the minimum rises from about 26 at 1e18 to about 49 at 1e21, which is Approach 3's b > a showing, not the parabola fits of this approach."
+        "filtering_note": "Each IsoFLOP curve uses final losses only, with the cosine length set to match the token count (footnote 7); the parabola is fit in the loss-vs-parameters plane (the paper does not state the axis transform; Fig. 3 plots parameters on a log axis). Lecture 9 p48 keeps the picture ('convex shapes. The minima form a power law') and p55 generalises it ('Isoflops everywhere'). The site's fixture isoflop-sweep draws the Approach-3 fitted function along IsoFLOP slices rather than the paper's measured points; with those constants the D_opt/N_opt ratio at the minimum rises from about 26 at 1e18 to about 50 at 1e21, which is Approach 3's b > a showing, not the parabola fits of this approach."
       },
       "prerequisites": [
         {
@@ -798,7 +798,7 @@
           "why": "A/N^α = 406.4 / (7e10)^0.34 = 0.083; B/D^β = 410.7 / (1.4e12)^0.28 = 0.163; L̂ = 1.69 + 0.08 + 0.16 = 1.94. At the Eq. 4 optimum the derivatives balance, α·A/N^α = β·B/D^β, so with α > β the data term is the larger of the two."
         },
         "transfer": {
-          "q": "A team fits Eq. 2 to their own runs and gets α = 0.28, β = 0.34 (the paper's values swapped), with E, A, B unchanged. Without computing Eq. 4 numerically, in which direction does the compute-optimal allocation move compared with the paper: more parameters per token or fewer, and why?",
+          "q": "A team fits Eq. 2 to their own runs and gets α = 0.28, β = 0.34 (the paper's values swapped), with E, A, B unchanged. Without computing Eq. 4 numerically, in which direction does the compute-optimal allocation move compared with the paper: more parameters per token or fewer?",
           "format": "trend",
           "answer": "more parameters per token: a = β/(α+β) becomes 0.34/0.62 > 0.5, so N_opt now grows faster than D_opt with compute; the term that decays more slowly (now the N term, exponent 0.28) is the one worth spending more on",
           "varies": "the fitted exponents α and β (functional: same formula, different fit)",
@@ -940,7 +940,7 @@
             "quote": "1 Billion ... 1.20e+20 ... 20.0 Billion ... 1.62e+20 ... 27.1 Billion"
           }
         ],
-        "filtering_note": "The paper states Eq. 4 without the derivation (set d/dN of L̂(N, C/6N) to zero; the two correction terms' derivatives balance). Plugging the rounded Eq. 10 exponents into a = β/(α+β) gives 0.28/0.62 = 0.452, which rounds to 0.45, not the printed 0.46; the unrounded fit presumably differs in the third decimal, so prompts use a tolerance. Because b > a, Approach 3's tokens-per-parameter grows with scale (Table A3: 27.1 at 1B, 41 at 10B, about 61 at 67B), unlike Approaches 1-2; the isoflop-sweep fixture built from these constants shows the same drift (D_opt/N_opt about 26 at 1e18 to about 49 at 1e21). Lecture 9 p53 records that a later re-fit of Approach 3 brought it in line with Approaches 1-2."
+        "filtering_note": "The paper states Eq. 4 without the derivation (set d/dN of L̂(N, C/6N) to zero; the two correction terms' derivatives balance). Plugging the rounded Eq. 10 exponents into a = β/(α+β) gives 0.28/0.62 = 0.452, which rounds to 0.45, not the printed 0.46; the unrounded fit presumably differs in the third decimal, so prompts use a tolerance. Because b > a, Approach 3's tokens-per-parameter grows with scale (Table A3: 27.1 at 1B, 41 at 10B, about 61 at 67B), unlike Approaches 1-2; the isoflop-sweep fixture built from these constants shows the same drift (D_opt/N_opt about 26 at 1e18 to about 50 at 1e21). Lecture 9 p53 records that a later re-fit of Approach 3 brought it in line with Approaches 1-2."
       },
       "prerequisites": [
         {
@@ -1325,7 +1325,7 @@
         "predict": {
           "q": "Gopher scored 60.0% 5-shot on MMLU. Chinchilla has 4x fewer parameters, trained on 4x more tokens at the same FLOPs. Commit to a number: Chinchilla's MMLU average as reported in Table 6.",
           "format": "number",
-          "answer": "67.6",
+          "answer": "67.6%",
           "tolerance": 0.02,
           "why": "Table 6 and §4.2.2 give 67.6% (the abstract rounds to 67.5%), a 7.6-point gain, above the 63.4% that forecasters expected for June 2023. The point is that the gain came from reallocating, not adding, compute."
         },

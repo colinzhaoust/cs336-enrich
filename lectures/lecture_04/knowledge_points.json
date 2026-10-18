@@ -886,7 +886,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "You have a dense model pretrained at short context and want long-context inference to be cheaper without pretraining again. Per slide 12, which route does the deck say supports 'post hoc' adaptation?",
+          "q": "You have a dense model pretrained at short context and want long-context inference to be cheaper without pretraining again. Which route can be adapted 'post hoc', after the dense short-context pretraining?",
           "format": "choice",
           "choices": [
             "sparse attention with a lightweight indexer (DSA)",
@@ -894,8 +894,7 @@
             "a 7-to-1 linear/full hybrid"
           ],
           "answer": "sparse attention with a lightweight indexer (DSA)",
-          "why": "DSA keeps the pretrained attention weights and only adds a selector, so it can be bolted on after dense pretraining; the hybrids replace layers and are trained that way from the start.",
-          "targets_misconception": "Sparse attention removes the KV cache like linear attention does."
+          "why": "DSA keeps the pretrained attention weights and only adds a selector, so it can be bolted on after dense pretraining; the hybrids replace layers and are trained that way from the start."
         },
         "transfer": {
           "q": "Compared with full attention at context n, which costs does an indexer-based sparse attention reduce and which does it leave unchanged: (a) KV-cache storage, (b) per-query score computation, (c) KV bytes read per query?",
@@ -1022,13 +1021,13 @@
           "distractor_from": "linear-time belief (neither part, or only the attention); same-scaling confusion"
         },
         "transfer": {
-          "q": "Same setup: the context doubles from 64K to 128K tokens with k = 2,048 fixed. By what factor does the total cost of the attention over the selected tokens (summed over all queries) grow? Type only the number.",
+          "q": "Now the context grows from 128K to 512K tokens and k is raised from 2,048 to 4,096. By what factor does the total cost of the attention over the selected tokens (summed over all queries) grow? Type only the number.",
           "format": "number",
-          "answer": "2",
+          "answer": "8",
           "tolerance": 0.01,
-          "why": "n queries each attend to k tokens, so the cost is n·k; with k fixed, doubling n doubles it (while the indexer's n² quadruples).",
-          "varies": "which part of DSA is measured",
-          "invariant": "k is bounded independently of n",
+          "why": "n queries each attend to k tokens, so the cost is n·k: n grows 4× and k 2×, so it grows 8×. The indexer's n² grows 16× whatever k is.",
+          "varies": "both n and k change; the attention part is measured",
+          "invariant": "the selected-token attention costs n·k, the indexer n²",
           "transfer_distance": "near"
         },
         "check": {
@@ -1530,7 +1529,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "You fine-tune an MoE and its FLOP-matched dense twin on the same small instruction set. Per slide 50, which shows the larger train/validation gap?",
+          "q": "You fine-tune an MoE and its FLOP-matched dense twin on the same small instruction set. Which shows the larger train/validation gap?",
           "format": "choice",
           "choices": [
             "the MoE",
@@ -2336,8 +2335,8 @@
         },
         "retrieval": [
           {
-            "q": "What reason does the lecture give for wanting experts used evenly?",
-            "answer": "Systems efficiency."
+            "q": "What reasons does the lecture give for wanting experts used evenly?",
+            "answer": "Systems efficiency (the slide's reason), and, in the professor's reading of the OLMoE ablation, model quality: without balancing, routing collapses onto a few experts and the loss is significantly higher."
           },
           {
             "q": "What is the derivative of the Switch balancing loss with respect to p_i(x) proportional to?",
@@ -2468,8 +2467,7 @@
             "both are reset to zero"
           ],
           "answer": "expert 3's bias goes down, expert 9's goes up",
-          "why": "A bias 'making it more likely to get tokens' is raised for under-used experts and lowered for over-used ones, by online update rather than by gradient. Over time this evens the load.",
-          "targets_misconception": "The per-expert bias also scales the expert's output, so balancing changes what the model computes for a token."
+          "why": "A bias 'making it more likely to get tokens' is raised for under-used experts and lowered for over-used ones, by online update rather than by gradient. Over time this evens the load."
         },
         "transfer": {
           "q": "Name one way the bias scheme and the Switch auxiliary loss differ in how the balancing signal reaches the router, and one thing p42's parenthetical warns about the 'loss free' label.",
@@ -2904,7 +2902,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "An MoE in bf16 diverges mid-training with router logits growing large. Per slide 48, what is the first change to make, and roughly how much does it change total training FLOPs?",
+          "q": "An MoE in bf16 diverges mid-training with router logits growing large. What is the first change to make, and roughly how much does it change total training FLOPs?",
           "format": "choice",
           "choices": [
             "compute only the router in float32; negligible FLOP change",
@@ -3177,11 +3175,15 @@
         {
           "belief": "MLA saves KV-cache memory by using fewer attention heads, like MQA/GQA.",
           "why_wrong": "MLA keeps all heads; it caches a single low-rank latent c_t^KV per token from which every head's K and V are reconstructed by up-projection (or absorbed into the query). The saving comes from the latent width being far smaller than heads × head_dim × 2, not from sharing heads."
+        },
+        {
+          "belief": "RoPE is just another linear map on the keys, so it can be folded into the merged query-key product like W^UK.",
+          "why_wrong": "RoPE's rotation depends on the positions of the query and the key, so it differs for every pair; sitting between W^Q and W^UK, it blocks precomputing their product. That is why DeepSeek adds a few non-latent key dimensions that carry the rotation (p58)."
         }
       ],
       "prompts": {
         "predict": {
-          "q": "With MLA and no RoPE, the key up-projection W^UK can be merged into the query projection. Where does RoPE have to be applied for this merge to break, according to slide 58?",
+          "q": "With MLA and no RoPE, the key up-projection W^UK can be merged into the query projection. Where does RoPE have to be applied for this merge to break?",
           "format": "choice",
           "choices": [
             "between W^Q and W^UK, so the rotation sits inside the merged product",
@@ -3194,7 +3196,7 @@
             "'after the softmax' <- plausible: treats RoPE as a score-level position bias (ALiBi-style) rather than a rotation of q and k"
           ],
           "why": "Without RoPE the score is ⟨h W^Q W^UK, c^KV⟩ and W^Q W^UK is one matrix. With RoPE it is ⟨h W^Q R_q, R_k W^UK c^KV⟩; the position-dependent R_q R_k sits between the two weights, so you cannot precompute their product. The fix is a few non-latent key dimensions that carry the rotation.",
-          "targets_misconception": "MLA saves KV-cache memory by using fewer attention heads, like MQA/GQA."
+          "targets_misconception": "RoPE is just another linear map on the keys, so it can be folded into the merged query-key product like W^UK."
         },
         "transfer": {
           "q": "A layer has 128 heads of dimension 128. Full K and V caching stores 2 × 128 × 128 = 32768 values per token per layer. MLA caches a 512-dim latent plus a 64-dim rotated key. By what factor does per-token cache shrink (ignoring bytes per value)?",

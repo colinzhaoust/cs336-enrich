@@ -56,7 +56,7 @@
             "source": "tea_repo",
             "ref": "generate_video.py:L714-L735",
             "role": "computation",
-            "quote": "planner_model = LiteLLMWrapper(\n        model_name=args.model,\n        temperature=0.7 ... helper_model = LiteLLMWrapper(\n        model_name=args.helper_model if args.helper_model else args.model ... scene_model = LiteLLMWrapper( # Initialize scene_model separately\n        model_name=args.model,\n        temperature=0.7"
+            "quote": "planner_model = LiteLLMWrapper(\n        model_name=args.model,\n        temperature=0.7 ... model_name=args.helper_model if args.helper_model else args.model ... scene_model = LiteLLMWrapper( # Initialize scene_model separately\n        model_name=args.model,\n        temperature=0.7"
           },
           {
             "source": "tea_repo",
@@ -180,7 +180,7 @@
             "source": "tea_repo",
             "ref": "generate_video.py:L492-L500",
             "role": "computation",
-            "quote": "file_prefix = topic.lower()\n        file_prefix = re.sub(r'[^a-z0-9_]+', '_', file_prefix) ... scene_outline_path = os.path.join(self.output_dir, file_prefix, f\"{file_prefix}_scene_outline.txt\")\n        if os.path.exists(scene_outline_path): ... print(f\"Loaded existing scene outline for topic: {topic}\")"
+            "quote": "file_prefix = topic.lower() ... re.sub(r'[^a-z0-9_]+', '_', file_prefix) ... os.path.join(self.output_dir, file_prefix, f\"{file_prefix}_scene_outline.txt\")\n        if os.path.exists(scene_outline_path): ... print(f\"Loaded existing scene outline for topic: {topic}\")"
           },
           {
             "source": "tea_repo",
@@ -318,13 +318,13 @@
             "source": "tea_repo",
             "ref": "src/core/video_planner.py:L155-L167",
             "role": "computation",
-            "quote": "prompt = get_prompt_scene_plan(topic, description) ... response_text = self.planner_model(\n            _prepare_text_inputs(prompt),\n            metadata={\"generation_name\": \"scene_outline\" ... scene_outline_match = re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', response_text, re.DOTALL)\n        scene_outline = scene_outline_match.group(1) if scene_outline_match else response_text"
+            "quote": "prompt = get_prompt_scene_plan(topic, description) ... response_text = self.planner_model( ... re.search(r'(<SCENE_OUTLINE>.*?</SCENE_OUTLINE>)', response_text, re.DOTALL) ... scene_outline_match.group(1) if scene_outline_match else response_text"
           },
           {
             "source": "tea_repo",
             "ref": "task_generator/prompts_raw/__init__.py:L194-L199",
             "role": "claim",
-            "quote": "Plan individual scenes. For each scene please provide the following:\n\n*   **Scene Title:** Short, descriptive title (2-5 words).\n*   **Scene Purpose:** Learning objective of this scene. How does it connect to previous scenes?\n*   **Scene Description:** Detailed description of scene content.\n*   **Scene Layout:**"
+            "quote": "Plan individual scenes. For each scene please provide the following: ... **Scene Title:** Short, descriptive title (2-5 words). ... **Scene Purpose:** Learning objective of this scene. ... **Scene Description:** Detailed description of scene content. ... **Scene Layout:**"
           },
           {
             "source": "tea_repo",
@@ -378,7 +378,7 @@
           "format": "number",
           "answer": "4",
           "tolerance": 0.0,
-          "why": "extract_xml strips the fences and returns the inner XML (utils.py L126); re.findall(r'<SCENE_(\\d+)>[^<]') matches each opening tag followed by a non-'<' character (L516)."
+          "why": "the <SCENE_OUTLINE> regex in generate_scene_outline (video_planner.py L166-L167) keeps only the tagged block, dropping the fences and the closing paragraph, and that is what is saved; extract_xml then finds no fence and returns it unchanged (utils.py L125-L128); re.findall(r'<SCENE_(\\d+)>[^<]') matches each opening tag followed by a non-'<' character (L516)."
         },
         "transfer": {
           "q": "Instead of a Manim outline, you reuse this planner for a slide deck and the model emits <SLIDE_OUTLINE><SLIDE_1>...</SLIDE_1>...</SLIDE_OUTLINE>. With the code unchanged, how many scenes are counted and what gets written to disk?",
@@ -675,8 +675,8 @@
         "transfer": {
           "q": "You point --manim_docs_path at a folder that holds the Manim docs as .rst and .html files instead of .md/.py. What does the core store contain after creation, and what does every later retrieval return?",
           "format": "short",
-          "answer": "Nothing is indexed (no .md/.py files pass the filter, so core_docs is empty and the collection is created empty); every retrieval returns the two header sentences with no documents, and no error is raised.",
-          "why": "_process_documentation_folder only loads files ending in .md or .py (L177) and prints 'No markdown or python files found' (L189); _create_core_store adds documents only if core_docs is truthy (L159); find_relevant_docs formats whatever (empty) results it gets (L353-L356).",
+          "answer": "Nothing is indexed (no .md/.py files pass the filter, so core_docs is empty and the collection is created empty); with --use_langfuse, every retrieval returns the two header sentences with no documents and no error is raised; without it (the default), the first manim-core query raises UnboundLocalError on span before searching (vector_store.py L264-L286).",
+          "why": "_process_documentation_folder only loads files ending in .md or .py (L177) and prints 'No markdown or python files found' (L189); _create_core_store adds documents only if core_docs is truthy (L159); find_relevant_docs formats whatever (empty) results it gets (L353-L356), but it reads span.id for each core query (L286) and span exists only when use_langfuse is set (L264-L273).",
           "varies": "the file types in the documentation corpus (modality dimension: same docs, different format)",
           "invariant": "the .md/.py extension filter and the create-even-if-empty behaviour of the store",
           "transfer_distance": "near"
@@ -728,7 +728,7 @@
       "id": "rag-query-retrieve-k2",
       "label": "RAG at five points: LLM-written JSON queries, k=2 per query, score >= 0.5",
       "kind": "quantity",
-      "statement": "When RAG is on, retrieval happens before each of the three planning stages, before code generation and before each error fix: the helper model turns the stage input into up to 10 JSON queries tagged 'manim-core' or a plugin name (cached per scene in scene<i>/rag_cache/), each query fetches k=2 chunks with relevance score >= 0.5 from the matching store, duplicates are dropped by content, and the chunks are appended to the prompt as fenced text with their scores.",
+      "statement": "When RAG is on (and Langfuse too: find_relevant_docs reads span.id for every query but creates span only under --use_langfuse, so with --use_rag alone the first query raises UnboundLocalError, vector_store.py L264-L286), retrieval happens before each of the three planning stages, before code generation and before each error fix: the helper model turns the stage input into up to 10 JSON queries tagged 'manim-core' or a plugin name (cached per scene in scene<i>/rag_cache/), each query fetches k=2 chunks with relevance score >= 0.5 from the matching store, duplicates are dropped by content, and the chunks are appended to the prompt as fenced text with their scores.",
       "provenance": {
         "status": "implemented",
         "basis": "evidence",
@@ -761,7 +761,7 @@
             "source": "tea_repo",
             "ref": "src/rag/vector_store.py:L277-L281",
             "role": "computation",
-            "quote": "manim_core_queries = [query for query in queries if query[\"type\"] == \"manim-core\"]\n        manim_plugin_queries = [query for query in queries if query[\"type\"] != \"manim-core\" and query[\"type\"] in self.plugin_stores] ... print(\"Warning: Some plugin queries were skipped because their types weren't found in available plugin stores\")"
+            "quote": "manim_core_queries = [query for query in queries if query[\"type\"] == \"manim-core\"] ... query[\"type\"] != \"manim-core\" and query[\"type\"] in self.plugin_stores] ... print(\"Warning: Some plugin queries were skipped because their types weren't found in available plugin stores\")"
           },
           {
             "source": "tea_repo",
@@ -794,7 +794,7 @@
             "quote": "cache_dir = os.path.join(self.output_dir, re.sub(r'[^a-z0-9_]+', '_', topic.lower()), f\"scene{scene_number}\", \"rag_cache\") ... cache_file = os.path.join(cache_dir, \"rag_queries_code.json\") ... if os.path.exists(cache_file): ... return cached_queries"
           }
         ],
-        "filtering_note": "The error-fix query cache is keyed per scene, not per error (rag_queries_error_fix.json, code_generator.py L172-L179), so the second and later fix attempts of a scene reuse the queries written for the first error. The retrieved text is appended to the planner prompts as a string but passed to the code-generation prompt via additional_context (code_generator.py L307-L309). The vision-storyboard query prompt asks for high-level 'what features exist' queries while the technical/code prompts ask for API-level queries (L798-L799 vs L1861)."
+        "filtering_note": "The error-fix query cache is keyed per scene, not per error (rag_queries_error_fix.json, code_generator.py L172-L179), so the second and later fix attempts of a scene reuse the queries written for the first error. The retrieved text is appended to the planner prompts as a string but passed to the code-generation prompt via additional_context (code_generator.py L307-L309). The vision-storyboard query prompt asks for high-level 'what features exist' queries while the technical/code prompts ask for API-level queries (L798-L799 vs L1861). Retrieval requires --use_langfuse: span is assigned only under `if self.use_langfuse:` (vector_store.py L264-L273) but read for every core and plugin query (L286, L304), so with --use_rag alone the first query raises UnboundLocalError; no caller catches it (video_planner.py L231-L239, code_generator.py L299-L305), and the README RAG example omits the flag."
       },
       "prerequisites": [
         {
@@ -820,7 +820,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "The helper model returns 6 queries for code generation: 4 typed manim-core, 1 typed manim_physics (store exists), 1 typed manim_slides (no store). Every search returns 2 chunks and none repeat. How many chunks reach the code prompt?",
+          "q": "RAG and Langfuse are both on (--use_rag --use_langfuse). The helper model returns 6 queries for code generation: 4 typed manim-core, 1 typed manim_physics (store exists), 1 typed manim_slides (no store). Every search returns 2 chunks and none repeat. How many chunks reach the code prompt?",
           "format": "number",
           "answer": "10",
           "tolerance": 0.0,
@@ -837,7 +837,7 @@
           "transfer_distance": "near"
         },
         "check": {
-          "q": "RAG is on and no rag_cache files exist at the start of the run. Scene 2 and scene 5 each fail to render twice, with a different error message each time, before their third version renders. Every helper-model reply is valid JSON. How many helper-model calls generate error-fix RAG queries across the whole run? Type only the number.",
+          "q": "RAG and Langfuse are both on (--use_rag --use_langfuse) and no rag_cache files exist at the start of the run. Scene 2 and scene 5 each fail to render twice, with a different error message each time, before their third version renders. Every helper-model reply is valid JSON. How many helper-model calls generate error-fix RAG queries across the whole run? Type only the number.",
           "format": "number",
           "answer": "2",
           "tolerance": 0.01,
@@ -1061,13 +1061,13 @@
             "source": "tea_repo",
             "ref": "generate_video.py:L383-L417",
             "role": "computation",
-            "quote": "while True: # Retry loop controlled by break statements\n                code, error_message = await self.video_renderer.render_scene( ... if error_message is None: # Render success if error_message is None\n                    break\n\n                if curr_version >= max_retries: # Max retries reached\n                    print(f\"Max retries reached for scene {curr_scene}, error: {error_message}\")\n                    break # Exit retry loop\n\n                curr_version += 1\n                # if program runs this, it means that the code is not rendered successfully\n                code, log = self.code_generator.fix_code_errors(\n                    implementation_plan=scene_implementation,\n                    code=code,\n                    error=error_message,"
+            "quote": "while True: # Retry loop ... await self.video_renderer.render_scene( ... if error_message is None: # Render success ... if curr_version >= max_retries: # Max retries reached ... break # Exit retry loop ... curr_version += 1 ... self.code_generator.fix_code_errors( ... error=error_message,"
           },
           {
             "source": "tea_repo",
             "ref": "src/core/video_renderer.py:L53-L68",
             "role": "computation",
-            "quote": "retries = 0\n        while retries < max_retries:\n            try: ... result = await asyncio.to_thread(\n                    subprocess.run,\n                    [\"manim\", \"-qh\", file_path, \"--media_dir\", media_dir, \"--progress_bar\", \"none\"], ... if result.returncode != 0:\n                    raise Exception(result.stderr)"
+            "quote": "while retries < max_retries: ... asyncio.to_thread(\n                    subprocess.run, ... [\"manim\", \"-qh\", file_path, \"--media_dir\", media_dir, \"--progress_bar\", \"none\"] ... if result.returncode != 0:\n                    raise Exception(result.stderr)"
           },
           {
             "source": "tea_repo",
@@ -1085,7 +1085,7 @@
             "source": "tea_repo",
             "ref": "task_generator/prompts_raw/__init__.py:L1216-L1223",
             "role": "claim",
-            "quote": "Requirements:\n1. Provide complete error analysis with specific line numbers where possible. ... 4. If external assets (e.g., images, audio, video) are referenced, remove them.\n5. **If voiceover is present in the original code, ensure it remains preserved in the corrected code.**\n6. Preserve all original code that is not causing the reported error."
+            "quote": "Requirements:\n1. Provide complete error analysis with specific line numbers where possible. ... 5. **If voiceover is present in the original code, ensure it remains preserved in the corrected code.**\n6. Preserve all original code that is not causing the reported error."
           },
           {
             "source": "tea_repo",
@@ -1228,7 +1228,7 @@
             "source": "tea_repo",
             "ref": "src/core/video_renderer.py:L70-L85",
             "role": "computation",
-            "quote": "if use_visual_fix_code and visual_self_reflection_func and banned_reasonings: ... if self.scene_model.model_name.startswith(('gemini/', 'vertex_ai/')):\n                        media_input = video_path\n                    else:\n                        # For other models, use image snapshot\n                        media_input = self.create_snapshot_scene("
+            "quote": "if use_visual_fix_code and visual_self_reflection_func and banned_reasonings: ... if self.scene_model.model_name.startswith(('gemini/', 'vertex_ai/')):\n                        media_input = video_path ... # For other models, use image snapshot ... media_input = self.create_snapshot_scene("
           },
           {
             "source": "tea_repo",
@@ -1440,7 +1440,7 @@
             "quote": "if not args.only_plan and not args.only_render:  # Add condition for only_render\n                            video_generator.combine_videos(topic)"
           }
         ],
-        "filtering_note": "The 'latest version' rule assumes the highest-numbered version is the one that rendered; if a later version failed before producing media no folder exists for it, so the rule holds, but if a visual-fix pass had produced v1 media after v0 succeeded both exist and v1 wins. Scene folders are matched by int(f.split('scene')[-1].split('_')[0]), which breaks for topics whose file_prefix itself contains 'scene'. The combine step is all-or-nothing: one unrendered scene means no combined video, which is what --peek_existing_videos counts (L746-L768). The .srt files come from manim-voiceover, not from this repo."
+        "filtering_note": "The 'latest version' rule assumes the highest-numbered version is the one that rendered; if a later version failed before producing media no folder exists for it, so the rule holds, but if a visual-fix pass had produced v1 media after v0 succeeded both exist and v1 wins. The combine step is all-or-nothing: one unrendered scene means no combined video, which is what --peek_existing_videos counts (L746-L768). The .srt files come from manim-voiceover, not from this repo."
       },
       "prerequisites": [
         {
@@ -1537,7 +1537,7 @@
             "source": "tea_repo",
             "ref": "evaluate.py:L357-L370",
             "role": "claim",
-            "quote": "parser.add_argument('--model_text', type=str, \n                       choices=ALLOWED_MODELS,\n                       default='azure/gpt-4o', ... parser.add_argument('--model_video', type=str,\n                       choices=['gemini/gemini-1.5-pro-002', ... default='gemini/gemini-1.5-pro-002', ... parser.add_argument('--model_image', type=str,\n                       choices=ALLOWED_MODELS,\n                       default='azure/gpt-4o',"
+            "quote": "parser.add_argument('--model_text', type=str, ... default='azure/gpt-4o', ... parser.add_argument('--model_video', type=str, ... default='gemini/gemini-1.5-pro-002', ... parser.add_argument('--model_image', type=str, ... default='azure/gpt-4o',"
           },
           {
             "source": "tea_repo",
@@ -1561,7 +1561,7 @@
             "source": "tea_repo",
             "ref": "eval_suite/prompts_raw/__init__.py:L104-L112",
             "role": "claim",
-            "quote": "## Evaluation Criteria\n\n1. **Visual Relevance**\n   - Does the video frame align with the theorem's concepts and derivations?\n\n2. **Element Layout**\n   - Placemend and Size: Are the visual elements well-placed and appropriately sized within the frame?\n   - Overlap: Are the visual elements free of unintentional overlap?"
+            "quote": "## Evaluation Criteria\n\n1. **Visual Relevance**\n   - Does the video frame align with the theorem's concepts and derivations?\n\n2. **Element Layout** ... Overlap: Are the visual elements free of unintentional overlap?"
           },
           {
             "source": "tea_repo",
@@ -1672,7 +1672,7 @@
           },
           {
             "q": "Which temperature do the evaluation judges use, and what integer range must every score fall in?",
-            "answer": "0.0; integers 1 to 5 (convert_score_fields rejects anything else).",
+            "answer": "0.0; the prompts ask for integers 1-5, but convert_score_fields only requires an int or a digit string. The range is never checked.",
             "layer": "detail"
           }
         ],
@@ -1750,7 +1750,7 @@
             "source": "tea_repo",
             "ref": "generate_video.py:L746-L756",
             "role": "computation",
-            "quote": "if args.peek_existing_videos:\n            print(f\"Here's the results of checking whether videos are rendered successfully in {args.output_dir}:\") ... if os.path.exists(os.path.join(args.output_dir, item, f\"{item}_combined.mp4\")):\n                        successful_rendered_videos += 1\n            print(f\"Number of successful rendered videos: {successful_rendered_videos}/{total_folders}\")"
+            "quote": "if args.peek_existing_videos: ... os.path.exists(os.path.join(args.output_dir, item, f\"{item}_combined.mp4\")):\n                        successful_rendered_videos += 1 ... print(f\"Number of successful rendered videos: {successful_rendered_videos}/{total_folders}\")"
           },
           {
             "source": "tea_repo",
@@ -1888,7 +1888,7 @@
             "source": "tea_repo",
             "ref": "task_generator/parse_prompt.py:L42-L50",
             "role": "computation",
-            "quote": "out_file.write(\"# This file is generated automatically through parse_prompt.py\\n\\n\")\n        txt_files = [file for root, dirs, files in os.walk(folder_path) for file in files if file.endswith(\".txt\")] ... var_name = \"_\" + file_path.replace(folder_path, \"\").replace(os.sep, \"_\").replace(\".txt\", \"\").strip(\"_\") ... out_file.write(f'{var_name} = \"\"\"{content}\"\"\"\\n\\n')"
+            "quote": "out_file.write(\"# This file is generated automatically through parse_prompt.py ... os.walk(folder_path) ... file.endswith(\".txt\")] ... var_name = \"_\" + file_path.replace(folder_path, \"\").replace(os.sep, \"_\").replace(\".txt\", \"\").strip(\"_\") ... out_file.write(f'{var_name} = \"\"\"{content}\"\"\"\\n\\n')"
           },
           {
             "source": "tea_readme",
@@ -2020,7 +2020,7 @@
             "source": "tea_repo",
             "ref": "mllm_tools/litellm.py:L186-L193",
             "role": "computation",
-            "quote": "content = response.choices[0].message.content\n            if content is None:\n                print(f\"Got null response from model. Full response: {response}\")\n            return content\n        \n        except Exception as e:\n            print(f\"Error in model completion: {e}\")\n            return str(e)"
+            "quote": "content = response.choices[0].message.content\n            if content is None:\n                print(f\"Got null response from model. ... return content ... except Exception as e:\n            print(f\"Error in model completion: {e}\")\n            return str(e)"
           },
           {
             "source": "tea_repo",
@@ -2050,7 +2050,7 @@
             "source": "tea_repo",
             "ref": "generate_video.py:L291-L297",
             "role": "computation",
-            "quote": "async def render_video_fix_code(self,\n                              topic: str,\n                              description: str,\n                              scene_outline: str,\n                              implementation_plans: List,\n                              max_retries=3,\n                              session_id: str = None) -> None:"
+            "quote": "async def render_video_fix_code(self, topic: str, description: str, scene_outline: str, implementation_plans: List, max_retries=3, session_id: str = None) -> None:"
           },
           {
             "source": "tea_repo",
@@ -2089,7 +2089,7 @@
             "quote": "if not args.only_plan and not args.only_render:\n                video_generator.combine_videos(args.topic)"
           }
         ],
-        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L938 creates a coroutine object that is never awaited (Python prints a RuntimeWarning at exit, nothing renders); L800 passes 2 positional arguments to a method needing 4, raising TypeError. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do. Correction (read-through pass, checked in Python): calling an async function with missing positional arguments raises TypeError immediately, so the single-topic --only_gen_vid path fails like the batch one rather than creating and discarding a coroutine."
+        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L800 and L938 both pass 2 positional arguments to a method needing 4, raising TypeError before any coroutine is created (the missing await at L938 would matter only after that); nothing renders in either mode. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do. Correction (read-through pass, checked in Python): calling an async function with missing positional arguments raises TypeError immediately, so the single-topic --only_gen_vid path fails like the batch one rather than creating and discarding a coroutine."
       },
       "prerequisites": [
         {

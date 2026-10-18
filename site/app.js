@@ -1,6 +1,6 @@
-import { WIDGETS } from "./widgets.js?v=3";
-import { judge } from "./grade.js?v=1";
-import { loadCards, saveCards, review, dueCards, retrievability, nextInterval } from "./fsrs.js";
+import { WIDGETS } from "./widgets.js?v=4";
+import { judge } from "./grade.js?v=3";
+import { loadCards, saveCards, review, dueCards, retrievability, nextInterval } from "./fsrs.js?v=3";
 
 // ------------------------------------------------------------------ util --
 const $ = (s, r = document) => r.querySelector(s);
@@ -15,7 +15,9 @@ const el = (tag, attrs = {}, ...kids) => {
 const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 const state = { threads: null, data: {}, cards: loadCards(), progress: loadProgress(), builds: {} };
 function loadProgress() { try { return JSON.parse(localStorage.getItem("atlas.progress.v1") || "{}"); } catch { return {}; } }
-function saveProgress() { try { localStorage.setItem("atlas.progress.v1", JSON.stringify(state.progress)); } catch {} }
+// pages create an empty record per KP they show; only records with something in them are saved or exported
+const nonEmpty = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v && Object.keys(v).length));
+function saveProgress() { try { localStorage.setItem("atlas.progress.v1", JSON.stringify(nonEmpty(state.progress))); } catch {} }
 function setting(k, dflt) { try { const v = localStorage.getItem("atlas.set." + k); return v === null ? dflt : v === "1"; } catch { return dflt; } }
 function setSetting(k, v) { try { localStorage.setItem("atlas.set." + k, v ? "1" : "0"); } catch {} }
 function participant() { try { return localStorage.getItem("atlas.participant") || ""; } catch { return ""; } }
@@ -30,7 +32,7 @@ function exportBundle() {
   let events = []; try { events = JSON.parse(localStorage.getItem("atlas.events.v1") || "[]"); } catch {}
   return { format: "atlas-learner-export/1", exported_at: new Date().toISOString(), participant: participant(),
     threads: Object.fromEntries(Object.entries(state.data).map(([id, d]) => [id, { version: d.kp.version, n_kps: d.kp.knowledge_points.length }])),
-    progress: state.progress, cards: state.cards, events };
+    progress: nonEmpty(state.progress), cards: state.cards, events };
 }
 async function getJSON(p) { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(`${r.status} ${p}`); return r.json(); }
 async function tryJSON(p) { try { return await getJSON(p); } catch { return null; } }
@@ -43,8 +45,18 @@ function anchorHref(sources, a) {
   const vm = VIDEO_REF.exec(a.ref || "");
   if (vm) { const url = src?.url || Object.values(sources || {}).find(x => /youtube\.com\/watch/.test(x.url || ""))?.url; return url ? `${url}&t=${videoSecs(vm[1])}s` : null; }
   if (!src) return null;
+  // a slide-deck page (lecture_08.pdf:p26): the course PDF at that page, upstream in published builds, local otherwise
+  const pm = /^([\w.\-]+\.pdf):p(\d+)/.exec(a.ref || "");
+  if (pm && src.kind === "slides") return `${state.threads.slides_pdf_base || (state.threads.figure_base ? "https://github.com/stanford-cs336/lectures/blob/main/" : "../../official/lectures/")}${pm[1]}#page=${pm[2]}`;
   const m = /^([\w.\-/]+):L(\d+)(?:-L(\d+))?/.exec(a.ref || "");
-  if (src.upstream && m) return `${src.upstream.replace(/\/[^/]*$/, "/")}${m[1]}#L${m[2]}${m[3] ? "-L" + m[3] : ""}`;
+  const lines = m ? `#L${m[2]}${m[3] ? "-L" + m[3] : ""}` : "";
+  if (src.upstream && m && /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/?$/.test(src.upstream)) {
+    // a bare repo root: drop the local clone's folder prefix (external/RoFormer/README.md -> README.md), add /blob/<ref>/
+    let rel = m[1]; const segs = String(src.path || "").split("/").filter(Boolean);
+    for (let k = segs.length; k > 0; k--) { const tail = segs.slice(-k).join("/") + "/"; if (rel.startsWith(tail)) { rel = rel.slice(tail.length); break; } }
+    return `${src.upstream.replace(/\/$/, "")}/blob/${src.ref || "main"}/${rel}${lines}`;
+  }
+  if (src.upstream && m && /^https?:\/\/\S+$/.test(src.upstream)) return `${src.upstream.replace(/\/[^/]*$/, "/")}${m[1]}${lines}`;
   if (src.url) return src.url;
   return null;
 }
@@ -78,7 +90,19 @@ function route() {
   if (a === "t" && state.data[b]) return renderThread(app, b, c);
   renderHome(app);
 }
-function updateDue() { const n = dueCards(state.cards).length; $("#due-pill").textContent = `reviews due: ${n}`; }
+function updateDue() { const n = reviewQueue().length; $("#due-pill").textContent = `reviews due: ${n}`; }
+// due cards that can be shown: the KP and prompt still exist, and a detail card joins only once every core card
+// of its KP has been remembered at least twice (the UI grades 1 or 3, so reps - again counts "remembered"; `again` counts every Again grade, `lapses` only
+// Agains a day or more after the last review; cards saved before `again` existed fall back to lapses)
+function reviewQueue() {
+  const remembered = id => { const c = state.cards[id]; return (c?.reps || 0) - (c?.again ?? c?.lapses ?? 0); };
+  const coreSecured = (tid, kp) => (kp.prompts.retrieval || []).every((r, i) => r.layer === "detail" || remembered(`${tid}:${kp.id}:r${i}`) >= 2);
+  return dueCards(state.cards).filter(id => {
+    const [tid, kid, ri] = id.split(":"); const kp = state.data[tid]?.kp.knowledge_points.find(k => k.id === kid);
+    const r = kp?.prompts?.retrieval?.[+String(ri).slice(1)];
+    return !!r && (r.layer !== "detail" || coreSecured(tid, kp));
+  });
+}
 
 function renderHome(app) {
   app.className = "";
@@ -100,7 +124,7 @@ function tocSection(title, kind) {
       el("div", { class: "tnum" }, num),
       el("div", {}, el("a", { class: "ttitle", href: `#/t/${t.id}` }, shortTitle(t).replace(/^L\d+ · /, "")), t.subtitle ? el("div", { class: "small muted" }, t.subtitle) : null, after),
       el("div", { class: "tmeta small muted" }, progressBar(s.st, s.n), `${s.n} KPs`, el("span", { class: "icons" }, [s.anim ? `▶${s.anim}` : "", s.widgets ? `⚙${s.widgets}` : "", s.spoken ? `🎙${s.spoken}` : ""].filter(Boolean).join("  "))),
-      el("div", { class: "tlinks small" }, el("a", { href: `#/read/${t.id}` }, "read"), el("a", { href: `#/t/${t.id}/${nk}` }, started ? "practise" : "practise"), kind === "lecture" ? el("a", { href: `#/t/${t.id}/_spoken` }, "video") : null, el("a", { href: `#/t/${t.id}/_gallery` }, "widgets")));
+      el("div", { class: "tlinks small" }, el("a", { href: `#/read/${t.id}` }, "read"), el("a", { href: `#/t/${t.id}/${nk}` }, "practise"), kind === "lecture" ? el("a", { href: `#/t/${t.id}/_spoken` }, "video") : null, el("a", { href: `#/t/${t.id}/_gallery` }, "widgets")));
   });
   return el("div", {}, el("h2", {}, title), el("div", { class: "toc" }, ...rows));
 }
@@ -115,9 +139,10 @@ function masteryOf(tid, kid) {
     const secured = Object.entries(state.cards).some(([id, c]) => id.startsWith(`${tid}:${kid}:`) && c.reps >= 2 && c.lapses === 0 && (c.last - (p.transfer_t || 0)) > 2 * 86400e3);
     return secured ? "secured" : "mastered";
   }
-  if (p.predict) return "seen";
+  if (p.predict || p.transfer || p.check || p.closed_book) return "seen";  // any attempt counts: predicting is optional
   return "new";
 }
+const isMastered = (tid, kid) => ["mastered", "secured"].includes(masteryOf(tid, kid));
 function readiness(tid, kp, kps) { const m = masteryOf(tid, kp.id); if (m === "mastered" || m === "secured") return m; return prereqsMet(tid, kp, kps) ? "ready" : "locked"; }
 function prereqsMet(tid, kp, kps) {
   const local = (kp.prerequisites || []).every(p => ["mastered","secured"].includes(masteryOf(tid, p.kp)) || !kps.find(k => k.id === p.kp));
@@ -147,6 +172,7 @@ function renderThread(app, tid, kid) {
   if (kid === "_paths") return renderPaths(main, tid);
   if (kid === "_spoken") return renderSpoken(main, tid);
   if (kid === "_gallery") return renderGallery(main, tid);
+  if (!byId[kid]) { main.append(el("div", { class: "warn" }, `no knowledge point ${kid} in this thread`)); return threadOverview(main, tid); }
   renderKP(main, tid, byId[kid], kps);
   renderMath(main);
 }
@@ -165,7 +191,7 @@ function selfGraded(p) { return (p.format || "short") === "short" && !Array.isAr
 function promptBlock(tid, kp, name, p, opts = {}) {
   const key = `${tid}:${kp.id}`; state.progress[key] ||= {};
   const prog = state.progress[key];
-  const box = el("div", { class: `block gate ${opts.locked ? "locked" : ""}` });
+  const box = el("div", { class: "block gate" });
   box.append(el("div", { class: "eyebrow" }, opts.eyebrow || name));
   box.append(el("div", { class: "q" }, p.q));
   const reveal = el("div", { class: "reveal", style: "display:none" });
@@ -222,32 +248,29 @@ function renderKP(main, tid, kp, kps) {
   main.append(el("div", { class: "kp-head" },
     el("div", { class: "kind" }, kp.kind || "", " · ", el("span", { class: `chip ${prov.status} ${prov.basis === "inference" ? "inference" : ""}` }, prov.status), (kp.prerequisites || []).length ? el("span", { class: "small muted" }, ` needs: ${kp.prerequisites.map(p => p.kp).join(", ")}`) : null),
     el("h1", {}, kp.label)));
-  if (!prereqsMet(tid, kp, kps) && setting("strict", false)) {
-    const missing = [...(kp.prerequisites || []).filter(p => kps.find(k => k.id === p.kp) && masteryOf(tid, p.kp) !== "mastered").map(p => [tid, p.kp]),
-      ...(kp.external_prerequisites || []).map(e => String(e.kp || e).split(":")).filter(([t2, k2]) => state.data[t2] && masteryOf(t2, k2) !== "mastered")];
+  const missing = [...(kp.prerequisites || []).filter(p => kps.find(k => k.id === p.kp) && !isMastered(tid, p.kp)).map(p => [tid, p.kp]),
+    ...(kp.external_prerequisites || []).map(e => String(e.kp || e).split(":")).filter(([t2, k2]) => state.data[t2] && !isMastered(t2, k2))];
+  // inside the session the learner started, strict mode asks only for prerequisites that come earlier in that session
+  const sessNow = sessionFor(tid, kp.id);
+  const blocking = sessNow?.active ? missing.filter(([t2, k2]) => t2 === tid && sessNow.ids.indexOf(k2) > -1 && sessNow.ids.indexOf(k2) < sessNow.i) : missing;
+  if (blocking.length && setting("strict", false)) {
     main.append(el("div", { class: "block gate" }, el("div", { class: "eyebrow" }, "locked · strict mode"), el("div", {}, "Master these first (answer their changed-case question):"),
-      el("ul", {}, ...missing.map(([t2, k2]) => el("li", {}, el("a", { href: `#/t/${t2}/${k2}` }, `${t2 === tid ? "" : t2 + " · "}${(state.data[t2]?.kp.knowledge_points.find(k => k.id === k2) || {}).label || k2}`)))),
+      el("ul", {}, ...blocking.map(([t2, k2]) => el("li", {}, el("a", { href: `#/t/${t2}/${k2}` }, `${t2 === tid ? "" : t2 + " · "}${(state.data[t2]?.kp.knowledge_points.find(k => k.id === k2) || {}).label || k2}`)))),
       el("div", { class: "small muted" }, "The one-sentence claim stays hidden until then. Turn strict mode off on the data page to browse freely.")));
-    logEvent("blocked", { thread: tid, kp: kp.id, missing: missing.map(m => m.join(":")) });
+    logEvent("blocked", { thread: tid, kp: kp.id, missing: blocking.map(m => m.join(":")) });
     return;
   }
-  if (!prereqsMet(tid, kp, kps)) {
-    const missing = [...(kp.prerequisites || []).filter(p => kps.find(k => k.id === p.kp) && masteryOf(tid, p.kp) !== "mastered").map(p => [tid, p.kp]),
-      ...(kp.external_prerequisites || []).map(e => String(e.kp || e).split(":")).filter(([t2, k2]) => state.data[t2] && masteryOf(t2, k2) !== "mastered")];
-    main.append(el("div", { class: "small muted", style: "margin:2px 0 8px" }, "builds on: ", ...missing.map(([t2, k2]) => el("a", { href: `#/t/${t2}/${k2}`, style: "margin-right:8px" }, `${t2 === tid ? "" : t2 + " · "}${k2}`))));
-  }
+  if (missing.length) main.append(el("div", { class: "small muted", style: "margin:2px 0 8px" }, "builds on: ", ...missing.map(([t2, k2]) => el("a", { href: `#/t/${t2}/${k2}`, style: "margin-right:8px" }, `${t2 === tid ? "" : t2 + " · "}${k2}`))));
 
   // 1. predict gate
   const rest = el("div", {});  // nothing is locked: predicting first is optional (Colin, 2026-10-02)
-  const unlock = () => { rest.querySelectorAll(".block.locked").forEach(b => b.classList.remove("locked")); statement.style.display = ""; };
-  const predict = promptBlock(tid, kp, "predict", kp.prompts.predict, { eyebrow: "1 · predict first (optional)", onCommit: () => { unlock(); setTimeout(route, 0); } });
+  const predict = promptBlock(tid, kp, "predict", kp.prompts.predict, { eyebrow: "1 · predict first (optional)", onCommit: () => setTimeout(route, 0) });
   main.append(predict);
   const statement = el("div", { class: "block" }, el("div", { class: "eyebrow" }, "the claim"), el("div", { class: "statement" }, kp.statement));
   main.append(statement);
 
   // 2. mechanism: presentations
-  const locked = "";
-  const mech = el("div", { class: `block ${locked}` }, el("div", { class: "eyebrow" }, "2 · mechanism"));
+  const mech = el("div", { class: "block" }, el("div", { class: "eyebrow" }, "2 · mechanism"));
   const interactiveRefs = new Set((kp.presentations || []).filter(p => p.type === "interactive").map(p => p.ref));
   for (const p of kp.presentations || []) mech.append(renderPresentation(tid, kp, p, d, interactiveRefs));
   if (kp.prompts.self_explain) {
@@ -263,14 +286,13 @@ function renderKP(main, tid, kp, kps) {
   const answered = n => !kp.prompts[n] || prog[`${n}_given`] !== undefined;
   const caseDone = answered("transfer") && answered("check");
   const closedBook = !caseDone && !!prog.closed_book;
-  const caseLocked = false;
   if (closedBook) { mech.style.display = "none"; rest.append(el("div", { class: "block notice" }, "Mechanism hidden: answer the changed case from what you understood. It comes back once you have answered.")); }
   else if (!caseDone) rest.append(el("div", { class: "block small" }, el("button", { onclick: () => { prog.closed_book = Date.now(); saveProgress(); logEvent("closed_book", { thread: tid, kp: kp.id }); route(); } }, "Test yourself closed book"), el("span", { class: "muted", style: "margin-left:8px" }, "optional: hides the mechanism, sources and cards until you answer the changed case below")));
-  rest.append(promptBlock(tid, kp, "transfer", kp.prompts.transfer, { eyebrow: kp.prompts.check ? "3a · changed case (you grade it)" : "3 · changed case (counts for mastery)", locked: caseLocked, onGrade: () => route() }));
-  if (kp.prompts.check) rest.append(promptBlock(tid, kp, "check", kp.prompts.check, { eyebrow: "3b · quick check (graded automatically; mastery needs 3a and 3b)", locked: caseLocked, onGrade: () => route() }));
+  rest.append(promptBlock(tid, kp, "transfer", kp.prompts.transfer, { eyebrow: kp.prompts.check ? "3a · changed case (you grade it)" : "3 · changed case (counts for mastery)", onGrade: () => route() }));
+  if (kp.prompts.check) rest.append(promptBlock(tid, kp, "check", kp.prompts.check, { eyebrow: "3b · quick check (graded automatically; mastery needs 3a and 3b)", onGrade: () => route() }));
 
   // 4. retrieval
-  const ret = el("div", { class: `block retrieval ${locked}` }, el("div", { class: "eyebrow" }, "4 · retrieval prompts (scheduled; come back in reviews)"));
+  const ret = el("div", { class: "block retrieval" }, el("div", { class: "eyebrow" }, "4 · retrieval prompts (scheduled; come back in reviews)"));
   // layers: core cards first; detail cards (identifiers, paths, exact thresholds) wait behind a fold
   const rs = (kp.prompts.retrieval || []).map((r, i) => [r, i]);
   rs.filter(([r]) => r.layer !== "detail").forEach(([r, i]) => ret.append(retrievalCard(`${tid}:${kp.id}:r${i}`, r)));
@@ -291,9 +313,9 @@ function renderKP(main, tid, kp, kps) {
 
   // next up: outer fringe
   const stops = d.kp.path?.stops || kps.map(k => k.id);
-  const next = stops.filter(id => id !== kp.id && masteryOf(tid, id) !== "mastered" && prereqsMet(tid, kps.find(k => k.id === id), kps));
-  const sess = Object.entries(SESSIONS).find(([, sd]) => sd.thread === tid && (sd.kps || []).includes(kp.id));
-  if (sess) { const ids = sess[1].kps; const i = ids.indexOf(kp.id); main.append(el("div", { class: "footer-nav" }, el("span", { class: "muted small" }, `session ${sess[0]} · ${i + 1}/${ids.length}`), i + 1 < ids.length ? el("a", { href: `#/t/${tid}/${ids[i + 1]}` }, "next in session →") : el("a", { href: "#/data" }, "session done → export data"))); }
+  const next = stops.filter(id => id !== kp.id && !isMastered(tid, id) && prereqsMet(tid, kps.find(k => k.id === id), kps));
+  const sess = sessionFor(tid, kp.id);
+  if (sess) { const { ids, i } = sess; main.append(el("div", { class: "footer-nav" }, el("span", { class: "muted small" }, `session ${sess.sid} · ${i + 1}/${ids.length}`), i + 1 < ids.length ? el("a", { href: `#/t/${tid}/${ids[i + 1]}` }, "next in session →") : el("a", { href: "#/data" }, "session done → export data"))); }
   main.append(el("div", { class: "footer-nav" }, el("span", { class: "muted small" }, "next on the outer fringe:"), ...next.slice(0, 3).map(id => el("a", { href: `#/t/${tid}/${id}` }, kps.find(k => k.id === id).label))));
 }
 
@@ -308,6 +330,9 @@ function retrievalCard(id, r, revealAlso = null) {
   return card;
 }
 
+// an image path, or an image URL whose type sits in a query string (pbs.twimg.com/media/...?format=jpg)
+// an edtrace cache file, whose name ends in the image type without a dot (official/lectures/var/files/image-<hash>-<url>_png)
+const IMG_REF = /\.(png|jpe?g|gif|svg|webp)(\?.*)?$|^https?:\/\/\S+[?&]format=(png|jpe?g|gif|webp)\b|^official\/lectures\/var\/files\/image-\S+_(png|jpe?g|gif|webp)$/i;
 function renderPresentation(tid, kp, p, d, interactiveRefs = new Set()) {
   const box = el("div", { class: "pres" });
   const lab = el("div", { class: "label" }, `${p.type} · ${p.action}${p.faded ? " · faded" : ""}`);
@@ -325,7 +350,7 @@ function renderPresentation(tid, kp, p, d, interactiveRefs = new Set()) {
       }
       const vid = el("video", { controls: "", preload: "metadata", src: `${state.threads.builds}${fid}/video.mp4` });
       const strip = el("div", { class: "steps" });
-      m.steps.forEach(s => strip.append(el("div", { class: "step", onclick: () => { vid.currentTime = Math.max(0, s.time - 0.05); vid.pause(); logEvent("seek", { thread: tid, kp: kp.id, fixture: fid, step: s.id }); strip.querySelectorAll(".step").forEach(x => x.classList.remove("active")); event.currentTarget.classList.add("active"); } },
+      m.steps.forEach(s => strip.append(el("div", { class: "step", onclick: e => { vid.currentTime = Math.max(0, s.time - 0.05); vid.pause(); logEvent("seek", { thread: tid, kp: kp.id, fixture: fid, step: s.id }); strip.querySelectorAll(".step").forEach(x => x.classList.remove("active")); e.currentTarget.classList.add("active"); } },
         el("img", { src: `${state.threads.builds}${fid}/${s.frame}`, alt: s.caption }), el("div", {}, s.caption))));
       holder.append(vid, el("div", { class: "small muted" }, `lint: ${m.lint_worst} · ${m.quality} · steps are seek points, not autoplay`), strip);
       if (p.notice) holder.append(el("div", { class: "notice" }, el("b", {}, "notice: "), p.notice));
@@ -339,14 +364,14 @@ function renderPresentation(tid, kp, p, d, interactiveRefs = new Set()) {
   } else if (p.type === "code" || p.type === "formula-step" || p.type === "example") {
     if (Array.isArray(p.steps) && p.steps.length) box.append(workedSteps(tid, kp, p));
     const sn = d.snippets?.[p.ref];
-    if (sn) box.append(el("pre", {}, numbered(sn)));
+    if (sn) { box.append(el("pre", {}, numbered(sn))); const cr = codeCredit(sn); if (cr) box.append(cr); }
     else if (d.discovered?.sections) {
       const eqs = d.discovered.sections.flatMap(sec => sec.equations || []);
       const hits = eqs.filter(e => e.latex && (p.ref === e.ref || (p.ref || "").split(/[,\s]+/).includes(e.ref)));
       if (hits.length) box.append(el("div", { class: "latex-block" }, ...hits.map(e => { const d = el("div", { class: "latex-row" }, el("span", { class: "muted small", style: "margin-right:10px" }, `(${e.number})`)); const t = el("span", { class: "latex" }); t.textContent = e.latex; d.append(t); return d; })));
     }
     else { const ev = findEvidence(d, p.ref); if (ev.length) box.append(el("pre", {}, ev.map(e => e.text).join("\n"))); }
-    box.append(el("div", { class: "small" }, "source: ", refLink(d.sources, kp, p.ref), sn ? el("span", { class: "muted" }, ` · ${sn.path.split("/").slice(-2).join("/")} @${sn.sha256}`) : null));
+    box.append(el("div", { class: "small" }, "source: ", p.type === "code" ? codeLink(d, kp, p.ref) : refLink(d.sources, kp, p.ref), sn ? el("span", { class: "muted" }, ` · ${sn.path.split("/").slice(-2).join("/")} @${sn.sha256}`) : null));
   } else if (p.type === "video-span") {
     const vm = VIDEO_REF.exec(p.ref || "");
     const holder = el("div", {}); box.append(holder);
@@ -366,7 +391,7 @@ function renderPresentation(tid, kp, p, d, interactiveRefs = new Set()) {
       if (p.notice) holder.append(el("div", { class: "notice" }, el("b", {}, "listen for: "), String(p.notice).replace(/^listen for:\s*/i, "")));
     });
   } else if (p.type === "figure") {
-    if (/\.(png|jpe?g|gif|svg|webp)$/i.test(p.ref || "")) {
+    if (IMG_REF.test(p.ref || "")) {
       // published builds point lecture figures at the upstream repo instead of copying them (threads.json figure_base)
       const fb = state.threads.figure_base, src = p.ref.startsWith("http") ? p.ref : fb && p.ref.startsWith("official/lectures/") ? fb + p.ref.slice("official/lectures/".length) : `../../${p.ref}`;
       box.append(el("img", { src, style: "max-width:100%;border:1px solid var(--rule);border-radius:6px" }), el("div", { class: "small muted" }, p.ref));
@@ -403,8 +428,17 @@ function workedSteps(tid, kp, p) {
 }
 
 function renderMath(root = document) {
-  if (!window.katex) { setTimeout(() => renderMath(root), 300); return; }
+  if (!window.katex) { if (root !== document && !root.isConnected) return; setTimeout(() => renderMath(root), 300); return; }  // stop once the page is gone
   root.querySelectorAll(".latex:not([data-done])").forEach(n => { try { window.katex.render(n.textContent, n, { throwOnError: false, displayMode: true }); } catch {} n.dataset.done = "1"; });
+}
+// credit under code quoted from an external repo; build_pages.py publishes its LICENSE as licenses/<name>.txt
+// one level above site/ (only on the published site, which sets figure_base, so local builds show plain text)
+const CODE_CREDITS = [["external/FeynRL/", "FeynRL", "Apache-2.0", "feynrl"], ["external/TheoremExplainAgent", "TheoremExplainAgent", "MIT", "theoremexplainagent"],
+  ["tools/edtrace/", "edtrace", "MIT", "edtrace"], ["external/RoFormer/", "RoFormer", "Apache-2.0", "roformer"]];
+function codeCredit(sn) {
+  const path = String(sn?.path || "").replace(/^4blue2brown\//, ""), c = CODE_CREDITS.find(([pre]) => path.startsWith(pre));
+  if (!c) return null;
+  return el("div", { class: "small muted" }, `${c[1]} · `, state.threads.figure_base ? el("a", { href: `../licenses/${c[3]}.txt`, target: "_blank" }, c[2]) : c[2]);
 }
 function numbered(sn) {
   const lines = sn.text.split("\n"); const w = String(sn.end).length;
@@ -415,12 +449,24 @@ function refLink(sources, kp, ref) {
   const href = anchorHref(sources, a);
   return href ? el("a", { href, target: "_blank" }, ref) : el("code", {}, ref);
 }
+// a code ref's link: its KP anchor if it has one, else the source whose folder holds the snippet's file
+// (never the thread's first source, which is often the paper or the slide deck)
+function codeLink(d, kp, ref) {
+  if ((kp?.provenance?.anchors || []).some(x => x.ref === ref)) return refLink(d.sources, kp, ref);
+  const sn = d.snippets?.[ref], norm = x => String(x || "").replace(/^4blue2brown\//, ""), m = /:L(\d+)(?:-L(\d+))?$/.exec(ref || "");
+  let best = null;
+  if (sn) for (const [k, s] of Object.entries(d.sources || {})) { const p = norm(s?.path); if (p && (norm(sn.path) === p || norm(sn.path).startsWith(p + "/")) && (!best || p.length > best.p.length)) best = { k, p }; }
+  const rel = best ? (norm(sn.path) === best.p ? best.p.split("/").pop() : norm(sn.path).slice(best.p.length + 1)) : null;
+  const href = best && m ? anchorHref(d.sources, { source: best.k, ref: `${rel}:L${m[1]}${m[2] ? "-L" + m[2] : ""}` }) : null;
+  return href ? el("a", { href, target: "_blank" }, ref) : el("code", {}, ref);
+}
 function findEvidence(d, ref) {
   const m = /^([\w.\-/]+):L(\d+)(?:-L(\d+))?/.exec(ref || ""); if (!m || !d.discovered?.items) return [];
   const lo = +m[2], hi = m[3] ? +m[3] : lo;
   return d.discovered.items.filter(it => (it.kind === "code" || it.kind === "claim" || it.kind === "value") && it.line >= lo && (it.extra?.end_line || it.line) <= hi + 0).map(it => ({ text: it.kind === "claim" ? `# ${it.text}` : it.kind === "value" ? `# @inspect ${it.text}` : it.text }));
 }
-function videoUrl(d) { const k = Object.keys(d.sources || {}).find(x => /_video$/.test(x)); return k ? d.sources[k].url : null; }
+// the lecture recording: prefer a YouTube *_video source (lecture_10 also has an mp4 illustration ending in _video)
+function videoUrl(d) { const ks = Object.keys(d?.sources || {}).filter(x => /_video$/.test(x)); const k = ks.find(x => /youtube\.com\/watch/.test(d.sources[x]?.url || "")) || ks[0]; return k ? d.sources[k].url : null; }
 async function loadTranscript(tid) {
   const d = state.data[tid]; if (!d) return null;
   if (d.transcript !== undefined) return d.transcript;
@@ -443,7 +489,7 @@ function renderProvenance(kp, sources, t) {
     box.append(el("span", { class: "anchor" }, el("span", { class: "chip" }, a.role || "ref"), href ? el("a", { href, target: "_blank" }, anchorText(a)) : el("code", {}, anchorText(a)), a.quote ? el("span", { class: "quote" }, ` “${a.quote}”`) : null));
   }
   if (prov.filtering_note) box.append(el("div", { class: "fnote" }, el("b", {}, "what the source filtered: "), prov.filtering_note));
-  const st = spokenStretches(state.data[t.id] || { kp: {} }, kp.id), url = state.data[t.id]?.sources?.[Object.keys(state.data[t.id]?.sources || {}).find(k => /_video$/.test(k))]?.url;
+  const st = spokenStretches(state.data[t.id] || { kp: {} }, kp.id), url = videoUrl(state.data[t.id]);
   if (st.length && url) box.append(el("div", { class: "small" }, el("b", {}, "taught in the video at: "), ...st.map(s => el("a", { href: `${url}&t=${videoSecs(s.from)}s`, target: "_blank", style: "margin-right:8px" }, `${s.from}–${s.to}`))));
   if (kp.prerequisites?.length) box.append(el("div", { class: "prereq" }, el("b", {}, "prerequisites"), el("ul", {}, ...kp.prerequisites.map(p => el("li", {}, el("a", { href: `#/t/${t.id}/${p.kp}` }, p.kp), " ", el("span", { class: `chip ${p.basis === "teaching-order" || p.basis === "call-order" ? "" : "inference"}` }, p.basis), p.note ? el("span", { class: "muted small" }, " ", p.note) : null)))));
   if (kp.external_prerequisites?.length) box.append(el("div", { class: "prereq" }, el("b", {}, "prerequisites in other threads"), el("ul", {}, ...kp.external_prerequisites.map(e => { const [t2, k2] = String(e.kp || e).split(":"); const known = state.data[t2]?.kp.knowledge_points.find(k => k.id === k2); return el("li", {}, known ? el("a", { href: `#/t/${t2}/${k2}` }, `${t2} · ${known.label}`) : el("code", {}, e.kp || e), " ", el("span", { class: `chip ${masteryOf(t2, k2)}` }, masteryOf(t2, k2)), e.note ? el("span", { class: "muted small" }, " ", e.note) : null); }))));
@@ -468,6 +514,10 @@ function renderFilter(main, tid) {
       tbl.append(el("tr", {}, el("td", {}, el("code", {}, s)), el("td", {}, bar(c("claim"), 40), c("claim")), el("td", {}, bar(c("value"), 20, "k"), c("value")), el("td", {}, c("cite")), el("td", {}, c("figure")),
         el("td", {}, ks.length ? ks.map(k => el("a", { href: `#/t/${tid}/${k.id}`, style: "margin-right:8px" }, el("span", { class: `chip ${k.provenance.status}` }, k.provenance.status), k.label)) : el("span", { class: "muted" }, "— not a KP (announcements, transitions, or dropped)"))));
     }
+    // KPs anchored to code outside every traced span, or only to the audio, still get a row
+    const placed = new Set(sections.flatMap(s => kpsInSec(s).map(k => k.id))), rest = kps.filter(k => !placed.has(k.id));
+    if (rest.length) tbl.append(el("tr", {}, el("td", { colspan: 5 }, el("span", { class: "muted" }, "outside the traced sections (or spoken only)")),
+      el("td", {}, rest.map(k => el("a", { href: `#/t/${tid}/${k.id}`, style: "margin-right:8px" }, el("span", { class: `chip ${k.provenance.status}` }, k.provenance.status), k.label)))));
     main.append(el("div", { class: "filter-view" }, tbl));
     main.append(el("h2", {}, "All evidence items"), el("div", { class: "evidence-list" }, ...disc.items.filter(i => i.kind !== "section_end").map(i => el("div", { class: "it" }, el("span", { class: "k" }, `L${i.line} ${i.kind}`), i.kind === "section_start" ? el("b", {}, i.section) : (i.text || "").slice(0, 160)))));
   } else if (disc.pages) { // slides format
@@ -477,21 +527,36 @@ function renderFilter(main, tid) {
       tbl.append(el("tr", {}, el("td", {}, pg.page), el("td", {}, pg.title), el("td", {}, (pg.claims || []).length), el("td", {}, ks.length ? ks.map(k => el("a", { href: `#/t/${tid}/${k.id}`, style: "margin-right:8px" }, k.label)) : el("span", { class: "muted" }, "—"))));
     }
     main.append(el("div", { class: "filter-view" }, tbl));
-  } else if (disc.sections && disc.sections[0]?.equations) { // paper format
-    const eqSec = {}; disc.sections.forEach(sec => (sec.equations || []).forEach(e => eqSec[e.ref] = sec.id));
-    const secOf = ref => { if (eqSec[ref]) return eqSec[ref]; const m = /^rope:(§[\d.]+)/.exec(ref); if (m) { const hit = disc.sections.find(s2 => s2.ref === "rope:" + m[1]) || disc.sections.find(s2 => m[1].startsWith(s2.ref.replace("rope:", "") + ".")); if (hit) return hit.id; } const pm = /^rope:p(\d+)/.exec(ref); if (pm) { const hit = disc.sections.find(s2 => s2.page === +pm[1]); if (hit) return hit.id; } return null; };
+  } else if (disc.sections && (disc.sections.some(x => x.equations) || Array.isArray(disc.equations))) { // paper format
+    // anchors carry the paper's own prefix (rope:, fa:, grpo:, feynrl:, chinchilla:); sections are keyed by id, or by ref when they have none
+    const pre = (disc.sections[0]?.ref || "").split(":")[0], key = s2 => s2.id || s2.ref, strip = r => String(r || "").replace(`${pre}:`, "");
+    const eqSec = {}, eqsOf = {};
+    disc.sections.forEach(sec => (sec.equations || []).forEach(e => { eqSec[e.ref] = key(sec); (eqsOf[key(sec)] ||= []).push(e); }));
+    if (!disc.sections.some(x => x.equations)) (disc.equations || []).forEach(e => {  // top-level equations name their section as "3.3 Approach 3: ..."
+      const mm = /^([A-Z](?:\.\d+)*|\d+(?:\.\d+)*)\s/.exec(e.section || ""), hit = mm && disc.sections.find(s2 => s2.ref === `${pre}:§${mm[1]}`);
+      if (hit) { eqSec[e.ref] = key(hit); (eqsOf[key(hit)] ||= []).push(e); }
+    });
+    const secRe = new RegExp(`^${pre}:(§[A-Za-z0-9.]+)`), pgRe = new RegExp(`^${pre}:p(\\d+)`);
+    const secOf = ref => {
+      if (eqSec[ref]) return eqSec[ref];
+      const m = secRe.exec(ref);
+      if (m) { const sid = m[1].replace(/\.$/, ""); const hit = disc.sections.find(s2 => strip(s2.ref) === sid) || disc.sections.filter(s2 => sid.startsWith(strip(s2.ref) + ".")).sort((x, y) => strip(y.ref).length - strip(x.ref).length)[0]; if (hit) return key(hit); }
+      const pm = pgRe.exec(ref); if (pm) { const hit = disc.sections.find(s2 => s2.page === +pm[1]); if (hit) return key(hit); }
+      return null;
+    };
     const citedEq = new Set(kps.flatMap(k => (k.provenance.anchors || []).map(a => a.ref)).filter(r => eqSec[r]));
     const tbl = el("table", {}, el("tr", {}, el("th", {}, "section (paper order)"), el("th", {}, "claims"), el("th", {}, "equations (cited by a KP)"), el("th", {}, "course restates"), el("th", {}, "→ knowledge points")));
     for (const sec of disc.sections) {
-      const ks = kps.filter(k => (k.provenance.anchors || []).some(a => secOf(a.ref) === sec.id));
-      const eqs = sec.equations || []; const cited = eqs.filter(e => citedEq.has(e.ref)).length;
-      tbl.append(el("tr", {}, el("td", {}, el("b", {}, sec.ref.replace("rope:", "")), " ", sec.title, el("div", { class: "muted small" }, `p${sec.page}`)), el("td", {}, bar((sec.claims || []).length, 8), (sec.claims || []).length),
-        el("td", {}, eqs.length ? `${eqs.length} (${cited})` : "—", eqs.length ? el("div", { class: "muted small" }, eqs.map(e => e.number).join(", ")) : null),
+      const ks = kps.filter(k => (k.provenance.anchors || []).some(a => secOf(a.ref) === key(sec)));
+      const eqs = eqsOf[key(sec)] || []; const cited = eqs.filter(e => citedEq.has(e.ref)).length;
+      tbl.append(el("tr", {}, el("td", {}, el("b", {}, strip(sec.ref)), " ", sec.title, sec.page ? el("div", { class: "muted small" }, `p${sec.page}`) : null), el("td", {}, bar((sec.claims || []).length, 8), (sec.claims || []).length),
+        el("td", {}, eqs.length ? `${eqs.length} (${cited})` : "—", eqs.length ? el("div", { class: "muted small" }, eqs.map(e => e.number ?? e.ref).join(", ")) : null),
         el("td", {}, (sec.course_restates || []).length ? (sec.course_restates || []).map(c => el("div", { class: "small" }, c.ref || c.page || JSON.stringify(c).slice(0, 40))) : el("span", { class: "muted" }, "not taught")),
         el("td", {}, ks.length ? ks.map(k => el("a", { href: `#/t/${tid}/${k.id}`, style: "margin-right:8px" }, el("span", { class: `chip ${k.provenance.status}` }, k.provenance.status), k.label)) : el("span", { class: "muted" }, "— dropped"))));
     }
     main.append(el("div", { class: "filter-view" }, tbl));
-    if (disc.course?.order) main.append(el("h2", {}, "Course order (Lecture 3)"), el("ol", { class: "small" }, ...disc.course.order.map(o => el("li", {}, el("code", {}, o.ref), " ", o.step))));
+    if (disc.course?.order) { const lec = /lecture_(\d+)/.exec(disc.course.source || disc.course.order[0]?.ref || "");
+      main.append(el("h2", {}, lec ? `Course order (Lecture ${+lec[1]})` : "Course order"), el("ol", { class: "small" }, ...disc.course.order.map(o => el("li", {}, el("code", {}, o.ref), " ", o.step)))); }
   } else if (disc.modules && disc.entry_trace) { // repo format
     const hops = disc.entry_trace.hops || [];
     const hopCount = {}; hops.forEach(h => { const m = h.callee.split(":")[0]; hopCount[m] = (hopCount[m] || 0) + 1; });
@@ -596,7 +661,7 @@ function renderGallery(main, tid) {
   const d = state.data[tid], uses = {};
   for (const k of d.kp.knowledge_points) for (const p of k.presentations || [])
     if ((p.type === "interactive" || p.type === "animation") && WIDGETS[p.ref]) (uses[p.ref] ||= []).push({ k, p });
-  main.append(el("h1", {}, "Widget gallery"), el("p", { class: "muted small" }, `${Object.keys(uses).length} widgets used by this thread, shown without gating. On a KP page each one appears only after the learner commits a prediction.`));
+  main.append(el("h1", {}, "Widget gallery"), el("p", { class: "muted small" }, `${Object.keys(uses).length} widgets used by this thread, shown without gating. On a KP page each one sits in the mechanism block.`));
   for (const [ref, us] of Object.entries(uses)) {
     const box = el("div", { class: "pres", "data-ref": ref });
     box.append(el("div", { class: "label" }, ref), el("div", { class: "small" }, "serves: ", ...us.map(u => el("a", { href: `#/t/${tid}/${u.k.id}`, style: "margin-right:8px" }, u.k.label))));
@@ -624,7 +689,7 @@ function renderGraph(main, tid) {
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, style: "width:100%;background:#fff;border:1px solid var(--rule);border-radius:8px" });
   const ns = "http://www.w3.org/2000/svg";
   for (const k of kps) for (const p of k.prerequisites || []) if (pos[p.kp]) { const a = pos[p.kp], b = pos[k.id]; const ln = document.createElementNS(ns, "line"); ln.setAttribute("x1", a.x); ln.setAttribute("y1", a.y + 14); ln.setAttribute("x2", b.x); ln.setAttribute("y2", b.y - 14); ln.setAttribute("stroke", "#9aa4ad"); if (p.basis !== "teaching-order" && p.basis !== "call-order") ln.setAttribute("stroke-dasharray", "4 3"); svg.append(ln); }
-  for (const k of kps) { const g = document.createElementNS(ns, "g"); g.setAttribute("cursor", "pointer"); g.addEventListener("click", () => location.hash = `#/t/${tid}/${k.id}`); const c = document.createElementNS(ns, "circle"); c.setAttribute("cx", pos[k.id].x); c.setAttribute("cy", pos[k.id].y); c.setAttribute("r", 12); c.setAttribute("fill", { mastered: "#3c8d5a", seen: "#e3b23c" }[masteryOf(tid, k.id)] || "#fff"); c.setAttribute("stroke", k.provenance.status === "supplement" ? "#b8582a" : "#24668d"); c.setAttribute("stroke-width", 2); const tx = document.createElementNS(ns, "text"); tx.setAttribute("x", pos[k.id].x); tx.setAttribute("y", pos[k.id].y + 28); tx.setAttribute("text-anchor", "middle"); tx.setAttribute("font-size", "11"); tx.setAttribute("fill", "#25313d"); tx.textContent = k.label.length > 26 ? k.label.slice(0, 24) + "…" : k.label; g.append(c, tx); svg.append(g); }
+  for (const k of kps) { const g = document.createElementNS(ns, "g"); g.setAttribute("cursor", "pointer"); g.addEventListener("click", () => location.hash = `#/t/${tid}/${k.id}`); const c = document.createElementNS(ns, "circle"); c.setAttribute("cx", pos[k.id].x); c.setAttribute("cy", pos[k.id].y); c.setAttribute("r", 12); c.setAttribute("fill", { secured: "#2f6f45", mastered: "#3c8d5a", seen: "#e3b23c" }[masteryOf(tid, k.id)] || "#fff"); c.setAttribute("stroke", k.provenance.status === "supplement" ? "#b8582a" : "#24668d"); c.setAttribute("stroke-width", 2); const tx = document.createElementNS(ns, "text"); tx.setAttribute("x", pos[k.id].x); tx.setAttribute("y", pos[k.id].y + 28); tx.setAttribute("text-anchor", "middle"); tx.setAttribute("font-size", "11"); tx.setAttribute("fill", "#25313d"); tx.textContent = k.label.length > 26 ? k.label.slice(0, 24) + "…" : k.label; g.append(c, tx); svg.append(g); }
   main.append(svg);
 }
 
@@ -632,7 +697,7 @@ function renderGraph(main, tid) {
 function renderMapAll(app) {
   app.className = "";
   const main = el("div", { class: "main", style: "max-width:1200px;margin:0 auto" }, mapCrumbs([["all dependencies"]]), el("h1", {}, "All knowledge points and their dependencies"),
-    el("p", { class: "muted small" }, "Lecture threads as columns in course order, then papers and repos; a dot per knowledge point; solid edges are same-thread prerequisites, dashed edges cross threads (external prerequisites). Dark green = secured (changed case plus a retrieval remembered two days later), green = mastered (changed case answered), yellow = seen, white = ready (prerequisites mastered), grey = locked. Click a dot to open it."));
+    el("p", { class: "muted small" }, "Lecture threads as columns in course order, then papers and repos; a dot per knowledge point; solid edges are same-thread prerequisites, dashed edges cross threads (external prerequisites). Dark green = secured (changed case plus a retrieval remembered two days later), green = mastered (changed case answered), yellow = seen, white = ready (prerequisites mastered), grey = prerequisites not yet mastered (locked only in strict mode). Click a dot to open it."));
   const lectures = [...state.threads.threads.filter(t => t.kind === "lecture" && state.data[t.id]).sort((a, b) => a.id.localeCompare(b.id)),
     ...state.threads.threads.filter(t => t.kind === "paper" && state.data[t.id]), ...state.threads.threads.filter(t => t.kind === "repo" && state.data[t.id])];
   const colW = 150, rowH = 26, W = 60 + lectures.length * colW, maxN = Math.max(...lectures.map(t => state.data[t.id].kp.knowledge_points.length));
@@ -691,30 +756,36 @@ function parseFlow(md) {
       continue;
     }
     if ((m = /^[-*]\s+(.*)$/.exec(t))) { flush(); const last = sec.blocks[sec.blocks.length - 1]; if (last?.type === "ul") last.items.push(m[1]); else sec.blocks.push({ type: "ul", items: [m[1]] }); continue; }
+    if ((m = /^(\d+)\.\s+(.*)$/.exec(t))) { flush(); const last = sec.blocks[sec.blocks.length - 1]; if (last?.type === "ol") last.items.push(m[2]); else sec.blocks.push({ type: "ol", start: +m[1], items: [m[2]] }); continue; }
     if (!t) { flush(); continue; }
     para.push(t);
   }
   flush(); return out;
 }
 // inline markdown: **bold**, *italic*, `code`, $math$, [text](url)
+// Bold may contain $math$ and `code` (whose * do not close it); an italic * cannot open right after a letter,
+// digit, _ or * (so p*(y|x), w^* and ||W||_* stay literal). Bold, italic and link text nest.
 function inlineMd(text) {
-  const frag = document.createDocumentFragment(); const re = /(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|`[^`]+`|\$[^$]+\$|\[[^\]]+\]\([^)]+\))/g;
+  const frag = document.createDocumentFragment(); const re = /(\*\*(?:\$[^$]+\$|`[^`]+`|[^*$`])+?\*\*|(?<![\p{L}\p{N}_*])\*(?![\s*])[^*]+?(?<!\s)\*|`[^`]+`|\$[^$]+\$|\[[^\]]+\]\([^)]+\))/gu;
   let last = 0, m;
   while ((m = re.exec(text))) {
     if (m.index > last) frag.append(text.slice(last, m.index));
     const tok = m[0];
-    if (tok.startsWith("**")) frag.append(el("b", {}, tok.slice(2, -2)));
+    if (tok.startsWith("**")) frag.append(el("b", {}, inlineMd(tok.slice(2, -2))));
     else if (tok.startsWith("`")) frag.append(el("code", {}, tok.slice(1, -1)));
     else if (tok.startsWith("$")) { const sp = el("span", { class: "latex-inline" }); sp.textContent = tok.slice(1, -1); frag.append(sp); }
-    else if (tok.startsWith("[")) { const mm = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok); frag.append(el("a", { href: mm[2], target: mm[2].startsWith("#") ? "" : "_blank" }, mm[1])); }
-    else frag.append(el("i", {}, tok.slice(1, -1)));
+    else if (tok.startsWith("[")) { const mm = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(tok); const sec = /^#[\w-]+$/.test(mm[2]) ? mm[2].slice(1) : null;  // [text](#id): a section of this flow, not a route
+      const attrs = { href: mm[2], target: mm[2].startsWith("#") ? "" : "_blank" };
+      if (sec) attrs.onclick = e => { e.preventDefault(); document.getElementById(`sec-${sec}`)?.scrollIntoView({ behavior: "smooth" }); };
+      frag.append(el("a", attrs, inlineMd(mm[1]))); }
+    else frag.append(el("i", {}, inlineMd(tok.slice(1, -1))));
     last = m.index + tok.length;
   }
   if (last < text.length) frag.append(text.slice(last));
   return frag;
 }
 function renderInlineMath(root) {
-  if (!window.katex) { setTimeout(() => renderInlineMath(root), 300); return; }
+  if (!window.katex) { if (root !== document && !root.isConnected) return; setTimeout(() => renderInlineMath(root), 300); return; }
   root.querySelectorAll(".latex-inline:not([data-done])").forEach(n => { try { window.katex.render(n.textContent, n, { throwOnError: false, displayMode: false }); } catch {} n.dataset.done = "1"; });
 }
 const kpRef = (tid, ref) => { const [t2, k2] = ref.includes(":") ? ref.split(":") : [tid, ref]; const kp = state.data[t2]?.kp.knowledge_points.find(k => k.id === k2); return kp ? { t2, kp } : null; };
@@ -732,29 +803,30 @@ async function renderFlow(app, tid) {
   (flow.meta.intro || []).forEach(x => body.append(el("p", { class: "lede" }, inlineMd(x))));
   toc.append(el("div", { class: "tochead" }, "Contents"));
   for (const sec of flow.sections) {
-    toc.append(el("a", { href: `#/read/${tid}`, onclick: e => { e.preventDefault(); document.getElementById(`sec-${sec.id}`)?.scrollIntoView({ behavior: "smooth" }); } }, sec.title));
-    const S = el("section", { id: `sec-${sec.id}` }, el("h2", {}, sec.title), sec.source ? el("div", { class: "src small muted" }, "source: ", sec.source) : null);
+    toc.append(el("a", { href: `#/read/${tid}`, onclick: e => { e.preventDefault(); document.getElementById(`sec-${sec.id}`)?.scrollIntoView({ behavior: "smooth" }); } }, inlineMd(sec.title)));
+    const S = el("section", { id: `sec-${sec.id}` }, el("h2", {}, inlineMd(sec.title)), sec.source ? el("div", { class: "src small muted" }, "source: ", sec.source) : null);
     for (const b of sec.blocks) S.append(flowBlock(tid, d, b));
     body.append(S);
   }
   body.append(el("div", { class: "flowend" }, el("p", {}, "Done reading? Practise each knowledge point (prediction, changed case, spaced cards) from ", el("a", { href: `#/t/${tid}` }, "the thread page"), ".")));
-  renderMath(body); renderInlineMath(body);
+  renderMath(body); renderInlineMath(wrap);
 }
 function flowBlock(tid, d, b) {
   const a0 = b.args?.[0];
   if (b.type === "p") return el("p", {}, inlineMd(b.text));
   if (b.type === "h3") return el("h3", { class: "flowh3" }, inlineMd(b.text));
   if (b.type === "ul") return el("ul", {}, ...b.items.map(x => el("li", {}, inlineMd(x))));
+  if (b.type === "ol") return el("ol", b.start > 1 ? { start: b.start } : {}, ...b.items.map(x => el("li", {}, inlineMd(x))));
   if (b.type === "table") { const [head, ...body] = b.header ? b.rows : [null, ...b.rows];
     return el("div", { class: "flowtable" }, el("table", {}, head ? el("tr", {}, ...head.map(c => el("th", {}, inlineMd(c)))) : null, ...body.map(r => el("tr", {}, ...r.map(c => el("td", {}, inlineMd(c))))))); }
   if (b.type === "math") { const t = el("div", { class: "latex" }); t.textContent = b.tex; return el("div", { class: "latex-block" }, t); }
   if (b.type === "code") {
     const sn = d.snippets?.[a0];
-    return el("div", { class: "flowcode" }, sn ? el("pre", {}, numbered(sn)) : el("div", { class: "muted small" }, a0), el("div", { class: "small muted" }, refLink(d.sources, { provenance: { anchors: [] } }, a0), b.text ? [" · ", inlineMd(b.text)] : null));
+    return el("div", { class: "flowcode" }, sn ? el("pre", {}, numbered(sn)) : el("div", { class: "muted small" }, a0), el("div", { class: "small muted" }, codeLink(d, null, a0), b.text ? [" · ", inlineMd(b.text)] : null), sn ? codeCredit(sn) : null);
   }
   if (b.type === "figure") {
     const fb = state.threads.figure_base, ref = a0;
-    if (/\.(png|jpe?g|gif|svg|webp)$/i.test(ref || "")) { const src = ref.startsWith("http") ? ref : fb && ref.startsWith("official/lectures/") ? fb + ref.slice(18) : `../../${ref}`; return el("figure", {}, el("img", { src, loading: "lazy" }), b.text ? el("figcaption", { class: "small muted" }, inlineMd(b.text)) : null); }
+    if (IMG_REF.test(ref || "")) { const src = ref.startsWith("http") ? ref : fb && ref.startsWith("official/lectures/") ? fb + ref.slice(18) : `../../${ref}`; return el("figure", {}, el("img", { src, loading: "lazy" }), b.text ? el("figcaption", { class: "small muted" }, inlineMd(b.text)) : null); }
     return el("div", { class: "small" }, "figure in the source: ", refLink(d.sources, { provenance: { anchors: [] } }, ref), b.text ? [" · ", inlineMd(b.text)] : null);
   }
   if (b.type === "slide") {
@@ -788,7 +860,9 @@ function flowBlock(tid, d, b) {
   if (b.type === "note" || b.type === "video") {
     const kind = b.type === "video" ? "listen" : (a0 || "note"), at = b.type === "video" ? a0 : b.args?.[1];
     const url = videoUrl(d), secs = at ? videoSecs(at.split("-")[0]) : null;
-    const label = { spoken: "said in lecture", skip: "skipped in lecture", slip: "careful: the lecture misspeaks", aside: "aside", deferred: "deferred", why: "why", listen: "listen", warning: "watch out" }[kind] || kind;
+    const tkind = state.threads.threads.find(x => x.id === tid)?.kind;
+    const slip = tkind === "paper" ? "careful: the paper slips" : tkind === "repo" ? "careful: docs and code disagree" : "careful: the lecture misspeaks";
+    const label = { spoken: "said in lecture", skip: "skipped in lecture", slip, aside: "aside", deferred: "deferred", why: "why", listen: "listen", warning: "watch out" }[kind] || kind;
     return el("aside", { class: `flownote ${kind}` }, el("div", { class: "eyebrow" }, label, at && url ? [" · ", el("a", { href: `${url}&t=${secs}s`, target: "_blank" }, at)] : at ? ` · ${at}` : null), el("div", {}, inlineMd(b.text || "")));
   }
   return el("div", { class: "warn" }, `unknown block ::${b.type}`);
@@ -846,7 +920,7 @@ function renderMap(app, unitId, tid) {
   if (unit) return renderMapUnit(main, unit);
   // level 1: units
   main.append(el("h1", {}, "Course map"),
-    el("p", { class: "muted" }, "Seven units, in the order the course builds them. Open a unit to see its lectures, papers and codebases; open one of those to see its knowledge points in teaching order."));
+    el("p", { class: "muted" }, "Seven units, grouped by topic and roughly in course order (L11's scaling case study sits with scaling, before L10's inference). Open a unit to see its lectures, papers and codebases; open one of those to see its knowledge points in teaching order."));
   const grid = el("div", { class: "unitgrid" });
   UNITS.forEach((u, i) => {
     const ts = u.threads.filter(t => state.data[t]); if (!ts.length) return;
@@ -897,13 +971,13 @@ function threadOverview(main, tid) {
   const byId = Object.fromEntries(d.kp.knowledge_points.map(k => [k.id, k])), links = threadLinks(tid), nk = nextKP(tid);
   const started = s.st.secured + s.st.mastered + s.st.seen > 0, unit = unitOf(tid);
   const linkList = (label, ids) => ids.length ? el("div", { class: "small" }, el("span", { class: "muted" }, label), ...ids.map(x => el("a", { class: "tlink", href: `#/t/${x}` }, shortTitle(state.threads.threads.find(y => y.id === x))))) : null;
-  main.append(el("div", { class: "small muted" }, (t.kind === "repo" ? "codebase" : t.kind) + (unit ? ` · ${unit.title}` : "")), el("h1", {}, shortTitle(t)), t.subtitle ? el("p", { class: "muted" }, t.subtitle) : null,
+  main.append(...[el("div", { class: "small muted" }, (t.kind === "repo" ? "codebase" : t.kind) + (unit ? ` · ${unit.title}` : "")), el("h1", {}, shortTitle(t)), t.subtitle ? el("p", { class: "muted" }, t.subtitle) : null,
     progressBar(s.st, s.n), el("div", { class: "small muted" }, `${s.n} knowledge points · ${s.st.secured + s.st.mastered} mastered`),
     el("div", { class: "chips", style: "margin:8px 0" }, ...mediaChips(s)),
     linkList("builds on: ", links.on), linkList("used by: ", links.by),
     el("div", { class: "actions", style: "margin:12px 0" }, el("a", { class: "btn primary", href: `#/read/${tid}` }, "Read it as one enriched lecture"), el("a", { class: "btn", href: `#/t/${tid}/${nk}` }, started ? `Practise: ${byId[nk]?.label.split(":")[0]}` : "Practise knowledge point by knowledge point"),
       el("a", { class: "btn", href: `#/t/${tid}/_gallery` }, "widgets"), t.kind === "lecture" ? el("a", { class: "btn", href: `#/t/${tid}/_spoken` }, "video index") : null,
-      el("a", { class: "btn", href: `#/t/${tid}/_graph` }, "prerequisite graph"), el("a", { class: "btn", href: `#/t/${tid}/_filter` }, "what the source filtered")));
+      el("a", { class: "btn", href: `#/t/${tid}/_graph` }, "prerequisite graph"), el("a", { class: "btn", href: `#/t/${tid}/_filter` }, "what the source filtered"))].filter(Boolean));  // native append prints null as text
   // animations of this thread, as thumbnails that open their knowledge point
   const anims = []; for (const id of [...stops, ...supps]) for (const p of byId[id].presentations || []) if (p.type === "animation" && !anims.find(a => a.ref === p.ref)) anims.push({ ref: p.ref, kid: id });
   if (anims.length) {
@@ -956,7 +1030,7 @@ const SESSIONS = {
   "paper-chinchilla": { title: "Chinchilla: three fits of one law", minutes: 25, thread: "chinchilla", kps: null, brief: "Read after L9. The IsoFLOP sweep animation uses the paper's own Approach-3 constants." },
   "paper-grpo": { title: "GRPO: the equations FeynRL implements", minutes: 25, thread: "grpo", kps: null, brief: "Read after L16; every equation links to the FeynRL code lines." },
   "paper-flashattention": { title: "FlashAttention: IO-aware exact attention", minutes: 25, thread: "flashattention", kps: null, brief: "Read after L5; animations of the online softmax and of Algorithm 1's loop order (K/V outside, Q inside), plus an HBM-access ledger against SRAM size." },
-  "paper-feynrl": { title: "FeynRL / P3O: trust the batch", minutes: 25, thread: "feynrl_paper", kps: null, brief: "Read after GRPO and the FeynRL repo thread." },
+  "paper-feynrl": { title: "FeynRL / P3O: trust the batch", minutes: 25, thread: "feynrl_paper", kps: null, brief: "Read after L16 and the FeynRL repo thread." },
   "l11-scaling-practice": { title: "L11: how labs actually run a scaling study", minutes: 30, thread: "lecture_11",
     kps: ["scaling-in-practice-challenges", "minicpm-mup-fixed-aspect-recipe", "wsd-schedule-branching", "deepseek-direct-batch-lr-fit", "isoflop-ratios-in-the-wild", "optimizer-comparison-confounders", "mup-two-conditions-and-init", "mup-lr-derivation-and-recap"],
     brief: "Read after L9. WSD schedules, direct batch/LR fits, and why muP exists." },
@@ -982,23 +1056,33 @@ const SESSIONS = {
     kps: ["verifiable-reward-vs-rlhf", "policy-gradient-variance", "ppo-ratio-clip", "language-rl-is-a-bandit", "grpo-group-zscore-advantage", "baseline-validity-std-division", "grpo-length-bias", "r1-zero-recipe"],
     brief: "The RL spine of the course; continue into the GRPO paper and the FeynRL repo threads for the equations and the code." },
 };
+const sessionKps = sd => sd.kps || state.data[sd.thread]?.kp.path?.stops || [];
+// the session this KP belongs to: the one the learner started (atlas.session) if it holds the KP, else the first that does
+function sessionFor(tid, kid) {
+  let act = null; try { act = localStorage.getItem("atlas.session"); } catch {}
+  for (const [sid, sd] of [...(SESSIONS[act] ? [[act, SESSIONS[act]]] : []), ...Object.entries(SESSIONS)]) {
+    if (sd.thread !== tid) continue; const ids = sessionKps(sd), i = ids.indexOf(kid);
+    if (i >= 0) return { sid, ids, i, active: sid === act };
+  }
+  return null;
+}
 function renderSession(app, sid) {
   app.className = "";
   const main = el("div", { class: "main", style: "max-width:860px;margin:0 auto" });
   if (!sid || !SESSIONS[sid]) {
-    main.append(el("h1", {}, "Sessions"), el("p", { class: "muted small" }, "A session is a fixed sequence of knowledge points for one sitting, with strict gating on and a participant id set. Give one to a learner, then export their data."));
+    main.append(el("h1", {}, "Sessions"), el("p", { class: "muted small" }, "A session is a fixed sequence of knowledge points for one sitting, with a participant id set (strict gating is optional). Give one to a learner, then export their data."));
     for (const [id, sdef] of Object.entries(SESSIONS)) main.append(el("div", { class: "tcard", onclick: () => location.hash = `#/session/${id}` }, el("div", { class: "kind" }, `${sdef.minutes} min · ${sdef.thread}`), el("div", { style: "font-weight:700" }, sdef.title), el("div", { class: "small muted" }, sdef.brief)));
     app.append(main); return;
   }
   const sdef = SESSIONS[sid], d = state.data[sdef.thread];
-  const ids = sdef.kps || d.kp.path.stops;
+  const ids = sessionKps(sdef);
   const pid = el("input", { type: "text", value: participant(), placeholder: "participant id (required)" });
   pid.addEventListener("change", () => { try { localStorage.setItem("atlas.participant", pid.value.trim()); } catch {} });
   const strict = el("input", { type: "checkbox" }); strict.checked = setting("strict", false); strict.addEventListener("change", () => setSetting("strict", strict.checked));
   main.append(el("h1", {}, sdef.title), el("p", {}, sdef.brief),
     el("div", { class: "block" }, el("div", { class: "eyebrow" }, "before you start"), el("label", {}, "participant id ", pid), el("label", { style: "display:block;margin-top:8px" }, strict, " strict gating (recommended for a real session)")),
     el("div", { class: "block" }, el("div", { class: "eyebrow" }, `sequence · ${ids.length} knowledge points`), el("ol", {}, ...ids.map(id => { const k = d.kp.knowledge_points.find(x => x.id === id); return el("li", {}, el("a", { href: `#/t/${sdef.thread}/${id}` }, k ? k.label : id), " ", el("span", { class: `chip ${masteryOf(sdef.thread, id)}` }, masteryOf(sdef.thread, id))); }))),
-    el("div", { class: "footer-nav" }, el("button", { class: "primary", onclick: () => { if (!pid.value.trim()) { alert("set a participant id first"); return; } logEvent("session_start", { session: sid }); location.hash = `#/t/${sdef.thread}/${ids.find(id => masteryOf(sdef.thread, id) !== "mastered") || ids[0]}`; } }, "start / continue"), el("a", { href: "#/data" }, "export data when done")));
+    el("div", { class: "footer-nav" }, el("button", { class: "primary", onclick: () => { if (!pid.value.trim()) { alert("set a participant id first"); return; } logEvent("session_start", { session: sid }); try { localStorage.setItem("atlas.session", sid); } catch {} location.hash = `#/t/${sdef.thread}/${ids.find(id => !isMastered(sdef.thread, id)) || ids[0]}`; } }, "start / continue"), el("a", { href: "#/data" }, "export data when done")));
   app.append(main);
 }
 
@@ -1017,7 +1101,7 @@ function renderData(app) {
     el("div", {}, `${Object.keys(b.progress).length} knowledge points touched · ${nCommit} commits · ${nRet} retrieval grades · ${Object.keys(b.cards).length} scheduled cards · ${b.events.length} events`)));
   const dl = el("button", { class: "primary", onclick: () => {
     const blob = new Blob([JSON.stringify(exportBundle(), null, 1)], { type: "application/json" });
-    const a = el("a", { href: URL.createObjectURL(blob), download: `atlas-${b.participant || "anon"}-${new Date().toISOString().slice(0, 10)}.json` }); document.body.append(a); a.click(); a.remove();
+    const a = el("a", { href: URL.createObjectURL(blob), download: `atlas-${participant() || "anon"}-${new Date().toISOString().slice(0, 10)}.json` }); document.body.append(a); a.click(); a.remove();
   } }, "export JSON");
   const file = el("input", { type: "file", accept: "application/json" });
   file.addEventListener("change", async () => {
@@ -1028,7 +1112,7 @@ function renderData(app) {
     try { localStorage.setItem("atlas.events.v1", JSON.stringify(obj.events || [])); localStorage.setItem("atlas.participant", obj.participant || ""); } catch {}
     route();
   });
-  const reset = el("button", { onclick: () => { if (confirm("Clear all progress, cards and events in this browser?")) { try { ["atlas.progress.v1", "atlas.cards.v1", "atlas.events.v1", "atlas.participant"].forEach(k => localStorage.removeItem(k)); } catch {} state.progress = {}; state.cards = {}; route(); } } }, "reset this browser");
+  const reset = el("button", { onclick: () => { if (confirm("Clear all progress, cards and events in this browser?")) { try { ["atlas.progress.v1", "atlas.cards.v1", "atlas.events.v1", "atlas.participant", "atlas.session"].forEach(k => localStorage.removeItem(k)); } catch {} state.progress = {}; state.cards = {}; route(); } } }, "reset this browser");
   main.append(el("div", { class: "block" }, el("div", { class: "eyebrow" }, "export / import"), dl, " ", el("label", { style: "margin-left:12px" }, "import: ", file), " ", reset));
   const recent = b.events.slice(-40).reverse();
   main.append(el("div", { class: "block" }, el("div", { class: "eyebrow" }, "last events"), el("pre", { style: "max-height:320px;overflow:auto" }, recent.map(e => `${new Date(e.t).toLocaleTimeString()}  ${e.type.padEnd(12)} ${JSON.stringify(Object.fromEntries(Object.entries(e).filter(([k]) => k !== "t" && k !== "type")))}`).join("\n") || "none yet")));
@@ -1039,13 +1123,7 @@ function renderData(app) {
 function renderReview(app) {
   app.className = "";
   const main = el("div", { class: "main", style: "max-width:800px;margin:0 auto" }, el("h1", {}, "Reviews"));
-  // a detail card joins the queue only once every core card of its KP has been remembered at least twice
-  const coreSecured = (tid, kp) => (kp.prompts.retrieval || []).every((r, i) => r.layer === "detail" || (state.cards[`${tid}:${kp.id}:r${i}`]?.reps || 0) >= 2);
-  const due = dueCards(state.cards).filter(id => {
-    const [tid, kid, ri] = id.split(":"); const kp = state.data[tid]?.kp.knowledge_points.find(k => k.id === kid);
-    const r = kp?.prompts?.retrieval?.[+String(ri).slice(1)];
-    return !r || r.layer !== "detail" || coreSecured(tid, kp);
-  });
+  const due = reviewQueue();
   if (!due.length) { main.append(el("p", { class: "muted" }, "Nothing due. Retrieval prompts you grade inside a knowledge point come back here on their FSRS schedule (first interval is a few days).")); app.append(main); return; }
   // interleave across threads: shuffle
   due.sort(() => Math.random() - 0.5);
@@ -1059,4 +1137,4 @@ function renderReview(app) {
   app.append(main);
 }
 
-boot().catch(e => { $("#app").innerHTML = `<div class="main"><div class="warn">Failed to load: ${esc(e.message)}. Serve this folder over http (python3 -m http.server from atlas/) — file:// blocks fetch.</div></div>`; });
+boot().catch(e => { $("#app").innerHTML = `<div class="main"><div class="warn">Failed to load: ${esc(e.message)}. Serve the repo root over http (python3 -m http.server from cs336_enrich/) and open /atlas/site/ — file:// blocks fetch.</div></div>`; });

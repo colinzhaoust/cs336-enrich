@@ -13,6 +13,8 @@ A language model already goes from any text to any text: any language, code, poe
 
 The lecture does not build an omni model. It gives the pieces for one direction, getting images *in*, and the argument for how to do it fits in three lines.
 
+::predict everything-into-tokens
+
 1. **Transformers work really well.** "Despite the best efforts of people to try other things," across every modality they are still the best tool we have at scale. So we use them.
 2. **Transformers speak tokens.** They take a sequence of tokens in and give tokens out. Here "token" is widened beyond the discrete ids of text: a token can also be **continuous**, an embedding vector that never passes through a vocabulary. What matters is that each token stands for roughly one *semantic unit* of information. A text subword is "somewhat meaningful"; a single pixel "is certainly not meaningful by itself".
 3. **So everything must become tokens**, discrete or continuous.
@@ -25,7 +27,6 @@ Text needed this step too. In [L1's tokenization](#/read/lecture_01) the answer 
 
 The lecture "will mostly focus on question number one". Generation comes back only at the end, with Chameleon, and the summary explains why the two questions really are different: understanding needs semantics, generation needs fine detail.
 
-::predict everything-into-tokens
 ::code lecture_17.py:L22-L24 | input and output of non-text data are posed as two separate questions
 ::note aside 0:05 | The lecture replaced a planned second lecture on reinforcement learning, because the course "would be a little bit incomplete" without multimodality, "so pervasive if you look at all the major models". The professor adds that this "could be a whole class in itself".
 ::video 2:21-3:04 | tokens can be continuous embeddings, but each should be a semantic unit; a pixel is not
@@ -113,14 +114,15 @@ The best model is **ViT-L/14@336px**: L for large (about 24 layers, which the pr
 
 ### Worked example: how many tokens is one image?
 
+::predict clip-preprocess-vit-patches
+
 The lecture never states the count; it follows from its numbers.
 - Patches per side: $336 / 14 = 24$. Patches per image: $24^2 = 576$.
 - Raw values per patch: $14 \times 14 \times 3 = 588$.
 
 And because of the crop, **576 for every image**. A 4000 × 3000 photo is resized so its shorter side is 336 (to 448 × 336) and cropped to 336 × 336: still 576 patches. The extra pixels are discarded, not tokenised. Note also what "/14" means: the patch size in pixels, not the number of patches per side. Shrink the patches and the count rises with the square: 8-pixel patches on the same crop give $(336/8)^2 = 1764$.
 
-::predict clip-preprocess-vit-patches
-::widget fixture:lecture_17--image-tokens | in "CLIP crop" mode the count stays at 576 whatever width and height you set; only the patch size and the crop side change it (8-px patches give 1764, a 224 crop with 16-px patches gives 196)
+::widget fixture:lecture_17--image-tokens | in "CLIP crop" mode the count stays at 576 whatever width and height you set; only the patch size and the crop side change it (8-px patches give 1764, a 224 crop with 14-px patches gives 256)
 ::code lecture_17.py:L74-L78 | ResNet-50 vs ViT; attention pooling; ViT-L/14@336px
 
 ### The text encoder
@@ -134,11 +136,12 @@ A GPT-2-style Transformer, "since that was from the same group that developed GP
 
 A student asked why CLIP trains on image-text pairs at all, rather than on images alone. There is a line of work, SimCLR for example, that learns image representations from images only: take one image, augment it (crop it, perturb it, rotate it), and train the encoder to give the augmented views similar embeddings while pushing other images away. That teaches invariances that are "useful for low level details".
 
+::predict text-pairs-vs-augmentation-ssl
+
 But its positives are only views of the *same* image. Nothing in the objective says that two different photos show the same kind of thing; in fact, two different dog photos are negatives and get pushed apart. "You won't data augment your way from one type of dog to another dog." A caption supplies exactly that link: two different photos both described as a dog are tied together through the text, which "gives you a higher level semantic representations of images".
 
 The argument cuts both ways. If what you need is *instance* identity, say finding re-uploads of one photo after cropping and recompression, while different photos of similar scenes must not match, then augmentation is the right signal and captions would wrongly pull similar scenes together.
 
-::predict text-pairs-vs-augmentation-ssl
 ::video 11:43-12:23 | "you won't data augment your way from one type of dog to another dog"
 ::kp clip-preprocess-vit-patches
 ::kp text-pairs-vs-augmentation-ssl
@@ -166,6 +169,8 @@ The surprise is the order: the stronger text model does *worse*, or at least is 
 
 ### What the representation is, and isn't
 
+::predict clip-semantics-vs-detail
+
 The section's summary has three lines.
 1. **The encoding captures semantics given by (noisy) text.** "Generally, text talks about the semantics." The captions are noisy because alt text rarely states the obvious: "if you have an image and it's a dog, you don't need to say a dog". A lot of data filtering was needed, and it is "maybe somewhat surprising" that it works at all.
 2. **The design decisions were chosen for image classification**, so the representation is "not very fine-grained". The objective only has to pick the right caption out of a batch, so it learns whatever distinguishes captions and nothing finer; and the 336 crop has already thrown away detail. The lecture's own example, in the OneVision section, is OCR, where "a J looks like an I".
@@ -173,7 +178,6 @@ The section's summary has three lines.
 
 Even so, CLIP is "a robust starting point for everything we're going to do later": every vision-language model in the rest of the lecture, except Chameleon, starts from a CLIP-style encoder.
 
-::predict clip-semantics-vs-detail
 ::code lecture_17.py:L92-L95 | semantics from noisy text; tuned for classification, not fine-grained; large batches and a full-batch softmax
 ::video 21:29-22:01 | the semantics come from the paired text, and the design was tuned for classification, so it is not fine-grained
 ::kp clip-semantics-vs-detail
@@ -227,13 +231,14 @@ Think of it like [data parallelism](#/read/lecture_07): each device holds a slic
 
 ### Batch size
 
+::predict siglip-sigmoid-decouples-batch
+
 Because the loss is decoupled from the batch, the batch size becomes a training choice again rather than part of the objective. In CLIP, "if you change the batch size, it's a different loss function". The paper's findings:
 - SigLIP beats CLIP **below a 16K batch**, where CLIP's softmax degrades.
 - You *can* go up to a **1M** batch, but **32K is enough**: beyond it the gains saturate. The professor tied this to [L9's critical batch size](#/read/lecture_09): 32K "was essentially their critical batch size".
 
 A larger batch still gives each image more negatives per step, so batch size is not irrelevant to SigLIP; it just stops being the thing that makes the loss work.
 
-::predict siglip-sigmoid-decouples-batch
 ::code lecture_17.py:L118-L121 | decouple batch size from loss; better than CLIP below 16K; up to 1M, but 32K is enough
 ::note slip 25:36 | Reading the efficiency line aloud he said "CLIP was five days on 32v4s", meaning SigLIP. Two more slips in this stretch: "the diagonal are negative examples" (23:23) should be the off-diagonal, which he put right in the code walk at 23:44; and "for smaller batch size for CLIP, you have more variance but it's the same in expectation" (28:10) is about SigLIP, and is loose even then, since a larger batch brings more negatives.
 ::kp siglip-sigmoid-decouples-batch
@@ -255,11 +260,12 @@ The encoder's output vectors are "not really in the same space, so to speak, as 
 
 ::figure official/lectures/images/llava-architecture.png | the image Xv goes through the vision encoder (Zv) and W to become the white tokens Hv; they sit in the same row as the grey text tokens Hq, and the LM reads both to produce the green response
 
+::predict vlm-template-encoder-projector-lm
+
 Two things to see here. First, the image enters as **continuous** tokens, the second kind from the opening section: vectors that bypass the LM's vocabulary table. The professor's shorthand, "in some sense converting these images into textual tokens", means they are made to look like token embeddings, not that they are vocabulary ids. Second, $W$ is applied to each patch separately, so the LM gets one token per encoder patch: 576 for a 336 crop. $W$'s shape is (encoder width × LM width); the number of patches is not in it. Feed a tiled 672 × 672 input (2304 patches) and the LM's sequence grows fourfold, while $W$ has exactly as many parameters as before.
 
 Simpler than the alternatives: the code names Flamingo and Q-Former as "more complex" connectors without describing them.
 
-::predict vlm-template-encoder-projector-lm
 ::code lecture_17.py:L137-L139 | CLIP ViT-L/14, then a linear projection W into embedding space
 ::note spoken 32:30 | Aloud, the encoder output is called "a vector", and W turns it into "another vector". What LLaVA projects is the grid of patch features, one vector per patch; the single pooled CLIP vector of the previous sections is not used.
 
@@ -274,12 +280,15 @@ The result is **158K** examples.
 
 ::figure official/lectures/images/llava-gen.png | the top half is all GPT-4 gets: five human captions and a list of boxes (person, backpack, suitcase…). The bottom half is what it writes from them: a conversation, a detailed description, a complex-reasoning answer
 
+::predict synthetic-instruction-data
+
 Notice what this implies. GPT-4 can be faithful only to what the annotation says. "What is the dog catching? A frisbee" is grounded if the caption mentions a frisbee; "what breed is the dog?" or "what colour is the frisbee?" would be invented, since COCO boxes record classes and positions, not colours. Training on invented details teaches the VLM to assert things it cannot see. The pairs still help, because most of what GPT-4 writes is about what the captions say, and that is in the image.
 
-::predict synthetic-instruction-data
 ::code lecture_17.py:L130-L134 | COCO captions and boxes, GPT-4 writes questions and conversations, paired with the images: 158K examples
 
 ### Training in two stages
+
+::predict staged-freezing-training
 
 1. **Alignment**: freeze the vision encoder *and* the language model; train only $W$. With a random $W$ the projected image vectors "are not embeddings, representing any natural language token". This stage trains $W$ until they "look like natural language token embeddings", so the frozen LM can read them.
 2. **Fine-tuning**: keep the vision encoder frozen; train $W$ and the language model together on the 158K conversations. All of it is image plus text in, text out.
@@ -333,13 +342,15 @@ The interpolation reduces "the number of patches", so it acts on the encoded fea
 ### Worked example: tokens grow with area
 
 The lecture gives no AnyRes numbers. Take a 336-pixel encoder with 14-pixel patches, so each piece costs 576 tokens, and ignore the overview piece.
+
+::predict anyres-tiling-token-budget
+
 - A 672 × 672 image: $672/336 = 2$ pieces per side, a 2 × 2 grid, $4 \times 576 = 2304$ tokens.
 - A 1344 × 1344 image: $1344/336 = 4$ per side, a 4 × 4 grid, $16 \times 576 = 9216$ tokens: sixteen times a plain CLIP crop, not four. Doubling the side quadruples the tokens.
 - One pixel too many, 337 × 336, needs a second column of pieces: 1152 tokens.
 
 Detail is no longer free. Every doubling of resolution costs four times the sequence length, which is why step 4 exists.
 
-::predict anyres-tiling-token-budget
 ::widget fixture:lecture_17--image-tokens | in AnyRes mode the count jumps by a whole 576-token piece each time width or height passes a multiple of 336; 4 × 4 pieces give 16×, not 4×
 
 ### One budget for three kinds of input
@@ -353,7 +364,7 @@ Single images, multiple images and video are all "technically all reducible to i
 
 Reading the figure, OneVision's encoder makes 729 tokens per piece, a 27 × 27 grid, rather than the 576 of a 336 crop with 14-pixel patches, and a video frame is cut to 196 tokens, a 14 × 14 grid, about a quarter of a piece. The principle is the one in the code: a shared total, split by how carefully each input deserves to be looked at.
 
-With the 576-token pieces of the worked example: if one 3 × 3-tiled image ($9 \times 576 = 5184$ tokens) sets the budget, a 64-frame video gets $5184 / 64 = 81$ tokens per frame, a 9 × 9 grid, seven times fewer than one crop.
+With the 576-token pieces of the worked example: if one 2 × 2-tiled image ($4 \times 576 = 2304$ tokens) sets the budget, a 32-frame video gets $2304 / 32 = 72$ tokens per frame, eight times fewer than one crop.
 
 ::widget fixture:lecture_17--image-tokens | pick a budget equal to one tiled image and add video seconds: the same total is split across the frames, and each frame gets far fewer tokens than one 576-token crop
 ::code lecture_17.py:L165-L170 | single image: higher resolution; multiple images: base resolution; video: lower resolution per frame
@@ -391,6 +402,8 @@ The same table answers a student's question about sizes. The projector is tiny, 
 
 ### Transfer between kinds of input
 
+::predict cross-modal-transfer-onevision
+
 A finding the professor called interesting: skills learned on one kind of input carry over to kinds never trained for that skill.
 
 - **Charts to multiple images.** The diagram and chart data is all single-image. "At training time, you never saw an example where you have a table and a chart." Yet at test time, given a diagram in one image and a table in another, the model answers a question that needs both.
@@ -407,7 +420,6 @@ A finding the professor called interesting: skills learned on one kind of input 
 
 At first sight the dataset is per-task supervised learning, "you're basically targeting each of these tasks". "But if you have enough tasks, these models seem to do some transfer, which is, I guess, reassuring." Why it works is not stated. A plausible reading: all three kinds of input reach the LM in the same token format under one budget, so a skill learned on one has no format barrier to the others.
 
-::predict cross-modal-transfer-onevision
 ::code lecture_17.py:L181-L187 | charts to multi-image; OCR plus relations to GUI agents; circles to video
 ::video 43:30-44:09 | transfer means a combination never seen in training (a table and a chart in two images) works at test time
 
@@ -457,7 +469,6 @@ The adaptor is the other kind of projector. A fixed set of 256 learned queries a
 
 The pattern: the first stage connects things, on the largest and cheapest data; later stages unfreeze more and use better data; instruction data comes last. Which parts train depends on which part is weak. LLaVA's CLIP was already strong, so only the connector learned at first. Qwen-VL trains its encoder in stage 1, on the noisy data, while the LM stays frozen. The lecture states these schedules, not the reasons; one plausible reason for the freeze is to keep large amounts of low-quality text from degrading the pretrained LM while the encoder side adapts. The highest-quality data is saved for the end, when everything is already connected.
 
-::predict staged-freezing-training
 ::code lecture_17.py:L203-L209 | stage 1: freeze LM, train encoder + adaptor; stage 2: all, higher resolution; stage 3: freeze encoder, train adaptor + LM
 
 The examples show the Qwen ambition: a VLM that subsumes a language model. Some answers are in Chinese; it writes code, because a language model can; and it can find Spider-Man and the Hulk in a picture, answering with **bounding boxes**. "It doesn't actually output an image. It just outputs a bounding box", as coordinates in text.
@@ -485,6 +496,8 @@ So the token count is about (patches)/4, which grows with the image's pixel area
 
 ::code lecture_17.py:L217-L221 | 675M ViT; dynamic resolution; ViT/14 with every 2×2 compressed gives 66 tokens; video at 2 frames/s, max 16384 tokens
 
+::predict qwen2-dynamic-resolution-tokens
+
 ### Worked example: where do 66 tokens come from?
 
 - $224 / 14 = 16$ patches per side, $16^2 = 256$ patches.
@@ -499,7 +512,6 @@ Since the count follows area, doubling the side quadruples it: a 448 × 448 imag
 
 **Video** is sampled at 2 frames per second, capped at **16384 tokens**. A 60-second clip at 448 × 448 per frame is 120 frames × 258 = 30,960 tokens, almost twice the cap. To fit, each frame may have $16384 / 120 \approx 136$ tokens, about a 320 × 320 frame. The cap forces the same trade OneVision made by hand: lower resolution per frame.
 
-::predict qwen2-dynamic-resolution-tokens
 ::widget fixture:lecture_17--image-tokens | in "native" mode 224 gives 66 and 448 gives 258; set 60 s of video at 2 frames/s with the 16384 budget and the readout goes over budget and prints the per-frame allowance and the frame size that fits
 ::note spoken 50:13 | Aloud, dynamic resolution is "the same idea AnyRes idea from LLaVA, where each 224 by 224 patch is encoded with a ViT". The code's mechanism is different: native resolution with 2 × 2 merging, not tiling into fixed pieces. He also said the ViT "they started with is the OpenCLIP" one, while the code says the encoder was initialised from DFN (Data Filtering Networks).
 
@@ -545,9 +557,10 @@ In RoPE, each pair of rotary dimensions has its own frequency, falling steadily 
 
 Why that hurts: slow frequencies change little between neighbours, which is good for long distances and bad for telling adjacent positions apart; fast ones are the reverse. An axis that only has slowly rotating dimensions has trouble telling adjacent rows apart.
 
+::predict mrope-interleaved-axes
+
 Qwen3-VL **interleaves** the axes: `[t w h t w h t w h t w h]`. Each axis keeps the same number of dimensions, four of the twelve in the schematic, but now spread from fast to slow, so "all the axes are exposed to both low and high frequency".
 
-::predict mrope-interleaved-axes
 ::widget fixture:lecture_17--mrope-axes | switch from blocked to interleaved: each axis still owns 4 of the 12 slots, but height's slots go from only the slowest (8–11) to a spread from 2 to 11
 
 ### Timestamps as tokens
@@ -560,6 +573,8 @@ In Qwen2-VL, time was "implicit in the positional encodings": a frame's temporal
 ::kp mrope-interleaved-axes
 
 ### Balancing long videos against short text
+
+::predict modality-balance-and-stability
 
 A video example can be thousands of tokens; a single-image or text example a few hundred. The normal loss treats every token the same, "and this would mean that the video examples are going to dominate". With one 500-token text example and one 8000-token video in a batch, a per-token mean takes $8000 / 8500 = 94\%$ of the loss, and of the gradient, from the video.
 
@@ -603,6 +618,8 @@ source: lecture_17.py:L268-L298 · video 59:21-1:00:39, 1:07:18-1:14:43
 
 ### Why the VLMs so far cannot draw
 
+::predict discrete-image-tokens-vqvae
+
 Every model so far encodes images with CLIP or SigLIP and injects the vectors into a language model. A student asked about generating video; the answer: "these models don't generate videos or images. All the multimodal stuff is on the input side. You're always generating text." The LM's output layer is a softmax over a text vocabulary, and the continuous image features have no decoder back to pixels. More training would not change that. To draw, you need something else, such as a diffusion model attached as a head.
 
 ::code lecture_17.py:L271-L272 | VLMs encode images and inject them into the LM; they can't generate images (need diffusion)
@@ -640,7 +657,6 @@ Chameleon's tokenizer turns a **512 × 512 image into 1024 tokens**, each from a
 
 The tokens are about 470 times smaller. Each 16 × 16-pixel cell, with its 6,144 bits of colour, becomes one choice among 8192 prototypes. A 6-point letter is smaller than that cell, so small print cannot survive. That is "discretization loses information - think OCR".
 
-::predict discrete-image-tokens-vqvae
 ::widget fixture:lecture_17--image-tokens | in VQ mode at 512 px with 16-px cells and 8192 codes, 1024 tokens of 13 bits stand in for about 6.3 million bits, about 470× smaller
 
 ### Training, and why it was unstable
@@ -657,7 +673,6 @@ Training on the mixture made the norms grow and the loss unstable, **norm growth
 
 This is the same lesson as Qwen3-VL's square-root loss, in a sharper form: visual and text tokens differ in density and entropy, and a model that mixes them has to correct for it. Each imbalance has its own fix. Length imbalance is fixed in the loss weights; the entropy mismatch inside one softmax is fixed in the architecture.
 
-::predict modality-balance-and-stability
 ::code lecture_17.py:L291-L293 | low-entropy text vs high-entropy image tokens leads to norm growth and logit drift; fixes: QK-norm, z-loss
 ::kp modality-balance-and-stability
 

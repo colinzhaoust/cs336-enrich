@@ -138,7 +138,7 @@ Try it on numbers before the general proof.
 
 With $\theta = \pi/6$ (30°), a query $W_q x_m = (1, 0)$ at $m = 1$ turns by 30° to $(0.866, 0.5)$. A key $W_k x_n = (0.7, 0.7)$ at $n = 3$ turns by 90° to $(-0.7, 0.7)$. The score is $0.866 \times (-0.7) + 0.5 \times 0.7 = -0.606 + 0.35 = -0.256$. Swap the positions (query at 3, key at 1) and the score becomes $+0.956$: the net rotation is now $-60°$ instead of $+60°$. RoPE depends on the *sign* of the offset, so it can tell "the key came before the query" from "the key came after".
 
-::widget fixture:rope-shared-shift | set m = 1 and n = 3 to reproduce −0.256, then raise the shared shift s: both arrows turn together and the readout stays put; tick "shift only q" and it changes
+::widget fixture:rope-shared-shift | set m = 1 and n = 3 to reproduce −0.256, then raise the shared shift s and watch the readout; tick "shift only q" and compare
 
 ### Why a rotation, and not something else? (§3.4.1)
 §3.2.1 calls Eq. 12 "a solution" and defers the derivation to §3.4.1, which tries to show that, under some extra assumptions, the solution is forced. It is the paper's most interesting piece of reasoning, so here it is, in the order the paper gives it. Two ingredients: write each function in polar form, length times $e^{i \cdot \text{angle}}$, so that multiplying complex numbers multiplies lengths and adds angles; and impose an initial condition (Eq. 22) that at position 0 nothing has been encoded yet, $q = f_q(x_q, 0)$ and $k = f_k(x_k, 0)$.
@@ -168,7 +168,7 @@ The matrix is block-diagonal: $2 \times 2$ rotation blocks down the diagonal and
 
 ::worked rope-block-diagonal
 
-::note warning | The paper writes the exponent two ways. Eq. 15 counts pairs from 1, $10000^{-2(i-1)/d}$; §3.3 and §3.4.3 write $10000^{-2i/d}$ with $i$ counted from 0. Same set of frequencies. Code (and the widgets here) use the 0-indexed form.
+::note warning | The paper writes the exponent two ways. Eq. 15 counts pairs from 1, $10000^{-2(i-1)/d}$; §3.3 and §3.4.3 write $10000^{-2i/d}$ with $i$ counted from 0. Same set of frequencies. rope.mjs, the table below and the decay-bound widget count from 0; the frequency-dials widget numbers pairs from 1, as Eq. 15 does, so the table's pair 63 is its $i = 64$.
 
 What does a spread of frequencies buy? Each pair is a clock hand that turns $\theta_i$ radians per position, so it returns to where it started every $2\pi/\theta_i = 2\pi \cdot 10000^{2i/d}$ positions (0-indexed). For $d = 128$, with 64 pairs:
 
@@ -193,13 +193,15 @@ Each pair is $10000^{-2/128} \approx 0.866$ times as fast as the one before, so 
 ## Why only the offset survives {#relative}
 source: rope:§3.2.2 · rope:eq16 · lecture_03.pdf p34
 
+What happens to the score when both tokens move? Before the algebra, a guess on the 2D example from above.
+
+::predict rope-relative-position
+
 Apply Eq. 14 to the query and the key and multiply. The paper's Eq. 16 is the central identity of RoPE:
 
 $$ q_m^\top k_n = \big(R^d_{\Theta,m} W_q x_m\big)^\top \big(R^d_{\Theta,n} W_k x_n\big) = x_m^\top W_q^\top\, R^d_{\Theta,n-m}\, W_k\, x_n, \qquad R^d_{\Theta,n-m} = (R^d_{\Theta,m})^\top R^d_{\Theta,n} \qquad \text{(Eq. 16)} $$
 
-The two rotations meet in the middle and merge into one rotation by the offset. The paper asserts the merge without proof; it is Fact 1, applied block by block. Before the proof, a guess on the 2D example from above.
-
-::predict rope-relative-position
+The two rotations meet in the middle and merge into one rotation by the offset. The paper asserts the merge without proof; it is Fact 1, applied block by block.
 
 ::worked rope-relative-position
 
@@ -232,9 +234,9 @@ The setup reads each pair of coordinates as one complex number, so the $d$-dimen
 
 $$ \big(R^d_{\Theta,m} W_q x_m\big)^\top \big(R^d_{\Theta,n} W_k x_n\big) = \mathrm{Re}\Big[\sum_{i=0}^{d/2-1} q_{[2i:2i+1]}\, k^*_{[2i:2i+1]}\, e^{i(m-n)\theta_i}\Big] \qquad \text{(Eq. 35)} $$
 
-Call the content part of each term $h_i = q_{[2i:2i+1]} k^*_{[2i:2i+1]}$: it depends only on the two vectors. The distance lives only in the unit phases $e^{i(m-n)\theta_i}$. A single phase never shrinks, but a *sum* of phases turning at different rates can cancel. Abel summation (summation by parts, the discrete version of integrating by parts) moves the distance dependence into the partial sums $S_j = \sum_{l<j} e^{i(m-n)\theta_l}$:
-
 ::predict rope-long-term-decay
+
+Call the content part of each term $h_i = q_{[2i:2i+1]} k^*_{[2i:2i+1]}$: it depends only on the two vectors. The distance lives only in the unit phases $e^{i(m-n)\theta_i}$. A single phase never shrinks, but a *sum* of phases turning at different rates can cancel. Abel summation (summation by parts, the discrete version of integrating by parts) moves the distance dependence into the partial sums $S_j = \sum_{l<j} e^{i(m-n)\theta_l}$:
 
 ::worked rope-long-term-decay
 
@@ -261,13 +263,13 @@ $$ \mathrm{Attention}(Q, K, V)_m = \frac{\sum_{n} \phi(q_m)^\top \varphi(k_n)\, 
 
 Because the score splits, $\phi(q_m)^\top$ can be pulled out of the sums: $\sum_n \varphi(k_n) v_n^\top$ and $\sum_n \varphi(k_n)$ are computed once and shared by every query, which makes the cost linear in $N$. This is why the paper says earlier relative schemes are incompatible with it. A T5 bias $b_{m-n}$ added to the score belongs to neither the query nor the key, so the sums cannot be precomputed. RoPE's rotations act on each token separately, so they can.
 
+::predict rope-linear-attention
+
 The paper inserts them into the numerator only:
 
 $$ \mathrm{Attention}(Q, K, V)_m = \frac{\sum_{n} \big(R^d_{\Theta,m}\phi(q_m)\big)^\top \big(R^d_{\Theta,n}\varphi(k_n)\big)\, v_n}{\sum_{n} \phi(q_m)^\top \varphi(k_n)} \qquad \text{(Eq. 19)} $$
 
 Rotation keeps the norm of the feature vectors, so it injects position without changing their size. But it does not keep the *sign* of inner products: two non-negative vectors rotated apart by more than 90° have a negative dot product. Hence the unrotated denominator, kept "to avoid the risk of dividing zero".
-
-::predict rope-linear-attention
 
 ::worked rope-linear-attention
 
@@ -282,13 +284,15 @@ The paper acknowledges that the weights in Eq. 19 are "not strictly probabilisti
 ## Computing it cheaply, and where it goes {#efficient}
 source: rope:§3.4.2 · rope:eq34 · external/RoFormer/README.md:L22-L32 · rope:§4.2.2 · lecture_03.pdf p35
 
-Written as Eq. 16, RoPE is a $d \times d$ matrix times a vector for every query and key. §3.2.2 already notes that, "due to the sparsity" of $R^d_{\Theta}$, this is wasteful: each row has only two non-zero entries. §3.4.2 gives the realization everyone actually uses. Look at what one pair does under rotation by $\varphi$: $(x_1, x_2) \mapsto (x_1\cos\varphi - x_2\sin\varphi,\; x_1\sin\varphi + x_2\cos\varphi)$. Every output coordinate is (its own value) × cos plus (its partner, one sign flipped) × sin. Collect that over all pairs:
+Written as Eq. 16, RoPE is a $d \times d$ matrix times a vector for every query and key. §3.2.2 already notes that, "due to the sparsity" of $R^d_{\Theta}$, this is wasteful: each row has only two non-zero entries. §3.4.2 gives the realization everyone actually uses.
+
+::predict rope-efficient-implementation
+
+Look at what one pair does under rotation by $\varphi$: $(x_1, x_2) \mapsto (x_1\cos\varphi - x_2\sin\varphi,\; x_1\sin\varphi + x_2\cos\varphi)$. Every output coordinate is (its own value) × cos plus (its partner, one sign flipped) × sin. Collect that over all pairs:
 
 $$ R^d_{\Theta,m}\, x = \begin{pmatrix} x_1 \\ x_2 \\ x_3 \\ x_4 \\ \vdots \end{pmatrix} \otimes \begin{pmatrix} \cos m\theta_1 \\ \cos m\theta_1 \\ \cos m\theta_2 \\ \cos m\theta_2 \\ \vdots \end{pmatrix} + \begin{pmatrix} -x_2 \\ x_1 \\ -x_4 \\ x_3 \\ \vdots \end{pmatrix} \otimes \begin{pmatrix} \sin m\theta_1 \\ \sin m\theta_1 \\ \sin m\theta_2 \\ \sin m\theta_2 \\ \vdots \end{pmatrix} \qquad \text{(Eq. 34)} $$
 
 Here $\otimes$ is elementwise multiplication. Each frequency appears twice because it serves both coordinates of its pair.
-
-::predict rope-efficient-implementation
 
 ::worked rope-efficient-implementation
 
@@ -302,15 +306,16 @@ The official repository does not contain the layer itself (its training script s
 
 ::note aside | Many later implementations, Hugging Face's Llama code among them, pair coordinate $i$ with $i + d/2$ ("rotate_half") instead of adjacent coordinates. That is the same operator under a fixed permutation of dimensions. Since the same permutation applies to $q$ and $k$, every score is unchanged, but weights trained with one convention need their dimensions reordered for the other.
 
-### Every layer, queries and keys only
+### Which vectors, which layers
+
+::predict rope-per-layer-application
+
 Eq. 14 rotates $W_q x_m$ and $W_k x_n$, the vectors that enter the dot product, and §4.2.2 confirms that the rotation lives "in the self-attention block". Two consequences follow, which the course puts on a slide and the paper leaves implicit.
 
 ::slide lecture_03:35 | the course's implementation slide (Hugging Face style): the usual q/k/v projections, then cos, sin = rotary_emb(...) and apply_rotary_pos_emb(query, key, cos, sin), then the usual attention; the note "embedding at each attention operation to enforce position invariance"
 
 - **It is applied inside every attention layer**, not once at the input. If you rotated the embedding once instead, $x'_m = R_m x_m$, even the first layer's score would be $x_m^\top R_m^\top W_q^\top W_k R_n x_n$. The projections now sit *between* the two rotations, and a general $W_q^\top W_k$ does not commute with rotations, so $R_m^\top$ and $R_n$ can no longer merge into $R_{n-m}$.
 - **Values are never rotated.** Eq. 2 uses $v_n$ directly, and the README rotates only `qw` and `kw`. Rotating $v_n$ by $n\theta$ would leak absolute position into the output $o_m = \sum_n a_{m,n} v_n$, where nothing cancels it.
-
-::predict rope-per-layer-application
 
 ::kp rope-efficient-implementation
 ::kp rope-per-layer-application
@@ -322,9 +327,9 @@ source: rope:§4 · rope:table1 · rope:fig3 · rope:table2 · rope:table5 · le
 
 **Machine translation (§4.1).** WMT 2014 English–German, about 4.5 million sentence pairs, in the fairseq toolkit with a 37k joint BPE vocabulary. The baseline transformer and RoFormer are trained under the same settings: Adam with $\beta_1 = 0.9$, $\beta_2 = 0.98$, the learning rate raised linearly from $10^{-7}$ to $5 \times 10^{-4}$ and then decayed with the inverse square root of the step, label smoothing 0.1. Evaluation uses one model made by averaging the last 5 checkpoints, beam size 4, length penalty 0.6.
 
-::figure rope:table1 | the paper's Table 1: BLEU on WMT14 En-De, Transformer-base 27.3, RoFormer 27.5 (bold); one number per model
-
 ::predict rope-experiments
+
+::figure rope:table1 | the paper's Table 1: BLEU on WMT14 En-De, Transformer-base 27.3, RoFormer 27.5 (bold); one number per model
 
 A 0.2 BLEU gap from one run per model, with no seeds or variance, is smaller than the run-to-run noise usually seen on this benchmark. It shows RoPE does not hurt translation; it does not show it helps.
 

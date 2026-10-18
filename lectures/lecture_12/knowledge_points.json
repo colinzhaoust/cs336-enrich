@@ -193,7 +193,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L64-L72",
             "role": "claim",
-            "quote": "In pre-training, you minimize perplexity on the training set ... The obvious thing is to measure perplexity on the test set ... Penn Treebank (WSJ) ... WikiText-103 (Wikipedia) ... One Billion Word Benchmark ... Classic paradigm: in-distribution evaluation: train on train split and evaluate on test split of some dataset"
+            "quote": "In pre-training, you minimize perplexity on the training set ... measure perplexity on the test set ... Penn Treebank (WSJ) ... WikiText-103 (Wikipedia) ... One Billion Word Benchmark ... Classic paradigm: in-distribution evaluation: train on train split and evaluate on test split"
           },
           {
             "source": "lecture_12",
@@ -678,7 +678,7 @@
           "type": "interactive",
           "action": "compare",
           "ref": "fixture:lecture_12--mc-scoring",
-          "notice": "One set of option probabilities gives two scores: log-prob scoring takes the argmax and is 0 or 1, while sampling the letter at temperature T earns only the key's sampled share, minus extraction failures. A submission that returns one constant probability q reports perplexity 1/q although its probabilities already sum past 1 over two tokens."
+          "notice": "One set of option probabilities gives two scores: log-prob scoring takes the argmax and is 0 or 1, while sampling the letter at temperature T earns only the key's sampled share, minus extraction failures. A submission that returns one constant probability q reports perplexity 1/q, although for any q above 0.5 its probabilities already sum past 1 over just two tokens (and over a vocabulary of |V| tokens for any q above 1/|V|)."
         },
         {
           "type": "code",
@@ -712,7 +712,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L113-L117",
             "role": "claim",
-            "quote": "Massive Multitask Language Understanding (MMLU) ... 57 subjects (e.g., math, US history, law, morality), multiple-choice ... collected by graduate and undergraduate students from freely available sources online ... Despite the name, MMLU is really about testing knowledge, not language understanding ... Evaluated on GPT-3 using few-shot prompting"
+            "quote": "Massive Multitask Language Understanding ... 57 subjects ... multiple-choice ... graduate and undergraduate students from freely available sources online ... Despite the name, MMLU is really about testing knowledge, not language understanding ... Evaluated on GPT-3 using few-shot prompting"
           },
           {
             "source": "mmlu_2021",
@@ -992,7 +992,7 @@
           "targets_misconception": "Making an exam harder means finding more obscure facts."
         },
         "transfer": {
-          "q": "A medical-licensing board worries its multiple-choice item bank is 'saturated' by study apps. Map each of MMLU-Pro's three changes (L123-L125) onto a change the board could make, and state which one is not a difficulty change at all.",
+          "q": "A medical-licensing board worries its multiple-choice item bank is 'saturated' by study apps. Map each of MMLU-Pro's three changes to MMLU onto a change the board could make, and state which one is not a difficulty change at all.",
           "format": "short",
           "answer": "Remove noisy or trivial items (audit the bank); widen 4 options to 10 (more distractors per stem); allow worked reasoning before the answer, the analogue of grading with chain of thought. The third is not a difficulty increase: the professor says it 'gives model more of a chance' (L125), it is a scoring-protocol change that raises scores.",
           "why": "MMLU-Pro bundles item cleaning, format hardening and a protocol change; only two of them make the exam harder.",
@@ -1111,17 +1111,10 @@
           "note": "Arena is introduced as the answer to 'does not capture real usage' (L152, L156-L157)."
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "lecture_15:bradley-terry-reward-model",
-          "basis": "author-inference",
-          "note": "Same model, different parametrization: sigmoid(r_A - r_B) with r = ELO · ln10/400. Lecture 15 derives it for reward modelling; lecture 12 uses it to rank models."
-        },
-        {
-          "kp": "lecture_15:pairwise-feedback-crowdsourcing",
-          "basis": "author-inference",
-          "note": "The data-collection protocol at L166-L169 is pairwise feedback from an uncontrolled crowd."
-        }
+      "external_prerequisites": [],
+      "see_also": [
+        "lecture_15:bradley-terry-reward-model",
+        "lecture_15:pairwise-feedback-crowdsourcing"
       ],
       "misconceptions": [
         {
@@ -1143,7 +1136,7 @@
           "targets_misconception": "An Arena rating is an absolute score, so a rating of 1300 means the same quality in any arena."
         },
         "transfer": {
-          "q": "A university runs a 'teaching assistant arena' where students submit a question, get two anonymized TA answers, and vote. One TA only ever appears paired against the weakest TA, because of scheduling. Explain, using the fitted-model view at L172-L173, why that TA's rating is still meaningful in principle, and what about the data would make it unreliable.",
+          "q": "A university runs a 'teaching assistant arena' where students submit a question, get two anonymized TA answers, and vote. One TA only ever appears paired against the weakest TA, because of scheduling. Explain, using the lecture's view of Elo ratings as one model fitted to all the pairwise votes, why that TA's rating is still meaningful in principle, and what about the data would make it unreliable.",
           "format": "short",
           "answer": "The rating is fit by maximizing the likelihood of all pairwise outcomes under one shared model (L173), so a TA compared only to the weakest TA is placed relative to that TA, who is in turn placed relative to everyone else; comparisons chain through the pool, which is why Arena need not show the same prompts to all models (L181). It becomes unreliable because the rating is pinned down only through one neighbour: few comparisons and a single path give a wide uncertainty, and any bias in that one pairing (prompt mix, time of day) propagates directly.",
           "why": "Maximum-likelihood fitting of a pairwise model transfers information along comparison chains; sparse, non-random pairing is the weak point.",
@@ -1221,7 +1214,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L176-L182",
             "role": "claim",
-            "quote": "Real-world prompts (free for users, incentives to actually use it) ... But who are these people? biases? spammers? ... Binary preference but conflates style and correctness ... How does the human even assess correctness?  Prone to sycophancy? ... Feature: don't need to feed same prompts to all models (important because human is rating) ... Dynamic: incorporates new prompts and models over time"
+            "quote": "Real-world prompts ... free for users ... who are these people? biases? spammers? ... Binary preference but conflates style and correctness ... human even assess correctness? ... Prone to sycophancy? ... don't need to feed same prompts to all models ... Dynamic: incorporates new prompts and models"
           },
           {
             "source": "lecture_12",
@@ -1299,12 +1292,9 @@
           "note": "Properties (L176) are listed immediately after the mechanism."
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "lecture_15:length-bias-preferences",
-          "basis": "author-inference",
-          "note": "'Conflates style and correctness' (L179) is the evaluation-side face of the style and length effects lecture 15 documents for human and GPT judges."
-        }
+      "external_prerequisites": [],
+      "see_also": [
+        "lecture_15:length-bias-preferences"
       ],
       "misconceptions": [
         {
@@ -1318,7 +1308,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "A model developer fine-tunes a model to add confident, flattering openers ('Great question! Here is the definitive answer...') and more formatting, without changing the factual content. Predict the direction its Arena rating moves (start your answer with up, down or same), then name the Arena property from L176-L182 that predicts it.",
+          "q": "A model developer fine-tunes a model to add confident, flattering openers ('Great question! Here is the definitive answer...') and more formatting, without changing the factual content. Does its Arena rating go up, down or stay the same? Start your answer with up, down or same.",
           "format": "trend",
           "answer": "up: the binary preference conflates style and correctness (L179) and raters who cannot assess correctness may reward sycophancy (L180)",
           "why": "Nothing about correctness changed, so any movement comes through the style channel the lecture flags.",
@@ -1513,7 +1503,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L184-L190",
             "role": "claim",
-            "quote": "AlpacaEval (2023) ... 805 instructions from various sources ... Metric: win rate against baseline model (GPT-4 preview) as judged by GPT-4 preview (potential bias?) ... Problem: LLM judges favor longer responses, resulted in leaderboard gaming ... Alpaca Eval 2.0 used regression to debias the metric ... How do we evaluate the metric? ... Correlation with Chatbot Arena (humans) is high"
+            "quote": "805 instructions ... win rate against baseline model (GPT-4 preview) as judged by GPT-4 preview (potential bias?) ... LLM judges favor longer responses, resulted in leaderboard gaming ... Alpaca Eval 2.0 used regression to debias the metric ... Correlation with Chatbot Arena (humans) is high"
           },
           {
             "source": "lecture_12",
@@ -1587,12 +1577,9 @@
           "note": "Arena's human preferences are the reference against which AlpacaEval and WildBench are validated (L190, L197)."
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "lecture_15:length-bias-preferences",
-          "basis": "author-inference",
-          "note": "L187 'LLM judges favor longer responses' is the same length effect lecture 15 documents for GPT-based and human judges; lecture 12 shows its consequence on a leaderboard and one fix."
-        }
+      "external_prerequisites": [],
+      "see_also": [
+        "lecture_15:length-bias-preferences"
       ],
       "misconceptions": [
         {
@@ -1832,7 +1819,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L244-L254",
             "role": "claim",
-            "quote": "Agent scaffolds ... Explicit planning: keep a todo list that gets checked off ... Hierarchical delegation: agents calling other sub-agents (clean context) ... Persistent memory: read/write files ... Extreme context engineering ... Agents dramatically enhance the capability surface of language models ... Agent scaffolds are very important ... Evaluating agents = evaluating agent scaffold + language model"
+            "quote": "Explicit planning: keep a todo list ... Hierarchical delegation: agents calling other sub-agents ... Persistent memory: read/write files ... Extreme context engineering ... Agent scaffolds are very important ... Evaluating agents = evaluating agent scaffold + language model"
           },
           {
             "source": "swebench_2023",
@@ -1942,14 +1929,14 @@
       ],
       "prompts": {
         "predict": {
-          "q": "A lab reports that swapping the scaffold (adding a todo list, sub-agents with clean context, and file-based memory) while keeping the model fixed raised their SWE-bench score substantially. A reviewer says 'then the benchmark is broken, since the model didn't change'. Using L212 and L254, what is the correct reading?",
+          "q": "A lab reports that swapping the scaffold (adding a todo list, sub-agents with clean context, and file-based memory) while keeping the model fixed raised their SWE-bench score substantially. A reviewer says 'then the benchmark is broken, since the model didn't change'. Using the lecture's definition of an agent and what it says about evaluating agents, what is the correct reading?",
           "format": "short",
           "answer": "The benchmark is measuring the agent, which the lecture defines as model plus scaffold (L212); the professor says explicitly that scaffolds are very important and that evaluating agents means evaluating scaffold and model together (L253-L254). The score moved because one of the two components changed. The reviewer's concern becomes valid only if the leaderboard claims to rank models rather than agents, which is a rules-of-the-game question.",
           "why": "The unit of evaluation in agentic benchmarks is the scaffold-model pair.",
           "targets_misconception": "A SWE-bench score is a property of the language model."
         },
         "transfer": {
-          "q": "A robotics group evaluates 'the same vision-language model' on a household-task benchmark with two different control loops and gets very different success rates. Transfer the lecture's agentic-evaluation lesson: what is the analogue of the scaffold, what would a leaderboard have to fix to compare models, and which SWE-bench design choice (L218-L219) is the analogue of grading by outcome?",
+          "q": "A robotics group evaluates 'the same vision-language model' on a household-task benchmark with two different control loops and gets very different success rates. Transfer the lecture's agentic-evaluation lesson: what is the analogue of the scaffold, what would a leaderboard have to fix to compare models, and which SWE-bench design choice is the analogue of grading by outcome?",
           "format": "short",
           "answer": "The control loop (planning, retries, memory of the scene) is the scaffold (L212); to compare models a leaderboard must fix the scaffold, or else it ranks scaffold-model pairs (L254). Grading by whether the task state is achieved is the analogue of SWE-bench's 'submit a PR, metric: unit tests' (L218-L219), an outcome check rather than a judgment of the model's output text.",
           "why": "Agent evaluation separates the decision logic around the model from the model, and grades by what the system does.",
@@ -2030,7 +2017,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L258-L264",
             "role": "claim",
-            "quote": "All of the tasks so far require linguistic and world knowledge ... Can we isolate reasoning from knowledge? ... Arguably, reasoning captures a more pure form of intelligence (isn't just about memorizing facts) ... ARC-AGI ... 100% solvable by humans, but challenging for AI ... Each task is unique, so memorization doesn't help"
+            "quote": "All of the tasks so far require linguistic and world knowledge ... Can we isolate reasoning from knowledge? ... reasoning captures a more pure form of intelligence ... ARC-AGI ... 100% solvable by humans, but challenging for AI ... Each task is unique, so memorization doesn't help"
           },
           {
             "source": "lecture_12",
@@ -2125,7 +2112,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "A team proposes to improve a model's ARC-AGI score by continued pretraining on a scraped corpus of puzzle solutions and ARC-like grid examples. Which two lines of the lecture predict a small effect, and what kind of model change does the lecture associate with large ARC gains?",
+          "q": "A team proposes to improve a model's ARC-AGI score by continued pretraining on a scraped corpus of puzzle solutions and ARC-like grid examples. Which two points in the lecture predict a small effect, and what kind of model change does the lecture associate with large ARC gains?",
           "format": "short",
           "answer": "'Each task is unique, so memorization doesn't help' (L264) and 'Pretrained language models didn't move the needle' (L273). The lecture associates large gains with reasoning models such as o1 and o3 (L274), i.e. changes in how the model computes at test time rather than what it has seen.",
           "why": "The benchmark is designed so that knowledge accumulation is not the bottleneck.",
@@ -2231,7 +2218,7 @@
             "source": "lecture_12",
             "ref": "lecture_12.py:L307-L311",
             "role": "claim",
-            "quote": "Many aspects of safety are strongly contextual (politics, law, social norms - which vary across countries) ... Many risks are quite varied (hallucinations, sycophancy, abetting crimes, inequality, losing critical thinking) ... Dual-use: capable cybersecurity agents (Mythos) can be used to hack into a system or to do penetration testing"
+            "quote": "Many aspects of safety are strongly contextual (politics, law, social norms - which vary across countries) ... Many risks are quite varied ... Dual-use: capable cybersecurity agents (Mythos) can be used to hack into a system or to do penetration testing"
           },
           {
             "source": "harmbench_2024",
@@ -2881,7 +2868,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "An agentic coding benchmark reports that an 'agent' that simply replies 'done' without editing any file scores 12%. Which problem from L367 does this reveal, and what would the Verified-style fix (L363) and the Docent-style check (L368) each do about it?",
+          "q": "An agentic coding benchmark reports that an 'agent' that simply replies 'done' without editing any file scores 12%. Which of the lecture's problems with agentic benchmarks does this reveal, and what would a Verified-style fix and a Docent-style check each do about it?",
           "format": "short",
           "answer": "'Trivial agent can solve task' (L367): some tasks pass their tests with no work, so their tests are insufficient. A Verified-style fix has humans screen and remove or repair those items (L363); a Docent-style check runs an LLM over the agent traces to flag tasks where success occurred without the expected actions (L368).",
           "why": "Outcome-graded benchmarks are only as good as their graders; both fixes audit the items, one by hand and one with a model.",
@@ -3040,7 +3027,7 @@
           "targets_misconception": "Evaluating a model on a benchmark is the same kind of claim as the pre-foundation practice of evaluating a method on a benchmark."
         },
         "transfer": {
-          "q": "A government agency, a model vendor's training team, and a small business each ask you 'which evaluation should we run?'. Match each to one of the four purposes at L374-L377, name a benchmark family from the lecture that fits each, and state the single piece of advice the professor says applies to all of them.",
+          "q": "A government agency, a model vendor's training team, and a small business each ask you 'which evaluation should we run?'. Match each to one of the lecture's four purposes of evaluation, name a benchmark family from the lecture that fits each, and state the single piece of advice the professor says applies to all of them.",
           "format": "short",
           "answer": "Agency: understand benefits and harms (L376), safety benchmarks like HarmBench or AIR-Bench. Training team: developer feedback to improve the model (L377), perplexity and exam benchmarks that give smooth, cheap signal. Small business: a purchase decision for a use case (L374), a realistic task set close to their work (GDPVal-style, or their own private eval). To all: define the rules of the game (L390), stating what is being evaluated (method, model or agent) and the difficulty, realism and validity choices (L29-L30).",
           "why": "The purpose selects the evaluation; the rules of the game make the result interpretable regardless.",
@@ -3049,7 +3036,7 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "A vendor's training team wants a cheap, smooth signal to compare checkpoints every few hours. Which purpose from L374-L377 is this, with a fitting evaluation?",
+          "q": "A vendor's training team wants a cheap, smooth signal to compare checkpoints every few hours. Which of the lecture's four purposes of evaluation is this, with a fitting evaluation?",
           "format": "choice",
           "choices": [
             "Raw capability: the one best benchmark",

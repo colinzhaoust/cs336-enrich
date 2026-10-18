@@ -1,5 +1,5 @@
 {
-  "repo": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/backend/src/edtrace",
+  "repo": "cs336_enrich/tools/edtrace/backend/src/edtrace",
   "git": {
     "head": null,
     "ref": null,
@@ -627,7 +627,7 @@
     "unresolved_calls": []
   },
   "algorithm_readmes": [],
-  "frontend_dir": "/Users/colin/Desktop/cs336_enrich/tools/edtrace/frontend/src",
+  "frontend_dir": "cs336_enrich/tools/edtrace/frontend/src",
   "frontend_modules": [
     {
       "path": "App.jsx",

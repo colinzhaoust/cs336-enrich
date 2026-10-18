@@ -7,15 +7,24 @@
 // accept (optional list of keywords; any one present in the learner's text is enough).
 
 const MULT = { k: 1e3, thousand: 1e3, m: 1e6, million: 1e6, b: 1e9, g: 1e9, billion: 1e9, t: 1e12, trillion: 1e12 };
-const NUM_RE = /([-+−]?(?:\d[\d,]*(?:\.\d+)?|\.\d+)(?:\s*[eE]\s*[-+−]?\d+)?)(?:\s*\/\s*(\d+(?:\.\d+)?))?(?:\s*(%|[kKmMbBtT](?![a-zA-Z])|\(?\s*(?:thousand|million|billion|trillion)\b)|([gG])(?![a-zA-Z]))?/;
+const NUM_RE = /([-+−]?(?:\d{1,3}(?:,\d{3})+(?![\d,])(?:\.\d+)?|\d+,\d{1,2}(?![\d,])|\d+(?:\.\d+)?|\.\d+)(?:\s*[eE]\s*[-+−]?\d+)?)(?:\s*\/\s*(\d+(?:\.\d+)?))?(?:\s*(%|[kKmMbBtT](?![a-zA-Z])|\(?\s*(?:thousand|million|billion|trillion)\b)|([gG])(?![a-zA-Z]))?/;
+
+const SUP = { "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9", "⁻": "-", "⁺": "+" };
 
 // Parse the first number in a string. Returns {value, mantissa, scaled} or null.
 // "300 (billion)" -> value 3e11, mantissa 300; "34%" -> 0.34; "2/3" -> 0.667; "1.4T" -> 1.4e12.
 export function parseNumber(s) {
-  const t = String(s ?? "").replace(/×\s*10\^?\s*([-+−]?\d+)/g, "e$1").replace(/·10\^?([-+−]?\d+)/g, "e$1");
+  const t = String(s ?? "")
+    // superscript exponents after 10 ("10²³", "10⁻³") -> "10^23", "10^-3"
+    .replace(/10\s*([⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, e) => "10^" + [...e].map(c => SUP[c]).join(""))
+    // "7.2 × 10^23", "7.2x10^23", "7.2*10^23", "7.2·10^23" -> "7.2e23"
+    .replace(/\s*[x*×·]\s*10\s*\^\s*([-+−]?\d+)/gi, "e$1")
+    // a bare power ("10^-3", "2^25") is evaluated
+    .replace(/(^|[^\d.e])(\d+(?:\.\d+)?)\s*\^\s*([-+−]?\d+)/gi, (_, pre, b, e) => pre + String(Math.pow(+b, +e.replace("−", "-"))));
   const m = NUM_RE.exec(t);
   if (!m) return null;
-  let x = parseFloat(m[1].replace(/,/g, "").replace(/−/g, "-").replace(/\s+/g, ""));
+  const num = /^[-+−]?\d+,\d{1,2}$/.test(m[1]) ? m[1].replace(",", ".") : m[1].replace(/,/g, "");
+  let x = parseFloat(num.replace(/−/g, "-").replace(/\s+/g, ""));
   if (!isFinite(x)) return null;
   if (m[2]) { const d = parseFloat(m[2]); if (d) x = x / d; }
   const mantissa = x;
@@ -31,19 +40,38 @@ export function parseNumber(s) {
 }
 
 const TREND = [
-  ["up", /\b(up|rises?|rising|increases?|increasing|grows?|growing|higher|larger|bigger|more|widens?|longer|improves?)\b/],
-  ["down", /\b(down|falls?|falling|decreases?|decreasing|drops?|dropping|lower|smaller|less|fewer|shrinks?|narrows?|shorter|collapses?)\b/],
-  ["same", /\b(same|unchanged|flat|constant|no change|stays?|identical|does not change|doesn't change)\b/],
+  ["up", /\b(up|rises?|rising|rose|risen|increases?|increased|increasing|grows?|grew|grown|growing|higher|larger|bigger|more|widens?|widened|longer|doubles?|doubled|triples?|tripled|jumps?|jumped|too (?:high|large|big|much)|over-?estimates?|over-?estimated)\b/g],
+  ["down", /\b(down|falls?|fell|fallen|falling|decreases?|decreased|decreasing|drops?|dropped|dropping|lower|smaller|less|fewer|shrinks?|shrank|shrunk|narrows?|narrowed|shorter|collapses?|collapsed|halves|halved|reduces?|reduced|decays?|decayed|plummets?|plummeted|too (?:low|small|little)|under-?estimates?|under-?estimated)\b/g],
+  ["same", /\b(same|unchanged|unaffected|not affected|no effect|flat|constant|no change|stays?|identical|neither up nor down|(?:does not|doesn't|don't|did not|didn't|will not|won't) (?:change|move)|doesnt change|dont change)\b/g],
 ];
-export function trendClass(s, firstOnly = true) {
-  const t = String(s ?? "").toLowerCase();
-  let best = null;
+// a direction word is negated when not/never/neither/nor/n't comes within three words before it,
+// with no punctuation in between ("does not go down" is negated; "not lower, higher" keeps "higher")
+const NEG = /(?:\b(?:not|never|neither|nor|dont|doesnt|didnt|isnt|wont|cannot)|n't)(?:\s+[\w']+){0,2}\s+$/;
+// an explanation after the answer ("up, because fewer tokens ...", "down: log Z falls ...") is ignored
+// when the classes disagree
+const WHY = /\s*(?:[:;(—–]|\s-\s|\bbecause\b|\bsince\b|\bdue to\b|\bas a result\b|\bso\b)/;
+function trendHits(t) {
+  const hits = [];
   for (const [cls, re] of TREND) {
-    const m = re.exec(t);
-    if (m && (best === null || m.index < best.index)) best = { cls, index: m.index };
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(t))) if (!NEG.test(t.slice(0, m.index))) hits.push({ cls, index: m.index });
   }
-  if (!best) return null;
-  return firstOnly && best.index > 40 ? null : best.cls;
+  return hits.sort((a, b) => a.index - b.index);
+}
+// Official answers (firstOnly): the earliest non-negated direction word within the first 40 characters.
+// Learner input: the one class all non-negated direction words agree on, else null (graded wrong).
+export function trendClass(s, firstOnly = true) {
+  const t = String(s ?? "").toLowerCase().replace(/[’‘]/g, "'");
+  const hits = trendHits(t);
+  if (!hits.length) return null;
+  if (firstOnly) return hits[0].index > 40 ? null : hits[0].cls;
+  const classes = new Set(hits.map(h => h.cls));
+  if (classes.size === 1) return hits[0].cls;
+  const w = WHY.exec(t);
+  if (!w) return null;
+  const head = new Set(trendHits(t.slice(0, w.index)).map(h => h.cls));
+  return head.size === 1 ? [...head][0] : null;
 }
 
 function close(x, y, tol) {

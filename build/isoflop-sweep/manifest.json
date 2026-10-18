@@ -2,7 +2,7 @@
   "fixture": "isoflop-sweep",
   "family": "curve",
   "scene": "CurveScene",
-  "quality": "720p",
+  "quality": "720p30",
   "knowledge_points": [
     "lecture_09:chinchilla-three-methods",
     "chinchilla:approach-2"
@@ -41,7 +41,7 @@
     {
       "id": "s2",
       "time": 9.2,
-      "caption": "four budgets: the minima trace N_opt \u221d C^a with a \u2248 0.5",
+      "caption": "four budgets: the minima trace N_opt \u221d C^a with a \u2248 0.45 (parametric fit; D/N rises with C)",
       "frame": "frames/s2.png",
       "notices": [
         "n2"

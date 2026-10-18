@@ -320,11 +320,10 @@
       ],
       "prompts": {
         "predict": {
-          "q": "H100: HBM bandwidth is 3.35 TB/s (lecture 6 table). Slide 10 says L1/shared memory is roughly an order of magnitude faster. About how many TB/s is that, and how many times higher than HBM?",
+          "q": "H100: HBM bandwidth is 3.35 TB/s (lecture 6 table). Slide 10's caption says SRAM, which L1 and shared memory are built from, is ~8× faster than DRAM. Guess the L1/shared memory bandwidth in TB/s and its ratio to HBM.",
           "format": "short",
           "answer": "~33 TB/s, ~10×",
-          "why": "3.35 × 10 ≈ 33 TB/s. Slide 10 gives the same order of magnitude as '~8x faster than DRAM'. Moving inward, bandwidth rises and capacity falls, but not by a fixed factor per level: about 3.35 (HBM) → 12 (L2) → 33 (L1/shared) → 401 TB/s (registers), while sizes shrink 80 GB → 50 MB → 256 KB.",
-          "targets_misconception": "L2 cache is inside the SM like L1."
+          "why": "Lecture 6's table gives ~33 TB/s, and 33 / 3.35 ≈ 10×, a little above slide 10's rough '~8x faster than DRAM'; both say about an order of magnitude. Moving inward, bandwidth rises and capacity falls, but not by a fixed factor per level: about 3.35 (HBM) → 12 (L2) → 33 (L1/shared) → 401 TB/s (registers), while sizes shrink 80 GB → 50 MB → 256 KB."
         },
         "transfer": {
           "q": "Two thread blocks running on different SMs must exchange partial sums. Which memory level must the exchange go through, and where does it sit in the bandwidth order?",
@@ -651,7 +650,7 @@
             "quote": "as of the V100, NVIDIA decided here is a piece of hardware that will do your matrix multiplies for you. ... matmuls became the one privileged operation in machine learning ... any near future machine learning architecture that we see that scales with compute is going to have a matrix multiply in it"
           }
         ],
-        "filtering_note": "The '>10x' is stated without the datasheet numbers behind it; the figure on p17 (a spec table) is not in the text layer. H100 numbers make it concrete: ~990 TFLOP/s bf16 tensor-core (lecture 2's 1979e12/2) vs ~67 TFLOP/s fp32 non-tensor (NVIDIA's H100 SXM datasheet, not lecture 2). The p26 table of which precisions tensor cores accept is shown, not explained. Spoken evidence (video 25:08-25:31): the professor draws a design consequence the slide leaves out: because tensor cores make matmul FLOPs more than 10x cheaper, any near-future architecture that scales with compute will be built around matrix multiplies."
+        "filtering_note": "The '>10x' is stated without the datasheet numbers behind it; the figure on p17 (a spec table) is not in the text layer. H100 numbers make it concrete: ~990 TFLOP/s bf16 tensor-core (lecture 2's 1979e12/2) vs ~67.5 TFLOP/s fp32 non-tensor (lecture_02.py L813, also NVIDIA's H100 datasheet figure). The p26 table of which precisions tensor cores accept is shown, not explained. Spoken evidence (video 25:08-25:31): the professor draws a design consequence the slide leaves out: because tensor cores make matmul FLOPs more than 10x cheaper, any near-future architecture that scales with compute will be built around matrix multiplies."
       },
       "prerequisites": [
         {
@@ -1196,7 +1195,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_05--bf16-accumulator",
-          "notice": "With a bf16 accumulator the running sum climbs exactly to 256 and then stalls (256 + 1 rounds back to 256); the fp32 accumulator stays on the diagonal."
+          "notice": "With a bf16 accumulator the running sum climbs along the diagonal and then goes flat, at the point where adding 1 rounds back to the same value; the fp32 accumulator stays on the diagonal."
         }
       ]
     },
@@ -1304,7 +1303,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_05--fp8-step-saving",
-          "notice": "Raise the quantize/transposed-copy overhead from 0 to 0.25: the matmul saving falls from the naive 50% into the quoted 20–30% band, and the step saving is that times the matmul share."
+          "notice": "Raise the quantize/transposed-copy overhead from 0 upward: the matmul saving falls from the naive 50% into the quoted 20–30% band, and the step saving is that times the matmul share."
         }
       ]
     },
@@ -1719,7 +1718,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_05--warp-access",
-          "notice": "With stride 1 the warp's 32 fp32 loads land in one 128-byte transaction; each doubling of the stride doubles the transactions, and reading down a column of a row-major matrix costs one transaction per thread."
+          "notice": "With stride 1 the warp's fp32 loads land in one 128-byte transaction and each doubling of the stride doubles the transactions; then switch to reading down a column of a row-major matrix."
         },
         {
           "type": "video-span",
@@ -2094,7 +2093,7 @@
           "choices": [
             "It falls despite the extra rows",
             "It rises in proportion to the rows",
-            "Unchanged: 0.2% more work is noise",
+            "Unchanged: 0.1% more work is noise",
             "It rises because padding adds reads"
           ],
           "answer": "It falls despite the extra rows",
@@ -2523,12 +2522,17 @@
         },
         "retrieval": [
           {
-            "q": "What resource per thread most directly limits how many warps an SM can keep resident, and what is the per-thread maximum?",
-            "answer": "Registers; up to 255 per thread."
+            "q": "What resource per thread most directly limits how many warps an SM can keep resident?",
+            "answer": "Registers: the SM's register file is fixed, so the more registers each thread uses, the fewer blocks (and warps) fit."
           },
           {
             "q": "Why is a GPU able to tolerate slow global memory even though each thread is slow?",
             "answer": "The SM overlaps one warp's memory stall with other warps' compute by switching warps at zero cost (latency hiding)."
+          },
+          {
+            "q": "How many registers can one thread use at most, per lecture 6?",
+            "answer": "255 (each thread uses between 0 and 255).",
+            "layer": "detail"
           }
         ]
       },

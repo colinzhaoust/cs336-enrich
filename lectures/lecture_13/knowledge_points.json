@@ -164,7 +164,7 @@
           },
           {
             "q": "Why, according to the professor, is data a 'long-tail problem' unlike architectures or systems?",
-            "answer": "Because it scales with human effort: curation and cleaning do not get solved once but keep demanding work."
+            "answer": "It scales with human effort: data work for a broad model can be split across many people (so data teams are large), whereas only so many people can usefully work on architectures and systems."
           }
         ],
         "self_explain": "Why would the same high-quality textbook data be more valuable placed in mid-training than mixed into pre-training from the start?"
@@ -392,7 +392,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L160-L167",
             "role": "claim",
-            "quote": "Collections are not original works so hence not copyrightable (e.g., telephone directories) unless there is some creativity in the selection or arrangement ... Copyright applies to expression, not ideas (e.g., quicksort) ... Registration not required for copyright protection (in contrast with patents) ... Threshold for copyright is extremely low (e.g., your website is copyrighted)"
+            "quote": "Collections are not original works so hence not copyrightable (e.g., telephone directories) ... Copyright applies to expression, not ideas (e.g., quicksort) ... Registration not required for copyright protection ... Threshold for copyright is extremely low (e.g., your website is copyrighted)"
           },
           {
             "source": "lecture_13",
@@ -1243,7 +1243,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L303-L309",
             "role": "claim",
-            "quote": "Lots of duplicates (e.g., copied code, forks, etc.) ... Allowed to train on any public repository with a permissive license (e.g., MIT, Apache) ... Repository: download through git protocol (rather than scraping the GitHub website) ... Metadata: GitHub API provides issues, pull requests, comments, etc."
+            "quote": "Allowed to train on any public repository with a permissive license (e.g., MIT, Apache) ... Repository: download through git protocol (rather than scraping the GitHub website) ... Metadata: GitHub API provides issues, pull requests, comments, etc."
           },
           {
             "source": "lecture_13",
@@ -1649,7 +1649,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L546-L555",
             "role": "claim",
-            "quote": "Positive examples (200K): ... OpenHermes-2.5: mostly GPT-4 generated instruction data ... ELI5: subreddit with curiosity questions and answers ... Negative examples (200K): ... RefinedWeb ... Trained a fastText classifier, run it on all of DCLM-pool ... This quality classifier outperforms other filtering methods"
+            "quote": "Positive examples (200K): ... OpenHermes-2.5: mostly GPT-4 generated instruction data ... ELI5 ... Negative examples (200K): ... RefinedWeb ... Trained a fastText classifier, run it on all of DCLM-pool ... This quality classifier outperforms other filtering methods"
           },
           {
             "source": "lecture_13_video",
@@ -2228,7 +2228,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L491-L500",
             "role": "claim",
-            "quote": "C4 (more diverse; recall: rule-based filtering) ... GitHub: kept permissive licenses, filtering based on manual rules ... arXiv: removed comments, inline expanded macros, bibliography ... Stack Exchange: 28 largest websites, sorted answers by score ... Result: 1.2T tokens ... Reproduced by Together's RedPajama v1"
+            "quote": "C4 (more diverse; recall: rule-based filtering) ... GitHub: kept permissive licenses, filtering based on manual rules ... arXiv: removed comments ... Stack Exchange: 28 largest websites, sorted answers by score ... Result: 1.2T tokens ... Reproduced by Together's RedPajama v1"
           },
           {
             "source": "lecture_13",
@@ -2330,7 +2330,7 @@
       "misconceptions": [
         {
           "belief": "Open datasets after GPT-3 were just bigger web crawls.",
-          "why_wrong": "The Pile was built as a mixture of 22 curated domains in reaction to GPT-3 (L424-L426), and LLaMA and Dolma each list six or more non-web components (L491-L497, L527-L529); web is one component among several."
+          "why_wrong": "The Pile was built as a mixture of 22 curated domains in reaction to GPT-3 (L424-L426), and LLaMA lists five non-web components beside its two web crawls (L491-L497) and Dolma four beside C4 and Common Crawl (L527-L529); web is one component among several."
         },
         {
           "belief": "A dataset listed as a component is used raw.",
@@ -2782,7 +2782,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L586-L592",
             "role": "claim",
-            "quote": "Repositories from the Software Heritage ... Processing: remove binary files, malware, bot activity, deduplication, PII redaction, subsample PRs ... Pair source code (especially low-resource languages like Nim) with shared low-level intermediate language (LLVM) ... Include existing datasets (GSM8K, code contests, StackOverflow, arXiv, Wikipedia, OpenWebMath)"
+            "quote": "Repositories from the Software Heritage ... Processing: remove binary files, malware, bot activity, deduplication, PII redaction ... Pair source code (especially low-resource languages like Nim) ... intermediate language (LLVM) ... Include existing datasets (GSM8K ... OpenWebMath)"
           },
           {
             "source": "lecture_13",
@@ -2868,18 +2868,18 @@
           "q": "A team builds a code dataset by cloning every public repository and training on all of it. Relative to The Stack's pipeline, which two steps have they skipped that the lecture says change the dataset most, and in which direction does each move the size?",
           "format": "choice",
           "choices": [
-            "licence filtering and near-dedup; both shrink it, dedup by about 10x in files",
+            "licence filtering and deduplication; both shrink it, and dedup to unique files alone is about 10x (51B → 5B)",
             "PII redaction and binary-file removal; both shrink it, PII by about half",
             "LLVM pairing and PR linearisation; both shrink it by dropping unpaired files",
             "near-dedup and test-file removal; public code needs no licence check"
           ],
-          "answer": "licence filtering and near-dedup; both shrink it, dedup by about 10x in files",
+          "answer": "licence filtering and deduplication; both shrink it, and dedup to unique files alone is about 10x (51B → 5B)",
           "distractor_from": [
             "'public code needs no licence check' <- misconception: 'Public GitHub code is free to train on because it is public.'",
             "'LLVM pairing and PR linearisation' <- related to misconception 'A pull request can be fed to a model as the diff text alone.' (treats PR/LLVM structuring steps as the main size filters)",
             "'PII redaction and binary-file removal' <- plausible: real Stack steps, but not the ones that change the size most"
           ],
-          "why": "licence filtering and near-deduplication; both shrink the set, dedup by roughly 10x on files. L581-L583: 51B files with only 5B unique, then permissive-licence filtering and minhash/Jaccard dedup; both discard data.",
+          "why": "licence filtering and deduplication; both shrink the set. L581: 51B files with only 5B unique, so dedup to unique files alone is about 10x; the permissive-licence filter and the minhash/Jaccard near-dedup that follow (L582-L583) discard more, but the lecture does not size them.",
           "targets_misconception": "Public GitHub code is free to train on because it is public."
         },
         "transfer": {

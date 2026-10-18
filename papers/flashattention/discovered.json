@@ -9,8 +9,8 @@
   },
   "generated_by": "discover_paper.py",
   "inputs": {
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/flashattention/paper.txt": "3bbd0cd3fdda5e29f324bb80c1416180623ab7f7dc3938a0812ce5877fc90c6d",
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/flashattention/lecture_05.txt": "a6b21ff193001a12174fb77d3cc6690e1b073d868de362fef39fe8a6b7a7e0ee"
+    "cs336_enrich/atlas/papers/flashattention/paper.txt": "3bbd0cd3fdda5e29f324bb80c1416180623ab7f7dc3938a0812ce5877fc90c6d",
+    "cs336_enrich/atlas/lectures/lecture_05/lecture_05.txt": "a6b21ff193001a12174fb77d3cc6690e1b073d868de362fef39fe8a6b7a7e0ee"
   },
   "verification_note": "Structure parsed from the arXiv HTML text; no PDF pages were inspected, so no page numbers. Only Appendix B equations carry printed numbers (1)-(6); main-body displays are anchored by section and text line. Table rows are the HTML cells as printed.",
   "sections": [
@@ -4195,7 +4195,7 @@
     ]
   },
   "anchor_check": {
-    "ok": 70,
+    "ok": 73,
     "failed": 0,
     "unchecked": 0,
     "problems": []

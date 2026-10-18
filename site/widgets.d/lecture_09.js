@@ -313,13 +313,13 @@ WIDGETS["fixture:lecture_09--critical-batch"] = (root) => {
       target loss ${fmt(s.L, 2)} nats → B_crit ≈ ${sci(m.bcritTokens)} tokens (Kaplan fit); lowering the target to ${fmt(s.L - 0.5, 2)} multiplies it by ${fmt((s.L / (s.L - 0.5)) ** (1 / KB.alphaB), 3)}<br>
       <span class="muted small">provenance: fixture:lecture_09--critical-batch · lecture_09.pdf:p37 (L361-L368, diminishing returns), p38 (L369-L385, steps vs examples curve, "roughly 2x", gradient-noise claim; curve (S/S_min−1)(E/E_min−1)=1 from McCandlish et al. 2018, figure only), p39 (L386-L392, smaller target → bigger batch); video 42:34-43:59 (noise- vs bias-limited), 45:48-46:26 (B_crit = E_min/S_min), 47:33-48:22. Right panel: B_crit(L) ≈ 2e8 / L^(1/0.21) tokens is Kaplan et al. 2020 eq. 1.4 (paper), not on the slides.</span>`;
   };
-  const bw = slider("batch size B (examples per step)", 0, 6, s.logB, 0.05, v => { s.logB = v; draw(); }, v => fmt(10 ** v, 1));
+  const bw = slider("batch size B (examples per step)", 0, 8, s.logB, 0.05, v => { s.logB = v; draw(); }, v => fmt(10 ** v, 1));
   bInput = bw.querySelector("input"); bOut = bw.querySelector(".readout");
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("S_min (steps, huge-batch limit)", 2, 6, s.logS, 0.1, v => { s.logS = v; draw(); }, v => fmt(10 ** v, 0)),
     slider("E_min (examples, tiny-batch limit)", 5, 10, s.logE, 0.1, v => { s.logE = v; draw(); }, v => sci(10 ** v, 1)),
     bw,
-    el("button", { style: "margin-top:6px;padding:3px 8px;font-size:12px", onclick: () => { s.logB = s.logE - s.logS; bInput.value = s.logB; bOut.textContent = fmt(10 ** s.logB, 1); draw(); } }, "set B = B_crit"),
+    el("button", { style: "margin-top:6px;padding:3px 8px;font-size:12px", onclick: () => { s.logB = Math.min(8, Math.max(0, s.logE - s.logS)); bInput.value = s.logB; bOut.textContent = fmt(10 ** s.logB, 1); draw(); } }, "set B = B_crit"),
     slider("target loss L (right panel)", 2, 5, s.L, 0.05, v => { s.L = v; draw(); }, v => fmt(v, 2)),
     read), pic)); draw();
 };
@@ -338,7 +338,7 @@ function allocation({ C, k = 1, r = 20 }) {
   const chN = Math.sqrt(C1 / 120), chD = 20 * chN, kapN = N0 * k ** 0.73, kapD = D0 * k ** 0.27;
   const yourN = Math.sqrt(C1 / (6 * r)), yourD = r * yourN;
   return { N0, D0, chN, chD, chNfactor: chN / N0, kapN, kapD, kapNfactor: k ** 0.73, kapDfactor: k ** 0.27, kapRatio: kapD / kapN,
-    kapFlops: 6 * kapN * kapD / C1, yourN, yourD, yourDT: yourD / 1e12, serveRatio: yourN / chN };
+    kapFlops: 6 * kapN * kapD / C1, yourN, yourD, yourDT: yourD / 1e12, yourDB: yourD / 1e9, serveRatio: yourN / chN };
 }
 MODELS["fixture:lecture_09--allocation"] = {
   fn: allocation,
@@ -346,15 +346,17 @@ MODELS["fixture:lecture_09--allocation"] = {
     { args: { C: 1.2e22 }, pick: "chN", expect: 1e10, tol: 0.02, from: "lecture_09:chinchilla-twenty-tokens-rule:predict" },
     { args: { C: 1.2e22 }, pick: "chD", expect: 2e11 },                                     // ... D = 200B
     { args: { C: 1.2e22, k: 25 }, pick: "chNfactor", expect: 5, tol: 0.05, from: "lecture_09:chinchilla-twenty-tokens-rule:check" },
-    { args: { C: 1.2e22, k: 100 }, pick: "chN", expect: 1e11 },                             // chinchilla transfer: 100B
-    { args: { C: 1.2e22, k: 100 }, pick: "kapN", expect: 2.88e11, tol: 0.02 },              // ... Kaplan ≈ 288B
-    { args: { C: 1.2e22, k: 100 }, pick: "kapD", expect: 6.94e11, tol: 0.02 },              // ... on ≈ 694B tokens
+    { args: { C: 1.2e22, k: 100 }, pick: "chN", expect: 1e11 },                             // ×100: Chinchilla 100B
+    { args: { C: 1.2e22, k: 10 }, pick: "chN", expect: 3.16e10, tol: 0.02 },                // chinchilla transfer (×10): ≈ 32B
+    { args: { C: 1.2e22, k: 10 }, pick: "kapN", expect: 5.37e10, tol: 0.02 },               // ... Kaplan ≈ 54B
+    { args: { C: 1.2e22, k: 10 }, pick: "kapD", expect: 3.72e11, tol: 0.02 },               // ... on ≈ 372B tokens
     { args: { C: 1.2e22, k: 100 }, pick: "kapNfactor", expect: 29, tol: 0.05, from: "lecture_09:kaplan-compute-optimal-allocation:predict" },
     { args: { C: 1.2e22, k: 100 }, pick: "kapDfactor", expect: 3.47, tol: 0.02 },           // ... D ≈ 3.5×
     { args: { C: 1.2e20, k: 1000 }, pick: "kapRatio", expect: 0.83, tol: 0.1, from: "lecture_09:kaplan-compute-optimal-allocation:transfer" },
     { args: { C: 1.2e20, k: 1000 }, pick: "kapFlops", expect: 1 },                          // 0.73 + 0.27 = 1: the budget is spent exactly
-    { args: { C: 6 * 70e9 * 215 * 70e9, r: 215 }, pick: "yourDT", expect: 15, tol: 0.05, from: "lecture_09:overtraining-for-inference:transfer" },
-    { args: { C: 6 * 70e9 * 215 * 70e9, r: 215 }, pick: "yourN", expect: 70e9 },            // ... the 70B model
+    { args: { C: 6 * 7e9 * 110 * 7e9, r: 110 }, pick: "yourDB", expect: 770, tol: 0.05, from: "lecture_09:overtraining-for-inference:transfer" },
+    { args: { C: 6 * 7e9 * 110 * 7e9, r: 110 }, pick: "yourN", expect: 7e9 },               // ... the 7B model
+    { args: { C: 6 * 70e9 * 215 * 70e9, r: 215 }, pick: "yourDT", expect: 15, tol: 0.05 },   // Llama 3 70B: about 15T tokens (flow's notice)
     { args: { C: 1.2e22, r: 80 }, pick: "serveRatio", expect: 0.5 },                         // overtraining predict: N*/2 is r = 80, half the serving cost
   ],
 };

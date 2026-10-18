@@ -20,10 +20,10 @@ Everything after that happens in this order, and each section below is one row.
 | Load and validate the YAML | `main_rl.py` → `configs/load.py` | a checked config object |
 | Build engines | `run_rl_sync.main` → `core/rl_engines.py` | 6 training actors, 2 rollout actors |
 | Pick prompts | `MixedDatasetSampler` | 512 prompts per epoch |
-| Generate | `VLLMRolloutEngine.generate` | 2,048 completions with their log-probabilities |
+| Generate | `VLLMRolloutEngine.generate` | 4 completions per prompt, with their log-probabilities |
 | Score | `rewards/math_verify_reward_func.py` | a 0/1 reward on each completion's last token |
 | Advantage | `Base.normalize_rewards` | a per-prompt z-score on every response token |
-| Batch | `prepare_training_batches`, `shard_and_put` | 43 micro-batches per training GPU |
+| Batch | `prepare_training_batches`, `shard_and_put` | an equal share of micro-batches per training GPU |
 | Loss and step | `GRPO.train_step` (or CISPO, PPO, P3O) | one optimizer step |
 | Weight sync | `sync_weights_direct` | rollout engines on the new weights |
 
@@ -49,9 +49,10 @@ The run block asks for 6 training GPUs and 2 rollout GPUs, with tensor paralleli
 ::code core/rl_engines.py:L18-L24 | alg_name is a key into this table; each value is a module path and a class name
 ::code core/rl_engines.py:L58-L60 | the one place where overlap mode reaches the loss: use_decoupled_loss is simply overlap.enabled
 
+::predict config-recipe-gsm8k
+
 **How many completions per epoch?** `rollout_samples_per_epoch` counts *prompts*, and the code rounds it up to whole dataloader batches. A batch holds one slice of `rollout_batch_size_per_gpu` prompts per rollout engine: $2 \times 64 = 128$. So 512 prompts make $\lceil 512/128 \rceil = 4$ batches, and with 4 samples each the replay buffer receives $512 \times 4 = 2048$ completions per epoch, an upper bound because empty responses are dropped.
 
-::predict config-recipe-gsm8k
 ::widget fixture:feynrl--pipeline-sizes | it opens at 384 prompts; slide rollout_samples_per_epoch to 500 and the prompt bar still shows 4 whole batches with a hatched tail, because the count is rounded up to batches of engines × 64 before being multiplied by n_samples
 ::kp config-recipe-gsm8k
 
@@ -59,6 +60,8 @@ The run block asks for 6 training GPUs and 2 rollout GPUs, with tensor paralleli
 source: run_rl_sync.py:L27-L99 · run_rl_sync.py:L101-L242 · run_rl_sync.py:L339-L470 · docs/ARCHITECTURE.md:L35
 
 With `overlap.enabled: False`, `main_rl.py` hands control to `run_rl_sync.main`. Its setup is a checklist: start Ray and check the cluster has $6 + 2 = 8$ GPUs, create one training actor per training GPU and wait until every one has built its DeepSpeed engine, load the tokenizer, import the reward module named in the YAML, create the rollout engines, build the prompt dataloader and an empty replay buffer.
+
+::predict sync-epoch-loop
 
 Then comes the loop over 100 epochs. One epoch is a strict sequence:
 
@@ -69,7 +72,6 @@ Back in `main`, the epoch ends with a weight sync, unless it was the last epoch:
 
 Three consequences are worth stating. Rollouts are generated once per epoch, never once per training step: with `train_steps_per_epoch: 3`, the three passes reuse the same micro-batches. The version goes up once per epoch, however many passes it makes. And $N$ epochs give $N - 1$ syncs, 99 here.
 
-::predict sync-epoch-loop
 ::animation fixture:rollout-train-timeline | in sync mode (s0) the rollout lane is idle for the whole training segment and the training lane for the whole rollout segment; the two never overlap, which is the cost overlap mode removes later
 ::widget fixture:feynrl--epoch-ledger | raise train_steps_per_epoch to 3: three passes over the same micro-batches, still one version bump, and only the micro-batches before the first optimizer tick are green, meaning they see the weights that generated them
 
@@ -126,12 +128,12 @@ source: rewards/gsm8k_reward_func.py:L19-L50 · rewards/math_verify_reward_func.
 
 **The reward contract.** A reward module is a Python file in `rewards/` with a `compute_score(prompt_data, response_data)` function, imported by the name in `reward.reward_func`. It returns three things: a float tensor with one entry per response token, a flag `is_per_token`, and a `correct_threshold` (a completion counts as correct for pass@k metrics when its reward is above it). The simplest module shows the convention: everything is zero except the last token, which gets 1 if the answer after `####` matches the reference.
 
+::predict reward-interface
+
 ::code rewards/gsm8k_reward_func.py:L39-L50 | a tensor of zeros the length of the response, and the scalar score written to r[-1]
 ::code rollouts/base.py:L174-L181 | a plain float is wrapped in a one-element tensor and then fails the length check
 
 The recipe actually uses `math_verify_reward_func`, which follows the same contract but compares answers symbolically with the math-verify package, in a pool of 8 worker processes so the 256 completions an engine returns are verified concurrently.
-
-::predict reward-interface
 
 **The advantage is computed here, at rollout time.** As soon as a prompt's 4 completions are scored, `normalize_rewards` turns their rewards into z-scores within that group: subtract the group mean, divide by the group's standard deviation plus $10^{-8}$. This is GRPO's group baseline ([L16](#/read/lecture_16)).
 
@@ -158,20 +160,20 @@ The stored z-score is what GRPO, CISPO and P3O read as the advantage. Training m
 ## How does the buffer become micro-batches and one optimizer step? {#batching}
 source: core/rl_engines.py:L446-L535 · algs/GRPO/grpo.py:L230-L438 · algs/RL/common.py:L213-L239 · configs/load.py:L385-L417 · algs/GRPO/README.md:L12
 
+::predict replay-batching
+
 The replay buffer now holds 2,048 completions, each with its token ids, mask, `old_logprobs`, z-scores and version. `prepare_training_batches` shuffles the whole buffer uniformly and cuts it into micro-batches of `train_batch_size_per_gpu = 8`: 256 of them.
 
 ZeRO-3 shards the parameters, so every forward pass is a collective in which all training GPUs take part. If one GPU ran out of micro-batches before the others, the rest would wait for it forever. So the count is padded up to a multiple of the number of engines by repeating the last micro-batch, and `shard_and_put` deals them out round-robin: engine 0 gets micro-batches 0, 6, 12, …, engine 1 gets 1, 7, 13, ….
 
 ::code core/rl_engines.py:L469-L482 | pad by repeating the last batch, because unequal shards deadlock ZeRO-3 collectives
-
-::predict replay-batching
 ::widget fixture:feynrl--pipeline-sizes | slide the prompts back to the recipe's 512 and read the micro-batch columns: 43 per training engine, with two orange cells, the repeats of the last batch; set training GPUs to 8 and the padding disappears because 256 divides evenly
 
 Inside each training actor, `GRPO.train_step` shuffles its 43 micro-batches with a seed of its own and loops over them: forward pass, loss, backward. With `update_after_full_replay: True` the gradient-accumulation boundary is the last micro-batch only, so gradients pile up over all 43 and DeepSpeed applies the optimizer once. `policy_engine.step()` is called after every micro-batch, but DeepSpeed only steps the optimizer at a boundary.
 
 ::code algs/GRPO/grpo.py:L301-L307 | with full replay the only boundary is the last micro-batch
 
-**The denominator.** A per-micro-batch mean would weight a token in a short micro-batch more than a token in a long one, and RL response lengths change every epoch. With `normalize_loss: True`, each actor counts its valid tokens, all GPUs sum the counts, and every micro-batch's raw loss sum is divided by that global count. The extra factor `dp_scale` (gradient-accumulation steps × world size, $1 \times 6$ here) cancels the averaging DeepSpeed does on its own across steps and GPUs, so in the end every valid token in the buffer counts equally.
+**The denominator.** A per-micro-batch mean would weight a token in a short micro-batch more than a token in a long one, and RL response lengths change every epoch. With `normalize_loss: True`, each actor counts its valid tokens, all GPUs sum the counts, and every micro-batch's raw loss sum is divided by that global count. The extra factor `dp_scale` (gradient-accumulation steps × world size, $1 \times 6$ here) cancels the averaging DeepSpeed does on its own across steps and GPUs, so in the end every valid token in the buffer counts equally, except the padding. The repeated last micro-batch is trained on three engines (batch 255 on engine 3, its copies on engines 4 and 5) and enters the count three times, so its 8 completions weigh three times as much in the step.
 
 ::code algs/GRPO/grpo.py:L380-L386 | each micro-batch's loss sum × dp_scale / global token count, adjusted for tokens lost to NaN masking
 
@@ -205,9 +207,9 @@ With the recipe's clip of 0.4 the band is $[0.6, 1.4]$. Where the clamped branch
 ::widget fixture:ratio-clip | slide the ratio past 1 + clip with a positive advantage: the loss curve goes flat, gradient exactly zero; on the other side of 1 it keeps its slope
 ::widget fixture:feynrl--clip-loss | select token 1 and drag its log π upward until the ratio leaves the shaded band: the readout switches to the clamped branch, its term stays at clamp·A, and its gradient becomes 0
 
-**What this means for the recipe.** Combine this with the [batching section](#batching). There is one optimizer step per epoch, after the last micro-batch, so every micro-batch of the pass is scored by the same weights that the rollout engines used to generate it. On paper every ratio is 1, the clip never binds, and the gradient is $A\,\nabla\log\pi$: REINFORCE with a group baseline. What keeps ratios from being exactly 1 is the engine gap. vLLM and the HuggingFace model compute the same distribution with different kernels, and `approx_kl` and `clipfrac` in the logs measure exactly that gap. The clip starts doing its trust-region job only when a configuration makes the weights move inside an epoch: more than one pass, or `update_after_full_replay: False`.
-
 ::predict supp-on-off-policy
+
+**What this means for the recipe.** Combine this with the [batching section](#batching). There is one optimizer step per epoch, after the last micro-batch, so every micro-batch of the pass is scored by the same weights that the rollout engines used to generate it. On paper every ratio is 1, the clip never binds, and the gradient is $A\,\nabla\log\pi$: REINFORCE with a group baseline. What keeps ratios from being exactly 1 is the engine gap. vLLM and the HuggingFace model compute the same distribution with different kernels, and `approx_kl` and `clipfrac` in the logs measure exactly that gap. The clip starts doing its trust-region job only when a configuration makes the weights move inside an epoch: more than one pass, or `update_after_full_replay: False`.
 ::note why | This is the paper's third source of off-policy data, engine mismatch, showing up in FeynRL's own default recipe. It is also why `clipfrac` is worth plotting even in sync mode: a non-zero value on the first pass of an epoch can only come from the two engines disagreeing.
 ::kp supp-importance-ratio
 ::kp grpo-clipped-loss
@@ -255,7 +257,7 @@ When it is on, `ref_forward` runs under `no_grad`, and the KL at each sampled to
 
 ::code algs/RL/common.py:L131-L138 | log-ratio plus exp(clamped reverse log-ratio) minus 1, in float32
 
-For example, a token with $\log\pi = -0.1$ and $\log\pi_{ref} = -0.15$ has log-ratio $0.05$ and $u = e^{-0.05} = 0.95123$, so the estimate is $0.05 + 0.95123 - 1 = 0.00123$.
+For example, a token with $\log\pi = -0.2$ and $\log\pi_{ref} = -0.1$ has log-ratio $-0.1$ and $u = e^{0.1} = 1.10517$, so the estimate is $-0.1 + 1.10517 - 1 = 0.00517$.
 
 ::predict kl-reference-penalty
 ::widget fixture:grpo--kl-estimators | FeynRL's compute_kl_distance is the k3 curve: it stays non-negative everywhere and touches 0 only where π = π_ref, unlike the plain log-ratio k1
@@ -278,12 +280,12 @@ After the optimizer step, the trained weights live as ZeRO-3 shards spread over 
 ::code rollouts/vllm_engine.py:L244-L256 | pickle to /dev/shm and pass a ~50-byte path through collective_rpc; the file is removed in finally
 ::code rollouts/vllm_engine.py:L284-L293 | advance loaded_version, then invalidate the prefix cache or abort
 
+::predict weight-sync-direct
+
 If any step raises, `main` catches it, saves a disk checkpoint and calls `refresh_rollout_engine`, which makes every engine reload the model from that directory. The run continues either way; only the time per epoch changes. Checkpoints are also saved every `checkpoint_save_interval = 15` epochs and after the last one.
 
 ::code run_rl_sync.py:L417-L433 | try direct; on any exception log a warning and fall through to the disk path
 ::code run_rl_sync.py:L443-L445 | the disk path runs when no sync succeeded, unless it is the last epoch
-
-::predict weight-sync-direct
 ::widget fixture:feynrl--epoch-ledger | type 150, 0 as the TP results and pick the failing epoch: that epoch's sync raises, the ledger marks a disk save and refresh in orange, and the next epoch proceeds on the right version
 ::note slip | ARCHITECTURE.md points to `configs/load.py:684-686` for the rule that rejects `nccl` in sync mode; at this commit the check is at L722-L724. Sync mode cannot use NCCL because the plain vLLM engine has no receive path for it.
 ::kp weight-sync-direct
@@ -341,9 +343,9 @@ source: run_rl_async.py:L222-L251 · run_rl_async.py:L700-L720 · rollouts/repla
 
 ::code run_rl_async.py:L700-L705 | keep items whose policy_version ≥ policy_version − max_lag
 
-Write $m$ for `max_lag`. With trainer version $T$, the survivors carry versions $T - m$ through $T$: that is $m + 1$ distinct versions, not $m$. With `max_lag: 1` the buffer mixes two versions, so overlap mode is never on-policy, and items of the current version are off-policy too as soon as the round's first optimizer step has happened. A value below 1 is rejected by the config loader before anything starts; there is no code path for a buffer of capacity 0.
-
 ::predict staleness-budget-max-lag
+
+Write $m$ for `max_lag`. With trainer version $T$, the survivors carry versions $T - m$ through $T$: that is $m + 1$ distinct versions, not $m$. With `max_lag: 1` the buffer mixes two versions, so overlap mode is never on-policy, and items of the current version are off-policy too as soon as the round's first optimizer step has happened. A value below 1 is rejected by the config loader before anything starts; there is no code path for a buffer of capacity 0.
 ::animation fixture:feynrl--overlap-rounds | from round 2 the buffer holds shards older than the trainer; at s3 a failed sync leaves the rollout tag on v1 while the trainer moves to v2, so new shards keep the old stamp; at s6 the full deque pushes the oldest shards out, and at s7 evict_stale drops exactly the shards stamped below v4 − 2 = v2
 
 Which of the two rules binds depends on speed. If rollout is faster than training, the deque fills in fewer than `max_lag` rounds and FIFO removes items before they are old enough to be evicted, so the real lag stays below the budget. If training is faster, the round waits for fresh shards and the overlap buys no speed, but the bound holds. The driver logs `lag_max`, `lag_mean` and the number of distinct versions in the buffer every round, so you can see which regime a run is in.

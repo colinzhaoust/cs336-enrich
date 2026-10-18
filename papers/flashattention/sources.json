@@ -13,7 +13,7 @@
     "title": "CS336 Spring 2026, Lecture 5: GPUs (FlashAttention on slides 50-54, memory hierarchy on 10-12)",
     "kind": "slides",
     "path": "official/lectures/lecture_05.pdf",
-    "text": "atlas/papers/flashattention/lecture_05.txt (copy of atlas/lectures/lecture_05/lecture_05.txt, pdftotext -layout)",
+    "text": "atlas/lectures/lecture_05/lecture_05.txt (pdftotext -layout)",
     "anchor_convention": "lecture_05.pdf:pNN (pdf page = slide number)",
     "note": "Gives the course's teaching order for FlashAttention (tiling -> online softmax -> forward pass), to be compared with the paper's order. The course thread's KPs gpu-memory-hierarchy, tiling-shared-memory, online-softmax, flash-attention-forward are referenced via external_prerequisites as lecture_05:<id>."
   },

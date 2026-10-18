@@ -54,7 +54,7 @@ MODELS["fixture:feynrl--pipeline-sizes"] = {
   fn: pipelineSizes,
   cases: [
     { args: RECIPE, pick: "completions", expect: 2048, tol: 0, from: "feynrl:config-recipe-gsm8k:predict" },
-    { args: { ...RECIPE, samples: 500 }, pick: "completions", expect: 2048, tol: 0, from: "feynrl:config-recipe-gsm8k:transfer" },
+    { args: { ...RECIPE, samples: 600 }, pick: "completions", expect: 2560, tol: 0, from: "feynrl:config-recipe-gsm8k:transfer" },
     { args: { ...RECIPE, samples: 500 }, pick: "roundUp", expect: 12, tol: 0 },                        // 500 prompts asked, 512 built
     { args: { ...RECIPE, samples: 513 }, pick: "completions", expect: 2560, tol: 0 },                  // edge: one prompt over adds a whole batch
     { args: { ...RECIPE, rolloutGpus: 8, tp: 4 }, pick: "engines", expect: 2, tol: 0 },                 // rollout-engine-generate predict: 2 actors
@@ -168,7 +168,7 @@ WIDGETS["fixture:feynrl--pipeline-sizes"] = (root) => {
 // weight_sync_method "direct", checkpoint_save_interval 15 (train_sync.yaml:L13-L14, L47, L55-L56, L60); 43 micro-batches
 // per engine per pass is what the recipe builds (fixture:feynrl--pipeline-sizes).
 function verifyTp(results) {
-  if (!results || !results.length) return 0;
+  if (results == null) return 0;                     // None skips verification; [] raises like all-None (L263-L269)
   const valid = results.filter(r => r !== null && r !== 0);
   if (!valid.length) return 1;                       // all workers returned None/0
   if (valid.length < results.length) return 2;        // partial failure
@@ -228,6 +228,7 @@ MODELS["fixture:feynrl--epoch-ledger"] = {
     { args: { epochs: 10, failEpoch: 5, results: [150, 150, 148, 150] }, pick: "verdict", expect: 3, tol: 0 },   // weight-sync-direct check: raises ...
     { args: { epochs: 10, failEpoch: 5, results: [150, 150, 148, 150] }, pick: "refreshes", expect: 1, tol: 0 }, // ... and main falls back to disk
     { args: { epochs: 10, failEpoch: 5, results: [150, 150, 150, 150] }, pick: "refreshes", expect: 0, tol: 0 }, // equal counts: accepted
+    { args: { epochs: 5, failEpoch: 2, results: [] }, pick: "verdict", expect: 1, tol: 0 },              // edge: an empty results list raises "all 0 TP workers"
     { args: { epochs: 10, failEpoch: 10, results: [0, 0] }, pick: "directCalls", expect: 9, tol: 0 },    // edge: no sync is attempted after the last epoch
     { args: { epochs: 10, method: "disk" }, pick: "refreshes", expect: 9, tol: 0 },                      // disk: save + refresh every epoch but the last
   ],

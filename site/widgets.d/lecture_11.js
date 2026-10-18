@@ -148,7 +148,8 @@ WIDGETS["fixture:lecture_11--hp-laws"] = (root) => {
     // region where LR is above base: aN·x + bD·y > 0
     const slope = -s.aN / s.bD;                                                       // iso-LR line through base: y = slope·x
     let b = clip + `<g clip-path="url(#l11hp)">`;
-    b += `<polygon points="${[[lo, lo * slope], [hi, hi * slope], [lo - 10, hi + 10]].map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(" ")}" style="fill:${C.ok};opacity:0.10"/>`;
+    const top = Math.max(hi, hi * slope) + 1;                                         // above the frame (slope >= 0)
+    b += `<polygon points="${[[lo, lo * slope], [hi, hi * slope], [hi, top], [lo, top]].map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(" ")}" style="fill:${C.ok};opacity:0.10"/>`;
     for (const f of [-1, -0.5, 0.5, 1]) {                                             // iso-LR lines at LR × 10^f
       const y = x => (f - s.aN * x) / s.bD;
       b += line(X(lo), Y(y(lo)), X(hi), Y(y(hi)), C.ok, "stroke-width:1;stroke-dasharray:2 3;opacity:0.7");

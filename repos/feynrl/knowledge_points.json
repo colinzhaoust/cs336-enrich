@@ -53,7 +53,7 @@
             "source": "feynrl_repo",
             "ref": "core/rl_engines.py:L18-L24",
             "role": "computation",
-            "quote": "Algorithm_Registry = {# supported algorithms\n                      'grpo':  ('algs.GRPO.grpo', 'GRPO'),\n                      'cispo': ('algs.CISPO.cispo', 'CISPO'),\n                      'p3o':   ('algs.P3O.p3o', 'P3O'),\n                      'ppo':   ('algs.PPO.ppo', 'PPO'),\n                      'p4o':   ('algs.P4O.p4o', 'P4O'),"
+            "quote": "Algorithm_Registry = {# supported algorithms\n                      'grpo':  ('algs.GRPO.grpo', 'GRPO'),\n                      'cispo': ('algs.CISPO.cispo', 'CISPO'), ... 'ppo':   ('algs.PPO.ppo', 'PPO'),"
           },
           {
             "source": "feynrl_repo",
@@ -81,11 +81,11 @@
           "targets_misconception": "rollout_samples_per_epoch is the number of completions per epoch."
         },
         "transfer": {
-          "q": "Change only rollout_samples_per_epoch to 500. How many completions per epoch now?",
+          "q": "Change only rollout_samples_per_epoch to 600. How many completions per epoch now?",
           "format": "number",
-          "answer": "2048",
+          "answer": "2560",
           "tolerance": 0.0,
-          "why": "ceil(500/128) = 4 batches, still 512 prompts because prompts are rounded up to the batch boundary (core/rl_engines.py:L199-L200, L366); x 4 = 2048."
+          "why": "ceil(600/128) = 5 batches = 640 prompts, because prompts are rounded up to the batch boundary (core/rl_engines.py:L199-L200, L366); x 4 = 2560."
         },
         "retrieval": [
           {
@@ -95,7 +95,12 @@
           },
           {
             "q": "In the gsm8k sync recipe, what are clip_low/clip_high and kl_coeff?",
-            "answer": "0.4 / 0.4 and 0.0 (no reference model is loaded)."
+            "answer": "0.4 / 0.4 and 0.0 (no reference model is loaded).",
+            "layer": "detail"
+          },
+          {
+            "q": "What does rollout_samples_per_epoch count, and how does it become the number of completions per epoch?",
+            "answer": "Prompts, not completions. It is rounded up to whole dataloader batches of engines x rollout_batch_size_per_gpu prompts, then multiplied by n_samples."
           }
         ],
         "self_explain": "Why does the recipe train for 100 epochs with only one training step per epoch, instead of 1 epoch with 100 steps?"
@@ -182,6 +187,13 @@
         {
           "kp": "supp-on-off-policy",
           "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_16:rl-rollout-cost",
+          "basis": "author-inference",
+          "note": "Why rollout generation dominates and why switching between training and rollout needs a weight transfer."
         }
       ],
       "misconceptions": [
@@ -461,8 +473,7 @@
           "q": "Same ratios but local batch 7 (still fixed). Counts per dataset?",
           "format": "short",
           "answer": "a=4, b=2, c=1",
-          "why": "raw = [3.5, 2.1, 1.4] -> floor [3, 2, 1] = 6; one remaining slot goes to the largest fractional part (0.5, dataset a) (L84-L90).",
-          "targets_misconception": "One epoch visits every prompt exactly once."
+          "why": "raw = [3.5, 2.1, 1.4] -> floor [3, 2, 1] = 6; one remaining slot goes to the largest fractional part (0.5, dataset a) (L84-L90)."
         },
         "check": {
           "q": "Three datasets with train_ratios {a: 0.6, b: 0.3, c: 0.1}, local batch size 7, dynamic_ratio_every_step False. Over 10 consecutive batches, how many prompts in total are drawn from dataset a? Type only the number.",
@@ -541,7 +552,7 @@
             "source": "feynrl_repo",
             "ref": "rewards/gsm8k_reward_func.py:L19-L30",
             "role": "claim",
-            "quote": "def compute_score(prompt_data: Dict[str, Any], response_data: Dict[str, Any]): ... r: torch.Tensor of length of response token ids\n        is_per_token: whether the reward is per token\n        correct_threshold: a response is counted as correct for pass@k when its scalar reward strictly exceeds this threshold."
+            "quote": "def compute_score(prompt_data: Dict[str, Any], response_data: Dict[str, Any]): ... r: torch.Tensor of length of response token ids\n        is_per_token: whether the reward is per token ... correct_threshold:"
           },
           {
             "source": "feynrl_repo",
@@ -666,7 +677,7 @@
             "source": "feynrl_repo",
             "ref": "rollouts/base.py:L131-L136",
             "role": "computation",
-            "quote": "denom = len(samples) # number of samples in the group\n        if len(samples) > 1:\n            rewards_array = np.array(stats['rewards'])\n            mean_scores = rewards_array.sum() / denom\n            # Bessel's correction (n-1) ... std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))"
+            "quote": "denom = len(samples) # number of samples in the group ... mean_scores = rewards_array.sum() / denom\n            # Bessel's correction (n-1) ... std_scores  = np.sqrt(((rewards_array - mean_scores)**2).sum() / max(denom - 1, 1))"
           },
           {
             "source": "feynrl_repo",
@@ -678,7 +689,7 @@
             "source": "feynrl_repo",
             "ref": "rollouts/base.py:L151-L155",
             "role": "computation",
-            "quote": "zscore = torch.zeros_like(sample['token_rewards'], dtype=torch.float)\n            zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)\n            sample[\"token_zscores\"] = zscore\n            if self.reward_broadcast:\n                sample[\"token_zscores\"][prompt_len:] = zscore[-1]"
+            "quote": "zscore[-1] = (sample['token_rewards'][-1] - mean_scores) / (std_scores + 1e-8)\n            sample[\"token_zscores\"] = zscore\n            if self.reward_broadcast:\n                sample[\"token_zscores\"][prompt_len:] = zscore[-1]"
           },
           {
             "source": "feynrl_repo",
@@ -706,6 +717,13 @@
           "kp": "reward-interface",
           "basis": "call-order",
           "note": "normalize_rewards (hop 60) consumes the per-response scalars collected from score_response."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_16:grpo-group-zscore-advantage",
+          "basis": "author-inference",
+          "note": "The lecture's (r - group mean)/(group std + eps) advantage; normalize_rewards is that formula in code."
         }
       ],
       "misconceptions": [
@@ -926,7 +944,7 @@
             "source": "feynrl_repo",
             "ref": "algs/GRPO/grpo.py:L169-L176",
             "role": "computation",
-            "quote": "raw_logratio = (logprobs - old_logprobs).to(torch.float32)\n            logratio     = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\n            ratio        = torch.exp(logratio)\n ... unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
+            "quote": "raw_logratio = (logprobs - old_logprobs).to(torch.float32) ... ratio        = torch.exp(logratio)\n ... unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
           },
           {
             "source": "feynrl_repo",
@@ -970,6 +988,13 @@
         {
           "kp": "supp-importance-ratio",
           "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_16:ppo-ratio-clip",
+          "basis": "author-inference",
+          "note": "The min(r*A, clip(r)*A) objective; FeynRL's compute_policy_loss implements it with asymmetric clip_low/clip_high."
         }
       ],
       "misconceptions": [
@@ -1050,7 +1075,7 @@
             "source": "feynrl_repo",
             "ref": "algs/CISPO/cispo.py:L171-L175",
             "role": "computation",
-            "quote": "# 3. CISPO loss as raw sum: clipped_ratio.detach() * log(pi) * advantage\n            # Unlike PPO, CISPO clips the importance ratio and uses it as a weighting\n            # coefficient for the policy's log-probability more like policy gradient.\n            clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high)\n            pi_sum = -(clipped_ratio.detach() * logprobs * adv * mask).sum()"
+            "quote": "# Unlike PPO, CISPO clips the importance ratio and uses it as a weighting ... clipped_ratio = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high)\n            pi_sum = -(clipped_ratio.detach() * logprobs * adv * mask).sum()"
           },
           {
             "source": "feynrl_repo",
@@ -1176,7 +1201,7 @@
             "source": "feynrl_repo",
             "ref": "algs/GRPO/grpo.py:L182-L186",
             "role": "computation",
-            "quote": "if ref_logprobs is not None and self.kl_coeff > 0.0:\n            kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs)\n            # avoid calculating kl for padded tokens.\n            kl_dist = torch.where(mask_bool, kl_dist, torch.zeros_like(kl_dist))\n            kl_sum  = (kl_dist * mask).sum()"
+            "quote": "if ref_logprobs is not None and self.kl_coeff > 0.0:\n            kl_dist = self.compute_kl_distance(logprobs=logprobs, ref_logprobs=ref_logprobs) ... kl_sum  = (kl_dist * mask).sum()"
           },
           {
             "source": "feynrl_repo",
@@ -1212,7 +1237,7 @@
             "source": "feynrl_repo",
             "ref": "configs/load.py:L779-L783",
             "role": "computation",
-            "quote": "if config.model.ref_model is not None and (config.train.kl_coeff == 0 or config.train.kl_coeff is None):\n                raise ValueError(f\"kl_coeff must be > 0 if model.ref is not None\") ... if config.model.ref_model is None and (config.train.kl_coeff > 0):\n                raise ValueError(f\"model.ref must be not None if kl_coeff > 0\")"
+            "quote": "raise ValueError(f\"kl_coeff must be > 0 if model.ref is not None\") ... if config.model.ref_model is None and (config.train.kl_coeff > 0):\n                raise ValueError(f\"model.ref must be not None if kl_coeff > 0\")"
           }
         ],
         "filtering_note": "The same estimator is reused for approx_kl between current and old policy (grpo.py:L198-L202), which is a diagnostic, not a loss term. The config validator (L779-L783) forces kl_coeff and ref_model to be set together (an empty ref_model string is normalised to None at L563), so the runtime gate at L344 is belt-and-braces."
@@ -1222,6 +1247,13 @@
           "kp": "grpo-clipped-loss",
           "basis": "call-order",
           "note": "compute_kl_distance (hop 118) is called from inside compute_policy_loss after the ratio term."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_16:per-token-kl-reward-shaping",
+          "basis": "author-inference",
+          "note": "The per-token log(pi/pi_ref) penalty against a frozen reference; FeynRL adds its KL term to the loss (k3 estimator) instead of the reward."
         }
       ],
       "misconceptions": [
@@ -1296,7 +1328,7 @@
             "source": "feynrl_repo",
             "ref": "algs/GRPO/grpo.py:L145-L159",
             "role": "computation",
-            "quote": "raw_logratio_prox = (logprobs - prox_logprobs).to(torch.float32) ... r_prox = torch.exp(logratio_prox) ... raw_log_w = (prox_logprobs - old_logprobs).to(torch.float32) ... behave_w  = torch.exp(log_w)\n            if self.behave_imp_weight_cap is not None:\n                behave_w = torch.clamp(behave_w, min=0.0, max=self.behave_imp_weight_cap) ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * behave_w * mask).sum()"
+            "quote": "raw_logratio_prox = (logprobs - prox_logprobs).to(torch.float32) ... raw_log_w = (prox_logprobs - old_logprobs).to(torch.float32) ... behave_w = torch.clamp(behave_w, min=0.0, max=self.behave_imp_weight_cap) ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * behave_w * mask).sum()"
           },
           {
             "source": "feynrl_repo",
@@ -1425,7 +1457,7 @@
             "source": "feynrl_repo",
             "ref": "core/rl_engines.py:L537-L546",
             "role": "computation",
-            "quote": "def sync_weights_direct(...):\n    ''' Transfer weights directly from deepspeed training engines to vllm rollout engines via ray object store. No disk I/O. '''\n    state_dict_ref, _ = gather_training_weights(training_engines, logger, sync_timeout=sync_timeout) ... return push_weights_to_rollout(rollout_engines, state_dict_ref, version, logger, ..."
+            "quote": "def sync_weights_direct(...):\n    ''' Transfer weights directly from deepspeed training engines to vllm rollout engines via ray object store. No disk I/O. ''' ... return push_weights_to_rollout(rollout_engines, state_dict_ref, version, logger, ..."
           },
           {
             "source": "feynrl_repo",
@@ -1449,7 +1481,7 @@
             "source": "feynrl_repo",
             "ref": "rollouts/vllm_engine.py:L271-L282",
             "role": "computation",
-            "quote": "if len(valid) < len(results):\n                # Some workers returned a count and some didn't — partial failure ... raise RuntimeError(f\"Weight sync verification failed: TP workers {failed} ... if len(set(valid)) > 1:\n                raise RuntimeError(f\"Weight sync verification failed: TP workers loaded different"
+            "quote": "# Some workers returned a count and some didn't — partial failure ... raise RuntimeError(f\"Weight sync verification failed: TP workers {failed} ... if len(set(valid)) > 1:\n                raise RuntimeError(f\"Weight sync verification failed: TP workers loaded different"
           },
           {
             "source": "feynrl_repo",
@@ -1527,7 +1559,7 @@
           ],
           "answer": "The engine raises on the mismatched counts, and main() falls back to a disk save and refresh",
           "why": "rollouts/vllm_engine.py:L264-L282: valid = all four counts (none is None or 0), so the all-failed and partial-failure checks pass, but `if len(set(valid)) > 1: raise RuntimeError(\"... TP workers loaded different param counts ...\")`; loaded_version is not updated (L284 is never reached). The error propagates through push_weights_to_rollout/sync_weights_direct to main(), which catches it, logs 'falling back to disk' and sets sync_success False (run_rl_sync.py:L427-L429); need_disk_for_rollout is then True (L443-L445), so main saves a checkpoint and calls refresh_rollout_engine.",
-          "distractor_from": "Option 2: treats non-zero counts as success (only the zero/None checks). Option 3: invents a per-worker retry; the code has none. Option 4: right about the raise, but misses that main() catches direct-sync exceptions and falls back to disk.",
+          "distractor_from": "Option 1: treats non-zero counts as success (only the zero/None checks). Option 3: invents a per-worker retry; the code has none. Option 4: right about the raise, but misses that main() catches direct-sync exceptions and falls back to disk.",
           "varies": "domain: all workers return non-zero but unequal counts, hitting the third verification check instead of the partial-failure check",
           "invariant": "update_weights_direct only advances loaded_version when every TP worker reports the same non-zero load count; any verification failure raises and main() recovers via the disk path.",
           "transfer_distance": "near"
@@ -1601,7 +1633,7 @@
             "source": "feynrl_repo",
             "ref": "core/rl_engines.py:L736-L744",
             "role": "computation",
-            "quote": "# Phase 2: Fire receive on all engines, then training broadcast.\n    # No barrier needed — NCCL broadcast is the implicit synchronization point. ... rollout_refs = [eng.receive_all_weights_nccl.remote(param_metadata) for eng in rollout_engines]\n    broadcast_ref = training_engines[0].nccl_broadcast_gathered.remote()"
+            "quote": "# No barrier needed — NCCL broadcast is the implicit synchronization point. ... rollout_refs = [eng.receive_all_weights_nccl.remote(param_metadata) for eng in rollout_engines]\n    broadcast_ref = training_engines[0].nccl_broadcast_gathered.remote()"
           },
           {
             "source": "feynrl_repo",
@@ -1613,7 +1645,7 @@
             "source": "feynrl_repo",
             "ref": "algs/RL/common.py:L1200-L1204",
             "role": "computation",
-            "quote": "for i, name in enumerate(param_names):\n                param = state_dict[name]\n                if use_pynccl:\n                    send_buf = param.to(device=device, non_blocking=True) if not param.is_cuda else param.contiguous()\n                    self.weight_sync_pynccl.broadcast(send_buf, src=0, stream=torch.cuda.current_stream())"
+            "quote": "for i, name in enumerate(param_names):\n                param = state_dict[name] ... send_buf = param.to(device=device, non_blocking=True) if not param.is_cuda else param.contiguous()\n                    self.weight_sync_pynccl.broadcast(send_buf, src=0, stream=torch.cuda.current_stream())"
           },
           {
             "source": "feynrl_repo",
@@ -1625,7 +1657,7 @@
             "source": "feynrl_repo",
             "ref": "rollouts/weight_sync.py:L191-L200",
             "role": "computation",
-            "quote": "if not torch.isfinite(buffer).all():\n                num_bad = (~torch.isfinite(buffer)).sum().item()\n                corrupt_params.append((name, dtype, tuple(shape), num_bad))\n                del buffer\n                continue\n\n            self.model_runner.model.load_weights(weights=[(name, buffer)])"
+            "quote": "if not torch.isfinite(buffer).all():\n                num_bad = (~torch.isfinite(buffer)).sum().item()\n                corrupt_params.append((name, dtype, tuple(shape), num_bad)) ... self.model_runner.model.load_weights(weights=[(name, buffer)])"
           },
           {
             "source": "feynrl_repo",
@@ -1736,7 +1768,7 @@
             "source": "feynrl_repo",
             "ref": "run_rl_async.py:L235-L238",
             "role": "computation",
-            "quote": "# At policy version T with max_lag=N, the buffer holds data from versions {T-N+1, ..., T}\n    bsz_rollout        = num_rollout_engines * rollout_batch_size_per_gpu\n    prompt_per_pass    = math.ceil(rollout_samples_per_epoch / bsz_rollout) * bsz_rollout\n    replay_buffer_size = prompt_per_pass * n_samples * max_lag"
+            "quote": "# At policy version T with max_lag=N, the buffer holds data from versions {T-N+1, ..., T} ... prompt_per_pass    = math.ceil(rollout_samples_per_epoch / bsz_rollout) * bsz_rollout\n    replay_buffer_size = prompt_per_pass * n_samples * max_lag"
           },
           {
             "source": "feynrl_repo",
@@ -1797,6 +1829,13 @@
         {
           "kp": "supp-on-off-policy",
           "basis": "author-inference"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_16:rl-rollout-cost",
+          "basis": "author-inference",
+          "note": "The utilization problem that overlap mode, and so the staleness budget, exists to address."
         }
       ],
       "misconceptions": [
@@ -1974,7 +2013,7 @@
       "misconceptions": [
         {
           "belief": "Sync mode is on-policy for every optimizer step.",
-          "why_wrong": "Only the first pass over the buffer has ratio 1; with train_steps_per_epoch > 1 or gradient accumulation boundaries inside the shard, later micro-batches see a moved policy."
+          "why_wrong": "Only the first pass uses the generating weights, and even there the ratio is 1 only up to the vLLM/trainer log-prob gap. With train_steps_per_epoch > 1 or optimizer steps inside the shard, later micro-batches see a moved policy."
         }
       ],
       "prompts": {

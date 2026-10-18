@@ -4,7 +4,8 @@
   "scene": "OnlineSoftmaxScene",
   "quality": "720p",
   "knowledge_points": [
-    "lecture_05:online-softmax"
+    "lecture_05:online-softmax",
+    "flashattention:fa-softmax-decomposition"
   ],
   "video": "video.mp4",
   "probe": {

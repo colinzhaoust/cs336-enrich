@@ -42,7 +42,7 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L90-L93",
             "role": "claim",
-            "quote": "Time-to-first-token (TTFT): how long user waits before any generation happens (for interactive applications) ... Latency (seconds/token): how fast tokens appear for *one* query (for interactive applications) ... Throughput (tokens/second): how fast tokens appear for *many* queries (for batch processing)"
+            "quote": "Time-to-first-token (TTFT): how long user waits before any generation happens ... Latency (seconds/token): how fast tokens appear for *one* query ... Throughput (tokens/second): how fast tokens appear for *many* queries"
           },
           {
             "source": "lecture_10",
@@ -902,7 +902,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:kv-cache-growth",
-          "notice": "The cache grows by 4·L·K·H bytes per generated token per sequence (bf16 key + value), linearly in S and in B, while the weight bar stays fixed at 2·params; at the Llama 2 13B shape the total crosses the 80 GB H100 when B × S reaches about 66k cached tokens."
+          "notice": "The cache grows by 4·L·K·H bytes per generated token per sequence (bf16 key + value), linearly in S and in B, while the dashed budget line (80 GB minus the 2·params of weights) stays fixed; at the Llama 2 13B shape the total crosses the 80 GB H100 when B × S reaches about 66k cached tokens."
         },
         {
           "type": "code",
@@ -1255,7 +1255,7 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L394-L402",
             "role": "computation",
-            "quote": "config = llama2_13b_config({K: 8, B: 64})  # Use GQA with 1:5 ratio @stepover ... Result: Worse latency, but better throughput (and it fits in memory now!) ... config = llama2_13b_config({K: 8, B: 256})  # Increase batch size @stepover ... Result: Worse latency, but better throughput (and still fits in memory!)"
+            "quote": "config = llama2_13b_config({K: 8, B: 64})  # Use GQA with 1:5 ratio ... Result: Worse latency, but better throughput (and it fits in memory now!) ... config = llama2_13b_config({K: 8, B: 256})  # Increase batch size ... Result: Worse latency, but better throughput (and still fits in memory!)"
           },
           {
             "source": "lecture_10",
@@ -1318,7 +1318,13 @@
           "note": "'reducing memory usage leads to speedup (since we're memory-bound)' (L388) is the latency = bytes / bandwidth model."
         }
       ],
-      "external_prerequisites": [],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_03:mqa-gqa-kv-cache",
+          "basis": "author-inference",
+          "note": "Lecture 3 introduced MQA/GQA as an arithmetic-intensity fix; here the same sharing is counted in KV-cache bytes."
+        }
+      ],
       "misconceptions": [
         {
           "belief": "GQA speeds up decode because attention does fewer FLOPs.",
@@ -1372,7 +1378,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:kv-cache-growth",
-          "notice": "Lowering K from 40 to 8 flattens the KV-cache growth line by 5x while the weight bar barely moves; the 80 GB crossing moves from about 66k to about 350k cached tokens."
+          "notice": "Lowering K from 40 to 8 flattens the KV-cache growth line by 5x while the dashed budget line (80 GB minus parameters) stays where it is; the 80 GB crossing moves from about 66k to about 330k cached tokens."
         },
         {
           "type": "code",
@@ -1551,13 +1557,13 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L429-L433",
             "role": "claim",
-            "quote": "Idea: just look at the local context, which is most relevant for modeling ... Effective context scales linearly with the number of layers ... KV cache is independent of sequence length! ... Problem: this can still hurt accuracy ... Solution: interleave local attention with global attention (hybrid layers)"
+            "quote": "Idea: just look at the local context, which is most relevant for modeling ... KV cache is independent of sequence length! ... Problem: this can still hurt accuracy ... Solution: interleave local attention with global attention (hybrid layers)"
           },
           {
             "source": "lecture_10",
             "ref": "lecture_10.py:L442-L446",
             "role": "claim",
-            "quote": "Goal: reduce the KV cache size (since inference is memory-bound) without hurting accuracy ... Lower-dimensional KV cache (GQA, MLA, CLA) ... Local attention (truncates the KV cache) on some of the layers ... Other ideas: linear attention / state-space-models (Mamba 2, GatedDeltaNet), diffusion models"
+            "quote": "Goal: reduce the KV cache size (since inference is memory-bound) without hurting accuracy ... Lower-dimensional KV cache (GQA, MLA, CLA) ... Local attention (truncates the KV cache) on some of the layers ... Other ideas: linear attention / state-space-models"
           },
           {
             "source": "lecture_10",
@@ -1629,6 +1635,11 @@
           "kp": "lecture_04:gated-linear-attention-variants",
           "basis": "author-inference",
           "note": "'linear attention / state-space-models (Mamba 2, GatedDeltaNet)' (L446) are named only here; lecture 4 has the mechanism."
+        },
+        {
+          "kp": "lecture_03:swa-reach-through-depth",
+          "basis": "author-inference",
+          "note": "The same depth-times-window argument (a stack of local layers reaches about layers × window tokens back), and lecture 3's interleaving of local and full layers, which this KP's hybrid remedy repeats."
         }
       ],
       "misconceptions": [
@@ -1723,13 +1734,13 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L462-L466",
             "role": "claim",
-            "quote": "fp32 (4 bytes): needed for parameters and optimizer states during training ... bf16 (2 bytes): default for inference ... fp8 (1 byte) [-240, 240] for e4m3 on H100s: can train if you dare ... int8 (1 byte) [-128, 127]: less accurate but cheaper than fp8, but for inference only ... int4 (0.5 bytes) [-8, 7]: cheaper, even less accurate"
+            "quote": "fp32 (4 bytes): needed for parameters and optimizer states ... bf16 (2 bytes): default for inference ... fp8 (1 byte) [-240, 240] for e4m3 on H100s ... int8 (1 byte) [-128, 127]: less accurate but cheaper than fp8, but for inference only ... int4 (0.5 bytes) [-8, 7]: cheaper, even less accurate"
           },
           {
             "source": "lecture_10",
             "ref": "lecture_10.py:L470-L478",
             "role": "claim",
-            "quote": "Quantization-aware training (QAT) ... During training, quantize-and-dequantize during the forward pass to simulate quantization errors ... Post-training quantization (PTQ): ... Run on sample data to determine scale and zero point for each layer or tensor ... GPTQ: use Hessian information to update non-quantized weights to account for quantization error"
+            "quote": "Quantization-aware training (QAT) ... During training, quantize-and-dequantize during the forward pass ... Run on sample data to determine scale and zero point for each layer or tensor ... GPTQ: use Hessian information to update non-quantized weights to account for quantization error"
           },
           {
             "source": "lecture_10",
@@ -1772,7 +1783,7 @@
             "quote": "Less memory means higher latency and throughput."
           }
         ],
-        "filtering_note": "The worked example is plain Python: 5.2342 / 0.1 = 52.342, round → 52, + 4 → x_quant = 56; x_approx = (56 − 4) × 0.1 = 5.2 (so the error is 0.0342, half a step at most). The dtype image (L461) is Baseten's and the fp8 training paper and fp8-vs-int8 paper are linked for the ranges (L464-L466); the code's '[-240, 240] for e4m3 on H100s' (L464) is a slip: the H100's E4M3 (OCP FP8) reaches ±448, as lecture 2 says; ±240 is the maximum of the e4m3 'fnuz' variant used on some other accelerators (corrected 2026-10-02). 'fp16 → int3 produces 4x lower memory, 3.2x speedup' (L486) is AWQ's own reported number, read by the professor; it is quoted here as the paper's claim, not asserted. The lecture says 'higher latency/throughput' at L451 where it means lower latency / higher throughput. Which layers or tensors share one scale (per-tensor vs per-channel vs per-group) is not discussed. Correction (1:05:59-1:06:15): the note above says per-tensor vs per-channel scaling 'is not discussed'. Partly it is: one scale and zero point per layer or tensor is presented as the naive PTQ, which 'generally doesn't work as well'; per-channel and per-group are still not mentioned. Spoken evidence (1:06:18-1:06:33): GPTQ is described as L475 describes it: Hessian information, layer by layer, with the quantization error 'propagated into the non-quantized weights'. That is error compensation, not choosing weights to protect, so the statement's 'GPTQ and AWQ decide which weights to protect' fits AWQ only (flagged for review; the statement is unchanged because no written material was corrected). Spoken evidence (1:07:16-1:07:39): AWQ walked through on the figure: a few large-activation channels stay fp16, everything else int3. Spoken slip (1:04:48): 'Less memory means higher latency and throughput', repeating L451's wording where lower latency is meant. Not imported."
+        "filtering_note": "The worked example is plain Python: 5.2342 / 0.1 = 52.342, round → 52, + 4 → x_quant = 56; x_approx = (56 − 4) × 0.1 = 5.2 (so the error is 0.0342, half a step at most). The dtype image (L461) is Baseten's and the fp8 training paper and fp8-vs-int8 paper are linked for the ranges (L464-L466); the code's '[-240, 240] for e4m3 on H100s' (L464) is a slip: the H100's E4M3 (OCP FP8) reaches ±448, as lecture 2 says; ±240 is the maximum of the e4m3 'fnuz' variant used on some other accelerators (corrected 2026-10-02). 'fp16 → int3 produces 4x lower memory, 3.2x speedup' (L486) is AWQ's own reported number, read by the professor; it is quoted here as the paper's claim, not asserted. The lecture says 'higher latency/throughput' at L451 where it means lower latency / higher throughput. Which layers or tensors share one scale (per-tensor vs per-channel vs per-group) is not discussed. Correction (1:05:59-1:06:15): the note above says per-tensor vs per-channel scaling 'is not discussed'. Partly it is: one scale and zero point per layer or tensor is presented as the naive PTQ, which 'generally doesn't work as well'; per-channel and per-group are still not mentioned. Spoken evidence (1:06:18-1:06:33): GPTQ is described as L475 describes it: Hessian information, layer by layer, with the quantization error 'propagated into the non-quantized weights'. That is error compensation, not choosing weights to protect; the statement now describes GPTQ that way (matching 1:06:18-1:06:33 and L475) and AWQ as protecting the salient weight channels. Spoken evidence (1:07:16-1:07:39): AWQ walked through on the figure: a few large-activation channels stay fp16, everything else int3. Spoken slip (1:04:48): 'Less memory means higher latency and throughput', repeating L451's wording where lower latency is meant. Not imported."
       },
       "prerequisites": [
         {
@@ -1804,8 +1815,7 @@
           "format": "number",
           "answer": "-2.4",
           "tolerance": 0.0,
-          "why": "x_quant: round(−2.37 / 0.1) = round(−23.7) = −24; −24 + 4 = −20 (L458). Dequantize: (−20 − 4) × 0.1 = −2.4 (L459). The error 0.03 is under half a step.",
-          "targets_misconception": "Post-training quantization needs no data."
+          "why": "x_quant: round(−2.37 / 0.1) = round(−23.7) = −24; −24 + 4 = −20 (L458). Dequantize: (−20 − 4) × 0.1 = −2.4 (L459). The error 0.03 is under half a step."
         },
         "transfer": {
           "q": "Llama 2 13B (13.0e9 parameters) is served at B = 1, short context, on an H100 (3.35e12 B/s). Under the napkin model, what is the per-token latency bound in milliseconds with int4 weights (KV cache ignored)?",
@@ -2618,7 +2628,7 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L579-L585",
             "role": "claim",
-            "quote": "Previous status quo: ... Allocate section of KV cache for prompt and response (up to a max length) ... Problem: fragmentation (what happens to your hard drive) ... But this is wasteful since we might generate much fewer tokens (internal fragmentation)! ... Might be extra unused space between sections (external fragmentation)!"
+            "quote": "Allocate section of KV cache for prompt and response (up to a max length) ... Problem: fragmentation ... But this is wasteful since we might generate much fewer tokens (internal fragmentation)! ... Might be extra unused space between sections (external fragmentation)!"
           },
           {
             "source": "lecture_10",

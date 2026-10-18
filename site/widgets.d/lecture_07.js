@@ -106,6 +106,9 @@ function drawGrid(title, rows, { hiRow = -1, hiCells = new Set(), pickCell = nul
   return g;
 }
 
+// Write a value back into a slider() label (its range input and readout) after code changes the state.
+const setRange = (lab, v) => { lab.querySelector("input").value = v; lab.querySelector(".readout").textContent = v; };
+
 export function collectiveGrid(root, notice) {
   // Default is deliberately none of the prompts' cases (they use W = 4, 5, 6, 8 or custom rows).
   const s = { op: "reduce-scatter", red: "sum", W: 3, preset: "r+j", n: 2, rank: 0, index: 0, custom: "1 0 4\n0 3 1\n2 1 0" };
@@ -117,11 +120,12 @@ export function collectiveGrid(root, notice) {
     while (pic.firstChild) pic.firstChild.remove();
     if (!inputs.length) { read.textContent = "type one row of numbers per rank"; return; }
     const W = inputs.length;
-    s.rank = Math.min(s.rank, W - 1);
+    s.rank = Math.min(s.rank, W - 1); setRange(rankCtl, s.rank);
     const res = runCollective(s.op, inputs, s.red);
     if (res.error) { pic.append(drawGrid("input (rank × slot)", inputs)); read.innerHTML = `<b>${res.error}</b>`; return; }
     const out = res.out[s.rank];
     if (out) s.index = Math.min(s.index, out.length - 1);
+    setRange(slotCtl, s.index);
     const srcCells = out ? new Set(res.src[s.rank][s.index].map(([q, j]) => `${q},${j}`)) : new Set();
     const pick = (r, j) => { if (res.out[r]) { s.rank = r; s.index = j; draw(); } };
     pic.append(drawGrid("input (rank × slot)", inputs, { hiCells: srcCells }));
@@ -142,6 +146,8 @@ export function collectiveGrid(root, notice) {
          <span class="muted small">provenance: fixture:lecture_07--collective-grid · lecture_07.py:L91-L205 (definitions and the lecture's inputs), L253-L282 (reduce-scatter then all-gather reproduces all-reduce)</span>`
       : `rank ${s.rank} receives nothing from ${s.op}; pick rank 0`;
   };
+  const rankCtl = slider("read rank", 0, 7, s.rank, 1, v => { s.rank = v; draw(); });
+  const slotCtl = slider("read slot", 0, 31, s.index, 1, v => { s.index = v; draw(); });
   const customBox = el("textarea", { rows: 3, style: "width:100%;font-family:var(--mono);font-size:13px", oninput: e => { s.custom = e.target.value; draw(); } });
   customBox.value = s.custom;
   const ctl = el("div", { class: "controls" },
@@ -151,8 +157,8 @@ export function collectiveGrid(root, notice) {
     slider("world size W (presets)", 2, 8, s.W, 1, v => { s.W = v; draw(); }),
     slider("n (for [r, r, …])", 1, 4, s.n, 1, v => { s.n = v; draw(); }),
     el("label", {}, "custom rows (one rank per line)", customBox),
-    slider("read rank", 0, 7, s.rank, 1, v => { s.rank = v; draw(); }),
-    slider("read slot", 0, 31, s.index, 1, v => { s.index = v; draw(); }),
+    rankCtl,
+    slotCtl,
     read);
   root.append(el("div", { class: "widget" }, ctl, pic)); draw();
 }
@@ -178,7 +184,7 @@ const ladderModel = ({ gb }) => {
 MODELS["fixture:lecture_07--link-ladder"] = {
   fn: ladderModel,
   cases: [
-    { args: { gb: 7.2 }, pick: "nvlink_ms", expect: 4, tol: 0.01, from: "lecture_07:interconnect-hierarchy:check" },   // 0.9 ms on HBM = 7.2 GB
+    { args: { gb: 7.2 }, pick: "ib_ms", expect: 144, tol: 0.01, from: "lecture_07:interconnect-hierarchy:check" },   // 0.9 ms on HBM = 7.2 GB
     { args: { gb: 7.2 }, pick: "hbm_ms", expect: 0.9, tol: 0.001 },
     { args: { gb: 16 }, pick: "nvlink_ms", expect: 8.889, tol: 0.01, from: "lecture_07:interconnect-hierarchy:transfer" },
     { args: { gb: 16 }, pick: "ib_ms", expect: 320, tol: 0.001 },
@@ -255,7 +261,8 @@ MODELS["fixture:lecture_07--tp-pp-traffic"] = {
   cases: [
     { args: { batch: 64, dim: 4096, bytes: 2, layers: 4, tp: 8 }, pick: "tp_recv_fwd_kib", expect: 1792, tol: 0.001, from: "lecture_07:tensor-parallelism:transfer" },
     { args: { batch: 256, dim: 2048, bytes: 2, layers: 8, pp: 4, micro: 8 }, pick: "pp_recv_kib", expect: 1024, tol: 0.001, from: "lecture_07:pipeline-sharding:transfer" },
-    { args: { batch: 128, dim: 1024, bytes: 4, tp: 4 }, pick: "tp_rs_keep_bytes", expect: 131072, tol: 0.001, from: "lecture_07:tp-backward-reduce-scatter:check" },
+    { args: { batch: 64, dim: 2048, bytes: 2, tp: 8 }, pick: "tp_rs_keep_bytes", expect: 32768, tol: 0.001, from: "lecture_07:tp-backward-reduce-scatter:check" },
+    { args: { batch: 128, dim: 1024, bytes: 4, tp: 4 }, pick: "tp_rs_keep_bytes", expect: 131072, tol: 0.001 },
     // the lecture's own settings (predict prompts are short-answer, so no `from`): 384 KiB per layer, shard 1024 × 256; 32-row micro-batches, 4 sends
     { args: { batch: 128, dim: 1024, bytes: 4, tp: 4 }, pick: "tp_recv_layer_kib", expect: 384, tol: 0.001 },
     { args: { batch: 128, dim: 1024, bytes: 4, tp: 4 }, pick: "tp_shard_cols", expect: 256, tol: 0.001 },
@@ -296,8 +303,8 @@ export function tpPpTraffic(root, notice) {
     pic.append(svg("text", { x: 10, y: 196, "font-size": 10, fill: "var(--ink)" }, `rank 0 receives ${kib(m.tp_recv_fwd_kib)} per forward`));
     pic.append(svg("text", { x: 340, y: 196, "font-size": 10, fill: "var(--ink)" }, `stage 1 receives ${kib(m.pp_recv_kib)} per forward`));
     const warn = m.valid ? "" : `<br><b>not a valid split: num_dim/W, layers/stages and batch/m must be integers (int_divide, L453, L501, L509)</b>`;
-    read.innerHTML = `<b>tensor parallel</b> (W = ${s.tp}): weight shard per layer ${s.dim} × ${fmt(m.tp_shard_cols, 2)}; per layer each rank receives (W−1)/W of ${s.batch} × ${s.dim} = <b>${kib(m.tp_recv_layer_kib)}</b>; over ${s.layers} layers <span class="big">${kib(m.tp_recv_fwd_kib)}</span>
-      backward reduce-scatter leaves each rank ${s.batch} × ${fmt(m.tp_shard_cols, 2)} = ${m.tp_rs_keep_bytes.toLocaleString("en-US")} B<br>
+    read.innerHTML = `<b>tensor parallel</b> (W = ${s.tp}): weight shard per layer ${s.dim} × ${fmt(m.tp_shard_cols, 2)}; per layer each rank receives (W−1)/W of ${s.batch} × ${s.dim} × ${s.bytes} B = <b>${kib(m.tp_recv_layer_kib)}</b>; over ${s.layers} layers <span class="big">${kib(m.tp_recv_fwd_kib)}</span>
+      backward reduce-scatter leaves each rank ${s.batch} × ${fmt(m.tp_shard_cols, 2)} × ${s.bytes} B = ${m.tp_rs_keep_bytes.toLocaleString("en-US")} B<br>
       <b>pipeline</b> (${s.pp} stages, m = ${s.micro}): micro-batch ${fmt(m.pp_micro_rows, 2)} × ${s.dim}, ${m.pp_sends_per_boundary} sends per boundary; each stage receives <span class="big">${kib(m.pp_recv_kib)}</span>
       TP traffic is paid at every layer; PP traffic only at stage boundaries, and changing m does not change it${warn}<br>
       <span class="muted small">provenance: fixture:lecture_07--tp-pp-traffic · lecture_07.py:L390-L392 (batch 128, num_dim 1024, fp32), L447-L479 (TP), L492-L536 (PP), spoken 1:08:12-1:08:33 (backward reduce-scatter) · 1 KiB = 1024 B</span>`;

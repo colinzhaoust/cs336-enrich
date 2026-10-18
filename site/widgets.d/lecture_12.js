@@ -237,6 +237,7 @@ function mcScore({ p, key = 0, T = 1, e = 0, q = 0.9 }) {
 const PDEMO = [0.4, 0.35, 0.15, 0.1];
 MODELS["fixture:lecture_12--mc-scoring"] = {
   fn: mcScore,
+  untied: "its KP prompts (logprob-vs-generation-benchmarks) are short/choice answers with no graded number; 1/0.9 is stated in the predict question, not asked",
   cases: [
     { args: { p: PDEMO, q: 0.9 }, pick: "pplConst", expect: 1.11, tol: 0.005 },          // logprob-vs-generation predict: 1/0.9 ≈ 1.11
     { args: { p: PDEMO, q: 0.9 }, pick: "sum2", expect: 1.8 },                            // ... already 1.8 over just two tokens: invalid
@@ -251,7 +252,7 @@ MODELS["fixture:lecture_12--mc-scoring"] = {
   ],
 };
 WIDGETS["fixture:lecture_12--mc-scoring"] = (root) => {
-  const s = { p: [...PDEMO], key: 0, T: 1, e: 0, q: 0.5 };
+  const s = { p: [...PDEMO], key: 0, T: 1, e: 0, q: 0.7 };
   const pic = el("div"), read = el("div", { class: "readout" }), read2 = el("div", { class: "readout" }), L = ["A", "B", "C", "D"];
   const draw = () => {
     const m = mcScore(s), W = 640, H = 170, x0 = 40, top = 28, bh = 110, y = v => top + bh - bh * v;
@@ -272,7 +273,7 @@ WIDGETS["fixture:lecture_12--mc-scoring"] = (root) => {
     read2.innerHTML = `a submission that returns probability ${fmt(s.q, 3)} for every token: reported perplexity 1/${fmt(s.q, 3)} = <b>${fmt(m.pplConst, 3)}</b><br>
       validity check: over just two candidate tokens its probabilities sum to ${fmt(m.sum2, 3)}; ${m.sum2 > 1 + 1e-9 ? "<b>more than 1: not a distribution</b>, and over a whole vocabulary of |V| tokens the sum is q·|V|" : "at most 1 over two tokens, but q·|V| over a whole vocabulary of |V| tokens exceeds 1 as soon as |V| > 1/q"}<br>
       a generation benchmark never sees this number: it grades response = LM(prompt) (L101)<br>
-      <span class="muted small">provenance: fixture:lecture_12--mc-scoring · lecture_12.py:L92-L101 · video 15:51-16:22 (the log-prob 0 submission), 31:27-31:43 (sample a letter or chain of thought, then extract) · q = 0.9 is the KP predict's submission; the default here is 0.5.</span>`;
+      <span class="muted small">provenance: fixture:lecture_12--mc-scoring · lecture_12.py:L92-L101 · video 15:51-16:22 (the log-prob 0 submission), 31:27-31:43 (sample a letter or chain of thought, then extract) · q = 0.9 is the KP predict's submission; the default here is 0.7.</span>`;
   };
   const opt = L.map((n, i) => slider(`model weight on ${n}`, 0.01, 1, s.p[i], 0.01, v => { s.p[i] = v; draw(); }));
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
@@ -298,6 +299,7 @@ function lenBias({ qA, qB, phi, d }) {
 }
 MODELS["fixture:lecture_12--length-bias"] = {
   fn: lenBias,
+  untied: "llm-judge-length-bias asks only for directions (short answer); q_A, q_B and phi are demo values, not AlpacaEval's",
   cases: [
     { args: { qA: 0.4, qB: 0, phi: 1, d: 0 }, pick: "rawB", expect: 0.5 },                 // no padding: raw = LC
     { args: { qA: 0.4, qB: 0, phi: 1, d: 2 }, pick: "rawB", expect: 0.7240, tol: 0.002 },  // llm-judge-length-bias predict: original goes up
@@ -364,6 +366,7 @@ function orderTest({ n = 4, k = 0, dependent = false }) {
 }
 MODELS["fixture:lecture_12--order-test"] = {
   fn: orderTest,
+  untied: "train-test-overlap-routes prompts are short/choice answers with no number; the p-values are the toy's, not the lecture's",
   cases: [
     { args: { n: 4, k: 0 }, pick: "pValue", expect: 1 },                          // exchangeable and clean: every order ties
     { args: { n: 4, k: 3 }, pick: "pValue", expect: 1 / 24 },                     // train-test-overlap predict: the published order wins

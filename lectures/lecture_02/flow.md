@@ -29,19 +29,20 @@ The lecture opens with two questions you should be able to answer by the end. Th
 
 *How long would it take to train a 70B-parameter model on 15T tokens on 1024 H100 GPUs?*
 
+::predict napkin-training-time
+
 The recipe has four parts:
 - **Total compute.** Training costs about $6ND$ floating-point operations (FLOPs), where $N$ is the parameter count and $D$ the number of training tokens. Here $6 \times 70\text{e}9 \times 15\text{e}12 = 6.3\text{e}24$ FLOPs. The section on the backward pass, near the end, derives the 6.
 - **Hardware speed.** One H100 does about $9.9\text{e}14$ FLOP/s in bf16 (a 16-bit number format covered below). The datasheet says 1979 teraFLOP/s, but that figure assumes a special sparse format, so the code divides it by 2.
 - **Utilization.** Real code never reaches the peak. The lecture assumes a model FLOPs utilization (MFU) of 0.5, meaning half the peak; MFU is defined properly later.
 - **Divide.** Daily throughput is $9.9\text{e}14 \times 0.5 \times 1024 \times 86400 \approx 4.4\text{e}22$ FLOPs per day, so the run takes $6.3\text{e}24 / 4.4\text{e}22 \approx 144$ days.
 
-::predict napkin-training-time
 ::code lecture_02.py:L72-L77 | the whole estimate is four lines of arithmetic
 $$ \text{days} = \frac{6ND}{\text{FLOP/s per GPU} \times \text{MFU} \times \#\text{GPUs} \times 86400} $$
 
-Nothing in the formula is quadratic. Days grow linearly with parameters and tokens and shrink linearly with GPU count and utilization. Four times the GPUs at MFU 0.4 instead of 0.5 gives $144 / (4 \times 0.8) = 45$ days.
+Nothing in the formula is quadratic. Days grow linearly with parameters and tokens and shrink linearly with GPU count and utilization. Twice the GPUs at the same MFU halves the run to 72 days.
 
-::note slip 2:46 | The professor reads the answer as 143 days; the exact quotient is 143.9, so the practice prompts use 144. Same arithmetic, different rounding.
+::note spoken 2:46 | The professor reads the answer as 143 days; the exact quotient is 143.9, so the practice prompts use 144. Same arithmetic, different rounding.
 
 ### Question 2: the largest model that fits
 
@@ -139,7 +140,7 @@ The professor expects this class to stop at bf16, but hardware goes lower.
 
 **fp8** (1 byte) was standardized in 2022 for machine learning. The H100 supports two variants, depending on whether you need range or resolution: E4M3 (4 exponent bits, range ±448) and E5M2 (5 exponent bits, range ±57344). NVIDIA's Transformer Engine library supports it.
 
-::figure https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/_images/fp8_formats.png | E4M3 spends a bit on resolution, E5M2 on range
+::figure official/lectures/var/files/image-df6d7649a3bdb77cfdc38092d8387a99-https_docs_nvidia_com_deeplearning_transformer-engine_user-guide__images_fp8_formats_png | E4M3 spends a bit on resolution, E5M2 on range
 ::note skip 13:37 | The trade-off between the two fp8 variants, and when to use each, was explicitly skipped.
 
 **nvfp4** (NVIDIA, 2025) uses 4 bits per value. Four bits can only spell these numbers: −6, −4, −3, −2, −1.5, −1, −0.5, 0, 0.5, 1, 1.5, 2, 3, 4, 6. Training on that grid alone would fail, so values are grouped into **blocks** that share a separate scale factor. Each value effectively gets more than 4 bits of dynamic range, with one restriction: a value cannot be far larger or smaller than its neighbors in the same block. NVIDIA's Nemotron 3 Super was trained in NVFP4. Much of this happens inside NVIDIA's software stack; you do not simply create an fp4 tensor yourself.
@@ -258,6 +259,8 @@ The professor attached a caveat in the same breath: this is about FLOPs, not tim
 
 ### Timing an operation on a GPU
 
+::predict gpu-timing-synchronize
+
 FLOPs are a property of the computation, independent of hardware. To learn how long it takes, you time it. On a GPU there is a trap: PyTorch launches GPU work **asynchronously**. `x @ w` puts a kernel on the GPU's queue and returns immediately, while the GPU is still working. A timer around that line measures only the launch.
 
 So the lecture's `benchmark()` helper calls `torch.cuda.synchronize()` before starting the clock, so earlier queued work is not counted, and again after the operation, so the clock waits until the GPU has finished. It runs several trials and averages them.
@@ -265,9 +268,7 @@ So the lecture's `benchmark()` helper calls `torch.cuda.synchronize()` before st
 ::code lecture_02.py:L830-L848 | synchronize before, synchronize after each run, average over trials
 ::animation fixture:lecture_02--sync-timeline | without the closing synchronize the timer window shuts when the launch returns, while the kernel is still running
 
-::predict gpu-timing-synchronize
-
-If you omit it, the professor warned, "you're going to find that wow, your timings are really fast", because the call is non-blocking. The giveaway is a FLOP/s figure above the datasheet: a 1.1e12-FLOP matmul "measured" at 20 µs would run at about 56 times the H100's peak, which no GPU can do. The timer is wrong, not the hardware.
+If you omit it, the professor warned, "you're going to find that wow, your timings are really fast", because the call is non-blocking. The giveaway is a FLOP/s figure above the datasheet: a 1.1e12-FLOP matmul "measured" at 20 µs would run dozens of times faster than the H100's peak, which no GPU can do. The timer is wrong, not the hardware.
 
 ::note deferred 35:18 | Benchmarking proper, with this as "a little preview", is the subject of a later lecture.
 ::kp gpu-timing-synchronize
@@ -523,13 +524,14 @@ The step's compute is the 6ND rule with $B$ data points: $6 \times 2 \times 48 =
 
 ### Memory has two costs
 
+::predict optimizer-state-capacity-not-speed
+
 Optimizer state is a large share of the memory: with Adam, 8 of the 12 bytes per parameter. Does that make it a big cost? The professor separated two things memory does.
 - **Capacity**: the tensor has to fit in HBM.
 - **Traffic**: the tensor has to be shipped to the compute units, and that takes time.
 
 Optimizer state costs mainly capacity. It is read and written once per step, by a cheap elementwise update, whereas forward and backward work grows with the number of tokens in the step. So it limits the largest model that fits but is "not really the bottleneck for compute".
 
-::predict optimizer-state-capacity-not-speed
 ::video 1:10:56-1:11:42 | "memory serves two purposes", and which one optimizer state uses
 
 The rule needs each step to process many tokens. For a 1B-parameter Adam model, the update moves about 22 bytes per parameter, about 6.6 ms at 3.35 TB/s. With 1M tokens per step, forward and backward take $6 \times 10^9 \times 10^6 = 6 \times 10^{15}$ FLOPs, about 12 s at an achieved $5 \times 10^{14}$ FLOP/s, so the update is negligible. With only 1,000 tokens per step it would be about a third of the step.
@@ -550,6 +552,8 @@ Memory affects both what fits and, through traffic, how fast it runs, so you gen
 
 Large batches improve training stability. But activation memory is $2 \cdot B \cdot D \cdot L$ bytes and grows with $B$, so a large enough batch runs out of memory. For $B = 64$, $D = 1024$, $L = 16$ the lecture's formula gives 2 MiB, and it grows linearly from there.
 
+::predict gradient-accumulation
+
 **Gradient accumulation** splits the batch into micro-batches:
 - run forward and backward on one micro-batch at a time;
 - **do not zero the gradients** between micro-batches, so each backward adds into `.grad`;
@@ -558,7 +562,6 @@ Large batches improve training stability. But activation memory is $2 \cdot B \c
 The sum of the micro-batch gradients equals the full-batch gradient (up to a constant factor if the loss is averaged per micro-batch), so the update is the same. Only one micro-batch's activations are alive at a time, so with micro-batches of 16 the activation memory falls from 2 MiB to 0.5 MiB. The gradient buffer does not shrink: it is parameter-shaped and simply keeps accumulating. And the FLOPs are unchanged, since every example is still processed once.
 
 ::code lecture_02.py:L721-L730 | the same activation formula with B replaced by the micro-batch size
-::predict gradient-accumulation
 ::animation fixture:lecture_02--grad-accum-timeline | four micro-step humps, each a quarter of the full-batch peak, cover the same 64 examples while the fixed-size gradient buffer fills until the single optimizer step
 ::widget fixture:memory-ledger | set the micro-batch below the batch: the activation bar tracks the micro-batch while FLOPs per update stay fixed
 

@@ -11,12 +11,14 @@ RL post-training works the same way in every recent reasoning recipe ([L16](#/re
 
 The paper's diagnosis starts by separating two things we want from an update.
 
-- A **trust-region** concern: one gradient update should not move the policy too far from where it is now, *whatever* the data are. A large step on perfectly fresh data can still wreck a model.
-- An **off-policy** concern: data produced by an older or different policy should influence the update only to the extent that it is still reliable. Stale data are dangerous even when the step is tiny.
+- A **trust-region** concern: one gradient update should not move the policy too far from where it is now, *whatever* the data are.
+- An **off-policy** concern: data produced by an older or different policy should influence the update only to the extent that it is still reliable.
 
-In the paper's summary, the trust region controls the size of an update, while off-policy correction weights data by how reliably it can be used. The two concerns are independent axes: a fresh batch with a big learning rate triggers only the first; a stale batch with a tiny step triggers mostly the second.
+In the paper's summary, the trust region controls the size of an update, while off-policy correction weights data by how reliably it can be used.
 
 ::predict feynrl-two-concerns
+
+The two concerns are independent axes. A large step on perfectly fresh data can still wreck a model, so a fresh batch with a big learning rate triggers only the first. Stale data are dangerous even when the step is tiny, so a stale batch with a tiny step triggers mostly the second.
 
 PPO-style objectives handle both with one fixed clip range: it bounds how far a step may move each token's probability, and it also caps how much weight a stale token can get. The paper's premise is that fixed clipping itself, not the value of the range, causes the fragility, so iterating on the clip (symmetric, asymmetric, sequence-level) leaves the problem in place. Neither concern is a constant you can set in advance, the abstract says; how severe each is shows up in the policy ratios of the current batch.
 
@@ -34,9 +36,9 @@ source: feynrl:§1 · feynrl:§2 (From on-policy to off-policy) · feynrl:§4.3
 2. **Older or different policies.** Demonstrations, rollouts from a previous run (the batch-RL setting), or an asynchronous pipeline in which the rollout engines keep generating with last version's weights while the trainer updates.
 3. **Engine mismatch.** Rollouts come from an inference engine (vLLM in FeynRL), training from a different stack. Even with identical weights the two can assign different probabilities to the same token: different numerical precision (training in BF16, generating in FP8), a different sampling strategy (temperature other than 1), or different kernels and architecture details.
 
-The third is the easiest to miss: regenerating rollouts after every step does *not* make the ratios exactly one if the sampling engine computes probabilities differently.
-
 ::predict feynrl-off-policy-sources
+
+The third is the easiest to miss: regenerating rollouts after every step does *not* make the ratios exactly one if the sampling engine computes probabilities differently.
 
 Why not discard stale data? Because then each expensive rollout feeds only a few updates. The paper says current recipes commit to one regime before training, either fresh on-policy rollouts after every update or a fixed off-policy correction tuned for one level of staleness, and so force a choice between sample efficiency and stability.
 
@@ -98,9 +100,10 @@ This is PPO's ratio with the snapshot $\pi_{\theta_{old}}$ replaced by whatever 
 
 **The catch.** The paper's remark is that importance sampling is unbiased but high-variance. A ratio is bounded below by 0 and unbounded above. A token that $\pi_b$ gave probability $10^{-4}$ and $\pi_\theta$ now gives $0.1$ gets weight 1,000. A few such tokens can dominate the whole gradient.
 
+::predict feynrl-importance-ratio
+
 The problem is one-sided. Take four tokens with log-ratios $(\ln 4, 0, 0, 0)$: the ratios are $(4, 1, 1, 1)$ and the first token carries $4/7 = 57\%$ of the total weight. Flip the sign of its log-ratio and the ratios become $(0.25, 1, 1, 1)$: it now carries $0.25/3.25 = 7.7\%$. Being disliked by $\pi_\theta$ can only shrink a token's weight toward zero; being under-sampled by $\pi_b$ can inflate it without limit.
 
-::predict feynrl-importance-ratio
 ::widget fixture:feynrl_paper--batch-ess | type the batch 4, 1, 1, 1 and read the share column: the ratio-4 token carries 57% of the weight; tick the flip box and the same token, now at 1/4, carries 7.7%
 
 **A second KL, not to be confused with the first.** The section closes with the language-model objective used in practice. Fine-tuning is regularized toward a frozen reference policy $\pi_{\theta_0}$, usually the model you started from:
@@ -123,9 +126,10 @@ $$ -\max\Big(\frac{\pi(y_t\mid c_{<t})}{\pi_{old}(y_t\mid c_{<t})},\ 1-\epsilon_
 
 Now the loss falls as the probability falls, until $\rho_t$ drops below $1 - \epsilon_\ell$, where it goes flat.
 
+::predict feynrl-fixed-clip-regimes
+
 The paper does not write out the consequence, so here it is. Where the term is constant, its gradient is **exactly zero**. The token is not down-weighted; it drops out of the update. (The loss *value* is not zero there, only its gradient.) And only one edge applies per token: a positive-advantage token is cut off above $1+\epsilon_h$, a negative-advantage token below $1-\epsilon_\ell$. A token with $\rho_t = 0.3$ is live if $A > 0$ and dead if $A < 0$.
 
-::predict feynrl-fixed-clip-regimes
 ::widget fixture:feynrl_paper--token-weight | push ρ past the edge that A's sign guards (above 1+ε when A > 0, below 1−ε when A < 0): GRPO's weight drops to exactly 0, the thick orange segment; on the other side it keeps growing with ρ
 
 In FeynRL's GRPO this is three lines: the unclipped term, the clamped term, and the elementwise minimum.
@@ -148,16 +152,17 @@ $$ \mathrm{ESS}(\mathcal{B};\theta) = \frac{\Big(\widehat{\mathbb{E}}_{\mathcal{
 
 Here $\mathcal{B}$ is the set of valid response tokens in the training batch (padding and prompt tokens excluded), $|\mathcal{B}|$ its size, and $\widehat{\mathbb{E}}_{\mathcal{B}}$ the plain average over them. With weights $w_i = \rho_i$ and $n = |\mathcal{B}|$ it is $(\sum w)^2 / (n \sum w^2)$.
 
+::predict supp-ess-bounds
+
 The name comes from classical importance sampling: $(\sum w)^2/\sum w^2$ estimates how many *unweighted* samples would be as informative as $n$ weighted ones, and dividing by $n$ makes it a fraction. Equal weights give 1; one weight carrying everything gives $1/n$.
+
+::predict feynrl-normalized-ess
 
 Work a toy batch, ratios $(4, 1, 1, 1)$: $\sum w = 7$, $\sum w^2 = 19$, so $\mathrm{ESS} = 49/(4 \times 19) = 49/76 = 0.645$. One token with four times the weight of the others drags the batch from "4 effective tokens" to about 2.6.
 
-::predict feynrl-normalized-ess
 ::widget fixture:feynrl_paper--batch-ess | raise the spread s, which makes the ratios unequal, and ESS falls toward 1/n; then move the common shift δ: every ratio, Σw and Σw² change, but ESS does not move
 
 **Why the bounds hold.** The paper states $[1/|\mathcal{B}|, 1]$ without proof. The upper bound is Cauchy-Schwarz applied to $w$ and the all-ones vector: $(\sum w)^2 \le n \sum w^2$, with equality exactly when all $w_i$ are equal. The lower bound: for non-negative weights $(\sum w)^2 \ge \sum w^2$, since the expansion only adds non-negative cross terms, with equality when a single weight is non-zero. So $(1, 0, 0, 0)$ gives $1/4$. More generally, $k$ equal non-zero weights out of $n$ give exactly $k/n$, whatever their size.
-
-::predict supp-ess-bounds
 
 That last remark is the property to remember. Multiply every weight by the same constant $c$ and both numerator and denominator gain a factor $c^2$: **ESS is scale-free**. $(8, 2, 2, 2)$ has the same ESS as $(4, 1, 1, 1)$, 0.645, and $(0.1, 0.1, 0.1, 0.1)$ has ESS 1. ESS measures how *concentrated* the weight is across tokens, not how far the ratios are from one. Two consequences:
 
@@ -187,11 +192,11 @@ $$ \mathcal{L}_{\text{P3O}}(\theta) = \mathbb{E}_{x,\,y\sim\pi_{\theta_{old}}(\c
 
 **Term 2, a pull toward the behavior policy.** A per-token KL between the current policy and the policy that produced the batch, weighted by $1 - e_{\mathcal{B}}$. It vanishes on a fresh batch ($e_{\mathcal{B}} \approx 1$) and grows as the batch drifts. The anchor is $\pi_{\theta_{old}}$, not the reference model of Eq. 8.
 
-Back to the toy batch, $e_{\mathcal{B}} = 0.645$ and $A = +1$. Tokens with $\rho_t = 4$, $1.5$ and $1.0$ all get weight 0.645; a token with $\rho_t = 0.3$ keeps 0.3. The KL weight is $1 - 0.645 = 0.355$.
-
 ::predict feynrl-p3o-objective
 
-Notice the token with $\rho_t = 1.0$. It is exactly on-policy, yet its weight is cut to 0.645, because the cap is the batch's ESS, which is below 1 whenever the ratios are unequal. With ratios $(3, 1, 1, 1)$, $e_{\mathcal{B}} = 36/48 = 0.75$, and every ratio-1 token gets 0.75. The paper says an ESS-driven objective "behaves like an on-policy update on fresh data"; that holds only approximately. On a nearly uniform batch $(1.1, 1.0, 0.9, 1.0)$: $\sum w = 4.0$, $\sum w^2 = 4.02$, $e_{\mathcal{B}} = 16/16.08 = 0.995$, so the cap barely binds and the KL weight is 0.005.
+Back to the toy batch, $e_{\mathcal{B}} = 0.645$ and $A = +1$. Tokens with $\rho_t = 4$, $1.5$ and $1.0$ all get weight 0.645; a token with $\rho_t = 0.3$ keeps 0.3. The KL weight is $1 - 0.645 = 0.355$.
+
+Notice the token with $\rho_t = 1.0$. It is exactly on-policy, yet its weight is cut to 0.645, because the cap is the batch's ESS, which is below 1 whenever the ratios are unequal. With ratios $(2, 2, 1, 1)$, $e_{\mathcal{B}} = 36/40 = 0.9$, and every ratio-1 token gets 0.9. The paper says an ESS-driven objective "behaves like an on-policy update on fresh data"; that holds only approximately. On a nearly uniform batch $(1.1, 1.0, 0.9, 1.0)$: $\sum w = 4.0$, $\sum w^2 = 4.02$, $e_{\mathcal{B}} = 16/16.08 = 0.995$, so the cap barely binds and the KL weight is 0.005.
 
 ::widget fixture:feynrl_paper--token-weight | P3O's green line is flat at e_B for every ρ above e_B, ρ = 1 included, and never reaches 0; tick the KL box to add the (1 − e_B) pull, which pushes a token with ρ > 1 back down and vanishes at e_B = 1
 
@@ -199,9 +204,9 @@ Notice the token with $\rho_t = 1.0$. It is exactly on-policy, yet its weight is
 
 $$ \nabla_\theta \rho_t = \rho_t\,\nabla_\theta\log\pi_\theta(y_t\mid c_{<t}) $$
 
-So the gradient of the ratio surrogate $-\rho_t A$ is $-\rho_t A\,\nabla\log\pi_\theta$, and the gradient of $-\operatorname{sg}(w)\log\pi_\theta A$ is $-w A\,\nabla\log\pi_\theta$. With $w = \rho_t$ they are identical. Detaching changes nothing about the direction; it only stops gradient flowing through the weight itself. What differs between PPO-style objectives and P3O is the *value* of the weight, and whether there is a flat region where it is effectively zero. For one token with $\rho_t = 1.5$, $A = +1$ and $g = \nabla\log\pi_\theta$: the ratio surrogate gives $-1.5\,g$; P3O with $e_{\mathcal{B}} = 0.645$ gives $-0.645\,g$, a shorter step in the same direction; PPO with $\epsilon = 0.2$ gives 0, because 1.5 is above 1.2.
-
 ::predict supp-score-function-weighting
+
+So the gradient of the ratio surrogate $-\rho_t A$ is $-\rho_t A\,\nabla\log\pi_\theta$, and the gradient of $-\operatorname{sg}(w)\log\pi_\theta A$ is $-w A\,\nabla\log\pi_\theta$. With $w = \rho_t$ they are identical. Detaching changes nothing about the direction; it only stops gradient flowing through the weight itself. What differs between PPO-style objectives and P3O is the *value* of the weight, and whether there is a flat region where it is effectively zero. For one token with $\rho_t = 1.5$, $A = +1$ and $g = \nabla\log\pi_\theta$: the ratio surrogate gives $-1.5\,g$; P3O with $e_{\mathcal{B}} = 0.645$ gives $-0.645\,g$, a shorter step in the same direction; PPO with $\epsilon = 0.2$ gives 0, because 1.5 is above 1.2.
 
 This is the paper's central contrast: the clip in Eq. 4 discards the gradient of every token outside the band, while the cap in Eq. 12 only scales it by a positive factor. Every token contributes, and Eq. 12 has no clipping range, no trust-region coefficient and no staleness budget.
 
@@ -219,7 +224,9 @@ source: feynrl:§3 · feynrl:table1 · feynrl:p6
 
 Table 1 colours each quantity by who chooses it: red and green for hyper-parameters fixed before training, purple for auxiliary choices, blue for batch statistics. Entropy and reference-KL terms are omitted.
 
-::figure feynrl:table1 | count the coloured symbols per row: GRPO/DAPO carry ε_ℓ and ε_h; GSPO carries ε^seq; the Decoupled row carries ε_ℓ, ε_h, a cap c_w and the purple π_prox; P3O's only coloured symbol is the blue e_B
+::figure feynrl:table1 | Table 1 as printed: red and green symbols are fixed before training, purple ones are auxiliary choices, blue ones are batch statistics; count the coloured symbols in each row before reading the table below
+
+::predict feynrl-p3o-vs-clip-family
 
 | Method | Policy objective (per token) | Fixed before training |
 |---|---|---|
@@ -229,8 +236,6 @@ Table 1 colours each quantity by who chooses it: red and green for hyper-paramet
 | P3O | $-\operatorname{sg}(\min\{\rho_t, e_{\mathcal{B}}\})\log\pi_\theta A + (1-e_{\mathcal{B}})\mathrm{KL}(\pi_\theta \Vert \pi_b)$ | nothing |
 
 (The last column is ours, read off the table's colours.) GSPO's $S_\theta$ is the geometric mean of the token ratios, so one number per completion is clipped. The Decoupled row is explained in the next section.
-
-::predict feynrl-p3o-vs-clip-family
 
 The table leaves out one relative that FeynRL implements and that is closer to P3O than any row: **CISPO**. Its loss has P3O's shape exactly, a detached clipped ratio times $\log\pi_\theta$ times $A$, so it too keeps a gradient on every token. But its clip is a fixed band $[1-\epsilon_\ell, 1+\epsilon_h]$, and it has no behavior KL.
 
@@ -253,6 +258,8 @@ At large-model scale the optimizer rarely sees strictly on-policy data: engines 
 
 This works, but it adds hyper-parameters: how $\pi_{prox}$ is built, how long it lives, and the cap $c_w$, all to be tuned per off-policy regime. P3O, the paper says, sidesteps this: the same $e_{\mathcal{B}}$ that sets the cap on fresh data falls when the batch becomes off-policy, so Eq. 12 covers both regimes with no extra hyper-parameter or code path.
 
+::predict feynrl-same-loss-sync-async
+
 This is the point where the paper meets the code most directly ([FeynRL practice thread](#/t/feynrl)). FeynRL switches every algorithm to the decoupled loss automatically when overlap mode is on:
 
 ::code core/rl_engines.py:L56-L60 | use_decoupled_loss is simply overlap.enabled, passed to every algorithm, with the behavior-weight cap c_w beside it
@@ -260,7 +267,6 @@ This is the point where the paper meets the code most directly ([FeynRL practice
 
 So switching a run from sync to overlap mode changes GRPO's loss (it now clips $\pi/\pi_{prox}$, weights by $\pi_{prox}/\pi_{old}$, and runs an extra no-gradient forward pass per epoch to take the snapshot) and leaves P3O's loss untouched; only $e_{\mathcal{B}}$ will come out lower when the buffer mixes versions.
 
-::predict feynrl-same-loss-sync-async
 ::animation fixture:feynrl_paper--overlap-loss | from s0 to s1 (overlap on) a purple π_prox snapshot block appears before every GRPO training block while the P3O lane gains nothing; at s2 (max_lag = 2) the buffer holds three versions and both lanes repeat their pattern unchanged
 
 "No staleness budget" is true of the *objective* only. FeynRL's asynchronous runner still has `max_lag`, which sizes the replay buffer and evicts samples more than `max_lag` versions behind. P3O makes the loss safe for whatever mix arrives; very stale data simply get a low $e_{\mathcal{B}}$ and contribute little.
@@ -284,9 +290,9 @@ $$ \mathcal{L}_{\text{ext}}(\theta) = -\mathbb{E}_{\pi_b}\big[\operatorname{sg}(
 
 Here $r_b = \pi_\theta/\pi_b$ is the per-token behavior ratio, $e_{\text{mix}}$ a joint ESS computed from both anchors, and $\pi_{\text{mix}}$ a per-token mixture of $\pi_b$ and $\pi_{prox}$ with weights $(1 - e_b)$ and $(1 - e_{prox})$, each anchor's own ESS. The full formulation is in Appendix B.
 
-The weights are the clever part. An anchor the policy has *not* drifted from has ESS near 1, hence weight near 0, and drops out of the mixture; the anchor with the larger drift dominates. Say the batch came from an old behavior policy ($e_b = 0.5$) but the optimizer has not stepped yet this epoch ($e_{prox} \approx 1$): the weights are 0.5 and about 0, $\pi_{\text{mix}}$ collapses onto $\pi_b$, and Eq. 13 is single-anchor P3O around the behavior policy. That is what the paper means by "reduces to P3O when either anchor is uninformative". The extension adds no hyper-parameter either: both mixture weights are batch statistics.
-
 ::predict feynrl-two-anchor-issue
+
+The weights are the clever part. An anchor the policy has *not* drifted from has ESS near 1, hence weight near 0, and drops out of the mixture; the anchor with the larger drift dominates. Say the batch came from an old behavior policy ($e_b = 0.5$) but the optimizer has not stepped yet this epoch ($e_{prox} \approx 1$): the weights are 0.5 and about 0, $\pi_{\text{mix}}$ collapses onto $\pi_b$, and Eq. 13 is single-anchor P3O around the behavior policy. That is what the paper means by "reduces to P3O when either anchor is uninformative". The extension adds no hyper-parameter either: both mixture weights are batch statistics.
 
 Then the surprise: empirically the single-anchor P3O matches or slightly outperforms the extension across the regimes of Section 4. The authors read this as evidence that the behavior-axis ESS already captures most of the drift that matters. So the extension is rejected on results, not on complexity.
 

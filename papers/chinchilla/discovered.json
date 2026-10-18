@@ -14,8 +14,8 @@
   },
   "generated_by": "discover_paper.py (parse of paper.txt; claims/findings curated in the script)",
   "inputs": {
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/chinchilla/paper.txt": "ff443a33cf4a02b6790fc5ed3f9a763fb3720ba1cbd2e4b62e80cb545c15f4db",
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/chinchilla/_arxiv_2203.15556.html": "69d724082e37672a65d292c60c84962aab430aba6cb3618b35477fe9829dd3cf"
+    "cs336_enrich/atlas/papers/chinchilla/paper.txt": "ff443a33cf4a02b6790fc5ed3f9a763fb3720ba1cbd2e4b62e80cb545c15f4db",
+    "cs336_enrich/atlas/papers/chinchilla/_arxiv_2203.15556.html": "69d724082e37672a65d292c60c84962aab430aba6cb3618b35477fe9829dd3cf"
   },
   "extraction_note": "paper.txt is html_to_text.py applied to the LaTeXML HTML served at arxiv.org/html/2203.15556 (fetched 2026-09-30). Equation numbers follow that HTML (1-4 in §1-§3, 5-11 in Appendix D.2). Section numbers are the paper's. No page numbers: the HTML has none, so anchors use §, eq, table, fig only. ar5iv returned HTTP 503 at fetch time.",
   "headings": [

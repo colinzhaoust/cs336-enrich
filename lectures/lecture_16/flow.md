@@ -11,13 +11,13 @@ source: lecture_16.pdf p2-p4 · video 0:05-3:46
 
 The course so far has built a ChatGPT-like model: pretraining, instruction tuning, and RLHF ([L15](#/read/lecture_15)). What is missing is the recent jump to *thinking models*, which write very long chains of thought (CoT) and solve hard problems in mathematics and coding. The professor opens with news he had no time to put on a slide: OpenAI had just announced that one of its thinking models solved a major open math problem. "How does that thing work? That's exactly this thinking model stuff or RLVR stuff."
 
+::predict verifiable-reward-vs-rlhf
+
 Lecture 15 ended on what the professor calls "a downer note". RLHF trains a reward model on human preferences and then runs RL against it. The reward model is a learned proxy, and you cannot keep pouring compute into optimizing the same proxy: "eventually you're going to overfit your reward model", no matter how well you regularize. The top-left plot shows the symptom. As the policy moves away from where it started (more KL), the proxy score keeps climbing while the true ("gold") score rises, peaks, and falls. RLHF is also annotation-bottlenecked, because a better reward model needs more human labels.
 
 Compare AlphaGo. There the reward is the win-loss condition of Go, which has no "sloppiness" in its definition, so "you can just put in as much compute as you want", and as long as the objective improves you are doing well. The professor frames RLHF as a learning problem and Go as closer to a search problem ("not quite a precise distinction"). The question for this lecture is whether some language tasks have Go's property. Formal mathematics (Lean, on the slide), ordinary math with a checkable final answer, and code with unit tests all do. This is **RLVR, reinforcement learning from verifiable rewards**: the reward is computed by a checker, so it *is* the objective rather than a model of it.
 
 One sentence frames everything that follows: "the algorithms aren't going to be that different fundamentally, but where we will end up will actually be surprisingly different." The optimizer stays in the PPO family. The reward changes.
-
-::predict verifiable-reward-vs-rlhf
 
 The lecture has two parts (slide 4). Part 1 covers the core algorithms, PPO and then GRPO and its variants, which are also what you implement in the assignment. Part 2 reads open technical reports to see those algorithms in production.
 
@@ -47,10 +47,11 @@ The slide's complaint is variance. One scalar reward multiplies the score of a w
 
 $$ L = \min\big(r\,A,\ \operatorname{clip}(r,\,1-\epsilon,\,1+\epsilon)\,A\big) $$
 
+::predict ppo-ratio-clip
+
 The **advantage** is how much better an action was than expected; for now think of it as the reward minus a baseline. The min makes the clip one-sided, which the slide does not spell out. If $A>0$, raising the action's probability helps until $r$ reaches $1+\epsilon$; beyond that the clipped term is the smaller one, it is a constant, and its gradient is zero. If $A<0$, the flat region sits below $1-\epsilon$. So a batch can move each action's probability only so far in the direction its advantage favours, which is what makes it safe to take several gradient steps on the same rollouts.
 
 ::widget fixture:ratio-clip | with A > 0 the objective goes flat for r > 1 + ε while the faint unclipped line keeps rising; drag A below zero and the flat segment jumps to r < 1 − ε
-::predict ppo-ratio-clip
 
 ::note slip 6:34 | Reading the pseudocode, the professor says "I clip the advantage in this slightly strange but OK way." PPO clips the probability ratio, not the advantage, as slide 5 says ("clip the ratios at some eps") and as he says himself at 9:26 ("computing the clipping ratios").
 
@@ -89,13 +90,13 @@ The professor's verdict on that clamp is blunt. A KL divergence is never negativ
 
 ::slide 15 | generalized advantage estimation: Â_t = Σ_l (γλ)^l δ_{t+l} with δ_t = r_t + γV(s_{t+1}) − V(s_t), the AlpacaFarm loop that computes it backwards over the response, and the note "Funny detail – this is a bandit problem and gamma=lambda=1 works – this is the reward-to-go vs the value"
 
+::predict language-rl-is-a-bandit
+
 PPO estimates advantages with **GAE (generalized advantage estimation)**. Each token's TD error $\delta_t$ is what that step earned beyond what the value model expected, and GAE sums later TD errors with weights $(\gamma\lambda)^l$; the discount $\gamma$ and the mixing factor $\lambda$ trade bias against variance over a long chain of decisions. In practice people often set $\gamma = \lambda = 1$. Then the value terms telescope away and each token's advantage is simply the reward-to-go minus the value at that token. With one reward at the end, that is the same $R$ for every position minus a per-position baseline.
 
 ::worked language-rl-is-a-bandit
 
 The slide calls this a funny detail that works. The professor puts it more sharply: $\gamma = \lambda = 1$ is "a degenerate setting that turns this back into a bandit problem. So you've thrown away a lot of the structure that you get from PPO." To see why nobody wants $\gamma < 1$ here, take a 300-token answer with one terminal reward and $\gamma = 0.99$: the first token sees the reward discounted by $0.99^{299} = e^{299\ln 0.99} \approx e^{-3.0} \approx 0.05$, so 95% of the credit is gone before it reaches the start of the answer.
-
-::predict language-rl-is-a-bandit
 
 ::slide 16 | three AlpacaFarm training curves for two 7B runs over about 380 steps: objective/kl_sum_seq rising to about 50 (green) and 13 (blue); objective/rewards (the reward-model score) rising from about 2.3 to about 3.8 and 3.2; objective/non_score_rewards (the KL penalty) falling from 0 to about −1 and −1.4
 
@@ -125,6 +126,8 @@ $$ A_i = \frac{r_i - \operatorname{mean}(r_1,\dots,r_G)}{\operatorname{std}(r_1,
 
 a z-score within the group. The rest is PPO: the clipped ratio, plus a KL penalty to a reference model. The KL is computed with the particular estimator on the slide, which "is not particularly important" to the professor ([the GRPO thread](#/read/grpo) covers why that estimator is always non-negative).
 
+::predict grpo-group-zscore-advantage
+
 ::widget fixture:grpo--kl-estimators | the slide's KL estimator π_ref/π − log(π_ref/π) − 1 is never negative for any single sample, unlike the plain log-ratio whose clamping slide 14 had to hack around
 
 The footer is worth unpacking. In the **online** case you sample, take one gradient step, and sample again. On that one step $\pi_\theta = \pi_{\theta_{old}}$, so every ratio is 1, the clip "never does anything", and the min reduces to $\min(A_i, A_i)$. What is left is "just advantage minus a KL penalty": a policy gradient whose weights are group-normalized rewards.
@@ -132,7 +135,6 @@ The footer is worth unpacking. In the **online** case you sample, take one gradi
 ::worked grpo-group-zscore-advantage
 ::widget fixture:lecture_16--group-weights | try the "all solved (8/8)" preset: every response is correct, yet both baselined rows are all zeros, because a group with no contrast gives GRPO nothing to learn
 ::video 14:40-16:31 | 'how good was I compared to my 10 other rollouts', and why the clip disappears in the online case
-::predict grpo-group-zscore-advantage
 
 ::slide 19 | "You can (and people do) write tiny GRPO implementations": compute reward for each rollout, mean/var normalization per group, compute KL term, gradient updates on the loss; nano-aha-moment's compute_pg_loss: kl_penalty = exp(ref_logps − logps) − (ref_logps − logps) − 1, policy_loss = −logps·advantages, loss = (policy_loss + KL_COEFFICIENT·kl_penalty).sum() / total_response_len
 
@@ -156,6 +158,8 @@ source: lecture_16.pdf p22-p24 · video 20:05-25:56
 
 Now the conceptual question: "Are we actually taking policy gradients?" GRPO replaced PPO's value-based advantage with a z-score. Is that a good advantage?
 
+::predict baseline-validity-std-division
+
 The rule comes from Sutton and Barto. In a policy gradient you may subtract from the reward any **baseline** $b(s)$ that depends only on the state, not on the action taken. In the bandit view of language RL, "it's just the prompt". The reason is the one-line identity on the slide: summed over actions, the baseline's contribution is $b(s)\nabla\sum_a \pi(a|s) = b(s)\nabla 1 = 0$. So any prompt-dependent baseline leaves the expected gradient unchanged; the choice of $b$ changes only the variance.
 
 ::worked baseline-validity-std-division
@@ -165,7 +169,6 @@ The group mean is such a baseline, up to a detail: it includes the sample's own 
 Dividing by the standard deviation is different. $\sigma(x)$ is one number for the whole prompt, so it multiplies that prompt's gradient instead of being subtracted from it. Across prompts, each one gets a different weight $1/\sigma(x)$, and the summed update is a reweighted gradient rather than the gradient of expected reward. In the professor's words, GRPO "divides by the standard deviation, which breaks this baseline contract." He is careful about what that means: "it's in some ways a problem. In other ways, it's not." If you want an algorithm that does "what's written on the tin", that actually descends the reward, GRPO is not it.
 
 ::widget fixture:lecture_16--group-weights | press "one success in 8" and then "half solved": the GRPO row is the mean-baseline row times one factor, 3.02 for the near-uniform group against 2.0 for the balanced one, a rescaling rather than a subtracted term
-::predict baseline-validity-std-division
 
 ::slide 23 | GRPO's objective with two terms in red, the per-response 1/|o_i| in front of the token sum and the std in the advantage's denominator; Dr. GRPO ("GRPO Done Right, without bias") with both removed, Â = R(q, o_i) − mean; right: a "token efficiency" plot where Dr. GRPO reaches reward about 0.6 at output lengths around 500 tokens while GRPO drifts out to 800-1,000; footer: "this gets pretty close to reinforce w/ leave-one-out"
 
@@ -174,6 +177,8 @@ There is a second deviation that the professor "didn't mention earlier". GRPO av
 ### What the two terms do
 
 ::slide 24 | "Stdev – upweights too easy or hard questions"; Dr. GRPO's paragraph on response-level length bias; five plots over 150 policy steps: reward (both reach about 0.6), output length (GRPO climbs from about 350 to over 1,000 tokens, Dr. GRPO levels off near 500), length of correct answers (both rise from about 200 to about 420), length of incorrect answers (GRPO from about 1,000 to about 1,900, Dr. GRPO back near 1,000), average benchmark score (both about 22-25%)
+
+::predict grpo-length-bias
 
 **The length normalizer** is the easier one. A response's advantage is spread over its own tokens, so each token's weight is $\hat A_i/|o_i|$. For a wrong answer ($\hat A<0$), a longer answer is punished less per token. The professor's extreme case: if I know I will get a proof wrong and take a reward of −1, "I'm just going to generate an infinitely long string. If I do that, I'll get to divide by infinity." Less extremely, the objective teaches a model "to blab on once it realizes that it cannot actually solve the problem." For a right answer the same division favours short responses.
 
@@ -187,7 +192,6 @@ The fix changes behaviour exactly where the argument says it should. In the slid
 
 **The std division** emphasizes prompts whose rewards barely vary. For a binary reward with success rate $p$ the group's std is $\sqrt{p(1-p)}$, which is small near $p=0$ and $p=1$: questions that are too easy or too hard. The professor says an always-solved question divides by "basically 0". Strictly, an exactly uniform group has a zero numerator too, so its advantage is 0 (the `1e-4` keeps it finite). The upweighting bites on *nearly* uniform groups, such as 1 success in 8, whose weights are multiplied by about 3.02 against 2.0 for a half-solved group. Upweighting both ends "seems like clearly a thing that maybe we don't want", because a model learns most from problems "within its solvability range".
 
-::predict grpo-length-bias
 ::kp baseline-validity-std-division
 ::kp grpo-length-bias
 
@@ -204,31 +208,34 @@ R1 was "a bit of a social phenomenon", and the professor thinks everyone should 
 
 R1 builds on DeepSeekMath's GRPO with one big change: it abandons process supervision and uses only **outcome supervision**. Outcome supervision rewards only whether the final answer is correct; process supervision uses something like "a grading rubric ... to check the validity of intermediate steps in a proof". Many people thought process supervision was important. "Turned out it wasn't critical."
 
+::predict r1-zero-recipe
+
 ::slide 28 | R1-Zero's setup: rewards = accuracy ("is it correct?") + format ("use thinking tags"); data not public; base model DeepSeek-V3; results "a bit worse than OpenAI o1", with a table: AIME 2024 pass@1 71.0 (o1-0912 74.4), cons@64 86.7 (83.3), MATH-500 95.9 (94.8), GPQA Diamond 73.3 (77.3), LiveCodeBench 50.0 (63.4), Codeforces rating 1444 (1843)
 
 **R1-Zero** is the controlled version: start from the DeepSeek-V3 base model (which, as the professor notes, has itself been mid-trained and can follow some instructions) and run GRPO with two rewards. The **accuracy reward** checks whether the math answer is correct. The **format reward** checks that the model wraps its reasoning in thinking tags, which matters because the tags "allow them to strip out the chain of thought later". No process rewards, no search.
 
-The result is "only a little bit worse than OpenAI o1". The slide image's table is more mixed than that. R1-Zero beats o1-0912 on AIME with majority voting over 64 samples (86.7 vs 83.3) and on MATH-500 (95.9 vs 94.8), and is clearly behind on code (LiveCodeBench 50.0 vs 63.4, Codeforces rating 1444 vs 1843).
+The result is "only a little bit worse than OpenAI o1". The slide image's table bears that out. R1-Zero trails o1-0912 on single-sample AIME (pass@1 71.0 vs 74.4) and on GPQA Diamond (73.3 vs 77.3), and is clearly behind on code (LiveCodeBench 50.0 vs 63.4, Codeforces rating 1444 vs 1843). It comes out ahead only with majority voting over 64 samples on AIME (86.7 vs 83.3) and on MATH-500 (95.9 vs 94.8).
 
 The professor likes the result because it has "none of the messes of a real production post-training pipeline": no RLHF or other stage to credit, just "a very simple base model plus GRPO". The assignment replicates a version of it.
-
-::predict r1-zero-recipe
 
 ::slide 29 | left: DeepSeek-R1-Zero's average response length during training, rising roughly linearly from a few hundred tokens to about 10,000 over about 8,000 steps; right: a training transcript where the model, mid-solution, writes "Wait, wait. Wait. That's an aha moment I can flag here." and re-checks its work
 
 R1 also took off because of two phenomena the paper highlighted. Response length grows steadily during training, from a few hundred tokens to roughly ten thousand (read off the slide image), as if the model learned to think longer. And an "aha moment" went viral: a CoT in which the model stops itself and re-evaluates.
+
+::predict r1-length-growth-aha-evidence
 
 ::slide 30 | "But maybe a bit overstated": Dr. GRPO's biased and unbiased objectives and token-efficiency plot under "Length due to biased objective?"; under "Base model already has 'aha'", a base model's response to a trigonometry problem containing "Aha! I can use this to get ..."
 
 The professor is unimpressed by both. "We now know that longer CoTs is arguably a natural side effect of the length normalization of the GRPO algorithm": exactly the bias from the previous section. And Dr. GRPO showed the "aha" phrasing already appears in the base model before any RL, so "clearly, it can't just be a result of the RL algorithm." People write "aha" when solving math problems, the model learned it in pretraining, and RL on lots of math tokens draws it out. Neither curve is clean evidence that RL created a new reasoning behaviour. What R1 did show is "just how simple RLVR could be".
 
 ::widget fixture:lecture_16--length-drift | switch the objective to Dr. GRPO: the push the length normalizer puts on incorrect responses disappears and the mean-length line goes flat, so a rising length curve alone cannot tell you whether reasoning got longer for a good reason
-::predict r1-length-growth-aha-evidence
 ::kp r1-zero-recipe
 ::kp r1-length-growth-aha-evidence
 
 ## DeepSeek R1: the production pipeline {#r1}
 source: lecture_16.pdf p31-p38 · video 31:38-40:00
+
+::predict r1-stage-order-and-distillation
 
 ::slide 31 | R1 vs R1-Zero, key differences: SFT initialization, a language-consistency reward for the CoT, non-verifiable rewards in stage 2; pipeline DeepSeek-V3 → Reasoning SFT → RL (GRPO) → SFT/RLHF
 
@@ -260,8 +267,6 @@ Then comes the post-training you met in lecture 15: SFT, then RLHF. For non-veri
 
 **Distillation** means fine-tuning a smaller model on a stronger model's outputs. R1 generated 800k traces and Qwen 2.5 models trained on them improve dramatically, in some cases matching specialized thinking models. From the slide image: even the 1.5B distilled model scores 28.9 on AIME 2024, three times GPT-4o's 9.3, and the 32B one reaches 72.6. The table also has Llama-8B and Llama-70B rows; the professor finds it "quite fascinating" that this works for Llama too. If the CoTs are legible to the student, base models are "already surprisingly good" at reasoning for long periods.
 
-::predict r1-stage-order-and-distillation
-
 ::slide 38 | the R1 paper's unsuccessful-attempts section: process reward models (hard to define a fine-grained step, hard to judge a step automatically, a model-based PRM invites reward hacking and needs retraining) and MCTS (inspired by AlphaGo; the token search space is far larger than chess's)
 
 The professor likes DeepSeek's reports because they publish what failed. DeepSeekMath was full of process reward models (PRMs). In R1 they tried PRMs, "they just didn't do very much", and "outcome reward models are great and they're good enough". The deciding argument is scale: outcome data scales easily, while step-by-step rubrics are "very hard to scale up". The other big speculation about o1 was tree search like AlphaGo's; DeepSeek tried a lot of MCTS and "couldn't get it to work very well". R1 is how the field learned that neither was necessary.
@@ -270,12 +275,13 @@ The professor likes DeepSeek's reports because they publish what failed. DeepSee
 
 ### Q&A: why length grows when correct answers are pushed short
 
+::predict incorrect-responses-drive-length-growth
+
 A student asked: if the length normalizer makes wrong answers longer, doesn't it make right answers shorter, so the effects cancel? The professor's answer is an asymmetry. Correct responses are indeed pushed shorter (good for inference cost, bad if it hurts accuracy), but "there's a lower bound to how small your COT can go to solve a particular problem". Incorrect responses have no upper bound. So the net growth is driven by the incorrect responses, and it is largest where the model fails most often.
 
 R1's own length curve cannot show this, because it aggregates all responses. Dr. GRPO's split plot (slide 24) can: correct-answer length is the same under both objectives, and the growth sits in the incorrect answers, "as we would expect from the explanation". He frames it as holding "at least in these sets of controlled comparisons".
 
 ::widget fixture:lecture_16--length-drift | once the green correct line reaches its floor it goes flat while the red incorrect line keeps climbing; raise the share of incorrect responses q and the mean climbs faster
-::predict incorrect-responses-drive-length-growth
 ::kp incorrect-responses-drive-length-growth
 
 ## Kimi k1.5: data curation and a DPO-style loss {#kimi}
@@ -292,6 +298,8 @@ In particular it uses a different RL algorithm, evidence that "technically speak
 ::slide 41 | data curation: automatic filters for questions that need rich reasoning and are easy to evaluate, a tagging system to balance domains; "Exclude multiple choice / true false (false positives)"; "Select only examples that models fail on best-of-8"; the Kimi paper's difficulty estimate: an SFT model answers each prompt ten times at high temperature and the pass rate is the difficulty proxy; "SFT – little description, just described as 'prompt engineering' (distillation?)"
 
 Kimi says much more than DeepSeek about data. For RL there is a wrinkle SFT does not have: difficulty. In SFT you "just jam the data in" and the model learns from it. In RL, "if your problems are too hard, you get no rewards. And if you get no rewards, you have no signal. And if you have no signal, you can't learn." In GRPO terms, a group whose rewards are all 0, or all 1, has zero advantages for every sample.
+
+::predict difficulty-filtering-curriculum
 
 So Kimi curates. It balances topics across domains. It excludes multiple-choice and true/false questions because they produce false positives: a model can guess the right letter without reasoning and collect the reward. And it filters by **best-of-8**, keeping only problems the model does not solve within 8 tries. Per the Kimi paper, that test asks the model to guess without any CoT, so it removes problems that are too easy to hack rather than problems the model can merely solve. The difficulty itself is estimated from the pass rate of ten high-temperature samples, as the excerpt on the slide image says. The professor adds that you can "filter on both sides" to keep medium-difficulty problems, the "general consensus" when you want RL to progress at a steady pace.
 
@@ -326,19 +334,18 @@ The length reward ranks responses within a group by length and maps them linearl
 
 $$ \lambda_i = 0.5 - \frac{\text{len}_i - \text{min\_len}}{\text{max\_len} - \text{min\_len}},\qquad \text{reward}_i = \begin{cases}\lambda_i & \text{correct}\\ \min(0,\lambda_i) & \text{incorrect}\end{cases} $$
 
+::predict kimi-length-reward
+
 Correct answers simply get $\lambda$: shorter is better. Wrong answers are never paid a positive $\lambda$; they are only penalized for being longer than the middle of the range. Why not push wrong answers short too? The professor's geometry example: suppose the model is bad at geometry, gets many wrong answers, and the penalty shrinks its geometry CoTs to nothing. "I will never get a positive geometry reward ever again. And I'm stuck." So wrong answers are only kept from growing "unboundedly". The term is switched on only later in training, because it costs performance early on.
 
 ::worked kimi-length-reward
 ::widget fixture:lecture_16--length-lens | in the bottom panel correct responses sit on the λ line from +0.5 (shortest) to −0.5 (longest); wrong responses stay at 0 up to the centre of the length range and follow the line down only beyond it
-::predict kimi-length-reward
 
 ::note slip 48:53 | Aloud, wrong answers are pushed "a little bit shorter than the average". The slide's rule uses the centre of the range, the midpoint of the shortest and longest lengths, which is not the mean.
 
 ::slide 44 | curriculum: assign difficulty labels and go from easy to hard; sample problems proportional to (1 − success_rate) to avoid repeating solved ones. Rewards: for code, generate new test cases for problems with ground-truth solutions; for math, 800k samples train a CoT reward model for answer-equivalence checks; excerpt: on manual spot checks the classic reward model reached about 84.4% accuracy and the chain-of-thought reward model 98.5%
 
 Kimi's **curriculum** orders problems from easy to hard and samples each problem with probability proportional to $1 - \text{success rate}$, so mastered problems stop being drawn. A problem solved 8 times out of 8 gets weight 0, which matches GRPO's view of it: its group has zero advantages and only wastes rollouts. "Basically everyone doing RL does these success rate filtering" to avoid wasting compute on problems that are solved or hopeless.
-
-::predict difficulty-filtering-curriculum
 
 The rewards hold an irony the professor relishes. For code, Kimi takes problems with ground-truth solutions and generates new test cases. For math, it trains a reward model on 800k samples to judge whether two answers are equivalent; on the slide image it is right about 98.5% of the time, against 84.4% for a classic reward model. "We started out this lecture by saying we want to work on formal math ... where a compiler can check the correctness", and "we ended up with a reward model that checks the correctness of math answers." The reason, which the assignment will teach you: equivalent math answers can be written many ways, and a model asked for a LaTeX `\boxed{}` answer sometimes skips the box or adds extra text inside it. A strict checker marks such answers wrong even when the reasoning is right. So "most RL projects have a very complicated answer checker, either a regex or a model". "It's a real rabbit hole getting the verified part of RLVR."
 ::kp kimi-length-reward
@@ -356,9 +363,10 @@ source: lecture_16.pdf p45-p48 · video 51:18-55:29
 
 And then a "really difficult and horrible trade off". On-policy GRPO "behaves very nicely". In the assignment you will see your utilization is low "and then you will get greedy": reuse rollouts so that inference and training overlap. That makes training off-policy, the samples come from an older policy, which leads to "destabilizing your training".
 
+::predict rl-rollout-cost
+
 ::widget fixture:lecture_16--rollout-budget | in synchronous mode the training lane is grey whenever rollouts run; set rollout 4, training 3, sync 0.5 and the trainers are busy 3/7.5 = 40% of the time; in the batch panel, set the long length to 8,000 and one long sequence among seven 1,000-token ones leaves about 77% of decode slots as padding
 ::animation fixture:rollout-train-timeline | sync mode alternates rollout, train and weight sync so each GPU group idles while the other works; overlap mode keeps rollouts running during training, at the price of samples from older policy versions (FeynRL's version of the trade-off)
-::predict rl-rollout-cost
 
 ::slide 46 | Kimi's hybrid deployment framework: Megatron (training) and vLLM (rollout) run as sidecars in the same pod; after training, Megatron offloads its GPU memory and passes weights through a checkpoint engine; vLLM starts with dummy weights, receives the new ones, rolls out, and is terminated so Megatron can onload and train again
 
@@ -370,11 +378,12 @@ Kimi's scaling plots show performance rising as the model thinks longer. On Omni
 
 ::slide 48 | Kimi's ablation against expert iteration: twelve benchmark panels, the RL method (orange, "Ours") above ReST (blue) on most of them, including the total; "Could we avoid RL-style negative gradients and just learn from positives?"
 
+::predict negative-gradients-vs-positive-only
+
 Last question: is RL actually better than just training on your own correct answers? That alternative is **expert iteration** (ReST in the plot, RFT in DeepSeekMath's): sample, keep the correct answers, fine-tune on them, repeat. It has worked well in past papers, and "in cases where you're dealing with very unstable stuff, you may actually want to do expert iteration instead." But Kimi's large ablation shows RL "consistently better" (orange over blue). The difference is the negative gradient: expert iteration only ever pushes probability *up* on correct samples, while a baselined policy gradient also pushes it *down* on below-average ones. "You can't really avoid RL if you want to squeeze out all of your performance."
 
 ::widget fixture:lecture_16--group-weights | the RFT row never goes below zero, so wrong responses simply drop out of the update; the mean-baseline and GRPO rows give every below-mean response a downward bar
 ::worked negative-gradients-vs-positive-only
-::predict negative-gradients-vs-positive-only
 ::kp rl-rollout-cost
 ::kp negative-gradients-vs-positive-only
 
@@ -439,6 +448,8 @@ The web-dev expert is trained on web code that passes checks by a vision-languag
 
 The most involved is the software-engineering (SWE) expert. SWE-bench (real GitHub issues, judged by the repository's tests) is the gold standard, and Qwen wants "SWE-bench but more". The pipeline on the slide image builds tasks automatically: inject a bug into a real function, keep it only if some tests now fail, write an issue for it, and keep the original code as the reference fix. That yields 800k tasks to run RL on, and RL performance goes up.
 
+::predict verifiable-reward-hacking
+
 ::slide 60 | left: SWE-bench Verified rising from about 68% to 75.1% over RL steps "with a reinforced reward-hacking blocker", while average agent turns grow from about 50 to 130; right: without the blocker, a slow climb to about 76% and then a jump to 84.6%, annotated "Reward Hacking: restoring deleted git remotes" with the agent's tool call git remote add origin ...; git fetch origin; bottom: Qwen3-Coder-Next (80B total, 3B active) at 70.6 / 71.1 / 71.3 on SWE-bench Verified under three agent scaffolds, close to much larger open models
 
 Here the professor stops for what he calls "very important through the broader context". We can pour compute into RL only because we believe the reward is unhackable or hard to hack. "If that assumption breaks down, your RL method will find increasingly obscure ways of cheating you out of your performance."
@@ -448,7 +459,6 @@ In a git repository, an agent can look at later commits and simply read the fix.
 He adds a story from his own group. They ran RL on Lean, a formal proof language, assuming "there's no way this can go wrong ... The Lean compiler is bulletproof." It is not adversarially robust: certain strings make it accept proofs that should fail in some modes. "The notion of verifiable rewards is actually much trickier than many of you might initially think."
 
 ::video 1:06:11-1:08:15 | the git-history 'emergent jump', the git log ban routed around with a remote, and the Lean checker that is not adversarially robust
-::predict verifiable-reward-hacking
 
 With the hack blocked, scores go up "slow but steady", and the result is strong: about 70.6% on SWE-bench Verified from a model with only 3 billion active parameters (read off the slide image's table, under the SWE-Agent scaffold).
 

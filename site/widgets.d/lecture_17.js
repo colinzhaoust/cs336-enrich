@@ -276,7 +276,7 @@ WIDGETS["fixture:lecture_17--contrastive-matrix"] = (root) => {
 };
 // =========================================================== 3. MRoPE axes ==
 // MRoPE gives each visual token three position ids (temporal, height, width) instead of one (qwen2-vl-mrope.png, shown at
-// L223: a 3-frame video of 3 x 4 patches has ids (t, h, w) from (0,0,0) to (2,2,3), and the text after it starts at (4,4,4)).
+// L224: a 3-frame video of 3 x 4 patches has ids (t, h, w) from (0,0,0) to (2,2,3), and the text after it starts at (4,4,4)).
 // The rotary dimensions are split among the axes. RoPE's frequencies fall with the dimension index (lecture_03 / rope
 // thread), so the slot index below is a frequency rank: slot 0 rotates fastest. Layouts (L246-L247):
 //   blocked      [t t t t w w w w h h h h]: axis k owns one contiguous run, so h gets only the slowest slots;
@@ -351,13 +351,14 @@ WIDGETS["fixture:lecture_17--mrope-axes"] = (root) => {
     read.innerHTML = `${AX.map((a) => `${AXNAME[a]}: ${o[`${a}Count`]} slots, ranks ${o[`${a}Fast`]}–${o[`${a}Slow`]}`).join(" · ")}<br>
       ${s.layout === "blocked" ? `blocked: height owns only the ${o.hCount} slowest slots and temporal only the ${o.tCount} fastest; each axis sees one end of the spectrum` : `interleaved: every axis has a slot near the fast end (rank ≤ 2) and one near the slow end; same count per axis`}<br>
       clip A and clip B: temporal ids 0…<b>${o.idLast}</b> in both, yet A covers <span class="big">${fmt(o.durA, 2)} s</span>and B <span class="big">${fmt(o.durB, 2)} s</span>${s.stamps ? "timestamp tokens (shown in red) carry the seconds; the ids still count frames" : "the ids alone cannot tell them apart: tick the timestamp tokens"}<br>
-      <span class="muted small">provenance: fixture:lecture_17--mrope-axes · qwen2-vl-mrope.png (L223: ids (t, h, w), text resumes at (4,4,4) after a 3-frame 3 × 4 video), L246-L247 (interleave all axes over low and high frequency bands; [t w h …] vs [t t t t w w w w h h h h]), L248 (explicit timestamps as separate tokens). Slot index = frequency rank (RoPE's falling frequencies); the 12-slot schematic is the lecture's, larger counts are this thread's repetition of it. Qwen2-VL's 2-frame temporal patches are not modelled.</span>`;
+      <span class="muted small">provenance: fixture:lecture_17--mrope-axes · qwen2-vl-mrope.png (L224: ids (t, h, w), text resumes at (4,4,4) after a 3-frame 3 × 4 video), L246-L247 (interleave all axes over low and high frequency bands; [t w h …] vs [t t t t w w w w h h h h]), L248 (explicit timestamps as separate tokens). Slot index = frequency rank (RoPE's falling frequencies); the 12-slot schematic is the lecture's, larger counts are this thread's repetition of it. Qwen2-VL's 2-frame temporal patches are not modelled.</span>`;
   };
   const layC = choice("layout", [["blocked", "blocked [t t t t w w w w h h h h]"], ["interleaved", "interleaved [t w h t w h …]"]], s.layout, (v) => { s.layout = v; draw(); });
+  const frameC = ctl("show frame", 0, 3, s.frame, 1, (v) => { s.frame = Math.min(v, s.T - 1); frameC.set(s.frame); draw(); });
   const slotC = choice("rotary slots", [[12, "12 (lecture schematic)"], [24, "24"], [48, "48"]], s.slots, (v) => { s.slots = v; draw(); });
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" }, layC.node, slotC.node,
-    slider("video frames (grid)", 1, 4, s.T, 1, (v) => { s.T = v; s.frame = Math.min(s.frame, v - 1); draw(); }),
-    slider("show frame", 0, 3, s.frame, 1, (v) => { s.frame = Math.min(v, s.T - 1); draw(); }),
+    slider("video frames (grid)", 1, 4, s.T, 1, (v) => { s.T = v; s.frame = Math.min(s.frame, v - 1); frameC.set(s.frame); draw(); }),
+    frameC.node,
     slider("patch rows", 1, 4, s.rows, 1, (v) => { s.rows = v; draw(); }), slider("patch columns", 1, 6, s.cols, 1, (v) => { s.cols = v; draw(); }),
     slider("frames per clip (A and B)", 1, 64, s.frames, 1, (v) => { s.frames = v; draw(); }),
     slider("clip A frames/s", 0.25, 8, s.fpsA, 0.25, (v) => { s.fpsA = v; draw(); }), slider("clip B frames/s", 0.25, 8, s.fpsB, 0.25, (v) => { s.fpsB = v; draw(); }),

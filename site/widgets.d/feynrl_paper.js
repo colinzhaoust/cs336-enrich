@@ -43,7 +43,7 @@ function klTerm(rho) {
 
 // ========================================================= 1. token weight ==
 function tokenWeight({ rho, A, epsL = 0.2, epsH = 0.2, eB = 1, kl = false }) {
-  const w = weights(rho, A, epsL, epsH, eB), K = rho > 0 ? klTerm(rho) : { k: Infinity, dk: -Infinity };
+  const w = weights(rho, A, epsL, epsH, eB), K = rho > 0 ? klTerm(rho) : { k: -Infinity, dk: 1 };   // ρ = 0: the ±10 exponent clamp's limit (dk = 1 once ρ < e^−10)
   const klc = (1 - eB) * K.dk;
   return { ...w, wGRPO: w.grpo, wCISPO: w.cispo, wP3O: w.p3o, wRatio: rho,
     cGRPO: -w.grpo * A, cCISPO: -w.cispo * A, cP3O: -w.p3o * A, cRatio: -rho * A, klCoef: 1 - eB, kHat: K.k, cKL: klc,
@@ -79,6 +79,8 @@ MODELS["fixture:feynrl_paper--token-weight"] = {
     { args: { rho: 4, A: 1, eB: 0.645, kl: true }, pick: "cP3Ototal", expect: -0.37875 }, // net: −0.645 + 0.266, still up but less
     { args: { rho: 1, A: 1, eB: 0.645 }, pick: "cKL", expect: 0, tol: 1e-9 },          // KL gradient vanishes at ρ = 1
     { args: { rho: 4, A: 1, eB: 1 }, pick: "cKL", expect: 0, tol: 1e-9 },              // and for e_B = 1 (fresh batch): no pull
+    { args: { rho: 0, A: 1, eB: 0.5, kl: true }, pick: "cKL", expect: 0.5 },          // ρ = 0 (slider minimum): clamp-bound limit, (1 − e_B)·1
+    { args: { rho: 0, A: 1, eB: 1, kl: true }, pick: "cKL", expect: 0, tol: 1e-9 },   // ... and no NaN at e_B = 1
   ],
 };
 WIDGETS["fixture:feynrl_paper--token-weight"] = (root) => {
@@ -183,7 +185,8 @@ MODELS["fixture:feynrl_paper--batch-ess"] = {
   fn: batchEss,
   cases: [
     { args: { batch: "4, 1, 1, 1" }, pick: "ess", expect: 0.645, tol: 0.01, from: "feynrl_paper:feynrl-normalized-ess:predict" },
-    { args: { batch: "8, 2, 2, 2" }, pick: "ess", expect: 0.645, tol: 0.01, from: "feynrl_paper:feynrl-normalized-ess:transfer" },
+    { args: { batch: "10, 2, 2, 2" }, pick: "ess", expect: 0.571, tol: 0.01, from: "feynrl_paper:feynrl-normalized-ess:transfer" },
+    { args: { batch: "8, 2, 2, 2" }, pick: "ess", expect: 0.645, tol: 0.01 },
     { args: { batch: "4, 1, 1, 1", shift: Math.log(2) }, pick: "ess", expect: 0.6447 },          // same batch via the common shift
     { args: { batch: "4, 1, 1, 1" }, pick: "essCode", expect: 0.6447 },                         // FeynRL's 1e-8 changes nothing visible
     { args: { batch: "1, 0, 0, 0" }, pick: "ess", expect: 0.25, from: "feynrl_paper:supp-ess-bounds:predict" },

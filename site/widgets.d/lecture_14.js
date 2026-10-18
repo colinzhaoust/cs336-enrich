@@ -153,8 +153,8 @@ MODELS["fixture:lecture_14--lsh-bands"] = {
     { args: { b: 5, r: 20, s: 0.6 }, pick: "P", expect: 1.828e-4, tol: 0.01 },        // the transfer's stricter layout
     { args: { b: 10, r: 10, s: 0.7 }, pick: "P", expect: 0.249, tol: 0.005 },          // L303 (KP note)
     { args: { b: 10, r: 20, s: 0.7 }, pick: "P", expect: 0.008, tol: 0.05 },           // L306: r moved the curve right (video 45:13-45:48)
-    { args: { b: 10, r: 20, s: 0.9 }, pick: "P", expect: 0.726, tol: 0.005 },          // L306, "0.72" at 0.9 (video 45:51)
-    { args: { b: 20, r: 20, s: 0.9 }, pick: "P", expect: 0.925, tol: 0.005 },          // L309, "0.92": b moved it left
+    { args: { b: 10, r: 20, s: 0.9 }, pick: "P", expect: 0.726, tol: 0.005 },          // L306, "0.72" at 0.9 (video 46:10)
+    { args: { b: 20, r: 20, s: 0.9 }, pick: "P", expect: 0.925, tol: 0.005 },          // L309, "0.92": b moved it left (video 46:10)
     { args: { b: 20, r: 450, s: 0.9 }, pick: "thr", expect: 0.99336, tol: 0.0001 },    // L316 Lee et al. threshold
     { args: { b: 20, r: 450, s: 0.9 }, pick: "pAtThr", expect: 0.6415, tol: 0.001 },   // L321 (KP note), "0.64" aloud
     { args: { b: 90, r: 100, s: 0.9 }, pick: "thr", expect: 0.956, tol: 0.001 },       // lsh-threshold-one-over-b predict (choice: down, 0.956)
@@ -463,6 +463,6 @@ WIDGETS["fixture:lecture_14--mixture-epochs"] = (root) => {
     slider("UniMax cap C (epochs)", 0.1, 50, s.cap, 0.1, v => { s.cap = v; draw(); }),
     slider("production tokens N", 9, 14, s.logN, 0.1, v => { s.logN = v; draw(); }, v => showTok(10 ** v)),
     slider("pilot run tokens", 7, 14, s.logPilot, 0.1, v => { s.logPilot = v; draw(); }, v => showTok(10 ** v)),
-    el("div", { style: "margin-top:8px" }, button("L362: 0.5 / 0.5", () => preset("low 10T 0.5\nhigh 10B 0.5")), button("L389: 0.1 / 0.9", () => preset("low 10T 0.1\nhigh 10B 0.9")), button("L401: 0.7 / 0.3", () => preset("low 10T 0.7\nhigh 10B 0.3"))),
+    el("div", { style: "margin-top:8px" }, button("L361: 0.5 / 0.5", () => preset("low 10T 0.5\nhigh 10B 0.5")), button("L389: 0.1 / 0.9", () => preset("low 10T 0.1\nhigh 10B 0.9")), button("L401: 0.7 / 0.3", () => preset("low 10T 0.7\nhigh 10B 0.3"))),
     read), pic)); draw();
 };

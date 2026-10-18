@@ -126,6 +126,7 @@ WIDGETS["fixture:lecture_08--batch-budget"] = (root) => {
   const pic = el("div"), read = el("div", { class: "readout" });
   const draw = () => {
     const a = { G: 2 ** s.logG, TP: 2 ** s.logTP, PP: s.PP, B: 2 ** s.logB, b: 2 ** s.logb }, m = batchBudget(a);
+    const feasible = m.dp >= 1 && m.perReplica >= a.b;
     const W = 640, x0 = 20, span = 600;
     let body = text(x0, 16, `global batch B = ${a.B} sequences, shared by ${Math.max(m.dp, 0)} data-parallel replicas`, { fill: C.muted, size: 11 });
     let regime;
@@ -145,12 +146,12 @@ WIDGETS["fixture:lecture_08--batch-budget"] = (root) => {
         body += text(x0 + 4, 105, "useful", { fill: "#fff", size: 11 }) + text(x0 + span - 4, 105, "bubble", { fill: "#fff", size: 11, anchor: "end" });
       }
     }
-    body += text(x0, 134, regime, { fill: m.dp >= 1 && m.bubble < 1 ? C.ok : C.b, size: 12 });
+    body += text(x0, 134, regime, { fill: feasible && m.bubble < 1 ? C.ok : C.b, size: 12 });
     pic.innerHTML = svg(W, 144, body);
     read.innerHTML = `DP = ⌊G / (TP × PP)⌋ = ⌊${a.G} / (${a.TP} × ${a.PP})⌋ = <b>${m.dp}</b>${m.dp >= 1 && m.used < a.G ? ` <span class="muted">(${a.G - m.used} GPUs left over)</span>` : ""}<br>
       sequences per replica B / DP = ${fmt(m.perReplica, 3)} · n_micro = B / (DP · b) = ${fmt(m.nMicro, 3)}${Number.isInteger(m.nMicro) || !Number.isFinite(m.nMicro) ? "" : " (not a whole number)"}<br>
-      bubble / compute = (PP − 1) / n_micro = <span class="big">${a.PP > 1 && m.dp >= 1 ? fmt(m.bubble, 3) : "–"}</span>
-      idle share of the step (PP − 1)/(n_micro + PP − 1) = ${a.PP > 1 && m.dp >= 1 ? fmt(m.idle, 3) : "–"}<br>
+      bubble / compute = (PP − 1) / n_micro = <span class="big">${a.PP > 1 && feasible ? fmt(m.bubble, 3) : "–"}</span>
+      idle share of the step (PP − 1)/(n_micro + PP − 1) = ${a.PP > 1 && feasible ? fmt(m.idle, 3) : "–"}<br>
       <span class="muted small">provenance: fixture:lecture_08--batch-budget · lecture_08.pdf:p34 (L339, bubble/useful = (n_stages−1)/n_micro, "we need a big batch size!"), p29 (L284, #machines < batch size), p57 (L541-L547, model parallel until it fits, then data parallel); video 29:08-29:25 and 33:52-34:13 (batch size is a resource data parallel and pipelining both spend); n_micro = B/(DP·b) is Narayanan et al. 2021 accounting (author).</span>`;
   };
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },

@@ -25,6 +25,8 @@ A caveat before starting: information about frontier post-training is sparse. Th
 
 The excerpt on the slide, from leaked Scale AI documents, shows the competition at work: in 2023 annotators were told to study why GPT-4 beat Bard and to write responses at least as good as GPT-4's.
 
+::predict sft-then-rlhf
+
 ::slide 6 | InstructGPT's three steps: (1) a labeler writes a demonstration and GPT-3 is fine-tuned on it (SFT, boxed in red); (2) several outputs are sampled, a labeler ranks them (D > C > A = B) and a reward model is trained on the ranking; (3) PPO optimizes the policy against the reward model
 
 This is the standard recipe, from InstructGPT (Ouyang et al. 2022):
@@ -35,7 +37,6 @@ This is the standard recipe, from InstructGPT (Ouyang et al. 2022):
 The professor's framing is that the algorithms are “not really the secret sauce ... It's going to be the data.” SFT in particular is “basically exactly the same as pre-training”: the same next-token loss on a different dataset. So the SFT half of the lecture is almost entirely about data, and the RLHF half splits between data and algorithms.
 
 ::video 5:42-6:25 | the two-part recipe, and data rather than algorithms as the leverage
-::predict sft-then-rlhf
 ::kp sft-then-rlhf
 
 ## What is inside an SFT dataset, and how has it changed? {#sft-data}
@@ -56,6 +57,8 @@ All of this is the open world. Closed labs also collect human data, and how they
 ::note slip 8:07 | The professor says FLAN “was used to train the T5 model by Google”. The original FLAN (Wei et al. 2022) fine-tuned Google's 137B LaMDA-PT model; Flan-T5 came from the later FLAN collection (Chung et al. 2022).
 
 A student asked how much the correctness of the input-output pairs matters. The professor called it a nuanced question. Collect the best responses you can, because bad examples teach bad behaviour. But models can be instruction-tuned on “all sorts of strange things”, even data without proper responses, because pretraining generalization carries much of the load.
+
+::predict sft-data-progression
 
 ::slide 10 | four random FLAN examples: an email plus “Write a subject line for this email” (target “Ronald Chisholm LOI”); a news item with “OPTIONS: - World - Sports - Business - Science/Tech” (target “Business”); a long travel article plus “Write highlights” (a three-sentence target about the city's history and art); a restaurant data-to-text task
 
@@ -86,7 +89,6 @@ Products have moved from chat to agents. Users want tool calls and to-do lists, 
 
 The summary has three axes. **Chattiness**: FLAN is usually valid data, “but people don't want to talk to a NLP benchmark”, so later datasets give longer, more human-like responses. **Detail**: OASST packs in far more factual knowledge, which “can be both a pro and a con”. **Tool use**: the newest shift, toward agentic applications.
 
-::predict sft-data-progression
 ::kp sft-data-progression
 
 ## Does the style of the data matter? Length and lists {#style}
@@ -101,6 +103,8 @@ Style is not an accident. When people say Claude has a different tone from ChatG
 ::slide 16 | Wang et al. 2023, Table 1: twelve instruction datasets with instance counts, turns, and average prompt and completion lengths, e.g. Flan V2 31.2 tokens per completion, Alpaca 64.6, Open Assistant 1 212.5, ShareGPT 357.8
 
 Datasets differ a lot in response length. The numbers are on the slide image: an average Flan V2 completion is 31.2 tokens and a ShareGPT completion is 357.8, so 357.8 / 31.2 ≈ 11.5 times longer. Open Assistant sits at 212.5. The table also records where each dataset came from. Self-Instruct was generated with vanilla GPT-3, Alpaca with Davinci-003, and ShareGPT is user prompts with outputs from various models.
+
+::predict length-bias-preferences
 
 ::slide 17 | Dubois et al. 2023: the preference for lists (about 55–65%) and for longer outputs (about 55–80%) across annotators (humans, simulated annotators, GPT-4) and models
 
@@ -119,7 +123,6 @@ The professor's warning is about engagement signals, which most companies watch:
 The same confound comes back twice later. Model judges share it (slide 48), and RLHF amplifies it, because a policy optimized against a length-loving judge learns to write longer. [L12's evaluation lecture](#/read/lecture_12) shows the fix used by AlpacaEval 2, a length-controlled win rate.
 
 ::video 21:07-21:58 | “easy to fool yourself” with engagement signals, and style control separately from capabilities control
-::predict length-bias-preferences
 ::kp length-bias-preferences
 ::kp lecture_12:llm-judge-length-bias
 
@@ -129,6 +132,8 @@ source: lecture_15.pdf p19-p21 · video 21:58-28:16
 ::slide 19 | the Open Assistant monopsony answer, ending in a bolded reference (Bivens & Mishel 2013, Journal of Economic Perspectives 27(3), 57-78); what is it teaching: the fact, or to output citations when asked? “But by what mechanism?”
 
 Open Assistant was meant to be the highest-quality human data, and it contains answers like this one, which ends with a real citation. The professor's point is that SFT on this example teaches **two things at once**. Next-token prediction teaches the model the fact itself, that this Bivens and Mishel paper exists. It also teaches a behaviour: a good answer ends with a reference.
+
+::predict sft-tail-knowledge-hallucination
 
 The second lesson is the dangerous one. Models do not reliably know whether a reference is true or false. If the model learns “emit a reference here” from examples whose content it does not actually know, it can misgeneralize and “hallucinate out a reference” instead of giving a proper one.
 
@@ -148,16 +153,16 @@ So you might *not* want to train on the highest-quality data when the model does
 
 What counts as tail knowledge? There is no formal definition. In the professor's past work, the length of a topic's Wikipedia article served as a proxy for how well known it is, and training on less-known material did make models hallucinate more.
 
-::predict sft-tail-knowledge-hallucination
 ::kp sft-tail-knowledge-hallucination
 
 ### Why would RL help? The “I know” signal
 A student asked why RL would help with hallucination when SFT does not. The professor offered what he called “a folk story”. Suppose the model's activations contain an “I know this” direction. SFT forced references regardless, so the model learned to cite whether or not that direction was active. Under RL the model samples its own answers and gets rewards. References produced while the “I know” direction is on tend to be right and earn good rewards, and references produced while it is off tend to be fabricated and earn bad ones. So the policy can learn to make citing depend on the internal signal.
 
+::predict rl-reads-internal-knowledge-signal
+
 The limit matters as much as the mechanism: “If you don't know what you know at all, at any level, RL cannot help you there.” RL can only extract a known/unknown distinction that already exists inside the model. It cannot create one. The deck's “in principle” on slide 21 stays in principle. The next lecture's verifiable rewards are where correctness rewards become concrete.
 
 ::video 26:31-27:21 | the “I know something” direction, and when RL cannot help
-::predict rl-reads-internal-knowledge-signal
 ::kp rl-reads-internal-knowledge-signal
 
 ## How do you make a model safe, and how much data does it take? {#safety}
@@ -166,6 +171,8 @@ source: lecture_15.pdf p22-p27 · video 28:16-34:57
 ::slide 22 | why safety controls: a misinformation threat model (Goldstein et al. 2023) and a scam email requesting a deceased relative's social security number that ChatGPT writes anyway (Kang et al. 2023)
 
 Post-training is where a model meets real users, so it is where misuse has to be handled: disinformation, spear-phishing, scams like the one on the right. Pretraining people, the professor jokes, “live in this ivory tower”. The post-training team is the last line of defence, and its main tool is training the model to refuse malicious inputs.
+
+::predict safety-violation-vs-false-refusal
 
 ::slide 23 | “Details are pretty sparse”: an excerpt on safety fine-tuning data (adversarial and “borderline” prompts) and a plot of violation rate (%) against false refusal rate (%) for Llama 3 8B and 70B, each point a different safety/helpfulness data mix; “# Examples? ~ few thousand in Llama 2”
 
@@ -188,8 +195,9 @@ The professor's best public reference for a full post-training pipeline is Ai2's
 
 Where do the prompts come from? Ai2 had earlier run **WildChat**, which gave people free chat access in exchange for their logs. From those logs they filtered out the unsafe requests and the jailbreak attempts, mined them at scale, and wrote the preferred response for each: resist the jailbreak, or say no. Closed labs appear to do the same with their usage data, finding unsafe behaviours and having annotators “play whack-a-mole” with them.
 
-::predict safety-violation-vs-false-refusal
 ::kp safety-violation-vs-false-refusal
+
+::predict small-data-big-behavior-change
 
 ::slide 26 | Bianchi et al.: mean harmfulness score on four test sets as 0, 100, 300, 500, 1000, 1500 or 2000 safety examples are added to Alpaca-style training data; “Significant improvements to safety with ~500 samples”
 
@@ -199,7 +207,7 @@ Here is the result that surprises people who have not done SFT before. With a ca
 |---|---|---|---|---|---|
 | mean harmfulness (roughly) | 2.9 | 1.85 | 0.75 | 0.3 | 0.15 |
 
-So 500 examples remove about 90% of the harmfulness score, and the next 1,500 add little. The Anthropic HH test set (Q-Harm) levels off higher, at about 1.0 from 300 examples on.
+So on this test set 500 examples remove about 90% of the harmfulness score, and the next 1,500 add little in absolute terms. The other test sets differ. The Anthropic HH test set (Q-Harm) levels off higher, at about 1.0 from 500 examples on (about 1.25 at 300). Hate speech (I-CoNa) and controversial topics keep falling, to about a quarter of their 500-example score by 2,000.
 
 The professor's explanation: after pretraining, models already have a “safe or unsafe” axis inside them, so a very small push is enough to pull it out. The other side of the coin is that being able to steer with few examples does not mean more examples are useless. A lab that wants “really fine grained distinctions about what is safe and not safe” still needs very large-scale data collection.
 
@@ -214,7 +222,6 @@ The three SFT lessons, connected:
 
 A student asked how we know whether a behaviour is “already in pretraining”. The professor admitted we don't, directly. We can show what is *not* there; for example, SFT struggles to generalize to very rare programming languages. We cannot show that safety *is* there. “Extracting” is a working hypothesis.
 
-::predict small-data-big-behavior-change
 ::kp small-data-big-behavior-change
 
 ## How do you run SFT, and why has it moved into pretraining? {#midtraining}
@@ -223,6 +230,8 @@ source: lecture_15.pdf p28-p30 · video 35:53-41:58
 ::slide 28 | “Just do gradient descent”: a ten-line PyTorch training loop (forward, loss.backward(), optimizer.step()); “But what if ... you have tons of compute and data, you want to scale up instruction tuning”
 
 Here the method is the most boring part: SFT is gradient descent on the next-token loss. The professor put the training loop up “almost as a joke”: call `loss.backward()` and that is basically it.
+
+::predict midtraining-two-phase
 
 ::slide 29 | turning instruction tuning into pretraining: (1) pretrain on web data, (2) mix instruction-tuning data into pretraining, (3) do an actual but short instruction-tuning round; “Lets you scale up instruction tuning w/o catastrophic forgetting”
 
@@ -242,19 +251,19 @@ The recipe is common knowledge among LLM companies but rarely documented. MiniCP
 
 A student asked whether the prompts are masked out of the loss in this mixed-in data. They are not; it is pure pretraining, so the model also predicts the prompt. The professor says the difference is small, since some SFT recipes also train on the prompt.
 
-::predict midtraining-two-phase
 ::kp midtraining-two-phase
 
 ### Why the decay phase gets the best data
 Another student guessed that the decay phase might get *lower*-quality data. The professor said the intuition runs the other way. The decay is “the most important part of your training”, for two reasons: it is the part of pretraining closest to deployment, and it runs at the lowest learning rate. Both point to putting the highest-quality data there. Why not make all of pretraining high quality? Because “you'll run out of tokens”. You cannot make Wikipedia your whole pretraining set.
 
+::predict decay-phase-data-ablations
+
 The decay phase also doubles as a cheap test bench. Data mixing is “much more trial and error than you think”, and mixture-optimization algorithms are fairly unreliable. Mid-training, though, is much shorter than full pretraining: “something like 10 of these for each one”. So the usual practice, as he has heard it, is to run many data ablations on the decay phase, rank which domains help, and carry those estimates back into the pretraining mix.
 
-**Worked example.** Every ablation branches from the same stable-phase checkpoint and costs only its own decay. If the decay is 10% of a full run, one run's compute buys 1 / 0.10 = 10 ablations. At 5%, it buys 1 / 0.05 = 20.
+**Worked example.** Every ablation branches from the same stable-phase checkpoint and costs only its own decay. If the decay is 10% of a full run, one run's compute buys 1 / 0.10 = 10 ablations. At 4%, it buys 1 / 0.04 = 25.
 
 ::note aside 41:35 | An example of how this works in practice came out in court: documents from the lawsuit over Meta's use of books show researchers running ablations to estimate how useful each books subset was.
 
-::predict decay-phase-data-ablations
 ::kp decay-phase-data-ablations
 ::kp lecture_11:wsd-schedule-branching
 
@@ -279,13 +288,14 @@ Earlier, a student had asked whether SFT and RL are really so different. The pro
 
 ::slide 33 | “Why optimize? G-V gap”: Zhang et al. 2023, six freelance writers comparing their own news summaries with Instruct Davinci's (total 50.4% vs 49.6%, agreement α = 0.07); left, the DeepSeekMath-V2 paper, “Towards Self-Verifiable Mathematical Reasoning”
 
+::predict imitation-vs-optimization
+
 Why not keep collecting SFT data forever? Because people do not always write the thing they would prefer. The professor's group asked freelance writers to summarize news articles, then to compare their own summaries with Instruct Davinci's (the predecessor of ChatGPT). Some preferred the model's. The numbers are on the slide image: overall the writers' summaries won 50.4% to 49.6%, and annotator 1 preferred the model's summaries 57.0% of the time. When interviewed, the writers said things like “actually, this is pretty good stuff.” They were good writers whose summaries passed quality checks. They simply had not thought of the better way until they saw it.
 
 People “aren't really these optimal systems”, so asking them to *rate* outputs can capture quality that asking them to *write* demonstrations misses. That is the **generation–validation (G-V) gap**: what people can recognize as better outruns what they write. A second reason, which the DeepSeekMath-V2 paper on the left points to, is that in some domains verification is simply much easier than generation. Checking a proof is easier than writing one, and DeepSeek has used models to verify their own proofs. That thread, RL from verifiable rewards (RLVR), is the whole next lecture.
 
 So an SFT model trained on these writers' summaries can at best reproduce them, while a method that optimizes the raters' judgement has room to go past them. Imitation is bounded by its demonstrations; optimization is bounded by what the reward can measure.
 
-::predict imitation-vs-optimization
 ::kp imitation-vs-optimization
 
 ::slide 34 | overview of the RLHF half: data (how people collect it, what to worry about), algorithms (PPO, DPO), side effects
@@ -324,6 +334,8 @@ The picture has changed since then. The annotator workforce has shifted toward e
 
 Beyond that there is a fast-growing market for bespoke expert annotators. Labs want to deploy models in white-collar jobs, so they want doctors and lawyers writing SFT data and judging responses. Median wages are above 50 dollars an hour across fields, and some experts get more than 100 dollars. If your mental model of an annotator is low-cost pairwise clicks from overseas, the professor says, that is not the full picture. But it is a pyramid: cheap, scalable annotation has not gone away.
 
+::predict pairwise-feedback-crowdsourcing
+
 ::slide 41 | complexities of crowdsourcing: hard to get really high-quality, verifiable annotators; hard to get them to really check correctness; have to be careful about AI use
 
 Why so expensive? Because good preference data is hard to get:
@@ -339,11 +351,12 @@ A student asked whether experts are hired because they label more carefully, or 
 
 Alongside the growth in expert work, there is still a large amount of low-paid annotation. Scale AI's early outsourcing “got into quite a bit of trouble”. Like the wider economy, annotation has split into high- and low-wage work.
 
-::predict pairwise-feedback-crowdsourcing
 ::kp pairwise-feedback-crowdsourcing
 
 ## Does it matter who the annotators are? {#annotators}
 source: lecture_15.pdf p43-p44 · video 52:57-57:59
+
+::predict annotator-distribution-effects
 
 Annotators have “a surprising amount of influence” over the model. Post-training is the final shaping step before a model ships, so whatever the annotator pool prefers, including its biases, ends up in the product.
 
@@ -371,11 +384,12 @@ The second axis is expertise rather than demographics. Hosking et al. compared c
 
 **Worked example.** Out of 100 baseline outputs, the crowd marks about 16 fewer as containing a factual error than the experts do. Rewrite the outputs assertively and the shortfall grows to about 22. A reward model trained on crowd labels learns that confident, well-formatted text is good. The policy then optimizes that, which is how RLHF amplifies style.
 
-::predict annotator-distribution-effects
 ::kp annotator-distribution-effects
 
 ### What makes an annotator good? Agreement measures variance, not bias
 A student asked what makes one annotator higher quality than another. There is no mechanical test, the professor said, but he offered two notions.
+
+::predict agreement-measures-variance-not-bias
 
 The first is a sufficiently detailed guideline with semi-objective criteria. “It should be factual”, with factuality defined, perhaps as nothing in the first three pages of a Google search contradicting it. Then you can catch an annotator who isn't following the rule.
 
@@ -386,11 +400,12 @@ Slide 33 shows inherent variance in practice: the six writers' agreement was α 
 ::widget fixture:lecture_15--annotator-pool | raise the shared bias b and agreement rises while the share of correct labels falls; tick “all annotators copy one chatbot” and agreement hits 100% whatever the chatbot's accuracy
 
 ::video 57:23-57:59 | “it doesn't tell you what the bias is. It tells you the variance”, and the case where everyone uses ChatGPT
-::predict agreement-measures-variance-not-bias
 ::kp agreement-measures-variance-not-bias
 
 ## Can a model replace the human annotators? {#ai-feedback}
 source: lecture_15.pdf p45-p48 · video 59:07-1:05:23
+
+::predict ai-feedback-rlaif
 
 Asked about domain-specific models as annotators, the professor split the question. Model-based annotation is a good idea: for catching up to the frontier it is “very, very good”, and modern models beat a random crowdworker. Domain-specific models have no special advantage, because they are rarely better than the strongest general open models.
 
@@ -401,7 +416,7 @@ When GPT-4 came out, the professor's students compared its pairwise judgements w
 - **Per pair.** GPT-4 agrees with the majority human label about as often as a single human annotator does, roughly 65% against 66%.
 - **Cost.** It is “an order of magnitude less”. On the plot, human labels cost a few hundred dollars per 1,000 examples against about 15 dollars for GPT-4.
 
-Note what “agreement near human inter-annotator levels” means, given the last part: GPT-4's disagreement with humans is about as large as humans' disagreement with each other. Per-pair agreement can never be high when humans themselves disagree about a third of the time.
+Note what “agreement near human inter-annotator levels” means, given the last part: GPT-4's disagreement with humans is about as large as humans' disagreement with each other. Per-pair agreement can never be high when humans themselves disagree about a third of the time. The human point is a reference, not a cap: a few GPT-4-based annotators on the plot (grey circles) sit slightly above it, at about 0.67–0.68, because a consistent judge can track the majority label better than one noisy human.
 
 ::slide 46 | AI feedback in open post-training: UltraFeedback (GPT-4 rates responses from a pool of models), a Zephyr-7b interview about choosing AI feedback, and Tulu 3's pipeline (prompts, responses from 22 models, GPT-4o ratings on helpfulness, instruction following, truthfulness and honesty, binarized into chosen and rejected)
 
@@ -413,7 +428,6 @@ Hugging Face's Zephyr is the instructive case. The team wanted no model distilla
 
 Model-generated data need not be pure distillation from a stronger model. In Anthropic's Constitutional AI, a model was prompted to generate safety data and then trained on it, an early self-training loop for post-training. Self-Instruct is the capability-centred version of the same idea. The slide shows both stages: response, critique, revision, then supervised fine-tuning on the revisions; and then AI preference labels that train a preference model for RL (“RLAIF”, RL from AI feedback). One limit remains: world knowledge that only lawyers or scientists have cannot be bootstrapped, so for that you still need human annotators.
 
-::predict ai-feedback-rlaif
 ::kp ai-feedback-rlaif
 
 ::slide 48 | “Length effects are a very significant outcome of RLHF”: left, Chen et al. 2024, model-judged win score against response length for ReMax, PPO, DPO and their length-penalized Odin versions, with GPT-3.5-turbo far above the trend; right, Singhal et al. 2024, reward against output length, and an SFT answer of 59 tokens that becomes 243 tokens after RLHF
@@ -450,6 +464,8 @@ Where does $r_\theta$ come from? Stiennon et al. train a reward model as “a bi
 
 $$ P(y_w \succ y_l \mid x) = \sigma\big(r(x,y_w) - r(x,y_l)\big), \qquad \mathcal{L} = -\log\sigma\big(r(x,y_w) - r(x,y_l)\big) $$
 
+::predict bradley-terry-reward-model
+
 Two consequences follow from the difference. Adding the same constant to every score changes nothing, so pairs identify rewards only up to a shift. That is why the slide's reward model is normalized afterwards so the reference summaries average 0. And the gradient is the remaining error, $1 - P$, so pairs the model already separates by a wide margin stop teaching.
 
 ::worked bradley-terry-reward-model
@@ -462,8 +478,9 @@ Bradley–Terry also assumes one scalar per response, so preferences must be tra
 
 The slide's last paragraph gives the KL term two jobs: it acts as an entropy bonus that deters the policy from “collapsing to a single mode”, and it keeps outputs close to what the reward model saw in training.
 
-::predict bradley-terry-reward-model
 ::kp bradley-terry-reward-model
+
+::predict ppo-for-rlhf-brief
 
 ::slide 53 | PPO at a conceptual level: Attempt 1, policy gradients ∇E[R(z)] = E[R(z)∇log p(z)] (“variances are too high”); Attempt 2, TRPO, maximize E[(π_θ/π_old)·Â] subject to E[KL(π_old, π_θ)] ≤ δ; Attempt 3, PPO, min(ratio·A, clip(ratio, 1−ε, 1+ε)·A)
 
@@ -481,7 +498,6 @@ How do we hill-climb the reward? PPO, which the assignment requires you to under
 
 ::widget fixture:lecture_15--kl-tilt | raise β and the policy's bars fall back onto the reference outlines and the KL readout drops; follow the curve and the proxy reward only rises with KL while the gold reward peaks and falls, which is the region the KL term keeps the policy out of
 
-::predict ppo-for-rlhf-brief
 ::kp ppo-for-rlhf-brief
 ::kp lecture_16:ppo-ratio-clip
 
@@ -490,13 +506,14 @@ source: lecture_15.pdf p54-p61 · video 1:09:02-1:16:33
 
 ::slide 54 | “Can we get rid of PPO?” Avoid on-policy RL: SFT on pairs with [GOOD]/[BAD] control tokens; train only on preferred outputs; train a reward model, sample, train on the preferred outputs; train a reward model, sample 1024 outputs, take the best
 
+::predict rlhf-without-rl-alternatives
+
 PPO's equations already look “a little bit gnarly”, and on-policy RL (sampling fresh rollouts from the current policy during training) is finicky to run. For years people asked whether they could use pairwise data without it. The professor lists the reasonable attempts “so that you do not necessarily repeat them in your own research”, with verdicts:
 - **Control tokens.** SFT on both responses, with [GOOD] prepended to the chosen one and [BAD] to the rejected one, then generate after [GOOD]. “It does not work.”
 - **SFT on preferred outputs only.** “Also does not work very well.” It also throws away the contrast with the rejected response, which is the signal pairwise data carries.
 - **Reward-model-filtered SFT.** Sample outputs, keep the ones the reward model prefers, fine-tune on them. “Does not work as well, although it does somewhat work.” It survives as a component, as Llama's loop on slide 59 shows.
 - **Best-of-n.** Sample 1024 outputs and return the one the reward model likes best. It is not mentioned aloud. It changes no weights, and it costs 1024 generations per query.
 
-::predict rlhf-without-rl-alternatives
 ::kp rlhf-without-rl-alternatives
 
 ::slide 55 | DPO, “RLHF without tears?”: get rid of the reward model and of on-policy machinery (rollouts, outer loops); take gradient steps on the log-loss of good outputs and negative steps on bad ones, appropriately weighted; RLHF (preference data → reward model ⇄ policy) against DPO (preference data → final LM, by maximum likelihood)
@@ -529,7 +546,9 @@ $$ \nabla_\theta\mathcal{L}_{\mathrm{DPO}} = -\beta\,\mathbb{E}\Big[\underbrace{
 
 The professor finds this the most intuitive form. For every annotated pair, raise the winner's likelihood and lower the loser's, and scale the step by how wrong the implied reward model currently is. If it already gives the winner a much higher reward, take a small step. If it rated the two about equal, take a big one.
 
-**Worked example.** At the start the policy equals the reference, so both implied rewards are $\beta\log 1 = 0$. The implied preference is $\sigma(0) = 0.5$, the loss is $\ln 2 \approx 0.693$, and every pair gets weight $\beta \cdot 0.5$, however likely or unlikely its responses are. Later, with $\beta = 0.1$, suppose the chosen response's log-ratio has fallen to −1.0 and the rejected one's to −4.0. The implied rewards are −0.1 and −0.4, the margin is 0.3, and $\sigma(0.3) \approx 0.574$. The model now prefers the winner, *although the winner became less likely than under the reference*. DPO raises the margin, not necessarily the chosen response's probability.
+::predict dpo-objective
+
+**Worked example.** At the start the policy equals the reference, so both implied rewards are $\beta\log 1 = 0$. The implied preference is $\sigma(0) = 0.5$, the loss is $\ln 2 \approx 0.693$, and every pair gets weight $\beta \cdot 0.5$, however likely or unlikely its responses are. Later, with $\beta = 0.1$, suppose the chosen response's log-ratio has fallen to −1.0 and the rejected one's to −3.0. The implied rewards are −0.1 and −0.3, the margin is 0.2, and $\sigma(0.2) \approx 0.550$. The model now prefers the winner, *although the winner became less likely than under the reference*. DPO raises the margin, not necessarily the chosen response's probability.
 
 ::widget fixture:lecture_15--dpo-margin | the presets “chosen +5 only” and “rejected −5 only” give the same loss, because only Δ_w − Δ_l enters; at “start” the weight is exactly β/2; “both lowered” has a loss below 0.693 although the chosen response lost likelihood
 
@@ -549,11 +568,12 @@ The results are highly contingent on the experimental setup. One Ai2 paper (left
 
 ::note slip 1:15:46 | The professor attributes the “DPO done right beats PPO” result to the Tulu 2 paper. The table the slide shows for it is from the Tulu 3 paper.
 
-::predict dpo-objective
 ::kp dpo-objective
 
 ## What goes wrong when you optimize too hard? {#pitfalls}
 source: lecture_15.pdf p62-p65 · video 1:16:33-1:19:48
+
+::predict rlhf-overoptimization
 
 ::slide 62 | things to watch out for: left, overoptimization (Gao et al.: reward-model score against the KL distance between the RL policy and the initial policy, dashed proxy curves rising while solid gold curves peak and fall, for reward models from 3M to 3B parameters); right, mode collapse / entropy (an RLHF calibration plot)
 
@@ -576,8 +596,9 @@ It happens across optimizers, gradient-free best-of-n included, so the culprit i
 
 ::note skip 1:18:00 | The professor says “I'm going to skip this because we're at time” while on the side-effect slides, and the human/noisy/noiseless contrast is never said aloud. This part reads slide 63 from its image and caption.
 
-::predict rlhf-overoptimization
 ::kp rlhf-overoptimization
+
+::predict mode-collapse-calibration
 
 ::slide 64 | mode collapse: an RLHF model's calibration on MMLU (52B, 5-shot) at temperature 1 (far from the diagonal) and 2.5 (on it); GPT-4's calibration before RLHF (accuracy 0.82, ECE 0.007) and after PPO (accuracy 0.78, ECE 0.074); the entropy of models' answers to opinion questions, with text-davinci-003 piled up at zero entropy
 
@@ -589,7 +610,6 @@ The plots show the cost. Calibration means stated probabilities match frequencie
 
 This matters more in the next lecture. RLVR needs entropy: the model has to keep exploring different solutions to make progress on hard problems, and a collapsed policy cannot explore.
 
-::predict mode-collapse-calibration
 ::kp mode-collapse-calibration
 
 ::slide 65 | recap: RLHF data collection is (also) hard, with many confounding factors; RLHF algorithms are more complex than SFT, especially PPO; be mindful of (over)optimizing for rewards

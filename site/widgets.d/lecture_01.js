@@ -30,10 +30,10 @@ const show = bytes => { try { return DEC.decode(new Uint8Array(bytes)).replace(/
 //   GPT-5 (tiktoken o200k_base): cannot run in the page; the trace stores its output for the lecture string only:
 //   [13225, 11, 130321, 235, 0, 220, 177519, 0] (trace at L604; video 1:07:25-1:07:44, "20 divided by 8 ... 2.5").
 // \w follows the Python `regex` module's Unicode definition (letters, marks, digits, connector punctuation);
-// "." matches any character but a newline, as in Python.
+// Python's "." matches any character but a newline; JS "." also skips \r, U+2028 and U+2029, so [^\n] stands in for it.
 const LECTURE_STRING = "Hello, 🌍! 你好!";                                       // lecture_01.py:L581, L601, L638, L662
 const GPT5_STORED = { [LECTURE_STRING]: [13225, 11, 130321, 235, 0, 220, 177519, 0] };
-const WORD_RE = /[\p{Alphabetic}\p{M}\p{Nd}\p{Pc}\p{Join_Control}]+|./gu;
+const WORD_RE = /[\p{Alphabetic}\p{M}\p{Nd}\p{Pc}\p{Join_Control}]+|[^\n]/gu;
 function tokenizerLens({ text: s }) {
   const chars = Array.from(s), charBytes = chars.map(c => ENC.encode(c).length);
   const bytes = charBytes.reduce((a, b) => a + b, 0), cps = chars.map(c => c.codePointAt(0));
@@ -50,7 +50,8 @@ MODELS["fixture:lecture_01--tokenizer-lens"] = {
   fn: tokenizerLens,
   cases: [
     { args: { text: LECTURE_STRING }, pick: "gpt5Ratio", expect: 2.5, tol: 0.02, from: "lecture_01:compression-ratio:predict" },
-    { args: { text: LECTURE_STRING }, pick: "bytes", expect: 20, from: "lecture_01:utf8-variable-length:predict" },
+    { args: { text: "早上好 🌍!" }, pick: "bytes", expect: 15, from: "lecture_01:utf8-variable-length:predict" },
+    { args: { text: LECTURE_STRING }, pick: "bytes", expect: 20 },                       // the lecture string: 13 characters, 20 bytes (L663)
     { args: { text: LECTURE_STRING }, pick: "chars", expect: 13 },                       // 13 characters, 20 bytes
     { args: { text: LECTURE_STRING }, pick: "charRatio", expect: 20 / 13 },              // L647 trace 1.538
     { args: { text: LECTURE_STRING }, pick: "charVocab", expect: 127758 },               // L644 trace, ord('🌍') + 1

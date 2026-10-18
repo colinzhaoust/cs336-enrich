@@ -125,11 +125,12 @@ The observation that fixes it: a lot of the work is shared across prefixes. When
 
 ### Why is reusing the cache exact?
 
+::predict kv-cache-needs-causality
+
 The code says the work "can be shared" but not why that is legitimate. The professor said it aloud: "this is because it's a causal transformer." In a causal (decoder-only) model a token attends only to itself and earlier tokens, so a token's hidden states, and so its keys and values in every layer, cannot depend on anything appended later. Appending a token leaves every cached K and V *exactly* unchanged. The cache is not an approximation.
 
 In a bidirectional model (BERT-style), "if you attach a token, then everything changes": every earlier token attends to the new one, so from the second layer up its hidden states, and hence its K and V, change. (Layer 1's keys and values are projections of each token's own embedding, so those would survive.)
 
-::predict kv-cache-needs-causality
 ::widget fixture:lecture_10--kv-recompute | under the causal mask only the new token's column is computed; switch to bidirectional and every earlier token's cells turn orange from layer 2 up, while layer 1 stays grey
 ::video 22:24-22:41 | "this is because it's a causal transformer. If it was bidirectional ... everything changes"
 
@@ -139,9 +140,10 @@ With a cache, inference splits into two stages that behave very differently:
 1. **Prefill**: take the prompt and encode it, populating the cache. You see the entire prompt, so this is parallelizable "just like in training". It also produces the distribution for the first output token.
 2. **Generation** (decode): produce response tokens one at a time. Each step runs one new token through the model, reading the cache and appending that token's K and V to it.
 
+::predict prefill-vs-decode
+
 The cache does not make generation parallel; it only spares you from paying again for tokens already seen. With it, step $t$ attends over $t$ cached tokens, $O(t)$ work, so the attention for generating T tokens totals $O(T^2)$ instead of $O(T^3)$: doubling the length quadruples it rather than multiplying it by eight.
 
-::predict prefill-vs-decode
 ::code lecture_10.py:L174-L176 | prefill is parallel like training; generation is sequential
 
 Time-to-first-token is, essentially, prefill time: nothing can be emitted until the whole prompt has been encoded. Seconds per token afterwards is set by generation.
@@ -183,6 +185,7 @@ With FlashAttention (see [L5](#/read/lecture_05)), the $S \times T$ score matrix
 $$ \text{FLOPs} = 4BSTD, \qquad \text{bytes} = 4BSD + 4BTD $$
 
 ::code lecture_10.py:L225-L240 | read Q, K, V; two products; write Y; the intensity simplifies to S·T / (S + T)
+::predict attention-decode-intensity
 
 Divide, and B and D cancel from every term:
 
@@ -192,7 +195,6 @@ $$ \text{intensity} = \frac{4BSTD}{4BSD + 4BTD} = \frac{ST}{S+T} $$
 
 For **prefill**, $T = S$ gives $S/2$: good, as long as prompts are long. For **generation**, $T = 1$ gives $S/(S+1)$, which is below 1 however long the context ("or even let's just call it 1"). At $S = 4096$ it is 0.9998, against the 295 the H100 needs. A longer context brings more work and proportionally more KV bytes, so the ratio only creeps toward 1 from below.
 
-::predict attention-decode-intensity
 ::code lecture_10.py:L242-L248 | prefill: S/2, "Good!"; generation: below 1, "Bad!"
 
 ### Why batching rescues the MLP but not attention
@@ -270,6 +272,8 @@ At $B = 1$: 26.87 GB per step, $26.87\text{e}9 / 3.35\text{e}12 = 8.0$ ms per to
 
 ### The trade-off: batch size
 
+::predict batch-latency-throughput-tradeoff
+
 The code's `b1`, `b64` and `b256` evaluate the same formula at three batch sizes. They are marked `@stepover`, so the values are not printed in the source; the numbers here are the formula evaluated (the B = 1 values match what was read aloud).
 
 | batch B | memory | latency | throughput |
@@ -290,7 +294,6 @@ The throughput gains also diminish. Latency is a linear function of B whose inte
 
 Going from 64 to 256 is four times the batch for 1.32 times the throughput. The curve bends where $B$ × KV bytes equals the parameter bytes, $26.03 / 0.839 \approx 31$, and approaches a ceiling of bandwidth over KV bytes per sequence, $3.35\text{e}12 / 0.839\text{e}9 \approx 3{,}990$ tokens/s. In practice "you'll never get to the asymptote because you'll hit the memory": B = 256 needs 241 GB.
 
-::predict batch-latency-throughput-tradeoff
 ::widget fixture:lecture_10--batch-sweep | throughput rises steeply until B ≈ 31, where the KV read equals the weight read, then bends toward the dashed ceiling while latency keeps growing linearly
 ::video 43:40-43:59 | the bus: each rider waits for the batch, the bus moves everyone at once
 
@@ -353,9 +356,10 @@ $$ c = W_c\, h \quad (C \text{ dimensions}), \qquad K = W_K\, c, \quad V = W_V\,
 
 DeepSeek-V2 compresses $N \cdot H = 16384$ to $C = 512$, "quite aggressive".
 
+::predict mla-latent-kv
+
 One wrinkle: MLA is not compatible with RoPE (the rotary position embedding of [L3](#/t/lecture_03)), so 64 extra dimensions carry the rotary part, $512 + 64 = 576$ in all. Per layer per token, MHA caches both K and V, $2 \times 16384 = 32768$ numbers, so MLA's 576 is about 57 times smaller. The speed-up "follow[s] by just simple math": the smaller the cache, the faster, almost linearly while decode stays memory-bound.
 
-::predict mla-latent-kv
 ::widget fixture:lecture_10--kv-ledger | switch the attention to MLA with N = H = 128: the bar of 512 + 64 values per layer is about 57× shorter than the MHA bar, which holds both K and V
 
 The accuracy check reverses the GQA paper's story. In DeepSeek-V2's Table 8, MHA beats GQA (at higher cost); in Table 9, MLA is even a bit better than MHA while much cheaper. The professor's own reading: "let's just say it's about the same."
@@ -376,7 +380,11 @@ GQA shares keys and values across heads; CLA shares them across **layers**. Only
 
 ### Local (sliding-window) attention
 
-An old and natural idea. Instead of attending to every earlier token, each token attends only to the last W tokens: a sliding window. Then a layer's cache never holds more than W tokens, so the KV cache is **independent of the sequence length**, "which is great", especially for long contexts.
+An old and natural idea. Instead of attending to every earlier token, each token attends only to the last W tokens: a sliding window.
+
+::predict sliding-window-kv
+
+Then a layer's cache never holds more than W tokens, so the KV cache is **independent of the sequence length**, "which is great", especially for long contexts.
 
 ::figure official/lectures/images/longformer-attention.png | full attention against a sliding window, a dilated window, and a window plus a few global positions (Longformer)
 
@@ -385,10 +393,9 @@ The model can still use information from further back, because it propagates one
 The catch is that local attention "still hurts accuracy": "There's no free lunch here." The fix used in practice is **hybrid** models that interleave local layers with global (full-attention) layers. Only the local layers' caches are capped.
 
 ::code lecture_10.py:L429-L433 | the cache is independent of length; accuracy suffers; interleave with global layers
-::predict sliding-window-kv
 ::widget fixture:lecture_10--kv-ledger | set a window: the green local layers stop at W tokens however long S gets, while the blue global layers keep growing with S
 
-For example, a 32-layer model with a 4096-token window, one global layer after every three local ones, at a 32k context: $(8 \times 32768 + 24 \times 4096) / (32 \times 32768) \approx 0.34$ of the all-global cache.
+For example, a 32-layer model with a 4096-token window, one global layer after every three local ones, at a 64k context: $(8 \times 65536 + 24 \times 4096) / (32 \times 65536) \approx 0.30$ of the all-global cache.
 
 ::note spoken 59:24 | Asked about linear attention against sliding windows: linear attention, gated DeltaNet and Mamba keep a compressed summary of the whole history instead of a cache, and are more expressive than a window; but compressing everything into a fixed state can lose what a needle-in-a-haystack question needs. "I'm not going to talk about linear attention" here; see the [L4 thread](#/t/lecture_04).
 ::kp sliding-window-kv
@@ -444,9 +451,9 @@ With $x = 5.2342$: $5.2342 / 0.1 = 52.342$, rounded to 52, plus 4 gives 56; dequ
 ::code lecture_10.py:L462-L466 | bytes per number, from fp32 down to int4
 ::note slip | The code gives fp8 e4m3 a range of [−240, 240] "on H100s". The H100's E4M3 format, the one [L2](#/read/lecture_02) describes, reaches ±448; ±240 is the maximum of a different e4m3 variant used by some other accelerators. The byte count, 1, is right either way.
 
-In the napkin model of the previous sections, int4 weights for Llama 2 13B at B = 1 would cut the per-token bound from about 7.8 ms to about 1.9 ms ($0.5 \times 13.0\text{e}9 / 3.35\text{e}12$), four times less. The real gain is smaller, because the KV cache and other overheads are not quantized away.
+In the napkin model of the previous sections, int4 weights for an 8B model at B = 1 would cut the per-token bound from about 4.8 ms to about 1.2 ms ($0.5 \times 8\text{e}9 / 3.35\text{e}12$), four times less. The real gain is smaller, because the KV cache and other overheads are not quantized away.
 
-::widget fixture:lecture_10--batch-sweep | switch the weights from bf16 to int4 at B = 1: the latency falls 4×; at a large B the KV read dominates and the same switch helps little
+::widget fixture:lecture_10--batch-sweep | switch the weights from bf16 to int4 at B = 1: the latency falls about 3.7× (4× on the weight read; the KV read is unchanged); at a large B the KV read dominates and the same switch helps little
 
 ### Quantization-aware training and post-training quantization
 
@@ -476,10 +483,11 @@ The crudest shortcut: "rip out parts of an expensive model to make it cheaper, a
 
 Asked how importance is measured, the professor said: pass the calibration set through the model and look at the magnitude of the activations. Units that are nearly always close to zero ("dead units") can go; large ones stay. This works because of an empirical fact about trained models: some channels are much larger than others.
 
+::predict prune-then-distill
+
 Right after removal the model "is not going to be very good"; the distillation step, training the small model to imitate the original, heals it, at a fraction of the cost of training it from scratch. The paper took a 15B model down to 8B without hurting accuracy much.
 
 ::figure official/lectures/images/pruning-kd.png | the paper's results for the pruned and distilled models
-::predict prune-then-distill
 
 The lecture's summary of all the lossy shortcuts names two recipes for a faster model:
 - **from scratch**: define a faster architecture, then train it;
@@ -533,10 +541,10 @@ The only way to end on A is to propose A and accept it. B is reached by proposin
 
 ::worked speculative-sampling-exactness
 ::code lecture_10.py:L524-L532 | the two-token proof: the two routes sum to q(A) and q(B)
+::predict speculative-sampling-exactness
 
 With numbers: $q = [0.3, 0.7]$, $p = [0.9, 0.1]$. A is proposed 90% of the time and accepted with probability $0.3/0.9 = 1/3$, so $P[A] = 0.3$. B arrives directly with 0.1, or via a rejected A with $0.9 \times 2/3 = 0.6$: $P[B] = 0.7$. Note the counter-intuitive part: the token the draft is most "confident" about is the one that gets rejected most, because over-proposed tokens are exactly the ones whose rate must be pulled down.
 
-::predict speculative-sampling-exactness
 ::note skip 1:15:20 | "I'm going to skip this simple proof": the two-token argument above is in the lecture code but was not presented in class ("basically the same arguments as rejection sampling").
 ::kp speculative-sampling-mechanism
 ::kp speculative-sampling-exactness
@@ -550,13 +558,14 @@ The professor showed the results of Chen et al., whose target is the 70B Chinchi
 
 Why there is a sweet spot was only said aloud: "if you have too few draft tokens, you're not really leveraging the batching on the target model side. And if you have too many, then you're going to reject more often." In that paper the best length was "around three or four".
 
+::predict spec-draft-length-tradeoff
+
 The reason more drafts stop paying: draft token $i$ counts only if all $i - 1$ before it were accepted. If each is accepted independently with probability $\alpha$ (a simplifying model from Leviathan et al., not from the lecture), the expected tokens per target pass is
 
 $$ E(k) = 1 + \alpha + \alpha^2 + \dots + \alpha^k = \frac{1 - \alpha^{k+1}}{1 - \alpha} \;\le\; \frac{1}{1-\alpha} $$
 
 which saturates, while the draft's sequential work grows linearly in $k$. At $\alpha = 0.6$, $k = 4$ gives 2.31 tokens per pass and $k = 16$ gives 2.50: four times the draft work for 8% more tokens.
 
-::predict spec-draft-length-tradeoff
 ::widget fixture:lecture_10--spec-sweet-spot | the expected-tokens bars flatten under the dashed ceiling 1/(1 − α) while the cost per pass keeps rising with k; a higher α moves the best k right, a compute-bound target (large B) moves it to k = 1
 
 The best k is not a constant. A draft closer to the target (higher $\alpha$) keeps later tokens alive longer and moves the sweet spot up. A target run at such a large batch that its pass is compute-bound loses the "free" extra positions, and the gain fades.
@@ -601,7 +610,7 @@ The batch is "dynamically being updated with either old finished sequences being
 ::animation fixture:lecture_10--continuous-batching | under static batching the slots of B and C sit idle until A ends while D, E, F wait; iteration-level scheduling refills each slot the next step, so the same six requests finish in 13 steps instead of 18
 ::predict continuous-batching
 
-For a sense of the waste: a static batch of 4 requests generating 50, 100, 150 and 400 tokens runs 400 steps, but only $50 + 100 + 150 + 400 = 700$ of its $4 \times 400 = 1600$ slot-steps do work, 44% occupancy.
+For a sense of the waste: a static batch of 4 requests generating 20, 60, 120 and 400 tokens runs 400 steps, but only $20 + 60 + 120 + 400 = 600$ of its $4 \times 400 = 1600$ slot-steps do work, 37.5% occupancy.
 
 ### Selective batching
 
@@ -637,9 +646,10 @@ Wasted memory is not harmless: it caps how many sequences fit, and so the batch 
 ::figure official/lectures/images/paged-attention-blocks.png | one sequence's cache cut into blocks of 4 tokens, scattered in memory
 ::figure official/lectures/images/paged-attention-logical.png | two requests: contiguous logical blocks, mapped through a block table to physical blocks interspersed in memory
 
+::predict paged-attention
+
 For example, a request with a 37-token prompt that generates 60 tokens, under a 2048-token reservation, wastes $2048 - 97 = 1951$ slots. With 16-token blocks it occupies 7 blocks, 112 slots, and wastes 15.
 
-::predict paged-attention
 ::widget fixture:lecture_10--paged-blocks | the slab's grey tail is the whole unused reservation; with blocks the waste is under one block per sample, and with sharing on every sample points to the same prompt blocks
 
 ### Sharing prefixes

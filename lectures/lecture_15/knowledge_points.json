@@ -435,6 +435,13 @@
           "basis": "teaching-order"
         }
       ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_12:llm-judge-length-bias",
+          "basis": "author-inference",
+          "note": "Lecture 12 shows the same length effect on a leaderboard (AlpacaEval gaming) and the length-controlled regression fix."
+        }
+      ],
       "see_also": [
         "lecture_16:grpo-length-bias",
         "lecture_16:kimi-length-reward"
@@ -627,25 +634,15 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "A team must pick one SFT set to add to a model. Per slides 19-20, which is most likely to raise its hallucination rate on unrelated factual questions?",
-          "format": "choice",
-          "choices": [
-            "2,000 correct QA pairs on facts the base model already knows",
-            "2,000 correct QA pairs on facts the base model has never seen",
-            "2,000 QA pairs whose answers are copied from a provided passage",
-            "none of them, since every answer in all three is correct"
-          ],
-          "answer": "2,000 correct QA pairs on facts the base model has never seen",
-          "why": "p20 (Gekhman et al.): fine-tuning on facts the model does not know makes it hallucinate, because it is trained to produce specifics it cannot ground. Known facts only reinforce existing knowledge, and copying from a passage teaches a grounded behaviour.",
-          "varies": "the learner chooses among three SFT sets rather than analysing a retrieval redesign",
+          "q": "Two SFT sets of 4,000 QA pairs, every answer verified correct, trained the same way. In set A, 10% of the questions are about facts the base model does not know; in set B, 60% are. Compared with the model tuned on A, which way does the B model's hallucination rate on held-out factual questions move? Start with up, down or same.",
+          "format": "trend",
+          "answer": "Up: a larger share of the set asks the model to state facts it does not know, so more of the training pushes it to produce confident answers it cannot ground.",
+          "value": "up",
+          "why": "p20 (Gekhman et al.): fitting facts the model does not know makes it hallucinate, and the damage grows with the share of such examples. Known examples are fitted fast and reinforce existing knowledge; each unknown one trains ungrounded, confident answering. That every answer is correct does not help.",
+          "varies": "the share of unknown facts in a fixed-size, all-correct SFT set (a dose comparison) rather than a set made only of unknown facts",
           "invariant": "SFT on unknown facts trains ungrounded confident answering; grounded or known content does not",
           "transfer_distance": "near",
-          "targets_misconception": "Adding more factually correct SFT examples can only make a model more factual.",
-          "distractor_from": [
-            "'2,000 correct QA pairs on facts the base model already knows' <- plausible: assumes any factual SFT is equally risky",
-            "'2,000 QA pairs whose answers are copied from a provided passage' <- plausible: treats the copied answers as new facts rather than a grounded behaviour",
-            "'none of them, since every answer in all three is correct' <- misconception: 'Adding more factually correct SFT examples can only make a model more factual.'"
-          ]
+          "targets_misconception": "Adding more factually correct SFT examples can only make a model more factual."
         },
         "retrieval": [
           {
@@ -983,7 +980,7 @@
             "quote": "we don't really know per se. We can know what things aren't in pre-training. ... We can't show necessarily that, for example, safety is something that's in pre-training per se."
           }
         ],
-        "filtering_note": "p26's plot is an image; the text layer keeps only the sub-labels '(Hate speech)' and '(Anthropic HH)'. Slide image audit (p26): it is one bar chart of mean harmfulness score on four test sets (I-MaliciousInstructions, I-CoNa (hate speech), I-Controversial, Q-Harm (Anthropic HH)) with 0, 100, 300, 500, 1000, 1500 and 2000 added safety examples; scores fall from about 3 to about 1 or below by 500, and 1,000-2,000 add little (Q-Harm stays near 1 from 300 on). The over-refusal side is not plotted on this slide. The paper behind p26 (Bianchi et al.) is not named on the slide (inference). p22-p25 (misinformation and scams motivation, 'Details are pretty sparse', the Llama 2 pipeline screenshots, 'extract scenarios from users') are context. The deck never names LIMA ('less is more for alignment'); the LIMA-style claim is stated as point 3 of p27 and supported by the safety result, Alpaca's small distilled set and the agentic-SFT trend, with the explicit hedge about the long tail. No number is given for 'the long tail'. Spoken evidence (32:14-33:07): the p26 plots are read aloud: with 'as little as 500 examples' of refusals, compliance with malicious and hate-speech instructions 'drops dramatically', a 'very small push' that gives an across-the-board reduction, because models already have a safe/unsafe axis after pretraining. Spoken evidence (33:21-33:40): the 'long tail' is given a concrete meaning: a lab that wants 'really fine grained distinctions about what is safe and not safe' still needs 'very large scale data collection'. Spoken evidence (34:06): 'factually correct can hurt' is tied to hallucination (sft-tail-knowledge-hallucination). Spoken evidence (34:33-34:57, Q&A): whether a behaviour is 'already in pre-training' cannot be checked directly; one can show what is not there (generalization to very rare programming languages is hard with SFT) but not that safety is, so 'extracting' is a working hypothesis. Spoken evidence (30:11-31:05): safety sets are 'a few thousand or tens of thousands of examples'; Llama 2 'about a few thousand' (matching p23), although he also says the Llama 2 report does not 'even talk about how many examples' (29:25); Tulu 3 / OLMo's safety component is 'something like 50,000-ish examples' (p24's table: CoCoNot 10,983, WildJailbreak 50,000, WildGuardMix 50,000, so the figure is a per-set size). Correction from the audio: the note calls p22-p25 'the Llama 2 pipeline screenshots'. Aloud only p23 is Llama 2; p24 ('Pipeline with most details') is Ai2's Tulu 3 post-training pipeline for OLMo ('two or three' in the captions, 30:32-30:57), and p25's 'extract scenarios from users' is its WildChat mining (31:12-31:50). The over-refusal side is not on p26 at all, but the trade-off is said aloud in general terms (29:31-30:11, safety-violation-vs-false-refusal). Slide image audit (p23): the screenshot is from the Llama 3 report (its Figure 18, legend 'Llama 3 8B / 70B', plus the 'Finetuning data' paragraph on borderline prompts and synthetic adversarial data); only the slide's corner annotation '# Examples? ~ few thousand in Llama 2' is about Llama 2. So the few-thousand figure is the slide's claim about Llama 2, while calling the screenshot 'Llama 2' (29:18) is a slip."
+        "filtering_note": "p26's plot is an image; the text layer keeps only the sub-labels '(Hate speech)' and '(Anthropic HH)'. Slide image audit (p26): it is one bar chart of mean harmfulness score on four test sets (I-MaliciousInstructions, I-CoNa (hate speech), I-Controversial, Q-Harm (Anthropic HH)) with 0, 100, 300, 500, 1000, 1500 and 2000 added safety examples; scores fall from about 3 to about 1 or below by 500; beyond that the gains are smaller and depend on the test set: I-MaliciousInstructions (about 0.3 at 500, about 0.13 at 2,000) and Q-Harm (about 1.25 at 300, then near 1 from 500 on, about 0.9 at 2,000) flatten, while I-CoNa (about 1.15 to 0.28) and I-Controversial (about 1.03 to 0.25) keep falling to about a quarter of their 500-example score by 2,000. The over-refusal side is not plotted on this slide. The paper behind p26 (Bianchi et al.) is not named on the slide (inference). p22-p25 (misinformation and scams motivation, 'Details are pretty sparse', the Llama 2 pipeline screenshots, 'extract scenarios from users') are context. The deck never names LIMA ('less is more for alignment'); the LIMA-style claim is stated as point 3 of p27 and supported by the safety result, Alpaca's small distilled set and the agentic-SFT trend, with the explicit hedge about the long tail. No number is given for 'the long tail'. Spoken evidence (32:14-33:07): the p26 plots are read aloud: with 'as little as 500 examples' of refusals, compliance with malicious and hate-speech instructions 'drops dramatically', a 'very small push' that gives an across-the-board reduction, because models already have a safe/unsafe axis after pretraining. Spoken evidence (33:21-33:40): the 'long tail' is given a concrete meaning: a lab that wants 'really fine grained distinctions about what is safe and not safe' still needs 'very large scale data collection'. Spoken evidence (34:06): 'factually correct can hurt' is tied to hallucination (sft-tail-knowledge-hallucination). Spoken evidence (34:33-34:57, Q&A): whether a behaviour is 'already in pre-training' cannot be checked directly; one can show what is not there (generalization to very rare programming languages is hard with SFT) but not that safety is, so 'extracting' is a working hypothesis. Spoken evidence (30:11-31:05): safety sets are 'a few thousand or tens of thousands of examples'; Llama 2 'about a few thousand' (matching p23), although he also says the Llama 2 report does not 'even talk about how many examples' (29:25); Tulu 3 / OLMo's safety component is 'something like 50,000-ish examples' (p24's table: CoCoNot 10,983, WildJailbreak 50,000, WildGuardMix 50,000, so the figure is a per-set size). Correction from the audio: the note calls p22-p25 'the Llama 2 pipeline screenshots'. Aloud only p23 is Llama 2; p24 ('Pipeline with most details') is Ai2's Tulu 3 post-training pipeline for OLMo ('two or three' in the captions, 30:32-30:57), and p25's 'extract scenarios from users' is its WildChat mining (31:12-31:50). The over-refusal side is not on p26 at all, but the trade-off is said aloud in general terms (29:31-30:11, safety-violation-vs-false-refusal). Slide image audit (p23): the screenshot is from the Llama 3 report (its Figure 18, legend 'Llama 3 8B / 70B', plus the 'Finetuning data' paragraph on borderline prompts and synthetic adversarial data); only the slide's corner annotation '# Examples? ~ few thousand in Llama 2' is about Llama 2. So the few-thousand figure is the slide's claim about Llama 2, while calling the screenshot 'Llama 2' (29:18) is a slip."
       },
       "prerequisites": [
         {
@@ -999,7 +996,7 @@
         },
         {
           "belief": "More SFT data is monotonically better, so safety data should be maximized.",
-          "why_wrong": "p27 point 2 says adding (even factually correct) data can hurt, and p26's bars show the harmfulness score saturating (1,000-2,000 examples add little over 500); quality and kind of behaviour, not count, is the lever."
+          "why_wrong": "p27 point 2 says adding (even factually correct) data can hurt. p26 shows most of the drop by 300-500 examples; further gains are smaller and dataset-dependent (Q-Harm stays near 1 from 500 on, while I-CoNa and I-Controversial keep falling to about a quarter of their 500-example score by 2,000). Quality and kind of behaviour, not count, is the main lever."
         }
       ],
       "prompts": {
@@ -1047,9 +1044,7 @@
         "retrieval": [
           {
             "q": "Roughly how many samples does the lecture say give significant safety improvements?",
-            "answer": "About 500.",
-            "format": "number",
-            "tolerance": 0.2
+            "answer": "About 500."
           },
           {
             "q": "About how many safety examples did Llama 2 use?",
@@ -1612,6 +1607,9 @@
           "note": "Pairwise data is the 'reward we can measure'."
         }
       ],
+      "see_also": [
+        "lecture_12:arena-pairwise-elo"
+      ],
       "misconceptions": [
         {
           "belief": "Preference data is cheaper and more reliable than demonstrations because the annotator only clicks a button.",
@@ -2054,10 +2052,10 @@
       ],
       "prompts": {
         "predict": {
-          "q": "You replace your human annotators with GPT-4 for pairwise labels. Per slide 45, roughly where does GPT-4's agreement with a human label land relative to agreement between two humans, and what does that imply about the ceiling of any single annotator?",
+          "q": "You replace your human annotators with GPT-4 for pairwise labels. Per slide 45, roughly where does GPT-4's agreement with the human majority label land relative to a held-out human annotator's, and at what cost? Is the human level a hard ceiling for any annotator?",
           "format": "short",
-          "answer": "Near the human inter-annotator level: GPT-4 agrees with a human about as often as another human would. The ceiling is the inter-annotator agreement itself; no annotator, human or LM, can exceed it on noisy preferences.",
-          "why": "Per-pair agreement is bounded by how consistent the humans are with each other; matching that bound is the best any judge can show on this metric.",
+          "answer": "Near the human inter-annotator level (about 0.645 against about 0.66 human-mode agreement), at a small fraction of the cost (about 15 dollars against a few hundred per 1,000 examples). It is not a hard ceiling: some GPT-4-based annotators on p45 (grey circles, about 0.67-0.68) score slightly above the held-out human.",
+          "why": "Agreement is measured against the majority (mode) label of the other human annotators. A consistent judge that tracks that majority can match or beat one noisy human, so the human point is a reference level, not a bound; GPT-4 reaching it at a fraction of the cost is what makes AI feedback usable.",
           "targets_misconception": "AI feedback is a cheap approximation that is clearly worse than human labels."
         },
         "transfer": {
@@ -2191,6 +2189,13 @@
           "kp": "imitation-vs-optimization",
           "basis": "author-inference",
           "note": "The reward model is how 'a reward we can measure' is manufactured from judgements."
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_12:arena-pairwise-elo",
+          "basis": "author-inference",
+          "note": "Same model, different parametrization: Arena's Elo win probability 1/(1+10^((ELO_B-ELO_A)/400)) is sigmoid(r_A - r_B) with r = ELO · ln10/400. Lecture 12 uses it to rank models; lecture 15 uses it to learn a reward."
         }
       ],
       "misconceptions": [
@@ -2361,7 +2366,7 @@
             "quote": "PPO says, well, TRPO is a good idea, but this distance constraint is actually kind of hard to deal with. ... I'm going to come up with a heuristic clipping thing"
           }
         ],
-        "filtering_note": "The InstructGPT objective on p51 is absent from the text layer. Slide image audit (p51, p53): p51's screenshot prints InstructGPT's RL paragraph and objective (2): the reward-model term r_θ(x, y), 'a per-token KL penalty from the SFT model at each token to mitigate over-optimization of the reward model', β log(π_RL/π_SFT), and the pretraining-mix term γ E[log π_RL(x)] ('PPO-ptx'; γ = 0 for plain 'PPO'), with 'The value function is initialized from the RM'. p53's image defines TRPO's constraint, Ê_t[KL(π_θold(·|s_t), π_θ(·|s_t))] ≤ δ, and PPO's clipped objective; the slide calls the whole thing 'very innocuous looking' to foreshadow p61-p63. The policy-gradient identity on p53 is in the text layer but with garbled math glyphs, so it is paraphrased. The slide does not derive the log-derivative trick or say why variance is high; lecture 16 (policy-gradient-variance, ppo-ratio-clip, per-token-kl-reward-shaping) expands all three and is the thread to send a learner to. The KL penalty is also said aloud (1:06:10-1:06:39): InstructGPT's equation 2 maximizes reward 'subject to this second term, which is really just a KL divergence', to stay close and not 'become degenerate'. The pretraining-mix term is not said. Spoken slip (1:06:31): he says the KL keeps the policy close to 'my pre-trained model'; InstructGPT's KL is to the SFT model (p51: 'from the SFT model'; also the first misconception), and pretraining data enters through the separate gamma term. Not imported. Spoken evidence (1:07:46-1:08:31): the reason given aloud for moving past plain policy gradients is not the slide's variance: sampling every step is expensive (inference is hard, training is arithmetically intense), so you want to 'roll out once' and reuse it, which is off-policy; TRPO takes several steps while staying close, with 'an importance weighting correction' ('I'm not going to go into that in detail'), and PPO replaces the hard distance constraint with 'a heuristic clipping thing'. Variance is never mentioned aloud. The statement and the second misconception keep p53's variance framing (no explicit correction); lecture_16:ppo-ratio-clip covers rollout reuse. Spoken evidence (1:05:53-1:06:07, 1:07:36-1:07:46): RLHF is 'baby reinforcement learning', a bandit rather than multi-turn RL (lecture_16:language-rl-is-a-bandit), and the policy gradient 'really just looks like SFT, but with weighted examples'. PPO details are deferred to the next lecture (1:05:36, 1:08:50) and needed for the assignment (1:07:10)."
+        "filtering_note": "The InstructGPT objective on p51 is absent from the text layer. Slide image audit (p51, p53): p51's screenshot prints InstructGPT's RL paragraph and objective (2): the reward-model term r_θ(x, y), 'a per-token KL penalty from the SFT model at each token to mitigate over-optimization of the reward model', β log(π_RL/π_SFT), and the pretraining-mix term γ E[log π_RL(x)] ('PPO-ptx'; γ = 0 for plain 'PPO'), with 'The value function is initialized from the RM'. p53's image defines TRPO's constraint, Ê_t[KL(π_θold(·|s_t), π_θ(·|s_t))] ≤ δ, and PPO's clipped objective; the slide calls the whole thing 'very innocuous looking' to foreshadow p61-p63. The policy-gradient identity on p53 is in the text layer but with garbled math glyphs, so it is paraphrased. The slide does not derive the log-derivative trick or say why variance is high; lecture 16 (policy-gradient-variance, ppo-ratio-clip, per-token-kl-reward-shaping) expands all three and is the thread to send a learner to. The KL penalty is also said aloud (1:06:10-1:06:39): InstructGPT's equation 2 maximizes reward 'subject to this second term, which is really just a KL divergence', to stay close and not 'become degenerate'. The pretraining-mix term is not said. Spoken slip (1:06:31): he says the KL keeps the policy close to 'my pre-trained model'; InstructGPT's KL is to the SFT model (p51: 'from the SFT model'; also the first misconception), and pretraining data enters through the separate gamma term. Not imported. Spoken evidence (1:07:46-1:08:31): the reason given aloud for moving past plain policy gradients is not the slide's variance: sampling every step is expensive (inference is hard, training is arithmetically intense), so you want to 'roll out once' and reuse it, which is off-policy; TRPO takes several steps while staying close, with 'an importance weighting correction' ('I'm not going to go into that in detail'), and PPO replaces the hard distance constraint with 'a heuristic clipping thing'. Variance is never mentioned aloud. The statement and the second misconception keep p53's variance framing (no explicit correction); lecture_16:ppo-ratio-clip covers rollout reuse. Spoken evidence (1:05:53-1:06:07, 1:07:36-1:07:46): RLHF is 'baby reinforcement learning', a bandit rather than multi-turn RL (lecture_16:language-rl-is-a-bandit), and the policy gradient 'really just looks like SFT, but with weighted examples'. PPO details are deferred to the next lecture (1:05:36, 1:08:50) and needed for the assignment (1:07:10). Forward pointers, not prerequisites (a prerequisite edge into lecture 16 closed a cycle through lecture_16:verifiable-reward-vs-rlhf, which requires rlhf-overoptimization): the clipping named on p53 is derived and exercised in lecture 16 (lecture_16:ppo-ratio-clip, p7, p12), and the KL-to-SFT term of the p51 objective is implemented there as per-token reward shaping (lecture_16:per-token-kl-reward-shaping, p14)."
       },
       "prerequisites": [
         {
@@ -2374,21 +2379,11 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "lecture_16:ppo-ratio-clip",
-          "basis": "author-inference",
-          "note": "The clipping mechanism named on p53 is derived and exercised in lecture 16 (p7, p12); this KP only states the three-attempt story."
-        },
-        {
-          "kp": "lecture_16:per-token-kl-reward-shaping",
-          "basis": "author-inference",
-          "note": "The KL-to-SFT term of the InstructGPT objective (image on p51) is implemented as per-token reward shaping in lecture 16 p14."
-        }
-      ],
       "see_also": [
         "lecture_16:policy-gradient-variance",
-        "lecture_16:language-rl-is-a-bandit"
+        "lecture_16:language-rl-is-a-bandit",
+        "lecture_16:ppo-ratio-clip",
+        "lecture_16:per-token-kl-reward-shaping"
       ],
       "misconceptions": [
         {
@@ -2601,7 +2596,6 @@
           {
             "q": "How many LM outputs does the lecture's best-of-n option sample?",
             "answer": "1024",
-            "format": "number",
             "layer": "detail"
           },
           {
@@ -2954,17 +2948,17 @@
       ],
       "prompts": {
         "predict": {
-          "q": "You train DPO on human preference pairs and track two curves: the implied reward margin on held-out pairs and the win rate judged by fresh human raters. Per slide 63, how do the two curves behave as training runs long?",
+          "q": "You run PPO against a reward model trained on human preference pairs and track two curves as optimization goes on: the reward model's score of the policy's samples (the proxy reward) and the win rate judged by fresh human raters. Per slide 63, how do the two curves behave as you push the optimization further?",
           "format": "choice",
           "choices": [
-            "Both rise together; more DPO is always better",
-            "The margin rises throughout; the human win rate peaks then falls",
-            "Both plateau at the same step because DPO has no reward model to exploit"
+            "Both rise together; more optimization is always better",
+            "The proxy reward rises throughout; the human win rate peaks then falls",
+            "Both peak and then fall together, because the reward model was trained on the same humans"
           ],
-          "answer": "The margin rises throughout; the human win rate peaks then falls",
-          "why": "Optimizing for the (implied) reward overfits past a point across RLHF-style optimizers; the proxy improves while the true preference degrades. p63 shows this for PPO, best-of-n and expert iteration; DPO's implied reward is a learned proxy of the same kind, so the same shape is expected.",
-          "targets_misconception": "Overoptimization is a PPO instability; DPO, which has no reward model, is immune.",
-          "distractor_from": "option 1: 'more optimization is always better'; option 3: 'DPO has no reward model so is immune'"
+          "answer": "The proxy reward rises throughout; the human win rate peaks then falls",
+          "why": "p63's left panel (proxy trained on human preferences): as PPO's proxy reward climbs from about 0.6 to about 1.35, its win rate rises to about 0.55 and then falls back to about 0.51; best-of-n does the same. The proxy keeps improving while the true preference degrades, because the optimizer finds and amplifies the reward model's errors.",
+          "targets_misconception": "The reward falls when you over-optimize.",
+          "distractor_from": "option 1: 'more optimization is always better'; option 3: misconception 'The reward falls when you over-optimize.'"
         },
         "transfer": {
           "q": "Slide 63's right panel shows no overoptimization when preferences come from a noiseless LM judge. A team therefore proposes to label with GPT-4 and 'optimize as hard as we like'. Using the p45 agreement result and the left/middle panels, explain why this does not deliver the right panel's immunity in practice.",

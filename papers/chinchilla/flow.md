@@ -11,6 +11,8 @@ Training a large language model is usually a one-shot affair. You know how many 
 
 By 2022 the field had an answer from Kaplan et al. (2020), the first big scaling-law study (recapped in [L9](#/read/lecture_09)). Their fits said that when compute grows 10×, the model should grow about 5.5× and the data only about 1.8×. In other words, spend new compute mostly on parameters. The models of the time followed that advice.
 
+::predict compute-optimal-question
+
 ::figure chinchilla:table1 | the column to read is the last one: almost every model, from 175B to 530B parameters, saw about 300B tokens
 
 | Model | Parameters | Training tokens | Tokens per parameter |
@@ -23,8 +25,6 @@ By 2022 the field had an answer from Kaplan et al. (2020), the first big scaling
 | Chinchilla | 70B | 1.4T | 20 |
 
 (The last column is ours: tokens divided by parameters.) Model size had grown threefold in two years while the token count stood still at about 300 billion. The paper's claim is that this was a mistake: these models are "significantly undertrained" (abstract).
-
-::predict compute-optimal-question
 
 The question gets a precise form. Write $L(N, D)$ for the final pre-training loss of a model with $N$ parameters trained on $D$ tokens. The compute it costs is a fixed function $\text{FLOPs}(N, D)$. For a budget $C$, the best split is
 
@@ -80,9 +80,9 @@ Kaplan et al. used a fixed number of training tokens and a fixed schedule for al
 
 Appendix B measures how much the schedule matters. One model is trained with the cosine cycle set to 1, 1.1, 1.25, 1.5, 2 and 5 times the number of steps actually taken, and the loss is read at the target step.
 
-::figure chinchilla:figA1 | the six curves at the target step: cycles up to 1.25× the run length end close together; 1.5×, 2× and 5× end clearly higher, because their learning rate never came down
-
 ::predict cosine-cycle-length
+
+::figure chinchilla:figA1 | the six curves at the target step: cycles up to 1.25× the run length end close together; 1.5×, 2× and 5× end clearly higher, because their learning rate never came down
 
 The rule the paper takes from this: decay the learning rate 10× over approximately the number of tokens you will actually train on. Overshooting the run length by more than about 25% clearly hurts. A footnote adds two details: decaying 10× and decaying to zero over the same steps differ little (10× is slightly better), while decaying only 5× is clearly worse. Another footnote draws the practical lesson: you must fix not only the model size but also the *training length* before training begins, because the schedule depends on it. All three approaches below follow this rule; every run's schedule matches its own horizon.
 
@@ -104,8 +104,8 @@ and the paper admits up front that future work may need to allow for curvature a
 
 A power law $y = k\,x^a$ becomes a straight line once you take logs: $\log y = \log k + a \log x$. The exponent is the slope on log-log axes, and the constant $k$ only shifts the line up or down. So "fitting a scaling law" means putting points on log-log axes and fitting a line, as in [L9](#/read/lecture_09). Two habits follow. Sample the points evenly in $\log x$, so each decade counts equally in the slope (Approach 1 uses 1,500 logarithmically spaced FLOP values for this reason). And remember that using the line beyond the data assumes the slope stays the same out there.
 
-::worked supp-power-law-fitting
 ::predict supp-power-law-fitting
+::worked supp-power-law-fitting
 
 The exponent is all you need to read the rule. A ratio of two points on a power law depends only on the slope: 10× the compute multiplies $N_{opt}$ by $10^a$. With $a = 0.50$ that is $3.16\times$; with Kaplan's $a = 0.73$ it is $5.37\times$ (the paper's "5.5×"), and the data then grows only $10^{0.27} = 1.86\times$ (the paper's "1.8×").
 
@@ -121,15 +121,15 @@ Now plot all the training curves against FLOPs instead of steps. Each curve star
 
 ::figure https://arxiv.org/html/2203.15556v1/scaling_11.png | left: all runs against FLOPs with the envelope of minimal loss along their bottom; centre and right: the model size and token count of each envelope point against FLOPs, straight lines on log-log axes, with the green projection at Gopher's budget of 5.76·10²³ FLOPs
 
+::predict approach-1
+
 ::worked approach-1
 
 Two details make the envelope honest. Each training curve is smoothed (a Gaussian window of 10 steps) and interpolated, so the loss is known at every FLOP count and the envelope can be read at 1,500 log-spaced values, not only at run endings. And a footnote reports where the selected points fall.
 
-::predict approach-1
-
 All selected points lie within the last 15% of their runs. That is the schedule effect from the last section seen from the other side: a run in the middle of its schedule still has a high learning rate, so at that FLOP count a shorter run that has already finished its decay is lower. The envelope is traced by run *endings*, which is why the paper concludes that the cosine cycle should match the planned token count.
 
-Fitting lines through the envelope points gives $a = 0.50$ and $b = 0.50$: parameters and tokens should grow at the same rate. At Gopher's budget the Approach 1 line gives 67B parameters and 1.5T tokens (Table 3, below).
+Fitting lines through the envelope points gives $a = 0.50$ and $b = 0.50$: parameters and tokens should grow at the same rate. Table 3, below, reads these lines off as model sizes and token counts.
 
 ### A head-to-head test against Kaplan's rule
 
@@ -225,11 +225,11 @@ A bigger model lowers the second term but, at a fixed budget, leaves fewer token
 
 $$ N_{opt}(C) = G\left(\frac{C}{6}\right)^{a}, \quad D_{opt}(C) = G^{-1}\left(\frac{C}{6}\right)^{b}, \quad G = \left(\frac{\alpha A}{\beta B}\right)^{\frac{1}{\alpha+\beta}}, \quad a = \frac{\beta}{\alpha+\beta}, \quad b = \frac{\alpha}{\alpha+\beta} \qquad (4) $$
 
+::predict approach-3-frontier
+
 ::worked approach-3-frontier
 
 The exponents are crossed: the share of compute that goes to $N$ is set by the *data* exponent $\beta$, and vice versa. The term that decays more slowly is the one worth spending more on. Here $\beta = 0.28 < \alpha = 0.34$: the data term is the stubborn one, so tokens get slightly more than half of each new factor of compute.
-
-::predict approach-3-frontier
 
 The paper reports $a = 0.46$, $b = 0.54$: the only approach with $b$ noticeably above $a$. A small difference with a long reach: since $D_{opt}/N_{opt} \propto C^{b-a} = C^{0.08}$, tokens per parameter keep rising with compute instead of staying constant.
 
@@ -261,6 +261,8 @@ The headline, in the abstract's words: "for every doubling of model size the num
 
 Table 3 turns Approach 1 into a lookup table: for each model size, the budget and token count at which that size is compute-optimal.
 
+::predict equal-scaling-rule
+
 ::figure chinchilla:table3 | read the tokens column against the parameters column: the ratio stays near 20 from 400M to 10T parameters
 
 | Parameters | FLOPs | Gopher units | Tokens | Tokens per parameter |
@@ -276,8 +278,6 @@ Table 3 turns Approach 1 into a lookup table: for each model size, the budget an
 | 10T | 1.30e28 | 22,515.9 | 216.2T | 21.6 |
 
 (The last column is ours.) This is where the famous **20 tokens per parameter** comes from. The phrase is not printed in the paper; it is the CS336 slides' summary of this table. Each row also satisfies $C \approx 6ND$: for the 1B row, $6 \times 10^9 \times 2.02\times10^{10} = 1.21\times10^{20}$. (The 67B row's 1.5T is rounded; $5.76\times10^{23}/(6 \times 6.7\times10^{10})$ is 1.43T.)
-
-::predict equal-scaling-rule
 
 With $a = b = 0.5$, a budget $k$ times larger multiplies both $N$ and $D$ by $\sqrt{k}$. For 4 Gopher units: $67\text{B} \times 2 = 134$B parameters on $1.5\text{T} \times 2 = 3$T tokens, and $6 \times 1.34\times10^{11} \times 3\times10^{12} = 2.4\times10^{24} \approx 4 \times 5.76\times10^{23}$. Equal scaling means equal *growth factors*, so the ratio $D/N$ stays near 20; it does not mean $N = D$.
 

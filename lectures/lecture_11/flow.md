@@ -91,7 +91,7 @@ $$ \log B_\text{opt} = -6.24 \log L + 20.91 \quad\Longleftrightarrow\quad B_\tex
 
 The logs are natural: at $L = 3.5$ the formula gives $e^{20.91 - 6.24 \times 1.253} = e^{13.09} \approx 4.9 \times 10^5$, and at $L = 5.0$ it gives $e^{10.87} \approx 5.3 \times 10^4$, both where the line sits on the plot. So going from loss 5.0 to loss 3.5 multiplies the optimal batch by $(5.0/3.5)^{6.24} \approx 9.3$. Lower loss, bigger batch: the critical-batch scaling of L9.
 
-The practical recipe, which the slide leaves implicit, has two steps. Back out the loss you expect to reach from the scaling law, then read the batch off this line. One consequence: a batch tuned early in training is too small later, because the loss keeps falling. A batch that was optimal at loss 3.5 would, by this formula, be about $(3.5/2.8)^{6.24} \approx 4.0$ times too small at loss 2.8 (an extrapolation: the plotted range ends near 3.3).
+The practical recipe, which the slide leaves implicit, has two steps. Back out the loss you expect to reach from the scaling law, then read the batch off this line. One consequence: a batch tuned early in training is too small later, because the loss keeps falling. A batch that was optimal at loss 5.0 is, by the factor above, about 9.3 times too small by the time the run reaches loss 3.5.
 
 ::video 8:37-9:44 | how one run becomes a column of points, and how the loss target then sets the batch size
 
@@ -134,9 +134,9 @@ In the figure the notation WSD(80N, 8N) means a run of 80N tokens ($N$ is the pa
 ::widget fixture:wsd-branch-schedule | slide the branch length: the orange branch reuses the blue WSD stable run up to 90% of its own length and pays only its decay, while the dashed cosine for the same length leaves the full-length cosine right after warmup, so it needs a run from step 0
 ::widget fixture:lecture_11--sweep-cost | switch to doubling sizes and slide the decay fraction d: WSD's bill is D_max + d·ΣD_i, so it wins whenever there is more than one data size, until d passes the break-even shown in the readout
 
-::slide 15 | C4 loss against tokens for WSD runs (40N, 2N), (60N, 2N), (80N, 2N), (40N, 4N), (60N, 6N), (80N, 8N) and Cosine(80N): the WSD curves lag above the cosine curve during the stable phase, then drop steeply in their decays; "Decay ~ 10%"
-
 ::predict wsd-schedule-branching
+
+::slide 15 | C4 loss against tokens for WSD runs (40N, 2N), (60N, 2N), (80N, 2N), (40N, 4N), (60N, 6N), (80N, 8N) and Cosine(80N): the WSD curves lag above the cosine curve during the stable phase, then drop steeply in their decays; "Decay ~ 10%"
 
 The loss curves show the price and the payoff. During the stable phase a WSD run looks "way underperforming", above the cosine curve the whole time. Then the decay starts and the loss plunges: "suddenly you reclaim all of your gains". At 80N tokens the WSD(80N, 8N) branch ends at about 3.62, slightly below the cosine curve's 3.65 at the same point. Shorter decays (2N) recover less. The professor's anecdotal summary: many people find cosine slightly better in many cases, but WSD is "basically as good" and much more versatile, since a run can always be continued.
 
@@ -232,7 +232,7 @@ For the model-data trade-off DeepSeek uses method 2, IsoFLOPs ([L9](#/read/lectu
 
 The extrapolation lines on the slide check out: at $C = 4.5\times10^{23}$, $M \times D = 4.3\times10^{11} \times 1.04\times10^{12} \approx 4.5\times10^{23}$.
 
-::animation fixture:isoflop-sweep | the same method-2 picture as slide 23(a): each larger budget's U-curve sits lower and its minimum moves right, and the line through the minima is the fitted optimal model size
+::animation fixture:isoflop-sweep | a method-2-style picture drawn from Chinchilla's Approach-3 parametric fit (not slide 23(a)'s measured points): each larger budget's U-curve sits lower and its minimum moves right, and the line through the minima is the fitted optimal model size
 
 ::predict deepseek-isoflop-loss-prediction
 
@@ -353,7 +353,7 @@ $$ \eta_\text{opt} \propto C^{0.5(-0.713 + 0.307)} = C^{-0.203}, \qquad B_\text{
 
 The learning rate falls and the batch grows with compute, which is DeepSeek's law, "albeit with different exponents" ($-0.125$ and $0.327$ for DeepSeek). He says the two effects "would cancel"; with these exponents they cancel only partly, and the model-size term wins. A 100× compute increase along the path (10× in $N$ and in $D$) multiplies the optimal learning rate by $10^{-0.713} \times 10^{0.307} = 10^{-0.406} \approx 0.39$.
 
-Off the path the two laws part ways, and this is why the choice of variable matters. Keep a 1B model fixed and train it on 10× more data. StepFun predicts a learning rate $10^{0.307} \approx 2.0$ times *higher* and a batch $10^{0.571} \approx 3.7$ times larger. A compute-only law sees 10× more compute and predicts a *lower* learning rate: wrong direction. A law in compute is only valid along the allocation it was fitted on. As a sanity check on the absolute numbers: at 1B parameters and 100B tokens the Step Law gives $\eta \approx 1.6\times10^{-3}$ and $B \approx 1.1\times10^{6}$ tokens, in the region of slide 34's minimum.
+Off the path the two laws part ways, and this is why the choice of variable matters. Keep a 10B model fixed and train it on 3× more data. StepFun predicts a learning rate $3^{0.307} \approx 1.4$ times *higher* and a batch $3^{0.571} \approx 1.9$ times larger. A compute-only law sees 3× more compute and predicts a *lower* learning rate: wrong direction. A law in compute is only valid along the allocation it was fitted on. As a sanity check on the absolute numbers: at 1B parameters and 100B tokens the Step Law gives $\eta \approx 1.6\times10^{-3}$ and $B \approx 1.1\times10^{6}$ tokens, in the region of slide 34's minimum.
 
 ::widget fixture:lecture_11--hp-laws | along the Chinchilla path, slide compute up: the path (slope 1) is flatter than the same-LR line (slope 0.713/0.307 ≈ 2.3), so moving out along it crosses into lower LR, while moving straight up (more data, same N) crosses into higher LR
 ::video 38:04-39:03 | how "up with data, down with model size" becomes "down with compute" once N and D are both driven by compute
@@ -408,13 +408,14 @@ Muon gets a few slides because it now passes the course's inclusion test for new
 
 Ignore line 5 for a moment and this is plain SGD with momentum: take the gradient, add it into the running buffer $B_t$ with factor $\mu$, step along $B_t$. The new idea starts from an observation. A gradient step treats all parameters alike, but a language model's parameters are not alike. Some are vectors, such as RMSNorm gains. Others are matrices, in attention and the MLPs, and a matrix has a spectrum: singular values and singular directions. Muon works on the spectrum.
 
+::predict muon-orthogonalized-update
+
 Line 5 takes the update matrix, writes it as its singular value decomposition $B_t = U S V^\top$, and replaces it with
 
 $$ B_t = U S V^\top \;\longrightarrow\; U V^\top $$
 
 Every singular value becomes 1. Big singular values are shrunk back to unit, small ones are expanded up to unit; the singular directions are kept.
 
-::predict muon-orthogonalized-update
 ::worked muon-orthogonalized-update
 
 The intuition is the professor's analogy with Adam. AdaGrad and Adam divide by the size of the gradient, so "every coordinate is roughly going to be the same size". Muon works in the spectral norm instead, so "every kind of direction is going to be unit size". Note that this changes the update's direction, not just its length: a normalization would keep the 100:10:1 proportions of singular values 10, 1 and 0.1; orthogonalization makes them 1:1:1, so the weak directions get relatively much more push.
@@ -441,7 +442,7 @@ A student asked the obvious question about all these grids: everyone grids learn
 
 ::predict grid-sensitive-sweep-the-rest
 
-They do, and "in general, yes, you are worried about hyperparameter interactions". But the number of combinations grows exponentially with the number of hyperparameters, so nobody can grid the whole space. What labs do is grid "the stuff that's most concerning and most sensitive", learning rate first ("the most important thing to tune"), together with batch size. Then for things like weight decay they "might do a univariate sweep afterwards to be locally optimal". A 6 × 4 grid of learning rate and batch plus four one-at-a-time sweeps of five values each costs $24 + 20 = 44$ runs; a full joint grid over all six would cost $6 \times 4 \times 5^4 = 15{,}000$. The price of the cheap version is in the word "locally": a coordinate-wise search can miss an interaction, such as AdamW's coupling of learning rate and weight decay.
+They do, and "in general, yes, you are worried about hyperparameter interactions". But the number of combinations grows exponentially with the number of hyperparameters, so nobody can grid the whole space. What labs do is grid "the stuff that's most concerning and most sensitive", learning rate first ("the most important thing to tune"), together with batch size. Then for things like weight decay they "might do a univariate sweep afterwards to be locally optimal". A 5 × 3 grid of learning rate and batch plus three one-at-a-time sweeps of four values each costs $15 + 12 = 27$ runs; a full joint grid over all five would cost $5 \times 3 \times 4^3 = 960$. The price of the cheap version is in the word "locally": a coordinate-wise search can miss an interaction, such as AdamW's coupling of learning rate and weight decay.
 
 ::video 56:34-57:19 | why labs do not grid everything ("they grow exponentially"), and what they do for weight decay instead
 ::kp grid-sensitive-sweep-the-rest
@@ -472,9 +473,10 @@ A note on bookkeeping used throughout: if each of the $n_l$ coordinates of a lay
 
 ### A2 is feature learning
 
+::predict a2-is-feature-learning
+
 Why insist on A2? The professor adds an aside "in case some of you are theorists". A2 is "what people call feature learning": a gradient step should change the network's internal representations by a significant amount, the same at every width. The contrast is the **neural tangent kernel** (NTK) regime, where "the change in activations actually vanish[es] as a function of the network width". A very wide network in that regime barely moves its hidden features and fits the data with essentially the random features it started with, like a kernel method. Its loss can still fall, through many tiny weight changes, but it learns no new features. muP rules this out by demanding a $\Theta(1)$ change at every width.
 
-::predict a2-is-feature-learning
 ::video 1:01:23-1:02:05 | A2 named as "feature learning", and the NTK contrast where activation changes vanish with width
 ::kp a2-is-feature-learning
 
@@ -547,9 +549,9 @@ Two differences matter in practice. The init differs only when fan-out is smalle
 
 ::predict mup-lr-derivation-and-recap
 
-Widen every hidden layer from 1024 to 4096 and train with Adam: muP multiplies the hidden-layer learning rate by $1024/4096 = 1/4$, while the standard parametrization leaves it unchanged. With plain SGD and square layers, muP leaves it unchanged too, since $n_l/n_{l-1} = 1$ before and after.
+Widen every hidden layer from 1024 to 4096 and train with Adam: muP multiplies the hidden-layer learning rate by $1024/4096 = 1/4$, while the standard parametrization leaves it unchanged.
 
-::widget fixture:mup-vs-sp-table | slide the width multiplier with both widths tied: the SP learning rate and the SGD-muP rate stay flat, the Adam-muP rate falls as 1/m, and the init std departs from SP's only once you make the fan-out smaller than the fan-in
+::widget fixture:mup-vs-sp-table | slide the width multiplier with both widths tied: the SP learning rate stays flat, the Adam-muP rate falls as 1/m, and the init std departs from SP's only once you make the fan-out smaller than the fan-in
 ::note slip 1:10:49 | Aloud the muP init becomes "1 over square root nl minus 1 times a component that is 1 over the square root fanout over fanin", and different "if this ratio is not smaller than 1". The slide's factor is min(1, √(fan-out/fan-in)), not its inverse, and it changes the init only when that ratio is below 1. His next words, "closer to the square root fanout over fanin", agree with the slide.
 
 What is the high-level point? Beyond the rules themselves, the method: take a scaling limit of the network, assert invariants, add assumptions, and read off the constraints they put on the hyperparameters. It is "a general principle for coming up with different kinds of algorithms or hyperparameter scalings", and quite unlike the usual way of working in CS or ML.

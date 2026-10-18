@@ -59,7 +59,7 @@ MODELS["fixture:lecture_10--intensity"] = {
   ],
 };
 WIDGETS["fixture:lecture_10--intensity"] = (root) => {
-  const s = { logB: 2, logT: 0, logS: 10, Fx: 1 };
+  const s = { logB: 2, logT: 0, logS: 10, Fx: 1, stage: "decode" };
   const pic = el("div"), read = el("div", { class: "readout" });
   const fB = v => `${2 ** v}`;
   let sT;
@@ -86,9 +86,9 @@ WIDGETS["fixture:lecture_10--intensity"] = (root) => {
       attention: ST / (S + T) = <span class="big">${fmt(m.attn, 4)}</span> ${tag(m.attn > ACC ? "compute-bound" : "memory-bound", m.attn > ACC)} · B does not appear: each sequence reads its own K and V<br>
       <span class="muted small">provenance: fixture:lecture_10--intensity · lecture_10.py:L187-L211 (MLP FLOPs and bytes, limit B·T), L226-L248 (attention ST/(S+T), prefill S/2, generation &lt; 1), L250-L253 (no B in attention: own KV cache), L147-L154 (H100 989e12 FLOP/s, 3.35e12 B/s, 295), L317-L327 (D, F). Attention uses D for all heads, as L226 does; the regime tag uses the exact intensity, not the limit.</span>`;
   };
-  const ctlT = slider("new tokens per sequence T", 0, 17, s.logT, 1, v => { s.logT = Math.min(v, s.logS); setRange(ctlT, s.logT, fB); draw(); }, fB);
-  const ctlS = slider("context S (cached tokens)", 7, 17, s.logS, 1, v => { s.logS = v; if (s.logT > v) { s.logT = v; setRange(ctlT, v, fB); } draw(); }, fB);
-  sT = buttons("stage", [["decode", "generation: T = 1"], ["prefill", "prefill: T = S"]], "decode", v => { s.logT = v === "decode" ? 0 : s.logS; setRange(ctlT, s.logT, fB); draw(); });
+  const ctlT = slider("new tokens per sequence T", 0, 17, s.logT, 1, v => { s.logT = Math.min(v, s.logS); setRange(ctlT, s.logT, fB); s.stage = s.logT === 0 ? "decode" : s.logT === s.logS ? "prefill" : null; sT.set(s.stage); draw(); }, fB);
+  const ctlS = slider("context S (cached tokens)", 7, 17, s.logS, 1, v => { s.logS = v; if (s.logT > v || s.stage === "prefill") { s.logT = v; setRange(ctlT, v, fB); } if (s.stage !== "decode") { s.stage = s.logT === v ? "prefill" : null; sT.set(s.stage); } draw(); }, fB);
+  sT = buttons("stage", [["decode", "generation: T = 1"], ["prefill", "prefill: T = S"]], "decode", v => { s.stage = v; s.logT = v === "decode" ? 0 : s.logS; setRange(ctlT, s.logT, fB); draw(); });
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("concurrent sequences B", 0, 10, s.logB, 1, v => { s.logB = v; draw(); }, fB),
     ctlS, ctlT, sT.node,
@@ -181,7 +181,7 @@ WIDGETS["fixture:lecture_10--kv-ledger"] = (root) => {
     slider("layers L", 1, 128, s.L, 1, v => { s.L = v; if (s.Lg > v) { s.Lg = v; setRange(ctlLg, v); } draw(); }),
     slider("context S", 9, 17, s.logS, 1, v => { s.logS = v; draw(); }, fS),
     slider("batch B (sequences)", 1, 512, s.B, 1, v => { s.B = v; draw(); }),
-    slider("sliding window W", 8, 15, 8, 1, v => { s.logW = v === 8 ? 0 : v; draw(); }, fW),
+    slider("sliding window W", 8, 15, 8, 1, v => { const was = s.logW; s.logW = v === 8 ? 0 : v; if (!was && s.logW && s.Lg === s.L) { s.Lg = 0; setRange(ctlLg, 0); } draw(); }, fW),
     ctlLg,
     slider("weights (GB)", 1, 300, s.wGB, 0.01, v => { s.wGB = v; draw(); }, v => fmt(v, 2)),
     slider("GPU memory (GB)", 16, 192, s.mem, 1, v => { s.mem = v; draw(); }),
@@ -225,7 +225,7 @@ WIDGETS["fixture:lecture_10--batch-sweep"] = (root) => {
   const s = { logB: 3, logS: 10, K: 40, pB: LL13_PARAMS / 1e9, wbytes: 2, logG: 0 };
   const pic = el("div"), read = el("div", { class: "readout" });
   const draw = () => {
-    const base = { params: s.pB * 1e9 - 2 * LL13.D * (LL13.K - s.K) * LL13.H * LL13.L, wbytes: s.wbytes, kvTok: kvPerToken({ ...LL13, K: s.K }), S: 2 ** s.logS, gpus: 2 ** s.logG };
+    const base = { params: Math.max(0, s.pB * 1e9 - 2 * LL13.D * (LL13.K - s.K) * LL13.H * LL13.L), wbytes: s.wbytes, kvTok: kvPerToken({ ...LL13, K: s.K }), S: 2 ** s.logS, gpus: 2 ** s.logG };
     const B = 2 ** s.logB, m = batchSweep({ ...base, B });
     const Wd = 640, px = 60, pw = 520, X = lb => px + pw * lb / 10;
     const pts = []; for (let lb = 0; lb <= 10.001; lb += 0.125) pts.push([lb, batchSweep({ ...base, B: 2 ** lb })]);
@@ -415,8 +415,8 @@ WIDGETS["fixture:lecture_10--kv-recompute"] = (root) => {
 };
 
 // ============================================================ 6. PagedAttention: slab vs blocks ==
-// Status quo (L582-L587): reserve a KV section for prompt + response up to a max length; the unused tail is internal
-// fragmentation. PagedAttention (L589-L590): a sequence's cache lives in fixed-size non-contiguous blocks, allocated as tokens
+// Status quo (L579-L585): reserve a KV section for prompt + response up to a max length; the unused tail is internal
+// fragmentation. PagedAttention (L587-L588): a sequence's cache lives in fixed-size non-contiguous blocks, allocated as tokens
 // arrive, so at most one partly filled block per sequence. Sharing (L595-L599): samples of one prompt map to the same physical
 // prompt blocks; copy-on-write at the block level. 16-token blocks are the KP prompts' (vLLM's default); 819,200 B per token is
 // Llama 2 13B's (L297, KP kv-cache-size). Copy-on-write detail (author, vLLM paper §4.4): the partly filled last prompt block is
@@ -456,7 +456,7 @@ WIDGETS["fixture:lecture_10--paged-blocks"] = (root) => {
   const draw = () => {
     const m = pagedBlocks(s), Wd = 640, x0 = 120, span = 500;
     // (a) the slab: one reserved section of M slots per request
-    let b = text(10, 16, `pre-allocated slab: ${s.M} slots reserved per request (L586)`, { fill: C.muted, size: 11 });
+    let b = text(10, 16, `pre-allocated slab: ${s.M} slots reserved per request (L581)`, { fill: C.muted, size: 11 });
     const u = Math.min(m.used, s.M) / s.M;
     b += text(10, 36, "slab", { size: 12, weight: "600" }) + rect(x0, 24, span, 16, C.rule) + rect(x0, 24, span * u, 16, C.a);
     b += text(x0 + span, 54, m.slabFits ? `${m.used} used (blue) · ${m.slabWaste} reserved but unused (grey)` : `${m.used} tokens do not fit the ${s.M}-slot slab`, { size: 11, anchor: "end", fill: m.slabFits ? C.ink : C.b });
@@ -483,7 +483,7 @@ WIDGETS["fixture:lecture_10--paged-blocks"] = (root) => {
       paged: ⌈${m.used} / ${s.b}⌉ = ${m.perSeqBlocks} blocks = ${m.perSeqBlocks * s.b} slots → <span class="big">${m.pagedWaste}</span> slots wasted per sample (always &lt; ${s.b})<br>
       prompt KV: ${shareTxt} = ${fmt(m.promptMB, 1)} MB at 819,200 B per token · physical blocks in use: <b>${m.phys}</b>${m.cow ? ` · copy-on-write: once the samples write into the partly filled block ${Math.ceil(s.P / s.b) - 1}, ${m.cow} copies are made` : ""}<br>
       ${tag(s.share && s.n > 1 ? "prefix shared: one physical copy of the prompt" : "no sharing: every sample stores its own prompt", s.share && s.n > 1)}<br>
-      <span class="muted small">provenance: fixture:lecture_10--paged-blocks · lecture_10.py:L582-L587 (reserve up to a max length; internal and external fragmentation), L589-L590 (non-contiguous blocks), L592-L599 (shared system prompt, several samples per prompt, copy-on-write at the block level), L297 with llama2_13b_config (819,200 B per token). Block ids are numbered in allocation order here; vLLM's allocator picks any free block. External fragmentation (gaps between slabs) is not drawn.</span>`;
+      <span class="muted small">provenance: fixture:lecture_10--paged-blocks · lecture_10.py:L579-L585 (reserve up to a max length; internal and external fragmentation), L587-L588 (non-contiguous blocks), L592-L599 (shared system prompt, several samples per prompt, copy-on-write at the block level), L297 with llama2_13b_config (819,200 B per token). Block ids are numbered in allocation order here; vLLM's allocator picks any free block. External fragmentation (gaps between slabs) is not drawn.</span>`;
   };
   const shB = buttons("prefix sharing", [[1, "on"], [0, "off"]], s.share, v => { s.share = v; draw(); });
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },

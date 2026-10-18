@@ -9,10 +9,10 @@
   },
   "generated_by": "discover_paper.py",
   "inputs": {
-    "/Users/colin/Desktop/4blue2brown/data/explainer_pipeline/papers/rope.json": "e25a8de3ccf895f5b1981cc3839b5ccd2559ed0dda1c5c8c3361e916e3666c9e",
-    "/Users/colin/Desktop/4blue2brown/data/formula_explainer/formulas/rope/relative.json": "da7747f8642e7ecd3a1f952fbcbb861561b633a338aabbac1743cff5bf92ce1f",
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/rope/lecture_03.txt": "66daf54ffed30dda2b78725553cbf28d8dff1886c5b5e17ffd89915e5b722b2a",
-    "/Users/colin/Desktop/4blue2brown/external/RoFormer/README.md": "60db852bc4032879791090c20f6bca31759fc6f60b434beb543d3242804f7133"
+    "4blue2brown/data/explainer_pipeline/papers/rope.json": "e25a8de3ccf895f5b1981cc3839b5ccd2559ed0dda1c5c8c3361e916e3666c9e",
+    "4blue2brown/data/formula_explainer/formulas/rope/relative.json": "da7747f8642e7ecd3a1f952fbcbb861561b633a338aabbac1743cff5bf92ce1f",
+    "cs336_enrich/atlas/lectures/lecture_03/lecture_03.txt": "66daf54ffed30dda2b78725553cbf28d8dff1886c5b5e17ffd89915e5b722b2a",
+    "4blue2brown/external/RoFormer/README.md": "60db852bc4032879791090c20f6bca31759fc6f60b434beb543d3242804f7133"
   },
   "verification_note": "Equation numbers, section numbers and pages 2-9 were verified against the page images in 4blue2brown/tmp/pdfs/rope; Fig. 3, Table 2 and Table 5 are on pages not in the image set and carry page=null.",
   "sections": [

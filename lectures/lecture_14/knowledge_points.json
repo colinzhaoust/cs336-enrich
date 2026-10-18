@@ -101,7 +101,7 @@
       "prerequisites": [],
       "external_prerequisites": [
         {
-          "kp": "lecture_13:common-crawl-mechanics",
+          "kp": "lecture_13:warc-wet-extraction-loss",
           "basis": "author-inference",
           "note": "Common Crawl's WARC/WET distinction (raw HTML vs pre-extracted text) is the context in which 'accuracy matters' (L48) and the dclm-wet.png figure make sense."
         }
@@ -765,7 +765,7 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L118-L124",
             "role": "claim",
-            "quote": "Philosophy: really high quality data (textbooks) to train a small model (1.5B) ... determine its educational value for a student whose goal is to learn basic coding concepts ... Use GPT-4 with this prompt to classify 100K subset of R to get positive examples ... Train random forest classifier on T using output embedding from pretrained codegen model"
+            "quote": "determine its educational value for a student whose goal is to learn basic coding concepts ... Use GPT-4 with this prompt to classify 100K subset of R to get positive examples ... Train random forest classifier on T using output embedding from pretrained codegen model"
           },
           {
             "source": "lecture_14",
@@ -1135,7 +1135,7 @@
       "misconceptions": [
         {
           "belief": "There is a best quality threshold for a dataset; find it once at small scale and reuse it.",
-          "why_wrong": "'No single optimal threshold for filtering' (L135): the small-scale optimum is a strict threshold (L137) and the large-run optimum is a looser one (L136), because a long run exhausts the strictly filtered set (inference; see L353 for the epoching mechanism)."
+          "why_wrong": "'No single optimal threshold for filtering' (L135): the small-scale optimum is a strict threshold (L137) and the large-run optimum is a looser one (L136), because a long run exhausts the strictly filtered set (said aloud at 19:02-20:14: high-quality data wins only until it starts epoching)."
         },
         {
           "belief": "More filtering is always better as long as enough tokens remain for one epoch.",
@@ -1238,7 +1238,7 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L163-L170",
             "role": "claim",
-            "quote": "Design space: ... 1. What is an item (sentence, paragraph, document)? ... 2. How to match (exact match, existence of common subitem, fraction of common subitems)? ... 3. What action to take (remove all, remove all but one)? ... Deduplication is fundamentally about comparing items to other items ... Need linear time algorithms to scale"
+            "quote": "Design space: ... 1. What is an item (sentence, paragraph, document)? ... 2. How to match (exact match, existence of common subitem, fraction of common subitems)? ... 3. What action to take (remove all, remove all but one)? ... Need linear time algorithms to scale"
           },
           {
             "source": "lecture_14",
@@ -1256,7 +1256,7 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L206-L214",
             "role": "claim",
-            "quote": "Pro: simple, clear semantics, high precision ... Con: does not deduplicate near duplicates ... This code is written in a MapReduce way, can easily parallelize and scale ... Item: 3-sentence spans ... Warning: when a 3-sentence span is removed from the middle of a document, the resulting document might not be coherent"
+            "quote": "Con: does not deduplicate near duplicates ... This code is written in a MapReduce way, can easily parallelize and scale ... Item: 3-sentence spans ... Warning: when a 3-sentence span is removed from the middle of a document, the resulting document might not be coherent"
           },
           {
             "source": "dedup_lee_2021",
@@ -1316,9 +1316,9 @@
       "prerequisites": [],
       "external_prerequisites": [
         {
-          "kp": "lecture_13:rule-based-heuristic-filters",
+          "kp": "lecture_13:fuzzy-deduplication-methods",
           "basis": "author-inference",
-          "note": "C4's cleaning pipeline (lecture 13) is where the 3-sentence-span exact dedup (L211-L213) belongs."
+          "note": "Lecture 13 surveys which pipelines dedup and with what tool; this KP and the next three give the mechanism."
         }
       ],
       "misconceptions": [
@@ -1614,7 +1614,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Sets A = {a, b, c, d, e, f} and B = {a, b, c, g, h, i} (Jaccard = 3/9). Using one seeded MinHash, what is the probability their minhashes are equal?",
+          "q": "Sets A = {a, b, c, d, e, f} and B = {a, b, c, g, h, i}. Using one seeded MinHash, what is the probability their minhashes are equal?",
           "format": "choice",
           "choices": [
             "1/2: half of A's six items also appear in B.",
@@ -1702,13 +1702,13 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L271-L279",
             "role": "claim",
-            "quote": "Suppose we hash examples with just one MinHash function ... P[A and B collide] = Jaccard(A, B) ... On average, more similar items will collide, but very stochastic... ... Goal: have A and B collide if Jaccard(A, B) > threshold ... Solution: use n hash functions ... Break up into b bands of r hash functions each (n = b * r)"
+            "quote": "Suppose we hash examples with just one MinHash function ... P[A and B collide] = Jaccard(A, B) ... Goal: have A and B collide if Jaccard(A, B) > threshold ... Solution: use n hash functions ... Break up into b bands of r hash functions each (n = b * r)"
           },
           {
             "source": "lecture_14",
             "ref": "lecture_14.py:L281-L288",
             "role": "claim",
-            "quote": "n = 12      # Number of hash functions ... b = 3       # Number of bands ... r = 4       # Number of hash functions per band ... h1 h2 h3 h4  |  h5 h6 h7 h8  |  h9 h10 h11 h12 ... Key: A and B collide if for *some* band, *all* its hash functions return same value ... the and-or structure of the bands sharpens the threshold"
+            "quote": "n = 12      # Number of hash functions ... b = 3       # Number of bands ... r = 4       # Number of hash functions per band ... Key: A and B collide if for *some* band, *all* its hash functions return same value ... the and-or structure of the bands sharpens the threshold"
           },
           {
             "source": "lecture_14",
@@ -2124,13 +2124,13 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L357-L365",
             "role": "computation",
-            "quote": "\"low\": trillion(10),  # 10T tokens (abundant) ... \"high\": billion(10),  # 10B tokens (scarce) ... p = {\"low\": 0.5, \"high\": 0.5}  # Naive data mixture ... train_tokens = trillion(1) ... high_num_epochs = (p[\"high\"] * train_tokens) / source_token_counts[\"high\"] ... 50x epochs on high quality data...can lead to overfitting!"
+            "quote": "\"low\": trillion(10) ... \"high\": billion(10) ... p = {\"low\": 0.5, \"high\": 0.5}  # Naive data mixture ... train_tokens = trillion(1) ... high_num_epochs = (p[\"high\"] * train_tokens) / source_token_counts[\"high\"] ... 50x epochs on high quality data...can lead to overfitting!"
           },
           {
             "source": "lecture_14",
             "ref": "lecture_14.py:L368-L371",
             "role": "claim",
-            "quote": "Setting: balancing different languages for multilingual models ... Previous work: between uniform and proportional mixing (p(s) ∝ num_tokens(s)^α for α in [0, 1]) ... Idea: sample sources uniformly but with a hard **cap** C on number of epochs for any source ... Specifically, p(s) * num_training_tokens ≤ C for all sources s"
+            "quote": "Setting: balancing different languages for multilingual models ... Idea: sample sources uniformly but with a hard **cap** C on number of epochs for any source ... Specifically, p(s) * num_training_tokens ≤ C for all sources s"
           },
           {
             "source": "unimax_2023",
@@ -2205,6 +2205,11 @@
           "kp": "lecture_13:multi-source-mixtures",
           "basis": "author-inference",
           "note": "The Pile's 22 hand-weighted subsets (imported at L7, shown at L337-L338) are the 'vibes' baseline in practice."
+        },
+        {
+          "kp": "lecture_09:data-repetition-effective-data",
+          "basis": "author-inference",
+          "note": "Why 50 epochs of a small source is a trap: repeated tokens count for less than unique ones."
         }
       ],
       "misconceptions": [
@@ -2231,7 +2236,7 @@
           "format": "number",
           "answer": "400",
           "tolerance": 0.05,
-          "why": "The 500M-token language: uniform weight ignores finiteness. Epochs = 0.2 × 1e12 / 5e8 = 400. UniMax requires p(s) × 1e12 ≤ 4 × 5e8 = 2e9, so p(s) ≤ 0.002 for that language, with the freed mass redistributed to languages under their cap. Uniform is p ∝ 1 (L347); the epoch formula is L363-L364; UniMax's cap is p(s) × num_training_tokens ≤ C (L371) with C in epochs of the source (L370).",
+          "why": "Epochs = 0.2 × 1e12 / 5e8 = 400: uniform weight ignores finiteness. With a UniMax cap of C epochs (say C = 4, an illustrative value; L370-L371 give none), p(s) ≤ C × 5e8 / 1e12 = 0.002 for that language, with the freed mass redistributed to languages under their cap. Uniform is p ∝ 1 (L347); the epoch formula is L363-L364; UniMax's cap is p(s) × num_training_tokens ≤ C (L371) with C in epochs of the source (L370).",
           "varies": "domain: languages instead of quality tiers (UniMax's own setting), with five sources instead of two",
           "invariant": "epochs = p(s) × budget / source size; the cap bounds that product",
           "transfer_distance": "near"
@@ -2290,7 +2295,7 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L375-L381",
             "role": "claim",
-            "quote": "Define distribution over mixtures `p` (e.g., Dirichlet) ... Define regression method (e.g., linear, gradient boosted trees) ... Define target based on downstream evals (careful not to overfit!) ... Discrepancy between small and large scale (tradeoff cost and accuracy) ... Hope 1: regression model is accurate at minimizer ... Hope 2: optimal data mixtures transfer from small to large scale"
+            "quote": "Define distribution over mixtures `p` (e.g., Dirichlet) ... Define target based on downstream evals (careful not to overfit!) ... Hope 1: regression model is accurate at minimizer ... Hope 2: optimal data mixtures transfer from small to large scale"
           },
           {
             "source": "lecture_14",
@@ -2302,7 +2307,7 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L393-L401",
             "role": "computation",
-            "quote": "General idea: make small scale look like large scale (general theme of this course) ... Instantiation: downsample all sources proportionally ... ratio = small_run_tokens / large_run_tokens ... downsampled_source_token_counts = {s: count * ratio for s, count in source_token_counts.items()} ... In this downsampled mixture, models that epoch too much won't look good. ... So the optimum will be more balanced."
+            "quote": "Instantiation: downsample all sources proportionally ... ratio = small_run_tokens / large_run_tokens ... In this downsampled mixture, models that epoch too much won't look good. ... So the optimum will be more balanced."
           },
           {
             "source": "lecture_14",
@@ -2413,8 +2418,8 @@
           "format": "number",
           "answer": "0.005",
           "tolerance": 0.02,
-          "why": "ratio = 2e10 / 4e12 = 0.005; downsampled sizes 40B, 2B and 100M. A pilot with 0.5 on the smallest source draws 1e10 tokens from a 100M-token pool: 100 epochs, the same as production would make, so its loss degrades and the regression learns to put less weight there; the fitted optimum becomes more balanced. Downsample all sources by small_run_tokens / large_run_tokens (L394, L397-L398) so that epochs per source match across scales; 'models that epoch too much won't look good' (L399).",
-          "varies": "functional: three sources and a different budget ratio; the pilot and production sizes are both new",
+          "why": "ratio = 2e10 / 4e12 = 0.005. Downsample all sources by small_run_tokens / large_run_tokens (L394, L397-L398) so that each source is epoched as many times in the pilot as in production; 'models that epoch too much won't look good' (L399).",
+          "varies": "functional: a different pilot/production ratio; the pilot and production sizes are both new",
           "invariant": "proportional downsampling preserves epochs-per-source between the small and large run",
           "transfer_distance": "near"
         },
@@ -2480,9 +2485,15 @@
           },
           {
             "source": "lecture_14",
-            "ref": "lecture_14.py:L416-L422",
+            "ref": "lecture_14.py:L416-L417",
             "role": "claim",
-            "quote": "1.2M examples using QwQ-32B as a teacher ... Questions come from 27 human and synthetic sources (e.g., StackExchange, NuminaMath, Chemistry) ... Sampling multiple (16) responses per prompt is helpful ... Better models aren't necessarily better teachers: QwQ-32B is a better teacher than DeepSeek-R1 ... Answer filtering wasn't helpful ... Smaller high quality sources (e.g., OpenMath-2-Math) is better than large diverse sources"
+            "quote": "1.2M examples using QwQ-32B as a teacher ... Questions come from 27 human and synthetic sources (e.g., StackExchange, NuminaMath, Chemistry)"
+          },
+          {
+            "source": "lecture_14",
+            "ref": "lecture_14.py:L419-L422",
+            "role": "claim",
+            "quote": "Sampling multiple (16) responses per prompt is helpful ... Better models aren't necessarily better teachers: QwQ-32B is a better teacher than DeepSeek-R1 ... Answer filtering wasn't helpful ... Smaller high quality sources (e.g., OpenMath-2-Math) is better than large diverse sources"
           },
           {
             "source": "lecture_14",
@@ -2654,7 +2665,7 @@
             "source": "lecture_14",
             "ref": "lecture_14.py:L431-L438",
             "role": "claim",
-            "quote": "SWE tasks have heavy dependencies (unlike math or coding contests) ... Setting up thousands of Docker images is an infrastructural nightmare ... Observation: strong models can solve many tasks without execution feedback ... Key: strong models have internal \"world model\" of code semantics ... SWE-Zero: 300K agent trajectories that don't require repository-specific execution ... 150K GitHub PRs ... OpenHands scaffold, remove future git commits to prevent \"git hacking\" by agent"
+            "quote": "strong models can solve many tasks without execution feedback ... strong models have internal \"world model\" of code semantics ... SWE-Zero: 300K agent trajectories that don't require repository-specific execution ... 150K GitHub PRs ... remove future git commits to prevent \"git hacking\" by agent"
           },
           {
             "source": "lecture_14",
@@ -2756,7 +2767,7 @@
       "misconceptions": [
         {
           "belief": "Agent trajectories are only useful as training data if each one was verified by running the tests in the repository.",
-          "why_wrong": "SWE-Zero's premise is that strong models solve many tasks without execution feedback because of an internal 'world model' of code (L433, L435); it produced 300K non-executing trajectories against SWE-Hero's 13K executing ones (L436, L441), with execution used as a filter where possible rather than a requirement (L440)."
+          "why_wrong": "SWE-Zero's premise is that strong models solve many tasks without execution feedback because of an internal 'world model' of code (L433, L435); it produced 300K non-executing trajectories against SWE-Hero's 13K executing ones (L436, L441), with a filter that drops trajectories where the teacher tried to execute anyway (L440), enforcing the no-execution protocol."
         },
         {
           "belief": "Giving the agent the real repository with its full git history is the most faithful setup.",

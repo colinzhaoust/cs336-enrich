@@ -822,22 +822,22 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "Zero-shot CLIP beats a ResNet-50 trained on 1.2M labelled ImageNet images. What does the lecture conclude about CLIP's image features for fine-grained tasks such as OCR?",
+          "q": "A team keeps a frozen CLIP ViT-L/14@336px encoder but replaces its 336 resize-and-crop with AnyRes tiling of 1344x1344 inputs. Of the two reasons the lecture gives for CLIP's weak fine detail, which does this change remove, and which remains?",
           "format": "choice",
           "choices": [
-            "they need ImageNet labels to be fine-tuned before they work",
-            "they are strictly better, as the zero-shot ImageNet win shows it",
-            "they stay coarse: design and crop were tuned for classification"
+            "neither: the frozen encoder needs ImageNet labels to use extra pixels",
+            "both: once every pixel is kept, its features become fine-grained too",
+            "the crop's pixel loss; the classification-tuned, caption-level features stay"
           ],
-          "answer": "they stay coarse: design and crop were tuned for classification",
-          "why": "L93-L94: CLIP's encoding captures semantics given by noisy text, and its design decisions were chosen for image classification (not very fine-grained); L159-L160: the 336x336 resize and crop loses information OCR needs. It learned from 400M web pairs, not labels.",
-          "varies": "starts from the headline zero-shot result instead of a medical fine-detail task",
-          "invariant": "CLIP learns caption-level semantics with classification-tuned, low-resolution inputs, so fine detail is lost",
+          "answer": "the crop's pixel loss; the classification-tuned, caption-level features stay",
+          "why": "Tiling keeps the pixels the 336 crop throws away (L159-L163), so the crop's information loss is gone. Each tile still goes through the same encoder, whose features carry the semantics of noisy captions and whose design was tuned for classification, 'not very fine-grained' (L93-L94): AnyRes changes what the encoder sees, not what it was trained to keep. It learned from 400M web pairs, not labels.",
+          "varies": "the preprocessing changes (AnyRes tiles instead of the 336 crop) and the question asks which of the two limits survives, instead of which probe fails",
+          "invariant": "CLIP's fine-detail limit has two parts: the crop discards pixels, and the caption-level, classification-tuned objective never needed fine detail",
           "transfer_distance": "near",
           "targets_misconception": "Because CLIP beats a supervised ImageNet model zero-shot, its features are a strictly better general-purpose image representation.",
           "distractor_from": [
-            "'they are strictly better, as the zero-shot ImageNet win shows it' <- misconception: 'Because CLIP beats a supervised ImageNet model zero-shot, its features are a strictly better general-purpose image representation.'",
-            "'they need ImageNet labels to be fine-tuned before they work' <- misconception: 'CLIP needed labelled data like ImageNet, just more of it.'"
+            "'both: once every pixel is kept, its features become fine-grained too' <- misconception: 'Because CLIP beats a supervised ImageNet model zero-shot, its features are a strictly better general-purpose image representation.'",
+            "'neither: the frozen encoder needs ImageNet labels to use extra pixels' <- misconception: 'CLIP needed labelled data like ImageNet, just more of it.'"
           ]
         },
         "retrieval": [
@@ -1284,7 +1284,7 @@
           "type": "interactive",
           "action": "compare",
           "ref": "fixture:lecture_17--image-tokens",
-          "notice": "A per-patch projector passes the encoder's patch count straight to the LM: a 448 crop with 14-px patches gives 1024 tokens, and tiling multiplies the count while W keeps its shape. In the comparison bars, only the Qwen-VL adaptor row stays at 256 whatever the input size."
+          "notice": "A per-patch projector passes the encoder's patch count straight to the LM: a 448 crop with 14-px patches gives 1024 tokens, and tiling multiplies the count while W keeps its shape. In the comparison bars, drag width or height: the AnyRes and native rows grow with the input; the Qwen-VL adaptor row stays at 256 because its cross-attention fixes the count, while the crop and VQ rows stay flat only because their preprocessing first brings every image to one fixed size."
         }
       ]
     },
@@ -1719,7 +1719,7 @@
             "source": "lecture_17",
             "ref": "lecture_17.py:L159-L163",
             "role": "claim",
-            "quote": "Preserving high resolution is important (e.g., for OCR) ... CLIP resizes and crops to 336x336, which loses information ... Solution: AnyRes, introduced in LLaVA 1.5 ... Break up image into a x b pieces (matching resolution of vision encoder), encode, concatenate ... If too many tokens (original image is too high resolution), then use bilinear interpolation"
+            "quote": "Preserving high resolution is important (e.g., for OCR) ... CLIP resizes and crops to 336x336, which loses information ... Solution: AnyRes ... Break up image into a x b pieces (matching resolution of vision encoder), encode, concatenate ... If too many tokens ... then use bilinear interpolation"
           },
           {
             "source": "lecture_17",

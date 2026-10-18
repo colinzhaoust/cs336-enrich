@@ -11,7 +11,7 @@ export const WIDGETS = {};
 const H100_BF16 = 1979e12 / 2;   // lecture_02.py:L74, L815 (dense = half the sparse datasheet figure)
 const H100_FP32 = 67.5e12;       // lecture_02.py:L813
 const H100_BW = 3.35e12;         // lecture_02.py:L351 (facts.py h100_bytes_per_sec)
-const DTYPES = { bf16: { bytes: 2, peak: H100_BF16 }, fp32: { bytes: 4, peak: H100_FP32 } }; // L141-L151 sizes
+const DTYPES = { bf16: { bytes: 2, peak: H100_BF16 }, fp32: { bytes: 4, peak: H100_FP32 } }; // L128 (fp32 4 B), L139 (fp16 2 B), L149 (bf16 = fp16 memory)
 const GELU_FLOPS = 20;           // lecture_02.py:L406 ("flops = 20 * n")
 
 const NS = "http://www.w3.org/2000/svg";
@@ -104,8 +104,9 @@ MODELS["fixture:lecture_02--checkpoint-tradeoff"] = {
   fn: checkpointCost,
   cases: [
     { args: { L: 64, k: 8 }, pick: "peak", expect: 16, from: "lecture_02:activation-checkpointing:predict" },
-    { args: { L: 32, mode: "none" }, pick: "growth_x2", expect: 4, tol: 0.1, from: "lecture_02:activation-checkpointing:check" },
-    { args: { L: 32, mode: "none" }, pick: "recompute", expect: 528 },   // check "why": 528 at L = 32
+    { args: { L: 64, k: 4 }, pick: "peak", expect: 20, from: "lecture_02:activation-checkpointing:check" },
+    { args: { L: 32, mode: "none" }, pick: "growth_x2", expect: 4, tol: 0.1 },  // transfer: store nothing, O(L²) compute
+    { args: { L: 32, mode: "none" }, pick: "recompute", expect: 528 },   // 528 at L = 32
     { args: { L: 64, mode: "none" }, pick: "recompute", expect: 2080 },  // and 2080 at L = 64
     { args: { L: 64, k: 1 }, pick: "peak", expect: 64 },                 // store all: O(L), no recompute
     { args: { L: 64, k: 64 }, pick: "peak", expect: 65 },                // one segment = no saving

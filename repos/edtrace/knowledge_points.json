@@ -399,7 +399,7 @@
       "id": "directive-grammar",
       "label": "How # @inspect, @clear are parsed from a line",
       "kind": "procedure",
-      "statement": "parse_directives splits the text after the first '#' on whitespace: a token starting with '@' opens a directive and following tokens become its args, so `# @inspect x y` and `# @inspect x @inspect y` both inspect x and y; @inspect args may be dotted (w.grad) and are followed through getattr after the line runs; a name not in locals prints a warning; @clear sets the variable's env entry to None.",
+      "statement": "parse_directives splits the text between the first and second '#' on whitespace (a directive after a second '#' is ignored): a token starting with '@' opens a directive and following tokens become its args, so `# @inspect x y` and `# @inspect x @inspect y` both inspect x and y; @inspect args may be dotted (w.grad) and are followed through getattr after the line runs; a name not in locals prints a warning; @clear sets the variable's env entry to None.",
       "provenance": {
         "status": "implemented",
         "basis": "evidence",
@@ -473,7 +473,7 @@
           "answer": "a and b are serialized values (the words 'set both' are dropped because no directive is open yet); c is set to None, which the viewer treats as removing it.",
           "why": "Tokens before the first @ are ignored (L106-L108); @inspect collects 'a','b'; @clear writes None (L330-L332), and renderEnv deletes null entries (TraceViewer L380-L385).",
           "varies": "token layout: prose before the directive and two directives sharing one comment (modality: same semantics, different surface)",
-          "invariant": "tokenization after the first '#' with '@' tokens opening directives",
+          "invariant": "tokenization of the text between the first and second '#', with '@' tokens opening directives",
           "transfer_distance": "near"
         },
         "check": {
@@ -700,7 +700,7 @@
             "source": "edtrace_backend",
             "ref": "execute.py:L265-L278",
             "role": "computation",
-            "quote": "if len(stepovers) > 0 and stepovers[-1] == (item.path, item.line_number):\n                # Stop skipping since we're back to this line\n                stepovers.pop()\n            else:\n                # Just starting to skip starting here\n                stepovers.append((item.path, item.line_number)) ... for stepover in stepovers for item in stack[:-1]"
+            "quote": "if len(stepovers) > 0 and stepovers[-1] == (item.path, item.line_number): ... stepovers.pop() ... stepovers.append((item.path, item.line_number)) ... for stepover in stepovers for item in stack[:-1]"
           },
           {
             "source": "edtrace_backend",
@@ -1132,7 +1132,7 @@
             "source": "edtrace_frontend",
             "ref": "TraceViewer.jsx:L244-L260",
             "role": "computation",
-            "quote": "if (inSameFunction(trace.steps[stepIndex].stack, currentStep.stack) &&\n        (!stayOnSameLine || getLast(trace.steps[stepIndex].stack).line_number !== getLast(currentStep.stack).line_number)) {\n      return stepIndex;\n    }\n    if (isStrictAncestorOf(trace.steps[stepIndex].stack, currentStep.stack)) {\n      // Escaped"
+            "quote": "if (inSameFunction(trace.steps[stepIndex].stack, currentStep.stack) && ... return stepIndex; ... if (isStrictAncestorOf(trace.steps[stepIndex].stack, currentStep.stack)) {\n      // Escaped"
           },
           {
             "source": "edtrace_frontend",
@@ -1144,7 +1144,7 @@
             "source": "edtrace_frontend",
             "ref": "TraceViewer.jsx:L355-L385",
             "role": "computation",
-            "quote": "for (let stepIndex = currentStepIndex; stepIndex >= 0; stepIndex--) { ... if (inSameFunction(step.stack, currentStep.stack)) { ... envs.push(step.env); ... } else if (isStrictAncestorOf(step.stack, currentStep.stack)) { ... break; ... Object.assign(env, stepEnv); ... if (env[key] === null) {\n      delete env[key];"
+            "quote": "for (let stepIndex = currentStepIndex; stepIndex >= 0; stepIndex--) { ... if (inSameFunction(step.stack, currentStep.stack)) { ... envs.push(step.env); ... } else if (isStrictAncestorOf(step.stack, currentStep.stack)) { ... Object.assign(env, stepEnv); ... delete env[key];"
           },
           {
             "source": "edtrace_frontend",

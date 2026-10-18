@@ -234,6 +234,7 @@ MODELS["fixture:lecture_15--kl-tilt"] = {
     { args: { beta: 0.01, errScale: 0 }, pick: "gold", expect: 1.5, tol: 0.001 },       // ... the tilt converges on the best gold response
     { args: { mode: "bon", n: 1 }, pick: "p4", expect: 0.10, tol: 1e-6 },                // best-of-1 = π_ref
   ],
+  untied: "ppo-for-rlhf-brief and rlhf-overoptimization grade only directions (trend answers) or short/choice text; the five responses, π_ref and r* are schematic, not the lecture's numbers",
 };
 WIDGETS["fixture:lecture_15--kl-tilt"] = (root) => {
   const s = { mode: "tilt", lb: 0.5, ln: 1, errScale: 1 };
@@ -322,6 +323,7 @@ MODELS["fixture:lecture_15--refusal-frontier"] = {
     { args: { d: 2.5, t: 2.5 }, pick: "v", expect: 0.5 },                                  // threshold at the harmful mean: half get through
     { args: { d: 2.5, t: 0 }, pick: "fr", expect: 0.5 },                                   // threshold at the benign mean: half refused
   ],
+  untied: "safety-violation-vs-false-refusal prompts are short/choice answers with no graded number; d, t and the X/Y/Z rates are a schematic device",
 };
 WIDGETS["fixture:lecture_15--refusal-frontier"] = (root) => {
   const s = { d: 2.5, t: 1.6, text: "M1 3 12, M2 6 5, M3 8 9" };
@@ -414,18 +416,19 @@ MODELS["fixture:lecture_15--annotator-pool"] = {
     { args: { b: 0.9, a: 0.8, c: 0.5, N: 1 }, pick: "agreement", expect: 0.9068, tol: 0.002 }, // ... b = 0.9: 91% agreement ...
     { args: { b: 0.9, a: 0.8, c: 0.5, N: 1 }, pick: "single", expect: 0.53, tol: 0.002 },      // ... with 53% of labels right
   ],
+  untied: "annotator-distribution-effects and agreement-measures-variance-not-bias prompts are short/choice answers with no graded number; b, a, c and the bot accuracy are schematic values",
 };
 WIDGETS["fixture:lecture_15--annotator-pool"] = (root) => {
   const s = { b: 0.3, a: 0.8, c: 0.5, lN: 2, copy: false, botAcc: 0.75 };
   const pic = el("div"), read = el("div", { class: "readout" });
-  const Nof = lN => 2 * Math.round(Math.pow(10, lN) / 2) + 1;      // odd pool sizes 1 … ~5,001
+  const Nof = lN => 2 * Math.floor(Math.pow(10, lN) / 2 + 1e-9) + 1;  // odd pool sizes 1, 11, 101, 1,001 … 5,011
   const draw = () => {
     const N = Nof(s.lN), m = annotators({ ...s, N }), W = 660, H = 250;
     const L = 46, R = 400, T = 30, B = 200, X = lN => L + lN / 3.7 * (R - L), Y = v => B - (v - 0.3) / 0.7 * (B - T);
     let b = text(10, 16, "accuracy of the majority label (what the reward model is trained on) vs pool size", { fill: C.muted, size: 11 });
     b += line(L, B, R, B, C.rule) + line(L, T, L, B, C.rule);
     for (const v of [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]) b += line(L, Y(v), R, Y(v), C.rule, 'stroke-opacity="0.35"') + text(L - 4, Y(v) + 4, `${Math.round(v * 100)}%`, { fill: C.muted, size: 9, anchor: "end" });
-    for (const [lN, lab] of [[0, "1"], [1, "11"], [2, "101"], [3, "1,001"], [3.7, "5,001"]]) b += text(X(lN), B + 14, lab, { fill: C.muted, size: 10, anchor: "middle" });
+    for (const [lN, lab] of [[0, "1"], [1, "11"], [2, "101"], [3, "1,001"], [3.7, fmt(Nof(3.7), 0)]]) b += text(X(lN), B + 14, lab, { fill: C.muted, size: 10, anchor: "middle" });
     b += text((L + R) / 2, B + 28, "annotators per pair, N (log scale)", { fill: C.muted, size: 10, anchor: "middle" });
     const pts = []; for (let t = 0; t <= 3.7 + 1e-9; t += 0.05) pts.push([X(t), Y(Math.max(0.3, annotators({ ...s, N: Nof(t) }).majAcc))]);
     b += path(pts, C.a) + line(L, Y(Math.max(0.3, m.limit)), R, Y(Math.max(0.3, m.limit)), C.b, 'stroke-dasharray="5 3"') + text(R, Y(Math.max(0.3, m.limit)) - 5, `limit as N → ∞: ${pct(m.limit, 0)}`, { fill: C.b, size: 10, anchor: "end" });

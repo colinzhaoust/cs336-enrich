@@ -6,7 +6,7 @@
   "knowledge_points": [
     "feynrl:sync-epoch-loop",
     "feynrl:weight-sync-nccl-async",
-    "feynrl:staleness-budget-max-lag"
+    "feynrl_paper:feynrl-off-policy-sources"
   ],
   "video": "video.mp4",
   "probe": {

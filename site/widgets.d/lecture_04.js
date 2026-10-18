@@ -49,16 +49,17 @@ function logPlot({ x0, y0, w, h, xmin, xmax, series, mark, title, xlabel }) {
 //     full attention then runs on k selected tokens per query: n·k pairs (video 24:36). KV cache is unchanged (it must be
 //     stored for the indexer to choose from). R and k are controls; the prompts use R = 64 and k = 2,048 (prompt
 //     dsa-indexer-still-quadratic:check, sparse-attention-dsa:check), which are the KP author's, not the slide's.
-function attentionCost({ n, dk, dv, k, R }) {
+function attentionCost({ n, dk, dv, k, R, n2 = 2 * n, k2 = k }) {
   const pair = dk + dv;
   const at = m => ({ idx: m * m * pair / R, att: m * Math.min(k, m) * pair });
   const softFlops = n * n * pair, linFlops = 2 * n * dv * dk, kvNums = n * pair, stateNums = dk * dv;
-  const d1 = at(n), d2 = at(2 * n);
+  const d1 = at(n), d2 = at(2 * n), g = (m, kk) => m * Math.min(kk, m) * pair;
   return {
     softFlops, linFlops, flopRatio: softFlops / linFlops,
     kvNums, stateNums, memRatio: kvNums / stateNums, memCross: stateNums / pair, capPerToken: stateNums / n,
     idx: d1.idx, att: d1.att, dsa: d1.idx + d1.att, idxShare: d1.idx / (d1.idx + d1.att), dsaCross: R * k, dsaVsDense: (d1.idx + d1.att) / softFlops,
     idxGrowth2x: d2.idx / d1.idx, attGrowth2x: d2.att / d1.att, dsaKvRatio: kvNums / kvNums,
+    idxGrowthTo: (n2 / n) ** 2, attGrowthTo: g(n2, k2) / g(n, k),   // context n → n2 and k → k2
   };
 }
 MODELS["fixture:lecture_04--attention-cost"] = {
@@ -73,7 +74,9 @@ MODELS["fixture:lecture_04--attention-cost"] = {
     { args: { n: 1024, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "capPerToken", expect: 16 },          // finite-state check: capacity per token ...
     { args: { n: 2048, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "capPerToken", expect: 8 },           // ... halves when the context doubles
     { args: { n: 65536, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "idxGrowth2x", expect: 4 },          // dsa predict: the indexer quadruples
-    { args: { n: 65536, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "attGrowth2x", expect: 2, from: "lecture_04:dsa-indexer-still-quadratic:transfer" },
+    { args: { n: 65536, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "attGrowth2x", expect: 2 },          // dsa predict's why: the top-k part only doubles
+    { args: { n: 131072, dk: 128, dv: 128, k: 2048, R: 64, n2: 524288, k2: 4096 }, pick: "attGrowthTo", expect: 8, from: "lecture_04:dsa-indexer-still-quadratic:transfer" },
+    { args: { n: 131072, dk: 128, dv: 128, k: 2048, R: 64, n2: 524288, k2: 4096 }, pick: "idxGrowthTo", expect: 16 },  // transfer's why: the indexer grows 16x
     { args: { n: 1024, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "attGrowth2x", expect: 4 },           // edge: k ≥ n selects everything, so it is dense again
     { args: { n: 4096, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "dsaCross", expect: 131072, tol: 0.03, from: "lecture_04:dsa-indexer-still-quadratic:check" },
     { args: { n: 131072, dk: 128, dv: 128, k: 2048, R: 64 }, pick: "idxShare", expect: 0.5 },          // at n = R·k the two parts cost the same
@@ -87,10 +90,11 @@ WIDGETS["fixture:lecture_04--attention-cost"] = (root) => {
     const a = { n: 2 ** s.ln, dk: s.dk, dv: s.dv, k: 2 ** s.lk, R: 2 ** s.lR }, m = attentionCost(a), f = n => attentionCost({ ...a, n });
     let b = logPlot({ x0: 52, y0: 24, w: 250, h: 170, xmin: 64, xmax: 2 ** 20, mark: a.n, title: "compute per head, whole sequence (FLOPs)", xlabel: "context n",
       series: [{ f: n => f(n).softFlops, color: C.b, label: "softmax n²(d_k+d_v)" }, { f: n => f(n).linFlops, color: C.ok, label: "linear 2n·d_k·d_v" },
-        { f: n => f(n).dsa, color: C.a, label: "DSA indexer + top-k" }, { f: n => f(n).idx, color: C.a, dash: "4 3", label: "DSA indexer alone" }] });
+        { f: n => f(n).dsa, color: C.a, label: "DSA indexer + top-k" }, { f: n => f(n).idx, color: C.a, dash: "4 3", label: "DSA indexer alone" },
+        { f: n => f(n).att, color: C.a, dash: "1 3", label: "DSA top-k attention n·min(k, n)" }] });
     b += logPlot({ x0: 372, y0: 24, w: 250, h: 170, xmin: 64, xmax: 2 ** 20, mark: a.n, title: "memory per head (numbers kept)", xlabel: "context n",
       series: [{ f: n => f(n).kvNums, color: C.b, label: "KV cache: softmax and DSA" }, { f: n => f(n).stateNums, color: C.ok, label: "linear state d_k×d_v" }] });
-    pic.innerHTML = svg(640, 286, b);
+    pic.innerHTML = svg(640, 300, b);
     const rc = m.flopRatio > 1 ? `linear form cheaper (n > d: ${fmt(m.flopRatio, 2)}× fewer FLOPs)` : m.flopRatio < 1 ? `quadratic form cheaper (n &lt; d)` : "the two forms cost the same (n = d)";
     const rm = m.memRatio > 1 ? `the fixed state is smaller than the cache (${fmt(m.memRatio, 1)}×): it must compress` : "the cache is still no bigger than the state";
     const rd = a.k >= a.n ? `k ≥ n: DSA selects every token, so it is dense attention plus an indexer` : m.idxShare > 0.5 ? `indexer-dominated (n > R·k = ${ints(m.dsaCross)}): the n² part is now the bill` : `top-k attention dominates (n &lt; R·k = ${ints(m.dsaCross)})`;
@@ -150,7 +154,7 @@ WIDGETS["fixture:lecture_04--kv-cache-model"] = (root) => {
     const W = 640, x0 = 150, span = 460;
     let b = text(10, 25, "layers", { size: 12 }) + text(10, 39, `${r.softLayers} of ${a.L} keep a cache`, { size: 10, fill: C.muted });
     const cw = span / a.L;
-    for (let i = 0; i < a.L; i++) { const soft = (i % (a.m + 1)) === a.m && Math.floor(i / (a.m + 1)) < r.softLayers; b += rect(x0 + i * cw, 14, cw - (cw > 4 ? 1.5 : 0.3), 16, soft ? C.a : C.rule); }
+    for (let i = 0; i < a.L; i++) { const soft = Math.floor(a.L / (a.m + 1)) === 0 ? i === a.L - 1 : (i % (a.m + 1)) === a.m && Math.floor(i / (a.m + 1)) < r.softLayers; b += rect(x0 + i * cw, 14, cw - (cw > 4 ? 1.5 : 0.3), 16, soft ? C.a : C.rule); }
     b += text(x0, 42, "blue: softmax layer (growing KV cache) · grey: linear / SSM layer (fixed state)", { size: 9, fill: C.muted });
     const bw = Math.max(2, span * r.fraction), inside = bw > span - 150;
     b += text(10, 66, "bytes per token", { size: 12 }) + text(10, 80, "all layers, full K and V", { size: 10, fill: C.muted });
@@ -280,10 +284,12 @@ MODELS["fixture:lecture_04--moe-ffn-budget"] = {
 };
 WIDGETS["fixture:lecture_04--moe-ffn-budget"] = (root) => {
   const s = { E: 32, k: 2, S: 0, gi: 0 };
-  let base = { E: 1, k: 1, g: 1, S: 0 }, baseName = "one dense FFN";
+  let base = { E: 1, k: 1, g: 1, S: 0 }, baseName = "one dense FFN", sl = null;
   const pic = el("div"), read = el("div", { class: "readout" }), ctl = el("div", { class: "controls" });
+  const syncSl = (lab, v) => { const i = lab.querySelector("input"); if (+i.value !== v) { i.value = v; lab.querySelector(".readout").textContent = v; } };
   const draw = () => {
     s.k = Math.min(s.k, s.E);
+    if (sl) syncSl(sl.k, s.k);
     const g = SIZES[s.gi], a = { E: s.E, k: s.k, g, S: s.S, base }, m = moeFfnBudget(a);
     const cols = 32, cs = 17, rows = Math.ceil(s.E / cols), x0 = 20, y0 = 24, side = Math.max(3, Math.round((cs - 3) * Math.sqrt(g)));
     const chosen = new Set(Array.from({ length: s.k }, (_, i) => Math.floor(i * s.E / s.k + (s.E / s.k) / 2)));
@@ -292,18 +298,22 @@ WIDGETS["fixture:lecture_04--moe-ffn-budget"] = (root) => {
     if (s.S) b += text(x0 + s.S * cs + 6, y0 + 12, "shared", { fill: C.ok, size: 10 });
     const ry = y0 + (s.S ? cs + 8 : 0);
     for (let i = 0; i < s.E; i++) { const cx = x0 + (i % cols) * cs, cy = ry + Math.floor(i / cols) * cs; b += rect(cx + (cs - side) / 2, cy + (cs - side) / 2, side, side, chosen.has(i) ? C.a : C.rule); }
-    const by = ry + rows * cs + 14, span = 360, mx = Math.max(m.params, 1), lx = 150 + span + 10;
-    b += text(x0, by + 13, "parameters", { size: 12 }) + rect(150, by, span * m.params / mx, 18, C.b, 'opacity="0.5"') + text(lx, by + 13, `${fmt(m.params, 3)} dense FFNs`, { size: 11 });
-    b += text(x0, by + 39, "FLOPs / token", { size: 12 }) + rect(150, by + 26, Math.max(2, span * m.active / mx), 18, C.a) + text(lx, by + 39, `${fmt(m.active, 3)} dense FFNs`, { size: 11 });
-    b += line(150 + span / mx, by + 46, 150 + span / mx, by + 52, C.ink) + text(150 + span / mx, by + 62, "↑ 1 dense FFN", { fill: C.muted, size: 9, anchor: mx > 3 ? "start" : "end" });
-    pic.innerHTML = svg(640, by + 62, b);
+    // Fixed log axis from 1/16 to 260 dense FFNs (the sliders' extremes: one 1/14-size expert, (256 + 4) full-size experts),
+    // so moving E moves only the parameters bar and the FLOPs bar stays put.
+    const by = ry + rows * cs + 14, span = 360, lx = 150 + span + 10, LO = Math.log10(1 / 16), HI = Math.log10(260);
+    const BW = v => Math.max(2, span * (Math.log10(Math.max(v, 1 / 16)) - LO) / (HI - LO));
+    b += text(x0, by + 13, "parameters", { size: 12 }) + rect(150, by, BW(m.params), 18, C.b, 'opacity="0.5"') + text(lx, by + 13, `${fmt(m.params, 3)} dense FFNs`, { size: 11 });
+    b += text(x0, by + 39, "FLOPs / token", { size: 12 }) + rect(150, by + 26, BW(m.active), 18, C.a) + text(lx, by + 39, `${fmt(m.active, 3)} dense FFNs`, { size: 11 });
+    [[1, "↑ 1 dense FFN"], [10, "10"], [100, "100"]].forEach(([v, lab]) => { b += line(150 + BW(v), by + 46, 150 + BW(v), by + 52, C.ink) + text(150 + BW(v), by + 62, lab, { fill: C.muted, size: 9, anchor: "middle" }); });
+    b += text(150 + span, by + 74, "log scale, fixed for all settings", { fill: C.muted, size: 9, anchor: "end" });
+    pic.innerHTML = svg(640, by + 78, b);
     read.innerHTML = `parameters = (E + shared) · size = (${s.E} + ${s.S}) · ${SIZE_LAB[s.gi]} = <b>${fmt(m.params, 3)}</b> dense FFNs<br>
       FLOPs / token = (k + shared) · size = (${s.k} + ${s.S}) · ${SIZE_LAB[s.gi]} = <span class="big">${fmt(m.active, 3)}</span> dense FFNs · parameters / FLOPs = ${fmt(m.ratio, 2)}×<br>
       routed experts a token touches: ${s.k}/${s.E} = ${fmt(100 * m.activeFrac, 2)}% · distinct top-${s.k} sets C(${s.E}, ${s.k}) ≈ 10^${fmt(m.log10Combos, 2)}<br>
       vs pinned baseline (${baseName}): parameters <b>×${fmt(m.paramsVsBase, 3)}</b> · FLOPs per token <b>×${fmt(m.flopsVsBase, 3)}</b><br>
       <span class="muted small">provenance: fixture:lecture_04--moe-ffn-budget · lecture_04.pdf:p15 (txt L131), p16 (L133), p32 (shared, always on), p35 (L270-L282, presets are its rows), p51-p53 (upcycled experts are full copies, size 1). Shared experts take the routed size; router cost ignored (p15).</span>`;
   };
-  const sl = { E: slider("routed experts E", 1, 256, s.E, 1, v => { s.E = v; draw(); }), k: slider("top-k", 1, 16, s.k, 1, v => { s.k = v; draw(); }),
+  sl = { E: slider("routed experts E", 1, 256, s.E, 1, v => { s.E = v; draw(); }), k: slider("top-k", 1, 16, s.k, 1, v => { s.k = v; draw(); }),
     S: slider("shared experts", 0, 4, s.S, 1, v => { s.S = v; draw(); }), g: slider("expert size (of a dense FFN)", 0, 4, s.gi, 1, v => { s.gi = v; draw(); }, v => SIZE_LAB[v]) };
   const setSl = (lab, v) => { const i = lab.querySelector("input"); i.value = v; i.dispatchEvent(new Event("input")); };
   const presets = el("div", { class: "small", style: "margin-top:6px" }, "p35 rows: ", ...PRESETS.map(([n, E, k, S, gi]) => el("button", { class: "ghost", onclick: () => { Object.assign(s, { E, k, S, gi }); setSl(sl.E, E); setSl(sl.k, k); setSl(sl.S, S); setSl(sl.g, gi); } }, n)));
@@ -326,7 +336,9 @@ function capacityDrop({ T, E, C, mine, other }) {
   const hot = Math.min(T, mine + other), rest = T - hot, nb = Math.floor(rest / (E - 1)), rem = rest - nb * (E - 1);
   const loads = [hot, ...Array.from({ length: E - 1 }, (_, i) => nb + (i < rem ? 1 : 0))];
   const drops = loads.map(l => Math.max(0, l - C)), dropped = drops.reduce((x, y) => x + y, 0);
-  return { loads, drops, dropped, droppedHot: drops[0], aloneHot: Math.max(0, Math.min(T, mine) - C), mean: T / E, slots: E * C,
+  // Which of the hot expert's tokens go is left open by the slides, so yours are dropped in proportion to your share of its queue.
+  const mineDropped = hot ? drops[0] * Math.min(mine, hot) / hot : 0;
+  return { loads, drops, dropped, droppedHot: drops[0], mineDropped, aloneHot: Math.max(0, Math.min(T, mine) - C), mean: T / E, slots: E * C,
     capFactor: C * E / T, pushRatio: hot / (rest / (E - 1)), fHot: hot / T };
 }
 MODELS["fixture:lecture_04--capacity-drop"] = {
@@ -337,6 +349,8 @@ MODELS["fixture:lecture_04--capacity-drop"] = {
     { args: { T: 256, E: 8, C: 64, mine: 40, other: 50 }, pick: "droppedHot", expect: 26, from: "lecture_04:token-dropping-stochasticity:check" },
     { args: { T: 256, E: 8, C: 64, mine: 40, other: 50 }, pick: "dropped", expect: 26 },       // no other expert overflows
     { args: { T: 256, E: 8, C: 64, mine: 40, other: 50 }, pick: "aloneHot", expect: 0 },       // alone, your 40 tokens all fit
+    { args: { T: 256, E: 8, C: 64, mine: 40, other: 50 }, pick: "mineDropped", expect: 26 * 40 / 90 }, // ... but with others there, ~11.6 of yours go
+    { args: { T: 256, E: 8, C: 64, mine: 40, other: 0 }, pick: "mineDropped", expect: 0 },     // others' traffic is what drops yours
     { args: { T: 256, E: 8, C: 64, mine: 40, other: 50 }, pick: "mean", expect: 32 },          // the average load is half the capacity
     { args: { T: 512, E: 8, C: 64, mine: 64, other: 0 }, pick: "dropped", expect: 0 },         // edge: perfectly balanced at capacity
     { args: { T: 520, E: 8, C: 64, mine: 65, other: 0 }, pick: "dropped", expect: 8 },         // edge: T > E·C drops even when balanced
@@ -346,17 +360,21 @@ MODELS["fixture:lecture_04--capacity-drop"] = {
 WIDGETS["fixture:lecture_04--capacity-drop"] = (root) => {
   const s = { T: 256, E: 8, C: 48, mine: 40, other: 0 };
   const pic = el("div"), read = el("div", { class: "readout" });
+  let sl = null;
+  const syncSl = (lab, v) => { const i = lab.querySelector("input"); if (+i.value !== v) { i.value = v; lab.querySelector(".readout").textContent = v; } };
   const draw = () => {
     s.mine = Math.min(s.mine, s.T); s.other = Math.min(s.other, s.T - s.mine);
+    if (sl) { syncSl(sl.mine, s.mine); syncSl(sl.other, s.other); }
     const m = capacityDrop(s), W = 640, x0 = 50, y0 = 26, h = 170, top = Math.max(...m.loads, s.C, 1) * 1.08;
     const bw = Math.min(64, 560 / s.E), Y = v => y0 + h - h * v / top;
     let b = text(x0, 14, `${s.T} tokens, top-1, ${s.E} experts, ${s.C} slots each · blue: your request · orange: other requests · pale: dropped`, { fill: C.muted, size: 11 });
     b += line(x0, y0 + h, x0 + s.E * bw, y0 + h, C.rule);
     m.loads.forEach((l, i) => {
-      const x = x0 + i * bw, kept = Math.min(l, s.C), mineKept = i === 0 ? Math.min(s.mine, kept) : 0, w = bw - 8;
+      const x = x0 + i * bw, kept = Math.min(l, s.C), mineKept = i === 0 ? s.mine - m.mineDropped : 0, w = bw - 8;
       if (i === 0) { b += rect(x, Y(mineKept), w, h * mineKept / top, C.a) + rect(x, Y(kept), w, h * (kept - mineKept) / top, C.b); }
       else b += rect(x, Y(kept), w, h * kept / top, C.rule);
-      if (m.drops[i]) b += rect(x, Y(l), w, h * m.drops[i] / top, C.b, 'opacity="0.3"') + text(x + w / 2, Y(l) - 4, `−${m.drops[i]}`, { fill: C.b, size: 11, anchor: "middle", weight: "bold" });
+      if (i === 0 && m.mineDropped) b += rect(x, Y(kept + m.mineDropped), w, h * m.mineDropped / top, C.a, 'opacity="0.3"');
+      if (m.drops[i]) b += rect(x, Y(l), w, h * (m.drops[i] - (i === 0 ? m.mineDropped : 0)) / top, C.b, 'opacity="0.3"') + text(x + w / 2, Y(l) - 4, `−${m.drops[i]}`, { fill: C.b, size: 11, anchor: "middle", weight: "bold" });
       b += text(x + w / 2, y0 + h + 13, i === 0 ? "E0 hot" : `E${i}`, { fill: C.muted, size: 10, anchor: "middle" }) + text(x + w / 2, y0 + h + 25, `${l}`, { fill: C.ink, size: 10, anchor: "middle" });
     });
     b += line(x0 - 4, Y(s.C), x0 + s.E * bw, Y(s.C), C.ink, 'stroke-dasharray="5 3"') + text(x0 - 6, Y(s.C) + 4, `cap ${s.C}`, { size: 9, anchor: "end" });
@@ -364,15 +382,16 @@ WIDGETS["fixture:lecture_04--capacity-drop"] = (root) => {
     pic.innerHTML = svg(W, 230, b);
     const regime = m.dropped === 0 ? "no drops" : s.T > m.slots ? `over-subscribed: ${s.T} tokens > ${m.slots} slots, drops even if routing were perfectly balanced`
       : `drops at the hot expert although the mean load (${fmt(m.mean, 1)}) is below capacity: dropping is a tail event, not an average`;
-    read.innerHTML = `hot expert E0: ${s.mine} yours + ${s.other} others = ${m.loads[0]} for ${s.C} slots → <span class="big">${m.droppedHot} dropped</span> there, ${m.dropped} dropped in the batch<br>
+    read.innerHTML = `hot expert E0: ${s.mine} yours + ${s.other} others = ${m.loads[0]} for ${s.C} slots → <span class="big">${m.droppedHot} dropped</span> there (about ${fmt(m.mineDropped, 1)} of yours, if drops fall evenly over the queue), ${m.dropped} dropped in the batch<br>
       your request alone at E0: ${m.aloneHot} dropped · so ${m.droppedHot > m.aloneHot ? "<b>who else is in the batch decides whether your tokens are dropped</b>" : "co-batched traffic changes nothing here"}<br>
       regime: <b>${regime}</b> · capacity factor C·E/T = ${fmt(m.capFactor, 2)} · slots ${m.slots}<br>
       balancing-loss push on p_i ∝ tokens routed to i: E0 vs an average other expert = <b>${fmt(m.pushRatio, 3)}×</b><br>
       <span class="muted small">provenance: fixture:lecture_04--capacity-drop · lecture_04.pdf:p47 (txt L379-L380, dropping is batch-level); video 1:15:42-1:16:18; p40 (L332-L333, the push is ∝ Σ 1[argmax = i]). Top-1 routing with the rest spread evenly is the prompts' setup, not a learned router.</span>`;
   };
+  sl = { mine: slider("your tokens to E0", 0, 512, s.mine, 2, v => { s.mine = v; draw(); }), other: slider("other requests' tokens to E0", 0, 512, s.other, 2, v => { s.other = v; draw(); }) };
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("tokens in batch T", 64, 1024, s.T, 8, v => { s.T = v; draw(); }), slider("experts E", 2, 16, s.E, 1, v => { s.E = v; draw(); }),
     slider("capacity C per expert", 8, 512, s.C, 4, v => { s.C = v; draw(); }),
-    slider("your tokens to E0", 0, 512, s.mine, 2, v => { s.mine = v; draw(); }), slider("other requests' tokens to E0", 0, 512, s.other, 2, v => { s.other = v; draw(); }),
+    sl.mine, sl.other,
     read), pic)); draw();
 };

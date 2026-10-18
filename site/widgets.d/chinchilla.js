@@ -94,11 +94,13 @@ MODELS["fixture:chinchilla--allocation-table"] = {
 };
 WIDGETS["fixture:chinchilla--allocation-table"] = (root) => {
   const KS = [0.1, 0.25, 0.5, 1, 2, 3, 4, 9, 10, 16, 100];
-  const s = { ap: 1, row: 1, ki: 4 };                                         // default: Table 3's 1B row x 2 (no prompt's case)
+  const s = { ap: 1, row: 1, ki: 4, C: null };                                // default: Table 3's 1B row x 2 (no prompt's case); C set = exact budget (D.4 preset)
   const pic = el("div"), read = el("div", { class: "readout" }), id = `chc${++uid}`;
-  const rowSlider = slider("printed row (parameters)", 0, 8, s.row, 1, v => { s.row = v; draw(); }, v => big(ROWS[1][v][0]));
+  const rowSlider = slider("printed row (parameters)", 0, 8, s.row, 1, v => { s.row = v; s.C = null; draw(); }, v => big(ROWS[1][v][0]));
   const draw = () => {
-    const m = allocation({ approach: s.ap, row: s.row, k: KS[s.ki] }), kap = allocation({ approach: "K", C: m.C });
+    const m = s.C ? allocation({ approach: s.ap, C: s.C }) : allocation({ approach: s.ap, row: s.row, k: KS[s.ki] }), kap = allocation({ approach: "K", C: m.C });
+    const kTxt = s.C ? fmt(m.k, 3) : KS[s.ki];
+    if (s.C) { s.row = m.row; const inp = rowSlider.querySelector("input"); inp.value = m.row; rowSlider.querySelector(".readout").textContent = big(ROWS[1][m.row][0]); }
     const W = 640, px = 64, pw = 548, H1 = 128, top1 = 26, top2 = top1 + H1 + 30, H2 = 128;
     const X = lc => px + pw * (lc - 18.5) / 10.5;                                   // log10 C in [18.5, 29]
     const Y1 = ln => top1 + H1 * (14 - ln) / 6;                                     // log10 N in [8, 14]
@@ -135,12 +137,12 @@ WIDGETS["fixture:chinchilla--allocation-table"] = (root) => {
     b += `<g clip-path="url(#${id}a)">${g1}</g><g clip-path="url(#${id}b)">${g2}</g>`;
     b += text(px + pw / 2, top2 + H2 + 28, "training FLOPs C (log scale)", { fill: C.muted, size: 11, anchor: "middle" });
     pic.innerHTML = svg(W, top2 + H2 + 34, b);
-    const [Nr, Cr, Dr] = ROWS[s.ap][s.row], dpd = m.ratioPerDecade;
+    const [Nr, Cr, Dr] = ROWS[s.ap][m.row], dpd = m.ratioPerDecade;
     const trend = Math.abs(dpd - 1) < 0.01 ? "flat: N and D grow by the same factor" : dpd > 1 ? `rising ×${fmt(dpd, 3)} per decade: D grows faster than N` : `falling ×${fmt(dpd, 3)} per decade: N grows faster than D`;
     read.innerHTML = `${NAMES[s.ap]}, printed row ${big(Nr)}: C_row = ${e10(Cr)}, D_row = ${big(Dr)}<br>
-      budget C = ${KS[s.ki]} × C_row = <b>${e10(m.C, 3)}</b> FLOPs = ${fmt(m.gopherUnits, 3)} Gopher units<br>
-      rule with Table 2's a = ${m.a.toFixed(2)}, b = ${m.b.toFixed(2)}: N = ${big(Nr)} × ${KS[s.ki]}^${m.a.toFixed(2)} = <span class="big">${big(m.N)}</span>
-      D = ${big(Dr)} × ${KS[s.ki]}^${m.b.toFixed(2)} = <span class="big">${big(m.D)}</span> tokens · D/N = <b>${fmt(m.ratio, 1)}</b> · 6ND / C = ${fmt(m.check6ND, 3)} (the printed row itself gives ${fmt(6 * Nr * Dr / Cr, 3)}: its tokens are rounded)<br>
+      budget C = ${kTxt} × C_row = <b>${e10(m.C, 3)}</b> FLOPs = ${fmt(m.gopherUnits, 3)} Gopher units${s.C ? " (Appendix D.4's budget; move the row or budget slider to leave it)" : ""}<br>
+      rule with Table 2's a = ${m.a.toFixed(2)}, b = ${m.b.toFixed(2)}: N = ${big(Nr)} × ${kTxt}^${m.a.toFixed(2)} = <span class="big">${big(m.N)}</span>
+      D = ${big(Dr)} × ${kTxt}^${m.b.toFixed(2)} = <span class="big">${big(m.D)}</span> tokens · D/N = <b>${fmt(m.ratio, 1)}</b> · 6ND / C = ${fmt(m.check6ND, 3)} (the printed row itself gives ${fmt(6 * Nr * Dr / Cr, 3)}: its tokens are rounded)<br>
       printed rows interpolated at this C: N ≈ ${big(m.Ntable)}, D ≈ ${big(m.Dtable)}, D/N ≈ ${fmt(m.ratioTable, 1)}<br>
       ×10 budget → N ×${fmt(m.nFactor10, 2)}, D ×${fmt(m.dFactor10, 2)} · tokens per parameter: <b>${trend}</b><br>
       Kaplan at the same C: N = ${big(kap.N)}, D = ${big(kap.D)}, D/N = ${fmt(kap.ratio, 2)} (×10 budget → N ×${fmt(kap.nFactor10, 2)})<br>
@@ -149,7 +151,8 @@ WIDGETS["fixture:chinchilla--allocation-table"] = (root) => {
   const apSlider = slider("approach", 1, 3, s.ap, 1, v => { s.ap = v; draw(); }, v => ["", "1 · min over training curves", "2 · IsoFLOP profiles", "3 · parametric fit"][v]);
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     apSlider, rowSlider,
-    slider("budget = printed row's FLOPs ×", 0, KS.length - 1, s.ki, 1, v => { s.ki = v; draw(); }, v => `${KS[v]}`),
+    slider("budget = printed row's FLOPs ×", 0, KS.length - 1, s.ki, 1, v => { s.ki = v; s.C = null; draw(); }, v => `${KS[v]}`),
+    el("div", { style: "margin-top:8px" }, el("button", { onclick: () => { s.C = 1e21; draw(); } }, "D.4: exactly 1e21 FLOPs")),
     read), pic)); draw();
 };
 
@@ -273,7 +276,7 @@ MODELS["fixture:chinchilla--parametric-frontier"] = {
     { args: { alpha: 0.28, beta: 0.34 }, pick: "a", expect: 0.5484 },                     // approach-3-parametric-fit transfer: swapped -> a > 0.5
     { args: { C: GOPHER_C, k: 12 }, pick: "nOptVs6", expect: 0.731, tol: 0.02 },           // approach-3-frontier transfer: C = 12ND -> N_opt x 2^-a
     { args: { C: 1e18 }, pick: "ratioOpt", expect: 25.67, tol: 0.02 },                     // D/N at 1e18 (isoflop-sweep fixture: ~26)
-    { args: { C: 1e21 }, pick: "ratioOpt", expect: 50.08, tol: 0.02 },                     // ... at 1e21 (fixture's grid search: ~49)
+    { args: { C: 1e21 }, pick: "ratioOpt", expect: 50.08, tol: 0.02 },                     // ... at 1e21 (isoflop-sweep fixture: ~50)
     { args: { C: 1e21 }, pick: "ratioPerDecade", expect: 10 ** (0.06 / 0.62) },            // D/N ∝ C^(b−a) = C^((α−β)/(α+β))
     { args: { C: 1e18, alpha: 0.34, beta: 0.34 }, pick: "ratioPerDecade", expect: 1 },     // α = β: D/N flat
     { args: { C: GOPHER_C }, pick: "NoptB", expect: 32.19, tol: 0.02 },                    // rounded constants: 32B at Gopher's budget (Fig. 4 prints 40B)

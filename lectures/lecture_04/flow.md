@@ -19,8 +19,8 @@ The lecture assumes you know how big that cache gets. Here is the count, from [L
 
 $$ \text{KV bytes per token} = 2 \cdot n_\text{layers} \cdot n_\text{kv heads} \cdot d_\text{head} \cdot \text{bytes per value} $$
 
-::worked supp-kv-cache-bytes
 ::predict supp-kv-cache-bytes
+::worked supp-kv-cache-bytes
 ::widget fixture:lecture_04--kv-cache-model | start from the Llama-2-13B defaults and move only the context slider: bytes per token never change, but the total doubles with every doubling of context
 ::kp supp-kv-cache-bytes
 
@@ -61,13 +61,13 @@ Why is that a better bargain? Because $n$ is the context length, which can be in
 
 ::worked linear-attention-reassociation
 
-**Worked example.** One head with $d_k = d_v = 128$ and $n = 8192$. Softmax attention costs $8192^2 \cdot 256 \approx 1.7 \times 10^{10}$ multiply-adds; the reordered form costs $2 \cdot 8192 \cdot 128^2 \approx 2.7 \times 10^8$. The ratio is $n^2(2d) / (2nd^2) = n/d = 64$. The crossover is at $n = d$: for contexts shorter than 128 tokens the quadratic form is actually cheaper.
+**Worked example.** One head with $d_k = d_v = 128$ and $n = 32{,}768$. Softmax attention costs $32768^2 \cdot 256 \approx 2.7 \times 10^{11}$ multiply-adds; the reordered form costs $2 \cdot 32768 \cdot 128^2 \approx 1.1 \times 10^9$. The ratio is $n^2(2d) / (2nd^2) = n/d = 256$. The crossover is at $n = d$: for contexts shorter than 128 tokens the quadratic form is actually cheaper.
 
-::widget fixture:lecture_04--attention-cost | slide the context n: the softmax and linear FLOP curves cross at n = d (128), and past it the gap grows as n/d, 64× at 8,192 tokens
-
-The catch is in the word *if*. With the softmax in place the reordering is not allowed: each row of $\rho(QK^\top)$ is divided by a sum over all $n$ scores in that row, so the $n \times n$ matrix must exist before $V$ is applied. Dropping $\rho$ changes the *model*, not just the algorithm: linear attention is a different layer, not a faster softmax attention. The professor makes this explicit in a later answer: "The first step is lossy, where we drop the row, and then we become linear." (The captions write ρ, rho, as "row".) The "kernel version" cited on the slide (Katharopoulos et al. 2020) replaces $\rho$ by a feature map $\phi$ applied to queries and keys, $\phi(Q)(\phi(K)^\top V)$, which keeps the associativity trick while making the scores nonnegative.
+::widget fixture:lecture_04--attention-cost | slide the context n: the softmax and linear FLOP curves cross at n = d (128), and past it the gap grows as n/d, 256× at 32,768 tokens
 
 ::predict linear-attention-reassociation
+
+The catch is in the word *if*. With the softmax in place the reordering is not allowed: each row of $\rho(QK^\top)$ is divided by a sum over all $n$ scores in that row, so the $n \times n$ matrix must exist before $V$ is applied. Dropping $\rho$ changes the *model*, not just the algorithm: linear attention is a different layer, not a faster softmax attention. The professor makes this explicit in a later answer: "The first step is lossy, where we drop the row, and then we become linear." (The captions write ρ, rho, as "row".) The "kernel version" cited on the slide (Katharopoulos et al. 2020) replaces $\rho$ by a feature map $\phi$ applied to queries and keys, $\phi(Q)(\phi(K)^\top V)$, which keeps the associativity trick while making the scores nonnegative.
 
 Two points that the slide leaves out. First, a language model uses a **causal mask**: token $t$ may only read tokens $j \le t$. Then there is no single $K^\top V$ for the whole sequence; each position needs the sum over its own prefix. That is precisely what turns linear attention into a recurrence, the subject of the next slide. Second, a student asked whether removing the softmax makes training unstable. The professor did not think so: "If anything, softmaxes are usually more of the problems". He expects linear layers to *improve* stability.
 
@@ -87,6 +87,8 @@ Call the prefix sum $S_t$. A prefix sum grows by its newest term, so it can be u
 
 $$ S_t = S_{t-1} + k_t v_t^\top, \qquad y_t = q_t^\top S_t . $$
 
+::predict linear-attention-recurrent-duality
+
 Each $k_t v_t^\top$ is an outer product, a $d_k \times d_v$ matrix, so the **state** $S_t$ is one $d_k \times d_v$ matrix per head, the same size whatever $t$ is. "As I sweep left to right on my context", the professor narrates, "I can multiply my Ks and Vs, and I can update this thing S, which is a state." That is exactly the shape of a recurrent neural network: a fixed-size state carried forward and read at every step.
 
 ::worked linear-attention-recurrent-duality
@@ -94,8 +96,6 @@ Each $k_t v_t^\top$ is an outer product, a $d_k \times d_v$ matrix, so the **sta
 Why is this "even nicer" than the linear cost? RNNs are "very nice for inference reasons": the state is fixed in size, so generating token one million costs the same as generating token ten. They are "not nice for training reasons": step $t$ waits for step $t-1$, so a sequence cannot be processed in parallel. Linear attention has both forms of one function. Training computes all positions at once as matrix multiplies; the slide calls this the "parallel, quadratic form" because, with the causal mask, it multiplies by the masked $n \times n$ matrix $QK^\top$, quadratic but pure matmul work (practical kernels process the sequence in chunks). Inference runs the serial form and carries one small $S$.
 
 The two forms compute the same outputs exactly. A student asked: if the forms are equivalent, why do models with more recurrent layers lose quality? Because the loss happened earlier. The professor: dropping $\rho$ is lossy, "and then after that, this linear form to this recurrent form, this equivalence, that is exact."
-
-::predict linear-attention-recurrent-duality
 
 **The state against the cache.** For one head with $d_k = d_v = 128$, the state holds $128 \times 128 = 16{,}384$ numbers. The KV cache for the same head holds $128 + 128 = 256$ numbers per token. They are equal at $16{,}384 / 256 = 64$ tokens. At $2^{20}$ (about a million) tokens the cache is $2^{20} \cdot 256 / 16{,}384 = 16{,}384\times$ bigger than the state. The fixed state is what makes long-context decoding cheap, and, as we will see, also what limits it.
 
@@ -108,7 +108,7 @@ The footnote on the slide is the first elaboration: multiply the old state by a 
 ::note slip 9:41 | Right after praising the linear form, the professor says "Unfortunately, this is linear, which is not very good." The slide says "linear time (great)". He most likely means that plain linear attention is too simple to be expressive enough, which is how the next part opens ("linear attention is too naive and simple for me").
 ::kp linear-attention-recurrent-duality
 
-::slide 6 | MiniMax-M1: benchmark bars against o3, Gemini 2.5 Pro, Claude 4 Opus, DeepSeek-R1 and Qwen3-235B; inference FLOPs against generation length (MiniMax-M1 grows far more slowly than DeepSeek-R1); the block diagram, M lightning-attention blocks per softmax-attention block, each followed by an MoE layer; a small table where the hybrid matches or beats softmax attention
+::slide 6 | MiniMax-M1: benchmark bars against o3, Gemini 2.5 Pro, Claude 4 Opus, DeepSeek-R1 and Qwen3-235B; inference FLOPs against generation length (MiniMax-M1 grows far more slowly than DeepSeek-R1); the block diagram, M lightning-attention blocks per softmax-attention block, each followed by an MoE layer; a small table where the hybrid wins six of eight benchmarks (softmax keeps CMMLU and GSM8k)
 
 Does something this simple work at scale? **MiniMax-M1** (and MiniMax-Text-01), a large Chinese open model, uses a **7-to-1 hybrid**: seven linear-attention layers ("lightning attention") for each full softmax-attention layer. Its benchmark scores are competitive with o3 and DeepSeek-R1, for example 86.0 on AIME 2024. The FLOPs curve shows the payoff: at 128K generated tokens, DeepSeek-R1 needs about $7 \times 10^{16}$ FLOPs and MiniMax-M1 under $2 \times 10^{16}$.
 
@@ -129,6 +129,8 @@ Unlike RetNet's constant $\gamma$, here $\gamma_t$ is computed from the current 
 
 The extra term $v_t^\top D$ does not touch the state. The professor first set it aside ("you can ignore the vt for now") and explained it in Q&A: it acts "a little bit like a residual connection", letting the current token's value pass straight to the output, and "D is another modulated gate" that sets how much passes through.
 
+::predict gate-input-only-duality
+
 ### Why the gate must read only the input
 
 The crucial property is in the last line of the slide. "Gamma of t is not stateful. Gamma of t only depends on my current inputs x of t." That is what keeps the parallel form. Unroll the recurrence and each pair is weighted by the product of the gates applied after it:
@@ -139,7 +141,6 @@ If every $\gamma_i$ comes from $x_i$ alone, all of them can be computed first, i
 
 An LSTM fails this test. Its gates read the previous hidden state $h_{t-1}$, so step $t$'s gate cannot be computed until step $t-1$ is finished. That is why LSTMs had to be trained step by step. Asked later what state-space models give up compared with transformers, the professor put the history this way: attention used to have "the very strong advantage of hardware efficiency", and state-space models caught on "despite their similarity to LSTMs" because the duality hands that efficiency back.
 
-::predict gate-input-only-duality
 ::video 14:31-14:57 | the rule of thumb: "only input-dependent terms, so no state dependence" keeps the parallel/serial duality
 ::kp gate-input-only-duality
 
@@ -160,6 +161,8 @@ source: lecture_04.pdf p9-p11 · video 14:56-20:41, 22:26-22:54
 
 $$ S_t = \gamma_t\,(I - \beta_t k_t k_t^\top)\,S_{t-1} + \beta_t\, k_t v_t^\top, \qquad \gamma_t, \beta_t = f(x_t) $$
 
+::predict gated-linear-attention-variants
+
 **An input gate $\beta_t$.** It scales the write. "If beta t is 0, that basically means, don't take any of my current information, don't add it into my state." Together with the forget gate $\gamma_t$, this is very reminiscent of an LSTM: one gate decides what to forget, one decides what to let in.
 
 **An erase term $(I - \beta_t k_t k_t^\top)$.** This comes from DeltaNet. When you write a new value under key $k_t$, you would like to also "erase any previous keys that have gone into it", rather than piling the new value on top of the old one. The matrix $I - k_t k_t^\top$ projects out the $k_t$ direction, so it removes whatever the state stores along the current key and leaves every other direction alone. The professor's caveat: "That's not exactly right, because you're not doing things like unit normalization." The projector reading holds exactly when $\|k_t\| = 1$.
@@ -175,7 +178,6 @@ $$ S_t = \gamma_t\,(I - \beta_t k_t k_t^\top)\,S_{t-1} + \beta_t\, k_t v_t^\top,
 Expanding the update shows where the name comes from: $S_t = S_{t-1} + \beta_t k_t\,(v_t - S_{t-1}^\top k_t)^\top$ (with $\gamma_t = 1$). The state is corrected by the error between the value you want under $k_t$ and the value it currently returns, which is the classic delta rule of online least squares.
 
 ::widget fixture:lecture_04--state-memory | tick the same-key write and move β: at β = 1 Gated DeltaNet's read jumps to the new value, at β = 0 it keeps the old one, while plain linear attention always adds the two
-::predict gated-linear-attention-variants
 
 ::note aside 17:46 | The slide's "close relationships to fast weight programming / test time training" is said aloud as a recurring rediscovery: this projector update appears if you solve certain meta-learning least-squares problems, and researchers in fast-weight programming and test-time training reached "the exact same kinds of solutions" from very different design principles.
 
@@ -189,7 +191,7 @@ The newest Qwen models, among the best open models available, use exactly this l
 
 ::slide 11 | ByteDance Seed and UC Santa Cruz, "A Systematic Analysis of Hybrid Linear Attention": a table of update rules (RetNet, GLA, Mamba-2, RWKV-6, DeltaNet, Gated DeltaNet, …); RULER sub-task accuracy and average recall against the linear:full ratio (3-1, 6-1, 12-1, 24-1, pure), with a dashed full-transformer baseline
 
-How many softmax layers can you remove? Controlled studies are rare; the professor points to this one. Read the plots from left to right, adding more linear layers per full layer:
+How many softmax layers can you remove? Controlled studies are rare; the professor points to this one. Its plots score RULER, a synthetic long-context benchmark of retrieval, tracing and question-answering tasks at fixed context lengths. Read them from left to right, adding more linear layers per full layer:
 - at low ratios (3-to-1, 6-to-1) the best variants, the Gated DeltaNet family among them, sit at the dashed transformer line: "basically no hit";
 - past some point, long-context performance degrades more noticeably;
 - fully recurrent ("pure") is clearly worse in every architecture; in the recall panel some variants fall from about 0.43 to 0.15–0.2.
@@ -205,6 +207,7 @@ Be careful which task you look at. Single-key retrieval is something "all of the
 ## Sparse attention: keep softmax, read fewer tokens {#dsa}
 source: lecture_04.pdf p12-p13 · video 22:54-34:22
 
+::predict sparse-attention-dsa
 ::slide 12 | the DSA prototype from DeepSeek-V3.2: a lightning indexer scores each preceding token, I_{t,s} = Σ_j w_{t,j} · ReLU(q_{t,j} · k_s), over a few indexer heads in FP8; the top-k scores select which key-value entries the query attends to; "Can be 'post hoc' adapted after dense short context pretraining"
 
 A completely different answer to the cost of attention: do not replace softmax attention, *sparsify* it. In **DeepSeek Sparse Attention** (DSA), from DeepSeek-V3.2, each query first runs a cheap **lightning indexer** over the long context, picks a small subset of tokens, and then does ordinary full attention on that subset only.
@@ -220,8 +223,9 @@ The surprising practical point is that you do not have to pretrain with it. Open
 
 The results: V3.2 roughly matches the frontier models of its time. The cost plots, read at 128K tokens, show prefill falling from about 0.65 to about 0.2 US dollars per million tokens, and decode from about 2.2 to about 0.3 dollars. GLM-5, which the professor calls one of the best open models available, adopted DSA too. Its RULER table shows what the extension stage buys. At 128K, GLM-4.7-Flash scores 79.21. Training only the indexer on top of the frozen model drops it to 71.35. Training indexer and model jointly for 150B tokens brings it back to 78.86. So little is lost relative to full attention, "even at long context retrieval tasks that are fairly difficult to do with RNN style architectures."
 
-::predict sparse-attention-dsa
 ::kp sparse-attention-dsa
+
+::predict dsa-indexer-still-quadratic
 
 ### DSA is not linear time
 
@@ -234,7 +238,6 @@ The results: V3.2 roughly matches the frontier models of its time. The cost plot
 The KV cache does not shrink at all: every token's key and value must be kept so that the indexer can choose among them. DSA saves reads and FLOPs, not storage.
 
 ::widget fixture:lecture_04--attention-cost | watch the DSA lines: the dashed indexer climbs with the same n² slope as softmax, the top-k part grows like n, and past n = R·k the indexer dominates; in the memory panel DSA sits on the KV-cache line
-::predict dsa-indexer-still-quadratic
 
 The professor's moral is the same as for FlashAttention: "sometimes, don't get too stuck up on the quadratic versus not. Sometimes, the constant factors are really, really important."
 
@@ -246,11 +249,12 @@ The professor's moral is the same as for FlashAttention: "sometimes, don't get t
 ::note aside 31:54 | Is FP4 attention possible? "Definitely possible", but softmaxes are sensitive to underflow and overflow at low precision. The indexer suggests a sensible split: select in low precision, then attend in full precision so the value vectors are weighted finely.
 ::note aside 30:51 | Asked to predict future attention architectures, the professor expects more combining of all these tricks, plus a higher layer in which post-training teaches the model to manage its own context (compaction, retrieval).
 
+::predict finite-state-recall-tradeoff
+
 **What do state-space layers give up?** A student asked the obvious question: if these layers are so cheap, why not use them everywhere? "The downside, I think, is expressive power. The all to all connection in softmax attention is incredibly powerful." The training-efficiency objection to recurrences has been answered by the duality. What remains is the fixed state: "if you have a finite state and you have to carry everything through, you're going to be losing some information relative to just carrying everything."
 
 Put numbers on it with the head from before. The state holds 16,384 numbers whatever the context. At 1,024 tokens that is 16 numbers per context token; at 2,048 it is 8; at a million, 1/64 of a number. Somewhere along that line a fact stated once near the start has to be squeezed out. You could make the state as big as the context, "but then you're paying these very large costs." This is why the production models keep a softmax layer every few layers: those layers hold every token's key and value and can look a fact up directly. The professor hedges that "It might be possible one day to not have any trade-offs", but so far this is where they show up.
 
-::predict finite-state-recall-tradeoff
 ::video 33:38-34:15 | the fixed state against carrying everything: "a state the size of your context" is fine, but costs as much as the context
 ::kp finite-state-recall-tradeoff
 
@@ -265,14 +269,17 @@ The second half modifies the other big block of the transformer, the feed-forwar
 
 The mental model the professor wants you to keep: take the FFN, make four copies of it, each the *same size* as the original, and add a small **router** that picks one of them for every input. You now hold "4x the parameters", but "on any forward or backward pass, I'm only going to pay one FFN worth of cost". Each copy is an **expert**. The parameters a token actually passes through are the model's **active parameters**; everything else is stored but idle for that token.
 
+::predict moe-params-without-flops
+
 In general, with $E$ experts of equal size, each token routed to $k$ of them:
 - FFN parameters grow with $E$;
 - FFN FLOPs per token grow with $k$ (times the expert size), and not with $E$ at all.
 
 **Worked example.** An MoE layer with 8 full-size experts and top-2 routing runs 2 FFNs' worth of compute per token and stores 8. Raise the count to 64 experts, still top-2: FLOPs per token are unchanged (factor 1), parameters go up 8×. The router itself is one small matrix multiply and is negligible.
 
-::predict moe-params-without-flops
 ::widget fixture:lecture_04--moe-ffn-budget | drag the routed-expert count E: only the parameters bar moves; top-k, expert size and shared experts are the only controls that move the FLOPs bar
+
+::predict expert-routing-token-level
 
 ### Routing is per token, and experts are not subject experts
 
@@ -280,7 +287,6 @@ Two student questions sharpen the picture. What is the granularity of routing? "
 
 So the tokens of one sequence spread over many experts. Later in the lecture someone asked whether experts end up specializing in domains. Papers that visualize the assignments find shallow, lexical patterns: punctuation goes to one expert, other symbols to another, non-English character sets to another. "They're not like medical experts, legal experts ... There's no semantics." The name "mixture of experts" invites the wrong picture.
 
-::predict expert-routing-token-level
 ::video 1:10:31-1:11:05 | what experts actually pick up: punctuation, symbols, scripts, "no semantics"
 ::kp expert-routing-token-level
 
@@ -387,13 +393,13 @@ $$ h_t = u_t + \sum_{i=1}^{N} g_{i,t}\,\mathrm{FFN}_i(u_t), \qquad g_{i,t} = \be
 
 $u_t$ passes through the residual; $e_i$ is expert $i$'s learned vector, so the scores are a softmax over $N$ logits, a logistic regression. Only the $K$ experts with nonzero gates run.
 
+::predict topk-token-choice-routing
+
 The slide's side notes mark one real variation: *where* the softmax goes.
 - **Softmax, then top-k** (DeepSeek v1-2, Grok, Qwen): normalize over all $N$ experts, then zero the rest. The kept gates sum to less than 1.
 - **Top-k, then softmax** (Mixtral, DBRX, DeepSeek v3): pick the top $K$ logits and softmax over only those. The kept gates sum to exactly 1.
 
 **Worked example.** Use T1's logits from slide 27, top-2. Softmax over all five gives 0.666 for E1 and 0.276 for E4, summing to 0.942; the other 0.058 went to experts that do not run. Softmaxing over only the two selected logits gives 0.707 and 0.293. Same experts, different mixing weights.
-
-::predict topk-token-choice-routing
 
 Look at the structure once more: score, take a top-k, run only the winners. "If you were paying attention in the DSA slide, this looks a lot like DSA", and the same pattern appears in H-Nets and elsewhere. It is worth recognizing on sight.
 
@@ -406,6 +412,8 @@ source: lecture_04.pdf p32-p35 · video 54:20-58:26
 ::slide 32 | (a) conventional top-2 routing over N experts; (b) fine-grained segmentation: each expert split in two, 2N experts, top-4; (c) shared expert isolation (DeepSeekMoE): expert 1 always on (green) plus top-3 of the rest; "originally from DeepSpeed MoE"
 
 Two refinements, now in nearly every big MoE, change the second design axis.
+
+::predict fine-grained-shared-experts
 
 **Fine-grained experts.** Cut each expert into smaller pieces and route to proportionally more of them. In panel (b), each expert is split in two and $k$ doubles from 2 to 4. Compute per token is unchanged (4 half-size experts cost the same as 2 full ones), but the number of different expert combinations a token can choose from explodes, so each piece can specialize more narrowly.
 
@@ -438,7 +446,6 @@ The table shows the field's history in one column. The early Google models and t
 
 **Worked comparison.** Mixtral routes 2 of 8 full-size experts, so its routed FFN compute per token is 2 standard FFNs, and 2/8 = 25% of its routed parameters are active. DeepSeek v3 routes 8 of 256 experts at 1/14 size, so its routed compute is $8/14 \approx 0.57$ standard FFNs, about 0.29× Mixtral's, while only $8/256 \approx 3.1\%$ of its routed parameters are active. "8 experts" sounds four times more expensive than "2 experts"; it is less than a third.
 
-::predict fine-grained-shared-experts
 ::widget fixture:lecture_04--moe-ffn-budget | click the Mixtral preset and pin it as the baseline, then click DeepSeek v3: parameters grow while FLOPs per token fall to about 0.3×, and the count of distinct top-k sets jumps by many orders of magnitude
 
 A student asked how shared experts interact with expert parallelism. They get no parallelism savings, since every token needs them. Instead you copy the shared expert onto every device, spending memory to avoid communication.
@@ -451,13 +458,13 @@ source: lecture_04.pdf p36-p39 · video 42:33-43:19, 58:26-1:03:13
 
 ::slide 36 | "Major challenge: we need sparsity for training-time efficiency… But sparse gating decisions are not differentiable!"; solutions: 1. reinforcement learning on the gating policy; 2. stochastic perturbations; 3. heuristic "balancing" losses; "Guess which one people use in practice?"
 
+::predict nondifferentiable-routing-solutions
+
 If every expert ran on every token during training, learning to route would be easy: you would see which expert helps each input. But then you pay the FLOPs of all experts, and the whole point was not to. So training is sparse too, and that creates two problems.
 - **The choice is not differentiable.** Which $k$ experts win is a step function of the router's scores. Gradients flow through the gate values $g_{i,t}$ of the experts that ran, but not through the decision itself.
 - **You never see the counterfactual.** "You only know the ones that activated." An expert that was not chosen produces no output for that token, so the loss says nothing about whether it would have been better.
 
 "So it's got this RL bandit flavor to the problem, but we're not going to solve it with either RL or bandits. We're going to solve it with the power of heuristics and deep learning magic." The answer to the slide's question is number 3, heuristic balancing losses. The other two are worth knowing first.
-
-::predict nondifferentiable-routing-solutions
 
 ::slide 37 | Clark et al.'s scaling curves: validation loss against expert count (1 to 512) for six model sizes, with S-BASE, RL-R (REINFORCE) and Hash routing, and an overlay comparing them; "RL is the 'right solution' but gradient variances and complexity means it's not widely used"
 
@@ -484,9 +491,10 @@ The Switch Transformer used a cheaper variant, a uniform multiplicative jitter o
 ## Balancing losses: the heuristic that makes MoEs train {#balancing}
 source: lecture_04.pdf p40-p43 · video 1:03:13-1:11:37
 
+::predict expert-collapse-without-balancing
+
 Start with what goes wrong if you simply run gradient descent through a top-k router. The experts that happen to be chosen get gradient signal and improve. Improved experts get stronger router weights, "strong weights means that they're selected more often", and they get still more signal. Experts that are not chosen get no gradient at all, so they never improve and never win. "So you get this rich gets richer effect ... And they run away, taking on everything." This **expert collapse** (or expert starvation) is, in the professor's words, "a very, very real problem" and "the core issue that you have to solve with heuristic training of MoEs."
 
-::predict expert-collapse-without-balancing
 ::video 1:03:35-1:04:06 | the loop: chosen, stronger weights, chosen more often, "they run away, taking on everything"
 
 ::slide 40 | the Switch Transformer's auxiliary loss: loss = α·N·Σ_i f_i·P_i, with f_i the fraction of the T tokens in the batch dispatched to expert i (by argmax) and P_i the router probability allocated to expert i, averaged over the batch; "The derivative with respect to p_i(x) is αN/T² Σ 1[argmax p(x) = i], so more frequent use = stronger downweighting"
@@ -499,13 +507,13 @@ $f_i$ is the fraction of tokens actually dispatched to expert $i$ (a count, with
 
 $$ \frac{\partial \mathcal{L}_\text{aux}}{\partial p_i(x)} = \frac{\alpha N}{T}\, f_i = \frac{\alpha N}{T^2} \sum_{x'} \mathbb{1}[\arg\max p(x') = i] . $$
 
+::predict load-balancing-loss
+
 The push on an expert's probability is proportional to how many tokens it is already getting. "The more tokens you get, the more negative gradient you get." Popular experts are pushed down hardest, which directly counters the rich-get-richer loop.
 
 ::worked load-balancing-loss
 
 **Worked example.** In a batch of $T = 400$ tokens, expert A is the argmax for 300 tokens and expert B for 100. The push on $p_A(x)$ is $(\alpha N / 400^2) \cdot 300$ and on $p_B(x)$ it is $(\alpha N / 400^2) \cdot 100$: three times stronger on the popular expert. And if the router's probabilities match its loads ($P_i = f_i$), the loss is $\alpha N \sum f_i^2$, which is smallest, equal to $\alpha$, when every expert gets exactly $1/N$ of the tokens.
-
-::predict load-balancing-loss
 
 ::slide 41 | DeepSeek v1-2: per-expert balancing L_ExpBal = α₁ Σ f_i P_i, the Switch loss with f_i normalized by N′/(K′T); per-device balancing L_DevBal = α₂ Σ f′_i P′_i, the same objective aggregated over the experts on each device
 
@@ -517,11 +525,11 @@ A student asked why the device term is needed, since perfectly balanced experts 
 
 ::slide 42 | DeepSeek v3: a per-expert bias b_i added to the score only for top-k selection, g′_{i,t} = s_{i,t} if s_{i,t} + b_i is in the top K_r, else 0; "auxiliary loss free balancing"; but a complementary sequence-wise balance loss L_Bal = α Σ f_i P_i "to prevent extreme imbalance within any single sequence"; "(but the approach is not fully aux loss free..)"
 
+::predict aux-loss-free-bias
+
 DeepSeek v3 tries to get rid of these "uglier" auxiliary losses. Each expert gets a bias $b_i$ that is added to its score *only when choosing the top-k*. The gate value that multiplies the expert's output is still the unbiased $s_{i,t}$. The bias is adjusted by online learning rather than by gradient: after each step, lower it for experts that received too many tokens and raise it for those that received too few (the update rule is in the DeepSeek-V3 report). Balancing therefore changes *which* experts are chosen, never how their outputs are weighted.
 
 It is not fully aux-loss free, as the slide notes: v3 keeps a small sequence-wise balance loss "to ensure extreme imbalances don't happen". "There's no solution that fully gets rid of them so far."
-
-::predict aux-loss-free-bias
 
 ::slide 43 | OLMoE with and without the load-balancing loss (LBL): training loss and C4 and Pile validation losses are all higher without it; expert assignment in the first MoE layer, without balancing one expert takes nearly 100% of tokens at first and then two experts split them, while with balancing all eight experts stay near 12.5%
 
@@ -540,9 +548,9 @@ source: lecture_04.pdf p44-p47 · video 1:11:37-1:16:35
 
 The two standard ways to spread training over many machines both run out ([L8](#/read/lecture_08) covers them in depth). **Data parallelism** gives each machine different examples, and stops once you have used up your batch size. **Model parallelism** cuts the model itself, and stops once you have used up its natural cut points. MoEs add a third axis. Because each expert FFN fits on one device, you can place different experts on different devices: **expert parallelism**.
 
-In the right-hand grid, under expert+data parallelism, each core holds a different expert (a different colour) while the data is still split as in data parallelism. The weights stay where they are. What moves is the tokens: before the MoE layer, an all-to-all **dispatch** sends each token's activation to the devices holding its $k$ experts; after it, an all-to-all **combine** brings the outputs back. That is why communication grows with the number of tokens, the width of each activation, and the number of distinct devices a token touches.
-
 ::predict expert-parallelism-communication
+
+In the right-hand grid, under expert+data parallelism, each core holds a different expert (a different colour) while the data is still split as in data parallelism. The weights stay where they are. What moves is the tokens: before the MoE layer, an all-to-all **dispatch** sends each token's activation to the devices holding its $k$ experts; after it, an all-to-all **combine** brings the outputs back. That is why communication grows with the number of tokens, the width of each activation, and the number of distinct devices a token touches.
 
 ::slide 45 | MegaBlocks: (A) batched matrix multiplication, one equal-sized product per expert with a fixed expert capacity; (B) the same as one block-diagonal matmul; (C) block-sparse matmul, which allows imbalanced routing and variable-sized experts; "Modern libraries like MegaBlocks (used in many open MoEs) use smarter sparse MMs"
 
@@ -563,9 +571,10 @@ Each expert has a fixed **capacity**, a number of token slots per batch. In the 
 
 The professor tells it as a queue. A popular expert's queue of tokens builds up "until my queue is so long, I have to start dropping tokens", and older MoE inference code would "silently drop" them: "You just send a zero back and pretend that that was fine." Routing and capacity are decided per batch, and a serving batch mixes requests from many users. So "if other users sent in queries that hit the experts that you're using", they could "bump you out of the expert queue", and you would get a worse answer because of someone else's prompt. That is randomness a dense model does not have.
 
+::predict token-dropping-stochasticity
+
 **Worked example.** A batch of 512 tokens, 8 experts, top-1, 96 slots per expert: 768 slots in total, far more than 512. But the router sends 150 tokens to expert 2 and spreads the other 362 evenly, about 52 per expert. Expert 2 overflows by $150 - 96 = 54$ tokens, and those 54 are dropped although average capacity was plentiful. Dropping is a tail event of the load, which is one more reason balance matters.
 
-::predict token-dropping-stochasticity
 ::widget fixture:lecture_04--capacity-drop | raise only the other requests' tokens to the hot expert E0: your own tokens start being dropped although your request and the mean load are unchanged
 ::widget fixture:moe-routing | route tokens one at a time with a skewed router: the popular experts fill their capacity c·k·T/E first and further tokens are dropped even when the total slots would suffice
 
@@ -577,6 +586,7 @@ This was "trivia", in the professor's word, and it has been solved: today's "dro
 ## Stability, fine-tuning, and upcycling {#stability}
 source: lecture_04.pdf p48-p53 · video 1:16:35-1:22:11
 
+::predict router-z-loss-fp32
 ::slide 48 | Zoph et al.'s instability example: 10 logits of 128 and one of 128.5; a bfloat16 roundoff of 0.5 changes the softmax output from about 0.142 to 0.091 (36%) and makes all logits equal; "Solution: Use Float 32 just for the expert router (sometimes with an aux z-loss)"; the z-loss L_z(x) = (1/B) Σ_i (log Σ_j e^{x_j^{(i)}})²
 
 Recall the rule from [L3's stability section](#/read/lecture_03): "exponentials are bad, divisions are bad, which means softmaxes are danger zone for stability issues." An MoE adds "yet another softmax", in the router.
@@ -587,8 +597,6 @@ The fixes are cheap:
 - **Compute the router in float32**, and only the router. It is one small linear layer per token (hidden width × number of experts), negligible next to the experts, which stay in bf16.
 - **Add a z-loss**, which penalizes the squared log of the softmax normalizer and so keeps the logits small. It is the same z-loss [L3](#/read/lecture_03) introduced for the output softmax; in MoEs it was "quite popular ... even in the early days".
 
-::predict router-z-loss-fp32
-
 ::slide 49 | OLMoE with a router z-loss (weight 0.001) against none: without it the training loss, C4 validation loss, HellaSwag and MMLU curves are full of spikes
 
 OLMoE's ablation is unambiguous: "It's quite clear, from these very spiky training loss curves, that z-loss on the router can be quite helpful."
@@ -596,20 +604,22 @@ OLMoE's ablation is unambiguous: "It's quite clear, from these very spiky traini
 ::video 1:16:42-1:17:10 | why the router is fragile: another softmax, and softmaxes are the danger zone
 ::kp router-z-loss-fp32
 
+::predict moe-adoption-barriers
 ::slide 50 | "Sparse MoEs can overfit on smaller fine-tuning data": on the SuperGLUE CB task the sparse model's training score reaches 100 while its validation score stays near 91, below the dense model's (about 94); Zoph et al.'s fix, updating only some parameters (all ≈ 86.2, non-MoE ≈ 86.2, MoE only ≈ 82.7, attention ≈ 85.7, FFN ≈ 86.4 on SuperGLUE); DeepSeek's fix, 1.4M SFT examples
 
 The third barrier from slide 24. MoEs "have so many parameters that if you're trying to fine tune the experts, you actually end up with very serious overfitting issues." On the slide, the dense model's train and validation curves stay close, while the sparse model memorizes its training set and validates worse.
 
 There are two kinds of fix. One is to fine-tune only part of the model. Zoph et al.'s bar chart shows that updating only the non-MoE parameters scores as well as updating everything, while updating only the MoE layers is clearly worst. Fine-tuning just the attention layers is, the professor says, something he sees "quite often with MoE works recently". The other is "the bitter lesson version": "maybe you should just use 1.4 million examples instead of whatever number you have", as DeepSeek did for its chat model, so that even the experts have enough data to fine-tune without overfitting.
 
-::predict moe-adoption-barriers
 ::kp moe-adoption-barriers
 
 ::slide 51 | sparse upcycling: the dense block's layer norms and attention are copied, its MLP is copied E times into the experts, and the router is trained from scratch; right: C4 validation accuracy against extra pretraining time for Base, Large and XL, where upcycled models (orange) pull ahead of continued dense training (blue)
 
-Can you start an MoE from a dense model you already trained? **Upcycling** copies everything, makes $E$ copies of each MLP to serve as the experts, and adds a randomly initialized router. Then you keep training. All the experts start identical, so right after upcycling the MoE computes the dense model's function (up to the gate weights). What breaks the symmetry is the random router plus "the stochasticity of which inputs go to where": different experts see different tokens, receive different gradients, and "start to specialize". The original paper's plot shows the upcycled model beating the same dense model trained for the same extra compute.
+Can you start an MoE from a dense model you already trained? **Upcycling** copies everything, makes $E$ copies of each MLP to serve as the experts, and adds a randomly initialized router. Then you keep training.
 
 ::predict upcycling
+
+All the experts start identical, so right after upcycling the MoE computes the dense model's function (up to the gate weights). What breaks the symmetry is the random router plus "the stochasticity of which inputs go to where": different experts see different tokens, receive different gradients, and "start to specialize". The original paper's plot shows the upcycled model beating the same dense model trained for the same extra compute.
 
 ::slide 52 | MiniCPM-MoE (13.6B), upcycled from MiniCPM-2.4B with top-2 of 8 experts and about 4B active parameters, trained on about 520B tokens: MMLU 53.46 to 58.90, GSM8K 53.83 to 61.56, HumanEval 50.00 to 56.71
 
@@ -673,13 +683,14 @@ $$ c_t^{KV} = W^{DKV} h_t, \qquad k_t^{C} = W^{UK} c_t^{KV}, \qquad v_t^{C} = W^
 
 Better still, you never have to rebuild the keys. Without position encoding, a score is $\langle h W^Q,\, W^{UK} c \rangle = \langle h\, W^Q W^{UK},\, c \rangle$, and $W^Q W^{UK}$ is one fixed matrix that can be precomputed: queries are projected straight into latent space and scored against the cached $c$'s.
 
+::predict mla-latent-kv-cache
+
 RoPE breaks this ("this is going to conflict with rope when you do KV caching"). RoPE rotates queries and keys by position-dependent matrices, so the score becomes $\langle h W^Q R_q,\, R_k W^{UK} c \rangle$. The rotations sit *between* $W^Q$ and $W^{UK}$ and differ for every pair of positions, so no fixed product can be precomputed. DeepSeek's fix is to carry position in a small side channel: a few extra, non-latent key dimensions that are rotated (cached alongside $c$), while the latent part stays unrotated and mergeable.
 
 ::worked mla-latent-kv-cache
 
 **Worked numbers**, using DeepSeek-V2's published sizes (not on the slide): 128 heads of width 128 would cache $2 \cdot 128 \cdot 128 = 32{,}768$ values per token per layer. MLA caches a 512-wide latent plus a 64-wide rotated key, 576 values: about 57× smaller, at every context length and every dtype.
 
-::predict mla-latent-kv-cache
 ::widget fixture:lecture_04--kv-cache-model | set 128 KV heads of width 128, then tick MLA (latent 512, rotated key 64): bytes per token shrink about 57× with no head removed, and setting the rotated dims to 0 shows the 64× an un-rotated latent would give
 
 ::note skip 1:24:56 | The decoupled-RoPE construction is named but skipped: "you have nonlatent dimensions that encode positions, but I'm not going to go into too much more details about that." The merge of W^UK into the query side is on the slide but not explained aloud.

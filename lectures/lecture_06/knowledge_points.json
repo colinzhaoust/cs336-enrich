@@ -75,6 +75,11 @@
           "kp": "lecture_05:execution-hierarchy",
           "basis": "author-inference",
           "note": "'Wait for CUDA threads to finish' assumes the learner knows a kernel runs as many threads on the device, separately from the Python process."
+        },
+        {
+          "kp": "lecture_02:gpu-timing-synchronize",
+          "basis": "author-inference",
+          "note": "L2 already taught that launches are asynchronous, so a timer must synchronize and average several runs."
         }
       ],
       "misconceptions": [
@@ -102,14 +107,13 @@
           "why": "With no warmup the single trial includes torch.compile's compilation (L181, L275). The other two have no compile step, so the distortion is concentrated on the compiled version, making it look slower than the naive one."
         },
         "check": {
-          "q": "You benchmark torch.compile(naive_gelu) with num_trials = 1, then change num_warmups from 0 to 3. What happens to the measured time? Answer up, down or same.",
+          "q": "You benchmark builtin_gelu with the default warmup in place, then raise num_trials from 1 to 10. What happens to the reported time? Answer up, down or same.",
           "format": "trend",
-          "answer": "down: with no warmup the single trial includes compilation; after warmup it measures only the compiled kernel.",
-          "value": "down",
-          "why": "Warmup absorbs one-off costs such as torch.compile's compilation and cache effects before timing starts (L181-L185, L275).",
-          "targets_misconception": "The first call is as good a measurement as any other.",
-          "varies": "the fix is applied and the learner predicts its effect, instead of spotting the distorted measurement",
-          "invariant": "the first call of a compiled function includes compilation, which warmup removes from the measurement",
+          "answer": "same (roughly): each trial measures the same steady-state kernel, so the mean of 10 estimates the same time as one trial, with less noise.",
+          "value": "same",
+          "why": "After warmup every trial times the same work; more trials average out run-to-run variation but do not shift the mean (L180-L201).",
+          "varies": "the number of timed trials after warmup, instead of the warmup itself",
+          "invariant": "after warmup, trials measure the steady state, and averaging them reduces noise rather than changing the time",
           "transfer_distance": "near"
         },
         "retrieval": [
@@ -167,7 +171,7 @@
             "source": "lecture_06_video",
             "ref": "video:25:35-26:23",
             "role": "spoken",
-            "quote": "scale up your matrices and see how the time changes. ... it should grow cubically. But notice that there is this flaw where up until you get up to almost 2,000 dimensional matrices, things are basically a constant. ... the shapes of these GPUs are built for fairly large matrix multiplications. And if you have a 2 by 2 matrix, it's going to be very inefficient."
+            "quote": "it should grow cubically. But notice that there is this flaw where up until you get up to almost 2,000 dimensional matrices, things are basically a constant. ... the shapes of these GPUs are built for fairly large matrix multiplications."
           }
         ],
         "filtering_note": "The professor states the shape of the curve but not where the crossover is; the results dict holds GPU timings from his machine and is not reproduced here. He does not say why the small-dim regime is flat; this thread attributes it to launch overhead in supp-kernel-launch (author inference). Spoken evidence (25:55-26:23), correcting two claims in this note: the crossover is said aloud, flat 'up until you get up to almost 2,000 dimensional matrices' on his B200 (a reading of his own GPU plot, not a portable number); and he does give a reason for the flat regime, 'the shapes of these GPUs are built for fairly large matrix multiplications', i.e. a small matmul cannot fill the hardware. That reason is not launch overhead, which remains this thread's inference (supp-kernel-launch). The two are compatible (an under-filled GPU finishes in roughly fixed time), and the statement was not changed."
@@ -193,6 +197,10 @@
         {
           "belief": "Halving dim always cuts the time by a large factor.",
           "why_wrong": "Below the crossover the time is set by a fixed per-launch cost, so dim changes barely move it (L176 'roughly constant')."
+        },
+        {
+          "belief": "A GPU with 2x faster arithmetic makes every matmul about 2x faster.",
+          "why_wrong": "Below the crossover the time is the fixed per-launch cost, which faster arithmetic does not touch; only the dim³ part of the time shrinks (L176's two regimes; author inference)."
         }
       ],
       "prompts": {
@@ -211,14 +219,14 @@
           "why": "When the kernel's work is tiny, the time is the launch and completion latency, which does not depend on dim (L176, supp-kernel-launch)."
         },
         "check": {
-          "q": "In the lecture's matmul benchmark, you go from dim = 128 to dim = 256, where the time is dominated by a fixed per-launch cost. What happens to the measured time? Answer up, down or same.",
+          "q": "At dim = 512, below the crossover, you rerun the matmul benchmark on a GPU whose arithmetic is 2x faster but whose fixed per-launch cost is unchanged. What happens to the measured time? Answer up, down or same.",
           "format": "trend",
-          "answer": "same (roughly): at these sizes the fixed launch-and-sync cost dominates, so 8x the FLOPs barely changes the time.",
+          "answer": "same (roughly): at this size the fixed launch-and-sync cost dominates, so halving the arithmetic time barely changes the total.",
           "value": "same",
-          "why": "Small matmuls are overhead-bound: the time is the kernel launch and completion latency, which does not depend on dim. Only at large dims does time grow like dim³ (L172-L176).",
-          "targets_misconception": "Halving dim always cuts the time by a large factor.",
-          "varies": "a pair of small dims, asked as a direction",
-          "invariant": "below the crossover, matmul time is a fixed overhead independent of dim",
+          "why": "Small matmuls are overhead-bound: the time is the kernel launch and completion latency, which faster arithmetic does not shorten. Only in the cubic regime, where the 2·dim³ FLOPs dominate, would the time drop toward half (L172-L176).",
+          "targets_misconception": "A GPU with 2x faster arithmetic makes every matmul about 2x faster.",
+          "varies": "the GPU's arithmetic speed at a fixed small dim, asked as a direction",
+          "invariant": "below the crossover, matmul time is a fixed overhead independent of the arithmetic",
           "transfer_distance": "near"
         },
         "retrieval": [
@@ -243,7 +251,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_06--matmul-time",
-          "notice": "Below about dim 2048 the curve lies on the fixed-cost floor and doubling dim barely moves it; above, each doubling multiplies the time by close to 8 as the 2·dim³ term takes over."
+          "notice": "Below about dim 2048 the curve lies on the fixed-cost floor and doubling dim barely moves it; above, the ratio per doubling climbs toward 8 (×4.5 at 4096, ×7.2 at 8192) as the 2·dim³ term takes over."
         },
         {
           "type": "video-span",
@@ -522,7 +530,7 @@
         "transfer": {
           "q": "You write a sigmoid-based GeLU as a chain of four PyTorch ops in the same style as naive_gelu. Without compiling, how does its kernel count and HBM traffic compare with naive_gelu's, and what single change brings it to builtin-level speed?",
           "format": "short",
-          "answer": "Fewer kernels (about four instead of about eight) and proportionally fewer HBM round trips, so faster but still unfused; torch.compile fuses the chain into one Triton kernel with one read and one write.",
+          "answer": "Fewer kernels (about four instead of nine; the lecture's profile shows 9 cudaLaunchKernel calls for naive_gelu) and proportionally fewer HBM round trips, so faster but still unfused; torch.compile fuses the chain into one Triton kernel with one read and one write.",
           "why": "The cost is per launched kernel, each with its own HBM read and write; fusion removes all but one (L300-L302)."
         },
         "check": {
@@ -559,7 +567,7 @@
           "type": "animation",
           "action": "trace",
           "ref": "fixture:fusion-timeline",
-          "notice": "Five kernel launches, each with its own HBM read and write, collapse into one launch with a single read and a single write; the arithmetic between them is unchanged."
+          "notice": "Nine kernel launches (13 reads + 9 writes of the whole tensor) collapse into one launch with a single read and a single write; the arithmetic between them is unchanged."
         },
         {
           "type": "code",
@@ -1314,8 +1322,8 @@
         "transfer": {
           "q": "You delete the max step and the subtraction (ops 1 and 2) from naive_softmax. What are the new read and write totals, and what goes wrong on the row [0, 0, 100] in fp32?",
           "format": "short",
-          "answer": "3MN + M reads and 2MN + M writes; exp(100) overflows fp32 to inf, so the row becomes inf/inf = nan.",
-          "why": "Remaining ops: exp (MN, MN), sum (MN, M), normalize (MN + M, MN), counting normalize's M denominator reads; the code comment at L435 counts normalize as MN reads, which gives 3MN. fp32 tops out near 3.4e38 and e^100 is about 2.7e43."
+          "answer": "3MN reads and 2MN + M writes (the lecture's tally; 3MN + M reads if you also count normalize's M denominator reads); exp(100) overflows fp32 to inf, so the row becomes inf/inf = nan.",
+          "why": "Remaining ops, with the code comments' counts: exp (MN, MN), sum (MN, M), normalize (MN, MN) per L435, which gives 3MN reads; counting normalize's M denominator reads as well gives 3MN + M. fp32 tops out near 3.4e38 and e^100 is about 2.7e43."
         },
         "check": {
           "q": "A softmax without the max-subtraction step computes exp(x) directly in fp16, whose largest finite value is 65,504. What is the smallest integer logit for which exp overflows to inf? Type only the number.",
@@ -1956,7 +1964,7 @@
             "source": "lecture_06",
             "ref": "lecture_06.py:L574-L582",
             "role": "claim",
-            "quote": "Key idea: divide the matrix C into output tiles (thread blocks). Fix an output tile in C. For each pair of (row tile of A, column tile of B): Load the corresponding A tile and B tile from HBM into shared memory. Perform matrix multiplication on the tiles. Accumulate ... Arithmetic intensity: O(tile_size)."
+            "quote": "Key idea: divide the matrix C into output tiles (thread blocks). ... For each pair of (row tile of A, column tile of B): Load the corresponding A tile and B tile from HBM into shared memory. ... Arithmetic intensity: O(tile_size)."
           },
           {
             "source": "lecture_06",
@@ -2371,13 +2379,13 @@
           "why": "Bandwidth only helps once a kernel's traffic exceeds its launch cost; at 100 elements it never does."
         },
         "check": {
-          "q": "A loop calls a tiny elementwise kernel 1,000 times on a 100-element tensor. You move to a GPU with 2x the memory bandwidth and the same launch overhead. What happens to the total time? Answer up, down or same.",
+          "q": "A loop calls a tiny elementwise kernel 1,000 times on a 100-element tensor. You split each call into two kernels on 50 elements each, so the loop makes 2,000 launches and moves the same total bytes. What happens to the total time? Answer up, down or same.",
           "format": "trend",
-          "answer": "same (roughly): the time is 1,000 launch overheads; the bytes moved per call are negligible, so bandwidth barely matters.",
-          "value": "same",
-          "why": "Bandwidth only helps once a kernel's traffic outweighs its launch cost; at 100 elements it never does. Fusing the calls is the lever (L176, L185).",
+          "answer": "up (about 2x): the time is the number of launches times a fixed overhead, and the launches doubled while the work did not change.",
+          "value": "up",
+          "why": "In the overhead-bound regime each launch costs roughly the same whatever its size, so 2,000 launches take about twice as long as 1,000 (L176, L185).",
           "targets_misconception": "Launch overhead is negligible next to any GPU work.",
-          "varies": "the hardware lever is applied and the learner predicts its effect",
+          "varies": "the number of launches at fixed total work, asked as a direction",
           "invariant": "in the overhead-bound regime, time is set by the number of launches, not bytes",
           "transfer_distance": "near"
         },
@@ -2499,7 +2507,7 @@
           "type": "animation",
           "action": "predict-trend",
           "ref": "fixture:fusion-timeline",
-          "notice": "When the kernels fuse, the bytes bar shrinks to one read and one write while the FLOPs bar does not move."
+          "notice": "When the kernels fuse, the HBM lane shrinks to one read and one write while the compute lane keeps the same nine op units, now back to back."
         }
       ]
     }

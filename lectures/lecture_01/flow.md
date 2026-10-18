@@ -65,9 +65,11 @@ His slogan is
 
 $$ \text{accuracy} = \text{efficiency} \times \text{resources} $$
 
-where, aloud, "efficiency is output over input, and resources is the input". Nothing here is measured; it is a way to think. Efficiency multiplies resources: a recipe that is 4× more compute-efficient, given $10^{25}$ FLOPs, behaves like the old recipe given $4 \times 10^{25}$.
+where, aloud, "efficiency is output over input, and resources is the input". Nothing here is measured; it is a way to think.
 
 ::predict efficiency-framing
+
+Efficiency multiplies resources: a recipe that is 4× more compute-efficient, given $10^{25}$ FLOPs, behaves like the old recipe given $4 \times 10^{25}$.
 
 Efficiency matters *more* at scale, not less. In a small experiment, a run that takes twice as long means you "just wait twice as long". At scale the same waste "could be hundreds of millions of dollars", so "even like a 5% improvement might be a big deal". Empirically, a 2020 OpenAI paper measured a 44× gain in algorithmic efficiency on ImageNet between 2012 and 2019: the compute needed to reach AlexNet's accuracy fell 44-fold, separately from the hardware getting faster. Multiply algorithmic and hardware gains together and you get the jumps the field has seen.
 
@@ -148,9 +150,12 @@ The popular choice is **Byte-Pair Encoding** (BPE), whose intuition is to break 
 
 Aloud the professor ranked these: the second is "more subtle, but maybe more importantly". The code only names it.
 
-Why shorter sequences matter: a Transformer's attention compares every position with every other, so its cost grows with the square of the sequence length $n$. Going from 250 tokens to 1000 (raw bytes) makes the sequence 4× longer and the attention scores $4^2 = 16$ times more expensive. The rest of the model (projections, MLPs) grows only linearly, 4×, and at short context that linear part dominates, so 16× is the attention term only.
+Why shorter sequences matter: a Transformer's attention compares every position with every other, so its cost grows with the square of the sequence length $n$.
 
 ::predict tokenization-efficiency-lens
+
+Going from 250 tokens to 1000 (raw bytes) makes the sequence 4× longer and the attention scores $4^2 = 16$ times more expensive. The rest of the model (projections, MLPs) grows only linearly, 4×, and at short context that linear part dominates, so 16× is the attention term only.
+
 ::widget fixture:lecture_01--vocab-trade | set tokenizer 1 to 1 byte per token and tokenizer 2 to 4: the length bar shrinks 4× and the attention bar 16×
 
 The dream is a tokenizer-free architecture that operates directly on bytes (ByT5, MegaByte, BLT, T-Free, H-Net). These are promising but "have not yet been scaled up to the frontier", and since frontier models still use tokenizers, the course still teaches them. The professor adds that every year he hopes he will not have to.
@@ -304,7 +309,7 @@ Put the two rules together and you can size a model from a budget alone: $C = 6N
 
 For $10^{25}$ FLOPs that gives $N \approx 290$B parameters on about 5.8T tokens. Notice that the lecture's own example, 70B on 1T tokens, is only 14 tokens per parameter: by this rule it is slightly too big a model for its budget.
 
-**The caveat**: the rule ignores inference cost. A model is trained once but served many times, and a smaller model is cheaper to serve. "A lot of models these days are small, but they're trained on way more tokens than is compute optimal." Fix a 10B model at a budget of $6 \times 10^{23}$ FLOPs and the budget buys $10^{13}$ tokens, 1000 tokens per parameter, fifty times the rule. This is also why PaLM is called undertrained: it was big for its compute, with too few tokens per parameter.
+**The caveat**: the rule ignores inference cost. A model is trained once but served many times, and a smaller model is cheaper to serve. "A lot of models these days are small, but they're trained on way more tokens than is compute optimal." Fix a 10B model at a budget of $1.2 \times 10^{24}$ FLOPs and the budget buys $2 \times 10^{13}$ tokens, 2000 tokens per parameter, a hundred times the rule. This is also why PaLM is called undertrained: it was big for its compute, with too few tokens per parameter.
 
 ::widget fixture:lecture_01--compute-napkin | hold C fixed and slide N: only one point meets the green D = 20·N line; every smaller N buys more than 20 tokens per parameter
 ::video 50:27-51:09 | "quite crude", varies with data and architecture, and why today's small models are over-trained
@@ -386,20 +391,20 @@ A tokenizer is a class implementing both. The lecture writes it as an abstract i
 
 ::code lecture_01.py:L256-L262 | the whole contract: encode str → list[int], decode list[int] → str
 
+::predict tokenizer-interface
+
 The model never sees characters, only ids, and ids mean something only relative to the vocabulary that produced them. The example `[15496, 11, 995, 0]` is GPT-2's encoding of "Hello, world!"; decode the same four integers with another tokenizer and you get an unrelated string. The GPT-5 tokenizer, for instance, encodes "Hello" as 13225, not 15496.
 
 The one property every tokenizer must have: it **round-trips**, `decode(encode(s)) == s` for every string. "If you implement a tokenizer and it doesn't round trip, you have a problem." A lowercasing encoder, for example, would fail it on any capital letter.
 
-::predict tokenizer-interface
-
 ### A production tokenizer, observed
+
+::predict gpt-tokenizer-observations
 
 To get a feel, the lecture points to an [interactive site](https://tiktokenizer.vercel.app/?encoder=gpt2) where you type text and see it tokenized. Three observations, which the professor offers as reasons "tokenizers are kind of annoying and why people want to get rid of them":
 - **A word and its preceding space form one token** (e.g. `" world"`). Many tokens are "space, word".
 - **The same word at the beginning and in the middle is represented differently.** In `"hello hello"` the first is `hello`, the second ` hello`: "two completely different indices that have nothing to do with each other".
 - **Numbers are split into chunks of a few digits.** Sometimes predictably, sometimes not. Some tokenizers make every digit a token, "but then you're blowing up the number of tokens you have".
-
-::predict gpt-tokenizer-observations
 
 So `"red red red"` encodes as `[a, b, b]`: the first `red` has no space before it, every later one is ` red`. Token identity depends on the character before the word.
 
@@ -421,9 +426,10 @@ The lecture's measure is the **compression ratio**: the number of UTF-8 bytes pe
 
 $$ \text{compression ratio} = \frac{\text{UTF-8 bytes of the string}}{\text{number of tokens}} $$
 
+::predict compression-ratio
+
 The numerator is **bytes**, not characters. `"Hello, 🌍! 你好!"` has 13 characters but 20 bytes, because the emoji takes 4 bytes and each Chinese character 3 (the byte section below explains why). So GPT-5's ratio on it is $20 / 8 = 2.5$; dividing characters instead would give $13 / 8 \approx 1.6$, a different and wrong number.
 
-::predict compression-ratio
 ::widget fixture:lecture_01--tokenizer-lens | on the lecture string the byte row has 20 boxes and the character row 13: the GPT-5 ratio 2.5 is 20 bytes ÷ 8 tokens
 
 A larger ratio means a shorter sequence for the same text, which is good "because attention is quadratic". Ratios also differ by language with the same tokenizer: if a 1000-byte English document becomes 250 tokens (ratio 4.0) and a 1000-byte Chinese document 500 tokens (ratio 2.0), the Chinese document uses twice the context window.
@@ -435,13 +441,13 @@ A larger ratio means a shorter sequence for the same text, which is good "becaus
 
 How do you raise the compression ratio? Increase the **vocabulary size**, the number of distinct token values: with more entries, longer chunks get their own token. GPT-5's vocabulary has 200,019 entries; "these days, tokenizers, especially multilingual tokenizers, have 100k or 200k tokens".
 
-The cost is **sparsity**. Aloud: "every element of vocab is treated like a distinct element". Each id is learned on its own, from the occasions it occurs, so a huge vocabulary of rarely seen ids learns slowly. And the gains shrink: the entries added last are the rarest chunks, so each saves less. Suppose growing a vocabulary from 32K to 64K lifts the ratio from 3.6 to 4.0 then sequences get only 10% shorter ($3.6/4.0 = 0.9$), for 32K new ids to learn.
+The cost is **sparsity**. Aloud: "every element of vocab is treated like a distinct element". Each id is learned on its own, from the occasions it occurs, so a huge vocabulary of rarely seen ids learns slowly. And the gains shrink: the entries added last are the rarest chunks, so each saves less. Suppose growing a vocabulary from 32K to 64K lifts the ratio from 3.0 to 3.3: then sequences get only about 9% shorter ($3.0/3.3 \approx 0.91$), for 32K new ids to learn.
 
 ::predict vocab-size-vs-sequence-length
 
 The three vocabularies of this lecture make the point: bytes 256, characters at least 127,758 (computed below), GPT-5 200,019. The character vocabulary is almost as large as GPT-5's yet compresses far worse, so size alone buys nothing; what matters is whether the entries are frequent chunks.
 
-::widget fixture:lecture_01--vocab-trade | set ratios 3.6 and 4.0 and vocabularies 32,000 and 64,000: the length bar shrinks only 10% while the vocabulary bar doubles with V
+::widget fixture:lecture_01--vocab-trade | set ratios 3.0 and 3.3 and vocabularies 32,000 and 64,000: the length bar shrinks only about 9% while the vocabulary bar doubles with V
 ::note skip 1:08:22 | Browsing the GPT-5 vocabulary file was skipped "in the interest of time".
 ::kp vocab-size-vs-sequence-length
 
@@ -451,9 +457,9 @@ The lecture names sparsity but not its concrete price, which follows from how a 
 
 $$ V \cdot d \ \text{parameters per matrix} $$
 
-At $d = 4096$: $256 \times 4096 \approx 1.05$M parameters for bytes, and $200{,}019 \times 4096 \approx 819$M for GPT-5's vocabulary, about 780× more. A row is updated only when its id occurs, which is the sparsity: rare ids get few gradient updates.
-
 ::predict supp-vocab-embedding-params
+
+At $d = 4096$: $256 \times 4096 \approx 1.05$M parameters for bytes, and $200{,}019 \times 4096 \approx 819$M for GPT-5's vocabulary, about 780× more. A row is updated only when its id occurs, which is the sparsity: rare ids get few gradient updates.
 
 This cost is independent of depth, so it weighs most on small models. A 7B model with $d = 4096$, a 128K vocabulary and untied matrices spends $2 \times 128{,}000 \times 4096 \approx 1.05$B parameters, 15% of its total, on the vocabulary. For a "1B" model with $d = 2048$ and a 256K vocabulary, those two matrices alone would be the whole budget.
 
@@ -471,10 +477,12 @@ A Unicode string is a sequence of Unicode characters, and each character has an 
 
 ::code lecture_01.py:L505-L511 | encode is map(ord), decode is map(chr)
 
-On the lecture string it gives 13 tokens, one per character. What is its vocabulary? There are about 150K assigned Unicode characters. The code can only compute a lower bound from the string it has, the largest code point plus one: $127757 + 1 = 127{,}758$, set by the emoji. Its compression ratio is $20/13 \approx 1.54$, above 1 only because some characters take several bytes; on pure ASCII text it is exactly 1. On `"你好"` alone it is $6/2 = 3$.
+On the lecture string it gives 13 tokens, one per character. What is its vocabulary? There are about 150K assigned Unicode characters. The code can only compute a lower bound from the string it has, the largest code point plus one: $127757 + 1 = 127{,}758$, set by the emoji. Its compression ratio is $20/13 \approx 1.54$, above 1 only because some characters take several bytes; on pure ASCII text it is exactly 1.
 
 ::predict character-tokenizer
 ::code lecture_01.py:L636-L648 | 13 tokens, vocabulary ≥ 127,758, ratio 1.54: "the worst of both worlds"
+
+On `"你好"` alone the ratio is $6/2 = 3$: two tokens, but six bytes.
 
 The code lists two problems: (1) a very large vocabulary, (2) many characters are rare (e.g. 🌍), an inefficient use of the vocabulary. Aloud the professor ranked them: 150K is "not crazy" (GPT-5's vocabulary is larger), and rarity is "the bigger problem". Most vocabulary slots are rarely used, while the common text still costs one token per character. A large vocabulary and a low compression ratio: "the worst of both worlds".
 
@@ -492,18 +500,22 @@ A Unicode string can also be stored as a sequence of bytes, integers from 0 to 2
 
 ::code lecture_01.py:L652-L658 | "a" is one byte, the emoji four
 
-So `ord` gives one integer for 🌍 while UTF-8 encoding gives four bytes: one is the character's number, the other its stored form. The lecture string's byte count, step by step:
+So `ord` gives one integer for 🌍 while UTF-8 encoding gives four bytes: one is the character's number, the other its stored form.
+
+::predict utf8-variable-length
+
+The lecture string's byte count, step by step:
 
 ::worked utf8-variable-length
-::predict utf8-variable-length
 
 A **byte tokenizer** emits one token per UTF-8 byte. Its indices for the lecture string are `[72, 101, 108, 108, 111, 44, 32, 240, 159, 140, 141, 33, 32, 228, 189, 160, 229, 165, 189, 33]`: 20 tokens, all between 0 and 255.
 
 ::code lecture_01.py:L514-L524 | encode is string.encode("utf-8"), decode is bytes(indices).decode("utf-8")
 
+::predict byte-tokenizer
+
 The vocabulary is nice and small: exactly 256, fixed, and every possible string is covered. But the compression ratio is bytes ÷ bytes, so it is **exactly 1 for every input**; the code asserts it. A 5,000-character Chinese document is about 15,000 tokens, still at ratio 1. Sequences are as long as the text's byte count, and since a Transformer's context is limited because attention is quadratic, "this is not looking great".
 
-::predict byte-tokenizer
 ::widget fixture:lecture_01--tokenizer-lens | type any script: the byte row is one token per byte box, so its ratio stays 1.0 while its token count follows the byte count
 ::code lecture_01.py:L667-L673 | vocabulary 256, assert compression_ratio == 1, sequences too long
 
@@ -519,9 +531,9 @@ Characters and bytes are "both really bad". The classical NLP approach goes the 
 
 ::code lecture_01.py:L678-L680 | split with \w+|.
 
-`"I'll say supercalifragilisticexpialidocious!"` (44 bytes) becomes 8 chunks: `I`, `'`, `ll`, ` `, `say`, ` `, `supercalifragilisticexpialidocious`, `!`. To make this a tokenizer you would map each distinct chunk to an integer; the lecture does not build that mapping.
-
 ::predict word-tokenizer
+
+`"I'll say supercalifragilisticexpialidocious!"` (44 bytes) becomes 8 chunks: `I`, `'`, `ll`, ` `, `say`, ` `, `supercalifragilisticexpialidocious`, `!`. To make this a tokenizer you would map each distinct chunk to an integer; the lecture does not build that mapping.
 
 What is good: each token is meaningful, "because humans invented words, and words tend to have a stable semantic meaning". And the compression ratio is high: $44 / 8 = 5.5$, against GPT-5's 2.5 on the earlier string.
 
@@ -548,9 +560,10 @@ The sketch: start with each byte as a token, and repeatedly merge the most commo
 
 ::code lecture_01.py:L705-L708 | train on the data; common sequences become one token; merge the most frequent pair
 
+::predict bpe-idea
+
 Because the merges come from pair counts, the vocabulary depends on the training text. Two tokenizers of the same size, one trained on English Wikipedia and one on Python code, tokenize the same file differently, and the code-trained one compresses Python better.
 
-::predict bpe-idea
 ::note aside | The lecture collapses two variants. Sennrich's BPE merged characters inside words, after splitting text into words; the byte-level version with a 256-byte base vocabulary is GPT-2's.
 
 ### The training loop

@@ -25,7 +25,7 @@ The process is **inherently lossy**, because a page is hierarchical (the DOM tre
 
 The tools are rule-based: trafilatura, resiliparse, jusText, lynx. Rules are used because they are very fast and the job does not need "too much intelligence". The professor allowed that there "could be a case for model-based interventions" here, if they were fast and did something smarter. Rules also have a failure rate, which is why anyone who looks at web data finds imperfections in it.
 
-::code lecture_14.py:L43-L49 | strip boilerplate, keep content, accept the loss; the tool you pick matters
+::code lecture_14.py:L43-L49 | strip boilerplate, keep content, accept the loss
 
 ::predict html-to-text-lossy
 
@@ -33,7 +33,7 @@ Does the choice of extractor matter? The DCLM paper ran the comparison: the same
 
 ::figure official/lectures/images/dclm-wet.png | the WET files Common Crawl ships score 20.7 on CORE; re-extracting the raw HTML with resiliparse or trafilatura gives about 24
 
-So **accuracy matters**: the extractor decides what the model will ever see, and no later stage can bring back content the extractor dropped. Resiliparse and trafilatura are close (trafilatura best on CORE, 24.5; resiliparse best on EXTENDED, 13.4), and both beat Common Crawl's own pre-extracted WET text by a wide margin. [L13](#/read/lecture_13) explains the WARC/WET distinction.
+So **accuracy matters**: the extractor decides what the model will ever see, and no later stage can bring back content the extractor dropped. Resiliparse and trafilatura are close (trafilatura best on CORE, 24.5; resiliparse best on EXTENDED, 13.4), and both beat Common Crawl's own pre-extracted WET text: on CORE by 3.4-3.8 points (WET 20.7), on EXTENDED by less (WET 12.2, against 12.5 and 13.4). [L13](#/read/lecture_13) explains the WARC/WET distinction.
 
 
 ### PDFs
@@ -102,7 +102,7 @@ The difference matters. KenLM never sees R: it measures whether a page is fluent
 
 ### To use a model or not
 
-Not everyone filters with a model. C4, Gopher, RefinedWeb, FineWeb and Dolma deliberately use only rules (see [L13](#/read/lecture_13)); GPT-3, LLaMA and DCLM use a trained classifier. The older datasets avoided classifiers on purpose, not to save cost: they "wanted to not bias things too much", since a classifier pulls everything toward whatever T is.
+Not everyone filters with a model. C4, Gopher, RefinedWeb, FineWeb and Dolma deliberately use only rules for *quality* filtering (see [L13](#/read/lecture_13); Dolma still runs fastText language ID and a Jigsaw toxicity classifier, both below); GPT-3, LLaMA and DCLM use a trained quality classifier. The older datasets avoided classifiers on purpose, not to save cost: they "wanted to not bias things too much", since a classifier pulls everything toward whatever T is.
 
 The code says model-based filtering is "becoming the norm". Aloud the professor went further: "basically everyone does some amount of model-based filtering". The reason is compute. With plenty of compute you could train on everything, but "most people are compute-poor", and without careful filtering "you're just wasting flops on low-quality content".
 
@@ -190,7 +190,7 @@ $$ P(\text{keep} \mid s) = P\big(X > 1 - s\big) = (2 - s)^{-9} $$
 |---|---|---|---|---|
 | P(keep) | 1.0 | 0.42 | 0.026 | 0.002 |
 
-Two things follow. First, the score is not the keep probability: a document scored 0.5 is kept 2.6% of the time, not half the time, and a document is kept more often than not only above a score of $2 - 2^{1/9} \approx 0.92$. Second, nothing is ever thrown away for sure: even a score-0 document survives one time in 512. The lecture gives no reason for the stochastic rule; a plausible one is diversity, so that some of the low-scoring mass, which the classifier may be wrong about, still reaches training.
+Two things follow. First, the score is not the keep probability: a document scored 0.5 is kept 2.6% of the time, not half the time, and a document is kept more often than not only when the score is close to 1. Second, nothing is ever thrown away for sure: even a score-0 document survives one time in 512. The lecture gives no reason for the stochastic rule; a plausible one is diversity, so that some of the low-scoring mass, which the classifier may be wrong about, still reaches training.
 
 ::widget fixture:lecture_14--pareto-keep | the curve drops steeply below score 1 but never touches 0, unlike the dashed hard threshold; the grid of 1,000 documents at your score shows how many actually get through
 ::note slip 14:47 | Aloud, GPT-3 was said to keep documents "if the linear classifier is scored highly enough", which sounds like a hard threshold. The code says "keep documents stochastically based on score", and keep_document itself was not discussed.
@@ -214,6 +214,8 @@ With these examples you have the whole toolkit: identify the type of data you wa
 
 ### The best threshold depends on how long you train
 
+::predict filter-threshold-scale-dependent
+
 Now a subtlety. A classifier gives you a score, but you cannot pick, say, 0.9 and call it the best threshold, because what data you want depends on the model you will train, in particular on how many tokens you train on:
 - train **shorter**, and you want less data of higher quality;
 - train **longer**, and you can tolerate, and need, lower-quality data.
@@ -229,7 +231,6 @@ The figure is a preliminary experiment by Michael Ryan: a 157M-parameter model, 
 
 High-quality data wins "in this regime, where you're not epoching". Once you train on many tokens it no longer does. And stopping DCLM early, at its best point (about 3.8), still leaves it "worse than if you had trained for longer using low-quality data".
 
-::predict filter-threshold-scale-dependent
 ::widget fixture:lecture_13--filter-budget | set the DCLM 1.6% filter and move the budget: at Llama 3's 15T it needs just under four epochs, at Qwen3's 36T over nine; the longer the run, the more of the pool a filter has to keep
 ::video 19:02-20:14 | high-quality data wins until it starts repeating; then unfiltered data overtakes it
 
@@ -393,9 +394,7 @@ With one MinHash, $P(\text{A and B collide}) = \text{Jaccard}(A, B)$. More simil
 
 With $n = 12$, $b = 3$, $r = 4$:
 
-```
-h1 h2 h3 h4  |  h5 h6 h7 h8  |  h9 h10 h11 h12
-```
+`h1 h2 h3 h4 | h5 h6 h7 h8 | h9 h10 h11 h12`
 
 If $h_5(A) = h_5(B)$ and $h_6$, $h_7$ and $h_8$ also agree, the second band fires and the pair collides, whatever the other bands do. Inside a band it is an AND; across bands it is an OR. "This and-or structure is doing the lifting."
 
@@ -482,7 +481,7 @@ source: lecture_14.py:L331-L371 · video 49:21-1:00:00
 
 So far the pipeline has turned raw HTML or PDFs into text, filtered it for quality and deduplicated it, usually one source at a time. But language models are trained on many sources at once. Marin, an open model-development project, keeps a live view of the sources its next model will train on:
 
-::figure official/lectures/images/marin-token-viewer.png | tokens per dataset, in billions, colored by category: web (orange) dominates, with Nemotron-CC medium-quality web at about 2.1T; multilingual, code, math and specialized sets are each far smaller
+::figure official/lectures/images/marin-token-viewer.png | tokens per dataset, in billions, colored by category: web (orange) dominates, with Nemotron-CC medium-quality web at about 2.1T; one multilingual set, finetranslations/multilingual, is about 1.5T, as large as finetranslations/web and tied for third-largest overall, while the other multilingual, code, math and specialized sets are each under 600B
 
 Nemotron-CC web data at several quality levels, FinePDFs (from the first section), institutional books, code: a few hundred billion to two trillion tokens each. An older example is The Pile ([L13](#/read/lecture_13)), which assigned a weight to each of its components.
 

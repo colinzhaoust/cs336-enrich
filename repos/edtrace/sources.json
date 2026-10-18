@@ -3,6 +3,8 @@
     "title": "edtrace backend: Python tracer package (local copy)",
     "kind": "repo",
     "path": "tools/edtrace/backend/src/edtrace",
+    "license": "MIT (c) 2025 Percy Liang",
+    "upstream": "https://github.com/percyliang/edtrace",
     "sha": null,
     "sha_source": "no .git directory under tools/edtrace; discover_repo.py records a sha256 per module in discovered.json instead",
     "anchor_convention": "execute.py:L232-L245  (path relative to tools/edtrace/backend/src/edtrace, 1-based inclusive line range)",
@@ -12,6 +14,8 @@
     "title": "edtrace frontend: React/Vite trace viewer (local copy)",
     "kind": "repo",
     "path": "tools/edtrace/frontend/src",
+    "license": "MIT (c) 2025 Percy Liang",
+    "upstream": "https://github.com/percyliang/edtrace",
     "anchor_convention": "TraceViewer.jsx:L244-L260  (path relative to tools/edtrace/frontend/src)",
     "note": "TraceViewer.jsx (946 lines) is the whole viewer: URL-param state, keyboard stepping, env merging, value and rendering display. App.jsx/main.jsx are router + mount; utils.js has getLast. Indexed by regex only (discovered.json frontend_modules); no JS parser was used."
   },
@@ -19,6 +23,8 @@
     "title": "edtrace README.md",
     "kind": "doc",
     "path": "tools/edtrace/README.md",
+    "license": "MIT (c) 2025 Percy Liang",
+    "upstream": "https://github.com/percyliang/edtrace",
     "note": "Hello-world program, the `python -m edtrace.execute -m hello` command, var/traces/<module>.json output location, dev/production viewer setup. Anchors are README.md:L<n>."
   },
   "cs336_lectures": {

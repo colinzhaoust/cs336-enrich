@@ -60,6 +60,8 @@ The slide's rule is to set up the norm "so that it doesn't affect the main resid
 
 ::widget fixture:lecture_03--residual-path | switch between pre-norm and post-norm: only post-norm puts LN boxes on the straight residual line, and the count of norms on the stream climbs by 2 per layer, while pre-norm's stays at 0 however deep the stack
 
+::predict pre-norm-vs-post-norm
+
 ::slide 11 | the evidence: Nguyen and Salazar's dev BLEU curves on English-Vietnamese (the PostNorm+LayerNorm curve lowest), and Xiong's validation loss and BLEU on IWSLT and BERT, where Pre-LN without warmup converges faster than Post-LN with warmup
 
 Why did everyone converge? The early motivation was **warmup**. Post-norm transformers need a learning-rate warmup at the start of training, and researchers hoped pre-norm would remove it. In the plots, pre-norm runs without warmup converge faster than post-norm runs with it, and post-norm without warmup barely trains. But the professor adds a caveat the slides lack: "modern transformer training still does warm up as well". Dropping warmup is not why pre-norm survived.
@@ -72,10 +74,11 @@ The second effect is empirical: pre-norm shows smaller and less frequent **gradi
 
 ::video 11:06-11:47 | why a clean residual path keeps gradient sizes equal across layers at initialization
 ::note aside 12:13 | The slides cite "Salazar and Ngyuen 2019"; the paper is Nguyen and Salazar (2019), "Transformers without Tears". Similar small citation slips recur in the deck: Narang et al. (slides 17, 25) is a 2021 paper, Ivanov et al. (slides 15-16) a 2020 one, and "Dehgani" and "Idefcs" on slide 55 are Dehghani and Idefics.
-::predict pre-norm-vs-post-norm
 ::kp pre-norm-vs-post-norm
 
 ::slide 13 | two newer layouts: the "double norm" with a LayerNorm both before and after each sub-block (inside the branch), and the layout with only the after-norm; "Recent models: Grok, Gemma 2. Olmo 2 only does non-residual post norm"
+
+::predict non-residual-double-norm
 
 If the problem is a norm *on the residual stream*, nothing forbids a norm *after* the computation, as long as it stays inside the branch. That is exactly what several recent models do:
 - **Double norm** (Grok, Gemma 2): $x \leftarrow x + \mathrm{LN}(\mathrm{Attn}(\mathrm{LN}(x)))$, a norm on the branch's input and another on its output, before the add.
@@ -88,7 +91,6 @@ Neither touches x on the skip path, so both are in the same family as pre-norm. 
 
 The professor states the rule of thumb behind this aloud, calling it "so ridiculous" and yet "proven right": **if you have stability issues, sprinkle in LayerNorms.** "Every time people have encountered stability issues, they say, oh, but what if we just throw a LayerNorm into attention? Turns out, that works too." He comes back to this with QK-norm in the stability section. Neither the slides nor the professor give evidence for the double norm itself, or say why OLMo 2 dropped the pre-norm.
 
-::predict non-residual-double-norm
 ::note deferred 13:23 | "I'll get to this later as we talk about stability": why extra norms help is picked up again at QK-norm (1:09:48).
 ::kp non-residual-double-norm
 
@@ -96,6 +98,8 @@ The professor states the rule of thumb behind this aloud, calling it "so ridicul
 source: lecture_03.pdf p14-p19 · video 13:56-20:14
 
 ::slide 14 | LayerNorm, y = (x − E[x]) / √(Var[x] + ε) · γ + β (GPT-1/2/3, OPT, GPT-J, BLOOM), against RMSNorm, y = x / √(‖x‖² + ε) · γ (LLaMA family, PaLM, Chinchilla, T5)
+
+::predict rmsnorm-vs-layernorm
 
 The second near-universal change is the norm itself. **LayerNorm** takes the d_model entries of a vector x, subtracts their mean, divides by their standard deviation, then scales by a learned gain γ and shifts by a learned bias β. **RMSNorm** skips the mean and the shift: it divides x by its root-mean-square and multiplies by γ. "It's just a scaling down and scaling back up."
 
@@ -118,9 +122,7 @@ So an RMSNorm saves wall-clock time by moving less data: one fewer pass over the
 ::video 15:37-16:13 | the two numbers: about 0.17% of FLOPs, up to 25% of runtime
 ::widget fixture:lecture_03--norm-runtime | double the matmul FLOP/s with bandwidth fixed: the FLOP-share bar stays at 0.17% but the runtime share rises from 25% to 40%; cutting the norm's FLOPs moves nothing, cutting its bytes does
 
-**Worked example.** Take the slide's split: 75% of the step in matmuls, 25% in norms. A new GPU doubles matmul throughput and keeps the same memory bandwidth. Matmul time becomes 0.375; norm time stays 0.25, because it is bandwidth-bound. The step takes 0.625 of the old time, and norms are now 0.25 / 0.625 = 40% of it.
-
-::predict rmsnorm-vs-layernorm
+**Worked example.** Simplify slide 16's three-way split to two parts, as the widget does: 75% of the step in matmuls, 25% in norms (the professor's "up to 25%"). A new GPU doubles matmul throughput and keeps the same memory bandwidth. Matmul time becomes 0.375; norm time stays 0.25, because it is bandwidth-bound. The step takes 0.625 of the old time, and norms are now 0.25 / 0.625 = 40% of it.
 
 ::slide 17 | Narang et al.'s comparison on a 223M-parameter transformer: vanilla 3.50 steps/s and final loss 1.838; RMS Norm 3.68 steps/s and final loss 1.821, with better SGLUE, XSum, WebQ and WMT scores
 
@@ -128,13 +130,13 @@ The validation: in Narang et al.'s controlled comparison, swapping in RMSNorm gi
 
 ::slide 18 | dropping bias terms: the original FFN(x) = max(0, xW₁ + b₁)W₂ + b₂ against most implementations' FFN(x) = σ(xW₁)W₂; "Reasons: memory (similar to RMSnorm) and optimization stability"
 
+::predict bias-removal
+
 The same reasoning extends to every **bias term**. The original transformer's linear layers all had biases; most modern implementations drop them, in the linear layers and in the norm. A bias is a tiny number of parameters, so its compute and parameter cost is negligible, but it is one more tensor to load, add and store every step: "not very arithmetically intense, but fairly memory intensive".
 
 ::worked bias-removal
 
 The slide names two reasons, memory and optimization stability, and the professor ranks them. Biases "can also induce stability issues", he says, mentioning it "offhand", but "the primary reason these are dropped is just to simplify things from a systems perspective." He is candid about the epistemics: you cannot reason out beforehand that dropping biases is safe. It is "collectively acquired knowledge" from many training runs, with "no guarantee".
-
-::predict bias-removal
 
 ::slide 19 | LayerNorm recap: everyone does non-residual norm (often pre-norm), for nicer gradient propagation and fewer spikes, some add a second norm; most use RMSNorm, which works as well and has fewer parameters to move; biases are dropped since the compute/param trade-off is not great
 
@@ -161,6 +163,8 @@ A **gated linear unit (GLU)** changes only the first half of the FFN. Next to th
 
 $$ \mathrm{FF}_{\mathrm{ReGLU}}(x) = \big(\max(0,\, xW_1) \otimes xV\big)\,W_2 $$
 
+::predict gated-activations
+
 ::slide 23 | GeGLU, FFN = (GELU(xW) ⊗ xV)W₂ (T5 v1.1, mT5, LaMDA, Phi-3, Gemma 2/3/4); SwiGLU, FFN = (Swish(xW) ⊗ xV)W₂ with swish(x) = x·sigmoid(x) (LLaMA 1/2/3, PaLM, Mistral, OLMo, most models post 2023); "Gated models use smaller dimensions for the d_ff by 2/3"
 
 The names compose: the activation on the first branch, plus "GLU". ReLU gives ReGLU, GeLU gives **GeGLU**, and **swish**, $x \cdot \mathrm{sigmoid}(x)$, gives **SwiGLU**. The split follows lineage. Google's models (T5, Gemma) use GeGLU; "everything that's a Llama descendant", and PaLM, uses SwiGLU. SwiGLU is the more common, "but honestly, amongst the gated units, doesn't really matter."
@@ -169,7 +173,6 @@ The footnote is the piece of trivia the professor flags as important later. The 
 
 ::worked gated-activations
 ::widget fixture:lecture_03--layer-budget | tick the gate: a third green FFN matrix appears and at the same d_ff the FFN grows to 1.5× its two-matrix size, while the attention segments do not move
-::predict gated-activations
 ::note slip 23:33 | The professor says "if you take a SwiGLU, which is x times a sigmoid, then you will get a SwiGLU". The function x·sigmoid(x) is swish; SwiGLU is the gated unit built from it (slide 23).
 
 ::slide 24 | Shazeer 2020's table on T5-style fine-tuning: average score ReLU 83.80, GELU 83.86, Swish 83.60, GLU 84.20, GEGLU 84.12, SwiGLU 84.36, ReGLU 84.67, against a run-to-run standard deviation of 0.235
@@ -200,10 +203,11 @@ The **parallel** block, first used in GPT-J and then in PaLM and GPT-NeoX, compu
 
 $$ \text{serial: } y = x + \mathrm{MLP}\big(\mathrm{LN}(x + \mathrm{Attn}(\mathrm{LN}(x)))\big) \qquad \text{parallel: } y = x + \mathrm{MLP}(\mathrm{LN}(x)) + \mathrm{Attn}(\mathrm{LN}(x)) $$
 
+::predict serial-vs-parallel-blocks
+
 Implemented right, it saves two things. The two branches read the same LN(x), so one LayerNorm can be shared. And the first matrix multiply of each branch (the Q, K, V projections and the MLP's up-projection) read the same input, so they can be **fused** into one larger matmul. PaLM's report, pasted on the slide, gives about 15% faster training at large scale, with a small quality loss at 8B parameters that disappears at 62B.
 
 ::widget fixture:lecture_03--residual-path | pick the parallel wiring: one LN feeds both Attn and MLP (1 norm per layer instead of 2), and "MLP reads this layer's attention output" turns to no
-::predict serial-vs-parallel-blocks
 
 The professor calls it "a really fun idea", but one the test of time has not favoured. Command A and other Cohere models (Cohere was founded by a former transformer author and follows many Google ideas) use it; few others do. His reasons, given aloud:
 - **The serial block got fast enough.** Optimization of the serial form "has gotten sufficiently good" that the systems gain is no longer worth the cost.
@@ -240,9 +244,9 @@ RoPE starts from an opinionated stance: the model should not care about the *abs
 
 $$ \langle f(x, i),\, f(y, j)\rangle = g(x, y,\, i - j). $$
 
-None of the earlier schemes meets it. An additive sinusoid expands into four terms, $\langle v_x, v_y\rangle + \langle v_x, PE_j\rangle + \langle PE_i, v_y\rangle + \langle PE_i, PE_j\rangle$. The last depends only on $i-j$ for sinusoids, but the two cross-terms each depend on one absolute position. Absolute embeddings are absolute by construction. The relative scheme is relative, "but they're not embeddings": it adds a term to the attention score, so there is no $f(x,i)$ whose inner product produces it.
-
 ::predict position-embedding-taxonomy
+
+None of the earlier schemes meets it. An additive sinusoid expands into four terms, $\langle v_x, v_y\rangle + \langle v_x, PE_j\rangle + \langle PE_i, v_y\rangle + \langle PE_i, PE_j\rangle$. The last depends only on $i-j$ for sinusoids, but the two cross-terms each depend on one absolute position. Absolute embeddings are absolute by construction. The relative scheme is relative, "but they're not embeddings": it adds a term to the attention score, so there is no $f(x,i)$ whose inner product produces it.
 
 ::slide 32 | the rotation idea in 2D: "we know that" with "we" rotated by 0 positions and "know" by 1; "of course we know" with "we" rotated by 2 and "know" by 3; the angle between the two arrows is the same
 
@@ -293,15 +297,18 @@ The first consensus hyperparameter is the ratio of the FFN's hidden width $d_{ff
 
 ::slide 38 | exception #1, GLU variants: scaling 4 by 2/3 gives d_ff = 8/3 d_model; ratios PaLM 4, Mistral 7B 3.5, LLaMA-2 70B 3.5, LLaMA 70B 2.68, Qwen 14B 2.67, DeepSeek 67B 2.68, Yi 34B 2.85, T5 v1.1 2.5; "PaLM, LLaMA2 and Mistral are slightly larger"
 
+::predict dff-ratio
+
 The first exception is the one we already met: gated FFNs have a third matrix, so the 2/3 correction turns 4 into $\tfrac83 \approx 2.67$. The table shows exactly that. LLaMA 65B (the slide's "LLaMA 70B"), Qwen 14B and DeepSeek 67B sit at 2.67-2.68, Yi at 2.85, T5 v1.1 at 2.5. The arithmetic for a concrete width:
 
 ::worked dff-ratio
 ::widget fixture:block-params | switch the gate on at a fixed d_ff and the FFN parameters jump by 3/2; scale d_ff by 2/3 (the "SwiGLU 8/3×" preset) and they return to the ReLU count, while attention never moves
-::predict dff-ratio
 
 A real model rounds the result: LLaMA-7B, with $d_{model} = 4096$, uses $d_{ff} = 11008$ instead of 10923, a multiple of 256 slightly above the exact value (alignment matters for GPU kernels, see [L5](#/read/lecture_05)).
 
 Why are LLaMA-2 70B and Mistral 7B at 3.5? The slide only says they are "slightly larger". The professor gives a reason aloud: their attention is cheaper. Both use grouped-query attention (GQA, taught at the end of this lecture), in which many query heads share a few key and value heads, so the K and V projections shrink. With the parameters saved in attention, "we can multiply this ratio by an arbitrary 1.33. And we'll get roughly 3.5", which "emphasizes the MLPs a little bit more". In the papers, he sums up, you find "either 2.6-ish or 3.5 for GLUs, or 4 if you're doing non-GLU models."
+
+::predict gqa-frees-ffn-budget
 
 The accounting behind that reason, per layer and in units of $d_{model}^2$ (biases and norms ignored):
 - **Attention** with $h$ query heads and $g$ key/value heads: Q and O stay $d \times d$, K and V shrink to $d \times \tfrac{g}{h}d$, so $2 + 2g/h$. Full multi-head attention ($g = h$) is 4.
@@ -310,7 +317,6 @@ The accounting behind that reason, per layer and in units of $d_{model}^2$ (bias
 LLaMA-2 70B has 64 query heads and 8 KV heads, so its attention costs $2 + 2\cdot 8/64 = 2.25$ instead of 4, freeing 1.75. A multi-head layer with SwiGLU at 8/3 totals $4 + 8 = 12$; the GQA layer with SwiGLU at 3.5 totals $2.25 + 10.5 = 12.75$, about 6% more. So the move is roughly, not exactly, parameter-neutral.
 
 ::widget fixture:lecture_03--layer-budget | lower the K/V heads g: only the orange K and V segments shrink; tick "spend the freed budget" and the green FFN widens until the layer is back at the dashed reference, and the readout gives that FFN ratio
-::predict gqa-frees-ffn-budget
 ::note spoken 46:01 | The reason for LLaMA-2's 3.5 is only in the audio. The professor says "MQA"; LLaMA-2 70B and Mistral 7B use grouped-query attention with 8 KV heads (their papers, not the slides). LLaMA-2 7B and 13B keep full multi-head attention and use about 2.7, which fits his reading. 3.5 / (8/3) is 1.31, rounded aloud to 1.33.
 ::kp gqa-frees-ffn-budget
 
@@ -336,12 +342,13 @@ source: lecture_03.pdf p42-p43 · video 49:53-51:31
 
 The canonical choice for multi-head attention: with $h$ heads, give each head dimension $d/h$, so the heads together are exactly as wide as one big head, $h \cdot d/h = d$. Then splitting into heads is a reshape, every projection is a square $d \times d$ matrix, and multi-head attention costs the same as single-head attention. The professor always found this "very strange" to teach, because nothing requires it. The query projection $W_Q$ maps $d_{model}$ to $h \times d_{head}$, whatever those are. Only the convenience of square matrices argues for ratio 1.
 
+::predict head-dim-times-heads
+
 ::slide 43 | num heads, head dim, model dim and ratio: GPT-3 96, 128, 12288, 1; T5 128, 128, 1024, 16; T5 v1.1 64, 64, 4096, 1; LaMDA 128, 128, 8192, 2; PaLM 48, 258, 18432, 1.48; LLaMA-2 64, 128, 8192, 1; Qwen 3.5 (27B) 24, 256, 5120, 1.2; "most models have ratios around 1, notable exceptions by some Google models"
 
 Almost every model follows it. The exceptions are mostly Google's: T5 at 16 (128 heads of 128 on a 1024-wide stream) and LaMDA at 2. Recomputing each row from its own columns is a good habit, and it catches one entry:
 
 ::worked head-dim-times-heads
-::predict head-dim-times-heads
 
 How much does the ratio matter? The slides' summary says the convention has "low to no validation". Aloud, the professor is milder: it is "yet another forgiving hyperparameter", with "a couple ablations" showing "a pretty wide basin around one". Neither names the ablations.
 
@@ -351,11 +358,12 @@ How much does the ratio matter? The slides' summary says the convention has "low
 ## Deep or wide? The aspect ratio {#aspect}
 source: lecture_03.pdf p44-p46 · video 51:31-55:08
 
+::predict aspect-ratio
+
 ::slide 44 | d_model / n_layer by model: BLOOM 205, T5 v1.1 171, PaLM (540B) 156, GPT-3 / OPT / Mistral / Qwen / OLMo 3 128 ("sweet spot?"), LLaMA / LLaMA-2 102, Gemma 3 87, Gemma 4 61, T5 (11B) 33
 
 The **aspect ratio** $d_{model}/n_{layers}$ is, to the professor, one of the most interesting hyperparameters conceptually. When you scale a model family up or down, you usually fix the aspect ratio and grow both dimensions, so this one number controls the whole depth-versus-width trade-off. Recent talk about reasoning might suggest models should be very deep, or very shallow for utilization. In fact they cluster: GPT-3, OPT, Mistral, Qwen and OLMo 3 all sit at 128, most others between about 100 and 200. GPT-3, for example, has $d_{model} = 12288$ and 96 layers: $12288/96 = 128$.
 
-::predict aspect-ratio
 ::note slip 52:29 | The slide's T5 (11B) value of 33 does not match T5 11B, which has d_model 1024 and 24 layers per stack, a ratio of about 43; the professor's own table on slide 51 lists T5 (11B) at 43 and GPT-2 at 33 (1600 / 48). The 33 on this slide appears to be GPT-2's row. Aloud, the professor rounds the whole band to "about 100".
 
 ::slide 45 | "Extremely deep models are harder to parallelize and have higher latency": Tay et al. 2021 on the limits of depth (every layer must wait for the previous one; width parallelizes over thousands of devices), with a diagram of four layers on four GPUs passing activations forward and gradients backward
@@ -381,9 +389,10 @@ Vocabulary size (the number of distinct tokens, see [L1's tokenizers](#/read/lec
 
 The obvious reason is coverage: a vocabulary has to cover many scripts and word forms, so multilingual models "really do need much larger vocab". The professor adds a second reason the slide omits. Scaling-law studies find that bigger models can make use of bigger vocabularies, and the right-hand column is also the column of bigger models: "No one's training large monolingual models anymore." Coverage and scale are confounded in this table.
 
+::predict vocab-size-trends
+
 A vocabulary is not free. The embedding and output matrices each have $V \times d_{model}$ entries. At $d_{model} = 4096$, going from 32,000 to 256,000 tokens adds $224{,}000 \times 4096 \approx 0.92$ billion parameters to the output matrix alone, and as many again to the input embedding if the two are not tied.
 
-::predict vocab-size-trends
 ::note aside 56:48 | Asked about multimodal models: if images are tokenized, you need many more tokens, and open releases usually add a separate image tokenizer with its own, quite large vocabulary.
 ::note aside 56:30 | Our note on the table: "GPT 40257" looks like a typo. GPT-1 used 40,000 BPE merges and a vocabulary of about 40,478 tokens. Yi's 64,000 also sits between the two bands without comment.
 ::kp vocab-size-trends
@@ -412,9 +421,9 @@ Machine Learning 101 says big models overfit and need dropout and weight decay. 
 
 ::slide 49 | dropout and weight decay by model: original transformer 0.1 / 0; GPT-2 0.1 / 0.1; T5 0.1 / 0; GPT-3 0.1 / 0.1; T5 v1.1 0 / 0; PaLM 0 / variable; OPT 0.1 / 0.1; LLaMA 0 / 0.1; Qwen 14B 0.1 / 0.1; "many older models used dropout during pretraining; newer models (except Qwen) rely only on weight decay"; footnote: papers often don't discuss dropout, which on open models closely matches not using it
 
-What do people do anyway? Many older models used dropout 0.1. Newer ones mostly drop it, Qwen being the exception on the slide, but **weight decay** survives, typically 0.1 (GPT-2, GPT-3, OPT, LLaMA). That is "very mystifying": why penalize weight size in a model that cannot overfit? (Recent technical reports often do not mention these settings at all; the footnote warns that the table may not hold for closed models.)
-
 ::predict regularization-weight-decay
+
+What do people do anyway? Many older models used dropout 0.1. Newer ones mostly drop it, Qwen being the exception on the slide, but **weight decay** survives, typically 0.1 (GPT-2, GPT-3, OPT, LLaMA). That is "very mystifying": why penalize weight size in a model that cannot overfit? (Recent technical reports often do not mention these settings at all; the footnote warns that the table may not hold for closed models.)
 
 ::slide 50 | Andriushchenko et al. 2023: left, validation loss against training loss for weight decay 0, 0.1 and 0.3, all on the diagonal ("it's not to control overfitting"); middle, training loss under a 10× cosine learning-rate decay, where the strongest weight decay (0.3) starts highest and ends lowest; right, the same with a constant learning rate
 
@@ -443,6 +452,7 @@ Over the last few years the emphasis has moved from performance alone to **stabi
 When a run is unstable, the usual suspects are the **softmaxes**. A softmax combines the two most dangerous operations in numerics: an exponential, which blows up quickly, and a division, which blows up when the denominator approaches zero. A language model has two of them: the **output softmax** that turns logits into a distribution over the vocabulary, and the **attention softmax** in every layer. The attention one is "especially" a danger zone.
 
 ### The output softmax: z-loss
+::predict z-loss
 ::slide 54 | the softmax as log P(x) = U_r(x) − log Z(x) with Z(x) = Σ_r' e^{U_r'(x)}; Devlin 2014's loss L = Σᵢ [log P(xᵢ) − α (log Z(xᵢ) − 0)²]; PaLM's report: "an auxiliary loss of z_loss = 10⁻⁴ · log² Z to encourage the softmax normalizer log(Z) to be close to 0, which we found increases the stability of training"; other examples: Baichuan 2, DCLM, OLMo 2, OLMo 3
 
 The professor's argument, given aloud while the formula is an image: the log-probability of token r is $U_r - \log Z$. The first term, the logit, is the output of the residual stream, and is well behaved if the model is. The second, the log of the normaliser $Z = \sum_{r'} e^{U_{r'}}$, "might not be so OK": if Z gets very big, or very close to 0, it blows up even when the logits look reasonable. Ideally Z stays near 1, $\log Z$ near 0.
@@ -451,7 +461,6 @@ The softmax is **over-parametrized**: adding the same constant to every logit ch
 
 ::worked z-loss
 ::widget fixture:lecture_03--z-loss | shift every logit: log Z, and the dot on the penalty parabola, slides along while the probabilities under the bars never change; the penalty bottoms out at log Z = 0
-::predict z-loss
 
 It became popular again through open models. Baichuan was, the professor thinks, the first open model to use it, then DCLM, OLMo and others. (OLMo 3's settings on slide 66 list a z-loss weight of $10^{-5}$.)
 
@@ -463,13 +472,14 @@ It became popular again through open models. Baichuan was, the professor thinks,
 
 For attention, the professor returns to the heuristic from the norm section: "if you have instability, if you can throw a layer norm in there, somehow, it might control it." (The cartoon on the slide says the same thing more rudely.) Normally the block's input is pre-normed, projected into Q and K, and their dot products go into the softmax. **QK-norm** adds an RMSNorm (or LayerNorm) on the queries and keys themselves, after the projection and right before the dot product. Then the inputs to the softmax always have a scale of roughly one, because the norm has divided out the size of the Qs and Ks.
 
+::predict qk-norm
 ::worked qk-norm
 
 The pre-norm alone does not do this. It bounds the block input, but $W_Q$ and $W_K$ can still grow and produce huge q and k, and then attention can collapse onto a single position (a near one-hot softmax). QK-norm came from the multimodal world (Idefics, Chameleon, and ViT-22B before them) and is now "a very standard intervention that most of the large models now introduce". It "doesn't seem to affect performance" across many runs, but it "does definitely prevent the kinds of attention degeneracies".
 
 The professor sees one line of development in the three norm tricks: first a norm before each sub-block (pre-norm), then norms after each sub-block (double norm), and now norms on the queries and keys.
 
-::predict qk-norm
+::note aside 1:11:28 | Our note on the slide's list of QK-norm models: Gemma 2 used logit soft-capping, not QK-norm; Gemma 3 is the Gemma model whose report says it replaced soft-capping with QK-norm.
 ::kp qk-norm
 
 ### Logit soft-capping
@@ -477,9 +487,9 @@ The professor sees one line of development in the three norm tricks: first a nor
 
 The third trick is a harder intervention and "more of a Google-specific trick". QK-norm controls the *inputs* to the softmax "and hopes that the outputs are well-behaved". **Soft-capping** caps the logits that go into the softmax directly: $z \mapsto c \tanh(z/c)$, which is close to the identity for small logits and saturates at $\pm c$. It is "almost a hard constraint", only smooth.
 
+::predict logit-soft-capping
 ::worked logit-soft-capping
 ::widget fixture:lecture_03--soft-cap | small logits stay on the dashed identity line; past about c the tanh curve flattens, so two large logits end up almost level: a small gap survives, where a hard clip would leave none
-::predict logit-soft-capping
 
 The slide asks whether it "might have perf issues". The professor answers yes. The table at the bottom is from the systematic comparison he credits to "some NVIDIA folks". Against a baseline perplexity of 11.19, soft-capping alone is slightly worse (11.24), while QK-norm is better (10.84), because it lets you "crank up the learning rate a little bit". The reason soft-capping costs quality: "you can never express very confident signals in your softmax beyond a certain point."
 
@@ -564,10 +574,11 @@ What has become "really, really popular over the past year" is to **interleave**
 
 Command A adds a twist in the position embeddings. The local layers use RoPE, so within the window they know exactly how far apart tokens are. The full layers use **NoPE**, no position embedding at all: they see the long context "almost, at bags", matching by content alone, while "the short range information still gets position information". LLaMA 4, Gemma 3, Gemma 4 and OLMo 3 interleave the same way but keep RoPE in the full layers too.
 
+::predict swa-reach-through-depth
+
 How does a local layer use anything outside its window? Through depth. A sliding-window layer reads only its window, but each vector in that window is the residual stream, which already contains what earlier layers gathered. Once a full-attention layer has written long-range information into every position, the local layers above it can use it: "as you go down these blocks, you're aggregating local information into global ones. So the local attentions at the end can, of course, access more global information".
 
 ::animation fixture:lecture_03--swa-reach | each local layer pushes token 1,000's information one window further while the window it reads stays one window wide; the full layer at layer 4 lights the whole row, so layer 5's window at 60,000 is made only of carriers
-::predict swa-reach-through-depth
 
 Even a stack with *no* full layers reaches beyond one window: each local layer can move information one window further back, so k layers of window w reach about k × w tokens. With a 4,096-token window, three local layers reach about 12,000 tokens past a given token, while each layer's attention still costs only a window's worth. The full layers make the reach immediate instead of gradual.
 

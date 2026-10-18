@@ -14,6 +14,9 @@
     "title": "FeynRL: RL post-training library (local clone), GRPO implementation",
     "kind": "repo",
     "path": "external/FeynRL",
+    "upstream": "https://github.com/FeynRL-project/FeynRL",
+    "ref": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "code_license": "Apache-2.0 (FeynRL, https://github.com/FeynRL-project/FeynRL)",
     "sha": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
     "upstream_thread": "atlas/repos/feynrl (KPs group-relative-advantage, grpo-clipped-loss, kl-reference-penalty, supp-importance-ratio)",
     "anchor_convention": "algs/GRPO/grpo.py:L169-L176 (repo-relative path, 1-based inclusive line range), algs/RL/common.py:L131-L139, rollouts/base.py:L131-L136",
@@ -23,7 +26,7 @@
     "title": "CS336 Spring 2026, Lecture 16: Post-training 2, RL from verifiable rewards (PPO recap p5-p9, GRPO p17-p24)",
     "kind": "slides",
     "path": "official/lectures/lecture_16.pdf",
-    "text": "atlas/papers/grpo/lecture_16.txt (copy of atlas/lectures/lecture_16/lecture_16.txt, pdftotext -layout; page = form-feed index, title slide = p1)",
+    "text": "atlas/lectures/lecture_16/lecture_16.txt (pdftotext -layout; page = form-feed index, title slide = p1)",
     "anchor_convention": "lecture_16.pdf:pNN",
     "note": "Gives the course's teaching order for GRPO, to be compared with the paper's order (course_path). The GRPO objective and advantage code on p18-p20 are screenshots; only slide captions survive in the text layer. atlas/lectures/lecture_16/knowledge_points.json landed on 2026-09-30 while this thread was being written; external_prerequisites of the form lecture_16:<kp-id> point at its ids (basis author-inference) and course_path follows its teaching order."
   }

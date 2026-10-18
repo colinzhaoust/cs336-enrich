@@ -65,12 +65,12 @@ function ioLedger(a) {
 MODELS["fixture:flashattention--io-ledger"] = {
   fn: ioLedger,
   cases: [
-    // fa-forward-loop-structure: predict (d = 128, M = 32768, N = 2048), check (M = 16384, d = 32, N = 2048), transfer (d = 32)
+    // fa-forward-loop-structure: predict (d = 128, M = 32768, N = 2048), check (M = 16384, d = 32, N = 3072), transfer (d = 32)
     { args: { N: 2048, d: 128, M: 32768 }, pick: "Bc", expect: 64, from: "flashattention:fa-forward-loop-structure:predict" },
     { args: { N: 2048, d: 128, M: 32768 }, pick: "Tc", expect: 32 },
     { args: { N: 2048, d: 128, M: 32768 }, pick: "Tr", expect: 32 },
-    { args: { N: 2048, d: 32, M: 16384 }, pick: "qLoads", expect: 1024, tol: 0.02, from: "flashattention:fa-forward-loop-structure:check" },
-    { args: { N: 2048, d: 32, M: 16384 }, pick: "Br", expect: 32 },                 // ... the cap at d binds
+    { args: { N: 3072, d: 32, M: 16384 }, pick: "qLoads", expect: 2304, tol: 0.02, from: "flashattention:fa-forward-loop-structure:check" },
+    { args: { N: 3072, d: 32, M: 16384 }, pick: "Br", expect: 32 },                 // ... the cap at d binds
     { args: { N: 2048, d: 32, M: 32768 }, pick: "Bc", expect: 256 },                // transfer: ⌈M/4d⌉ = 256, B_r = 32
     { args: { N: 2048, d: 32, M: 32768 }, pick: "Br", expect: 32 },
     // fa-io-complexity: predict (N = 4096, d = 64, M = 32768: 17.3M), check (d 64 -> 128 at fixed M: Q/O term ×4), transfer (2M halves it)

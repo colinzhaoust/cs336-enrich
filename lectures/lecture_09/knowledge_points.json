@@ -485,7 +485,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_09--power-floor",
-          "notice": "With α = 1/d the 'boxes' presets flatten the line as d grows: 16× data halves the error at d = 4, and halving it at d = 6 needs 2⁶ = 64× the data."
+          "notice": "With α = 1/d the 'boxes' presets flatten the line as d grows: 16× data halves the error at d = 4, and halving it at d = 10 needs 2¹⁰ ≈ 1,000× the data."
         },
         {
           "type": "video-span",
@@ -1240,6 +1240,10 @@
       ],
       "misconceptions": [
         {
+          "belief": "At a fixed parameter count, depth does not matter: one very wide layer does as well as several narrower ones.",
+          "why_wrong": "Slide 33: 1 vs 2 layers 'makes a huge difference', and a single layer is 'a terrible, terrible scaling trend'. Shape matters little only from about 2 layers on."
+        },
+        {
           "belief": "Loss depends only on total parameter count, so a huge vocabulary embedding is worth as much as the same number of weights inside the Transformer blocks.",
           "why_wrong": "Embedding parameters 'don't behave the same'; Kaplan's clean laws use non-embedding parameters, and a model fat with embeddings sits off the curve."
         }
@@ -1256,7 +1260,7 @@
           ],
           "answer": "4-layer, by a lot",
           "why": "1 vs 2 layers is the one shape change the slide calls 'huge'; beyond 2 the returns diminish, so most of the 4-layer model's advantage comes from not being 1 layer.",
-          "targets_misconception": "Loss depends only on total parameter count, so a huge vocabulary embedding is worth as much as the same number of weights inside the Transformer blocks."
+          "targets_misconception": "At a fixed parameter count, depth does not matter: one very wide layer does as well as several narrower ones."
         },
         "transfer": {
           "q": "Model X has 100M total parameters, 40M of them embeddings. Model Y has 80M total, 10M embeddings. Which does a Kaplan-style non-embedding law predict has lower loss?",
@@ -1268,7 +1272,8 @@
             "cannot tell"
           ],
           "answer": "Y",
-          "why": "Non-embedding counts are 60M (X) vs 70M (Y); the law is fit on non-embedding parameters, so Y is the larger model in the sense that matters."
+          "why": "Non-embedding counts are 60M (X) vs 70M (Y); the law is fit on non-embedding parameters, so Y is the larger model in the sense that matters.",
+          "targets_misconception": "Loss depends only on total parameter count, so a huge vocabulary embedding is worth as much as the same number of weights inside the Transformer blocks."
         },
         "retrieval": [
           {
@@ -2208,6 +2213,11 @@
       ],
       "external_prerequisites": [
         {
+          "kp": "lecture_01:chinchilla-d-20n",
+          "basis": "teaching-order",
+          "note": "Stated as a preview in lecture 1 (D ≈ 20N, so a 70B model sees about 1.4T tokens); this KP derives where the 20 comes from."
+        },
+        {
           "kp": "lecture_02:six-nd",
           "basis": "author-inference",
           "note": "C = 6ND closes the system D = 20N."
@@ -2233,10 +2243,10 @@
           "targets_misconception": "Under Chinchilla, extra compute should go mostly into the model, as under Kaplan."
         },
         "transfer": {
-          "q": "The budget grows 100x to 1.2 x 10^24 FLOPs. Starting from N = 10B, D = 200B, what do Chinchilla's rule and Kaplan's exponents each pick for N and D?",
+          "q": "The budget grows 10x to 1.2 x 10^23 FLOPs. Starting from N = 10B, D = 200B, what do Chinchilla's rule and Kaplan's exponents each pick for N and D?",
           "format": "short",
-          "answer": "Chinchilla: N = 100B, D = 2T (both 10x, still 20 tokens/param). Kaplan: N about 288B (100^0.73 = 28.8x), D about 694B (100^0.27 = 3.5x), about 2.4 tokens/param.",
-          "why": "Same budget, two allocations; the Kaplan model is nearly 3x larger and sees about 3x fewer tokens, which is the disagreement slides 45 and 50 are about."
+          "answer": "Chinchilla: N about 32B, D about 632B (both sqrt(10) = 3.16x, still 20 tokens/param). Kaplan: N about 54B (10^0.73 = 5.4x), D about 372B (10^0.27 = 1.86x), about 6.9 tokens/param.",
+          "why": "Same budget, two allocations; the Kaplan model is about 1.7x larger and sees about 1.7x fewer tokens, and the gap widens with every further 10x of compute. That is the disagreement slides 45 and 50 are about."
         },
         "check": {
           "q": "Under Chinchilla's rule (D = 20N and C = 6ND), a compute budget grows 25x. By what factor does the compute-optimal model size N grow?",
@@ -2546,11 +2556,11 @@
           "targets_misconception": "Training past the Chinchilla ratio wastes compute."
         },
         "transfer": {
-          "q": "Llama 3 70B is listed at 215 tokens per parameter. About how many training tokens is that, in trillions?",
+          "q": "Mistral 7B is listed at 110 tokens per parameter. About how many training tokens is that, in billions?",
           "format": "number",
-          "answer": "15",
+          "answer": "770",
           "tolerance": 0.05,
-          "why": "70B x 215 = 15,050B, about 15T tokens, more than 10x the Chinchilla-optimal 1.4T for a 70B model."
+          "why": "7B x 110 = 770B tokens, about 5.5x the Chinchilla-optimal 140B (20 x 7B) for a 7B model."
         },
         "retrieval": [
           {

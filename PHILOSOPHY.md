@@ -58,8 +58,8 @@ attach to the same node.
 
 ## Sequencing and mastery (see research/07-sequencing-and-transfer-items.md)
 
-- Show the whole map; gate on prerequisites; let the learner choose only among *ready*
-  knowledge points (ALEKS outer-fringe success ≈ 0.93; free learner control g ≈ 0.05).
+- Show the whole map and mark which knowledge points are *ready* (ALEKS outer-fringe success ≈ 0.93;
+  free learner control g ≈ 0.05). Prerequisite gating is an opt-in strict mode for study sessions.
 - Block first exposure, interleave retrieval only across knowledge points already passed.
 - A knowledge point is *mastered* when its changed case is answered, and *secured* only
   after a retrieval prompt is remembered at least two days later. Three changed cases,
@@ -83,10 +83,9 @@ attach to the same node.
 - Choice options are shown in a stable per-item shuffle: authors list the right answer first.
 - No LLM grades learners. If one is added later it must be audited the same way first.
 
-**The changed case is closed book.** A widget can compute any case, and the source quotes and retrieval
-answers state facts the check asks for, so presentations, provenance and retrieval cards are hidden from the
-moment the learner starts the transfer until transfer and check are answered. Provenance is also hidden
-before the prediction. Seeing the mechanism comes before the test, never during it.
+**The changed case can be taken closed book.** A widget can compute any case, and the source quotes and
+retrieval answers state facts the check asks for, so the opt-in closed-book mode hides presentations,
+provenance and retrieval cards until transfer and check are answered. Without it, everything stays visible.
 
 **Retrieval has layers.** A card is `core` (the concept a practitioner keeps) or `detail` (an identifier,
 path, exact constant, source wording). Both exist, but they are not shown together: detail cards are folded on

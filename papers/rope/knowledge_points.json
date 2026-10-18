@@ -503,7 +503,7 @@
             "quote": "rotate([vector[i],vector[i+1]], position*base**(-i/vector.length))"
           }
         ],
-        "filtering_note": "The paper writes the exponent two ways: 10000^{−2(i−1)/d} with i from 1 (Eq. 15) and 10000^{−2i/d} in §3.3 and §3.4.3 (i from 0). They describe the same set; the atlas uses the 0-indexed form to match rope.mjs. The paper does not motivate the choice beyond 'following Vaswani et al.'; the course (p33) adds that Gemma 4 rotates only the first two coordinates as an alternative, which the paper does not discuss. The paper says nothing about why pairs are adjacent rather than (i, i+d/2)."
+        "filtering_note": "The paper writes the exponent two ways: 10000^{−2(i−1)/d} with i from 1 (Eq. 15) and 10000^{−2i/d} in §3.3 and §3.4.3 (i from 0). They describe the same set; the atlas uses both, and each item names its own: the statement, check and frequency-dials widget follow Eq. 15 (i from 1); the label, predict, transfer and rope.mjs use the 0-indexed form. The paper does not motivate the choice beyond 'following Vaswani et al.'; the course (p33) adds that Gemma 4 rotates only the first two coordinates as an alternative, which the paper does not discuss. The paper says nothing about why pairs are adjacent rather than (i, i+d/2)."
       },
       "prerequisites": [
         {
@@ -634,7 +634,7 @@
             "quote": "before:dot(qm,kn), after:dot(qs,ks), relative:dot(q,rotate(k,(n-m)*theta))"
           }
         ],
-        "filtering_note": "The paper asserts (R_m)^T R_n = R_{n−m} without proof; it follows block-by-block from the additive-angle identity (supplement KP). The course states the goal ('invariant to absolute position', p32) with a picture of 'we know' shifted by two positions but does not write Eq. 16. The anchored Eq. 16 quote copies the paper's misprint: as printed it lacks the subscript m and the transpose on W_q; the intended form is q_m^T k_n = x_m^T W_q R^d_{Θ,n−m} W_k x_n."
+        "filtering_note": "The paper asserts (R_m)^T R_n = R_{n−m} without proof; it follows block-by-block from the additive-angle identity (supplement KP). The course states the goal ('invariant to absolute position', p32) with a picture of 'we know' shifted by two positions but does not write Eq. 16. The anchored Eq. 16 quote copies the paper's misprint: as printed it lacks the subscript m and the transpose on W_q; the intended form is q_m^T k_n = x_m^T W_q^T R^d_{Θ,n−m} W_k x_n."
       },
       "prerequisites": [
         {
@@ -1480,10 +1480,10 @@
     "note": "Paper order: §2 lineage motivates §3.1 requirement, §3.2.1 2D solution, §3.2.2 general form and Eq. 16, §3.3 properties (decay, linear attention), §3.4.2 efficient realization, §4 experiments. Supplements are the two prerequisites the paper uses without stating.",
     "stops": [
       "rope-position-goal",
-      "rope-multiplicative-vs-additive",
       "rope-2d-solution",
       "rope-block-diagonal",
       "rope-relative-position",
+      "rope-multiplicative-vs-additive",
       "rope-long-term-decay",
       "rope-linear-attention",
       "rope-efficient-implementation",

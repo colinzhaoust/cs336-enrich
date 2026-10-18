@@ -72,13 +72,14 @@ Each is written in the code as literal tensors: what each rank holds before, wha
 
 ### Gather and reduce: everything comes to one rank
 
+::predict collective-taxonomy
+
 **Gather** is the inverse of scatter. Each rank holds one piece; rank 0 receives them all and **concatenates** them: [0], [1], [2], [3] become [0, 1, 2, 3] on rank 0.
 
 **Reduce** starts from the same pieces but **combines** them with an operation instead of concatenating. With sum, [0], [1], [2], [3] become [6] on rank 0. The operation can be any associative and commutative one: sum, min, max. The professor tied the two together: you can think of gather as "a reduction where the operation is concatenation".
 
 The difference shows in the shapes. Gather's output is world size times as long as one input; reduce's output has the input's length.
 
-::predict collective-taxonomy
 ::code lecture_07.py:L115-L135 | gather ends with [0, 1, 2, 3] on rank 0; reduce ends with [6]
 ::widget fixture:lecture_07--collective-grid | pick gather, then reduce, on the same inputs: gather's row on rank 0 is W cells long, reduce's keeps the input length, and each reduced cell outlines one input cell from every rank
 
@@ -108,20 +109,23 @@ Three collectives carry almost all the communication of distributed training. Th
 
 ::code lecture_07.py:L139-L152 | four one-element shards become [0, 1, 2, 3] on every rank
 
-Its training use, foreshadowed here: each rank holds only a **shard** (a slice) of the parameters, and before the forward pass it all-gathers them to get the full parameters. Of the gathered tensor, only $1/W$ was already local; the other $(W-1)/W$ had to cross the wires. If 8 ranks each hold 1M bf16 parameters (2 MB), after the all-gather each holds 16 MB, of which 14 MB arrived from other ranks.
+Its training use, foreshadowed here: each rank holds only a **shard** (a slice) of the parameters, and before the forward pass it all-gathers them to get the full parameters. Of the gathered tensor, only $1/W$ was already local; the other $(W-1)/W$ had to cross the wires. If 4 ranks each hold 5M bf16 parameters (10 MB), after the all-gather each holds 40 MB, of which 30 MB arrived from other ranks.
 
 ::note deferred 13:16 | "It's not important that you understand this statement precisely": the parameter-shard use returns with ZeRO and FSDP in the next lecture.
 ::kp all-gather
 
 ### Reduce-scatter: sum each slot, deliver slot $i$ to rank $i$
 
-Now every rank holds a full-length vector. Rank $r$ holds $[r, r+1, r+2, r+3]$, so the four rows are [0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5] and [3, 4, 5, 6]. **Reduce-scatter** reduces each slot across the ranks and gives the result for slot $i$ only to rank $i$:
+Now every rank holds a full-length vector. Rank $r$ holds $[r, r+1, r+2, r+3]$, so the four rows are [0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5] and [3, 4, 5, 6]. **Reduce-scatter** reduces each slot across the ranks and gives the result for slot $i$ only to rank $i$.
+
+::predict reduce-scatter
+
+Slot by slot:
 - slot 0: $0 + 1 + 2 + 3 = 6$, to rank 0;
 - slot 1: $1 + 2 + 3 + 4 = 10$, to rank 1;
 - slot 2: $14$, to rank 2;
 - slot 3: $3 + 4 + 5 + 6 = 18$, to rank 3.
 
-::predict reduce-scatter
 ::code lecture_07.py:L154-L167 | each rank keeps one slot's sum: 6, 10, 14, 18
 
 In general, $W$ inputs of length $L$ become one output of length $L/W$ per rank. The use case: after the backward pass each rank has gradients computed from its own data, and they must be summed. Reduce-scatter sums them but **distributes the storage**: no rank holds the whole summed gradient, only its share.
@@ -189,7 +193,7 @@ The numbers turn into ratios. The professor used them once aloud: NVLink is "abo
 ::worked interconnect-hierarchy
 ::widget fixture:lecture_07--link-ladder | type any payload: each hop down multiplies the time by the same factor, about 4.4 from HBM to NVLink and 36 from NVLink to Infiniband, whatever the size
 
-A 16 GB gradient tensor crosses NVLink 5.0 in about 9 ms ($16 / 1800$ s) and Infiniband in 320 ms ($16 / 50$ s): same bytes, 36 times the time. The rest of the lecture keeps returning to this gap. The strategy that communicates in every layer belongs inside the 8-GPU NVLink domain; the one that communicates rarely can cross the slow links.
+A 4 GB gradient tensor crosses NVLink 5.0 in about 2.2 ms ($4 / 1800$ s) and Infiniband in 80 ms ($4 / 50$ s): same bytes, 36 times the time. The rest of the lecture keeps returning to this gap. The strategy that communicates in every layer belongs inside the 8-GPU NVLink domain; the one that communicates rarely can cross the slow links.
 
 ::note spoken 35:00 | Asked what happens with nine GPUs: if eight share a node and the ninth sits on another without NVLink, that is "really bad": one GPU's worth of extra compute, very expensive to reach.
 
@@ -228,6 +232,8 @@ You do not program NCCL directly. PyTorch's `torch.distributed` library gives a 
 
 ### One process per rank, the same code on every rank
 
+::predict torch-distributed-setup
+
 A distributed program is one function launched `world_size` times, once per rank, each in its own process. The lecture's `spawn` helper calls PyTorch's `mp.spawn` to start them; each process receives its `rank` and the `world_size`.
 
 ::code lecture_07.py:L577-L591 | spawn starts world_size processes; when traced it runs rank 0 alone with distributed calls disabled
@@ -237,8 +243,6 @@ Each process first calls `setup`, which joins the group with `init_process_group
 ::code lecture_07.py:L540-L549 | the master address is for coordination only; nccl if CUDA is available, else gloo
 
 Every rank then runs the same code and must call the same collectives in the same order; a collective completes only when every rank has joined it. The processes otherwise run asynchronously: one might finish before another starts, and their prints interleave in whatever order the hardware feels like. `dist.barrier()` makes every process wait until all have reached that line. The lecture uses more barriers than usual so the printed output stays readable, but the professor named the cost: "you end up kind of waiting potentially unnecessarily."
-
-::predict torch-distributed-setup
 
 ### The three workhorses, run for real
 
@@ -369,7 +373,7 @@ The **losses differ**, since each is computed on a different 32-example slice. T
 
 ### What it costs
 
-Communication per step is one all-reduce of the full gradient. With the byte accounting from the benchmark, the lecture's toy has 4 fp32 matrices of $1024^2$ elements, 16 MiB of gradients, so each rank sends and receives $2 \times 16 \times 3/4 = 24$ MiB per step. For a 7B-parameter model with bf16 gradients (14 GB) on 8 ranks it is $2 \times 14 \times 7/8 = 24.5$ GB per rank per step.
+Communication per step is one all-reduce of the full gradient. With the byte accounting from the benchmark, the lecture's toy has 4 fp32 matrices of $1024^2$ elements, 16 MiB of gradients, so each rank sends and receives $2 \times 16 \times 3/4 = 24$ MiB per step. For a 13B-parameter model with bf16 gradients (26 GB) on 16 ranks it is $2 \times 26 \times 15/16 = 48.75$ GB per rank per step.
 
 Memory per rank does **not** shrink, except for activations, which follow the local batch. Every rank holds full parameters, gradients and optimizer state. The professor said so directly: all-reduce "does require holding all the models, parameters in memory."
 
@@ -414,6 +418,8 @@ Data parallelism leaves the model whole. **Tensor parallelism** cuts the model i
 
 ### The algorithm
 
+::predict tensor-parallelism
+
 With `num_dim = 1024` and 4 ranks, `local_num_dim = 1024 / 4 = 256`. Each rank holds, for every layer, a `1024 × 256` block of columns of the weight matrix: a quarter of the parameters. This is **column tensor parallelism**.
 
 ::code lecture_07.py:L450-L459 | every rank gets all 128 × 1024 of the data, and a 1024 × 256 column block of each layer
@@ -434,25 +440,25 @@ The professor contrasted it with data parallelism. DDP is "very elegant, because
 
 How much does a rank receive per layer? It already has its own slice and gets the other three. In fp32, one slice is $128 \times 256 \times 4$ B $= 128$ KiB, so each rank receives $3 \times 128 = 384$ KiB per layer.
 
-::predict tensor-parallelism
-
 Two things follow. The traffic scales with the **activation**, batch × num_dim, not with the parameters: the weight blocks never move. And it is paid **at every layer**. For 4 layers that is $4 \times 384$ KiB $= 1.5$ MiB per rank per forward pass; a real model multiplies it by dozens of layers, larger batches and long sequences, and the backward pass pays again. Worse, the activations travel on the critical path: the next layer cannot start until the gather is done. So the summary's rule: tensor parallelism "requires very fast interconnects". In the professor's words later, "you wouldn't do tensor parallelism past an NVLink domain."
 
 ::widget fixture:lecture_07--tp-pp-traffic | add layers and TP traffic grows with them, a (W−1)/W share of one batch × num_dim activation each time; the weight shard never moves
 ::video 1:16:21-1:16:40 | per-layer activation traffic is why TP stays inside a node
 ::kp tensor-parallelism
 
-### The backward pass: reduce-scatter
+### The backward pass
 
-The code stops at the forward pass: "Backward pass: homework exercise". A student asked what happens in backprop, and the professor gave the answer aloud: "in forward, you're all gathering, in the backward, you're reduce scattering."
+The code stops at the forward pass: "Backward pass: homework exercise".
+
+::predict tp-backward-reduce-scatter
+
+A student asked what happens in backprop, and the professor gave the answer aloud: "in forward, you're all gathering, in the backward, you're reduce scattering."
 
 Here is why. In the forward pass, every rank used the *whole* gathered activation $x$ as input to its own column block of the next layer. So in the backward pass, each rank computes a gradient with respect to all of $x$, but only from its own block's contribution: a **partial** gradient. The true gradient of $x$ is the **sum** of the four partials. And each rank needs only the slice of that sum that its own weight block produced in the previous layer. Sum, then keep only your slice: a reduce-scatter.
 
 ::animation fixture:lecture_07--tp-gather-scatter | the forward all-gather takes each rank from 1 slice to all 4; the backward reduce-scatter runs it in reverse, from 4 partial slices to 1 summed slice
 
 After the reduce-scatter each rank holds $128 \times 256 \times 4 = 131{,}072$ bytes of activation gradient. An all-reduce would leave the full $524{,}288$ bytes on every rank, four times what its weight block can use. The duality runs both ways: a forward pass that ends in a reduce-scatter needs an all-gather in its backward pass.
-
-::predict tp-backward-reduce-scatter
 ::note spoken 1:08:33 | Asked whether autograd does this automatically: plain `.backward()` will not, "because there's no parallelism in that". In this course you would "manage and call the reduce scatter yourself", by design; in practice libraries do it for you.
 ::note deferred 1:09:14 | Writing the tensor-parallel backward pass, shapes and hooks, is still the homework; only which collective it needs was said in class.
 ::kp tp-backward-reduce-scatter
@@ -465,6 +471,8 @@ The third cut runs between layers. In **pipeline parallelism** each rank gets a 
 ::figure official/lectures/images/pipeline-parallelism.png | the cut now runs across the depth: each GPU owns a run of consecutive layers
 
 ### The algorithm
+
+::predict pipeline-sharding
 
 The lecture runs 4 layers on 2 ranks, so `local_num_layers = 4 / 2 = 2`: rank 0 holds layers 1–2, rank 1 holds layers 3–4, each a full `1024 × 1024` matrix. The batch of 128 is cut into 4 **micro-batches** of 32. For each micro-batch:
 - rank 0 takes it from the data; every later rank **receives** it from rank $r - 1$ with `dist.recv`;
@@ -482,8 +490,6 @@ The lecture runs 4 layers on 2 ranks, so `local_num_layers = 4 / 2 = 2`: rank 0 
 
 Communication happens only at **stage boundaries**, and only between neighbors. With two stages there is one boundary, crossed once per micro-batch: four sends of $32 \times 1024$, which together are just the batch's activation, $128 \times 1024$, once. Tensor parallelism moved an activation's worth after *every* layer; pipeline parallelism moves one per stage boundary, however many layers each stage holds.
 
-::predict pipeline-sharding
-
 That is why the summary says pipeline parallelism "can work with slow interconnects". The professor gave a concrete case: decentralized training, where "GPUs are halfway across the world", uses pipeline parallelism, and "you wouldn't want to do tensor parallel in that setting."
 
 ::widget fixture:lecture_07--tp-pp-traffic | compare the PP row with the TP row: a stage receives batch × num_dim per forward pass whatever m is, while TP pays at every layer
@@ -497,12 +503,11 @@ How much do micro-batches help? The lecture gives no formula; the standard one i
 
 $$ \text{idle fraction} = \frac{p-1}{m+p-1} $$
 
+::predict pipeline-bubble
 ::worked pipeline-bubble
 ::animation fixture:pipeline-bubbles | with 4 stages and one batch, three stages idle at every moment; at m = 4 and m = 8 the micro-batches fill the middle, and only the ramp-up and ramp-down stay idle
 
-For the lecture's $p = 2$: one micro-batch leaves each stage idle half the time; four leave it idle $1/5 = 20\%$. Micro-batching does not reduce anyone's work, it only fills the idle slots. The price is smaller matrix multiplies per micro-batch, which run less efficiently (L2's arithmetic intensity). The bubble shrinks slowly: for $p = 8$, 32 micro-batches still leave $7/39 \approx 18\%$ idle, and getting below 10% takes $m = 64$.
-
-::predict pipeline-bubble
+For the lecture's $p = 2$: one micro-batch leaves each stage idle half the time; four leave it idle $1/5 = 20\%$. Micro-batching does not reduce anyone's work, it only fills the idle slots. The price is smaller matrix multiplies per micro-batch, which run less efficiently (L2's arithmetic intensity). The bubble shrinks slowly: for $p = 4$, 16 micro-batches still leave $3/19 \approx 16\%$ idle, and getting below 10% takes $m = 28$.
 
 ### Overlap: what the naive version leaves out
 
@@ -542,7 +547,7 @@ They compose because they cut different axes. Give every GPU a coordinate on eac
 ::worked parallelism-axes
 ::widget fixture:lecture_07--axes-composer | the parameter share per GPU depends only on W_t·W_p; push W_t past the NVLink domain and the readout warns that tensor parallelism now crosses Infiniband
 
-For 160B parameters in bf16 with $W_t = 8$, $W_p = 8$, $W_d = 16$ (1024 GPUs), each GPU holds $160\text{e}9 / 64 = 2.5\text{e}9$ parameters, 5 GB of weights.
+For 64B parameters in bf16 on the same layout ($W_t = 8$, $W_p = 4$, $W_d = 32$), each GPU holds $64\text{e}9 / 32 = 2\text{e}9$ parameters, 4 GB of weights.
 
 Data parallelism has a limit of its own. Growing it means growing the batch, and past the **critical batch size** "it doesn't actually help you": you are wasting compute and are better off using tensor parallelism.
 

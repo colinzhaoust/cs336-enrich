@@ -43,7 +43,7 @@
             "source": "lecture_11",
             "ref": "lecture_11.pdf:p58",
             "role": "claim",
-            "quote": "What are challenges in scaling 'in practice' 1. Setting model arch hyperparameters ( width, etc) 2. Setting optimizer hyperparameters (LR, batch) 3. Compute needed to fit the big chinchilla sweep Some solutions? 1. Assume stability (or use muP) 2. Search for optimal LR / batch in small scale, either keep fixed or predict scaling 3. Use alternative learning schedules (WSD-like)"
+            "quote": "challenges in scaling 'in practice' 1. Setting model arch hyperparameters ... 2. Setting optimizer hyperparameters (LR, batch) 3. Compute needed to fit the big chinchilla sweep ... 1. Assume stability (or use muP) 2. Search for optimal LR / batch in small scale ... 3. Use alternative learning"
           },
           {
             "source": "lecture_11",
@@ -61,7 +61,7 @@
             "source": "lecture_11_video",
             "ref": "video:0:54-1:15",
             "role": "spoken",
-            "quote": "when we scale up, there are certain things that are going to be a little bit trickier to tune. ... optimizers and optimizer behavior is going to be actually pretty scale sensitive. ... things like initializations, learning rates, batch size, those we need to carefully think about as a function of scale."
+            "quote": "when we scale up, there are certain things that are going to be a little bit trickier to tune. ... optimizers and optimizer behavior is going to be actually pretty scale sensitive. ... initializations, learning rates, batch size, those we need to carefully think about as a function of scale."
           },
           {
             "source": "lecture_11_video",
@@ -380,7 +380,7 @@
             "source": "lecture_11",
             "ref": "lecture_11.pdf:p11",
             "role": "figure",
-            "quote": "Three model sizes (9m, 30m, 170m) as a function of data size (y), batch (x) and loss (col) Vertical columns of points represent a single training curve (fixed batch, more points). Red line attempts to identify minimum loss points for each y-value – this is the 'optimal batch size' for a model size / dataset size combination."
+            "quote": "Three model sizes (9m, 30m, 170m) as a function of data size (y), batch (x) and loss (col) Vertical columns of points represent a single training curve ... Red line attempts to identify minimum loss points for each y-value – this is the 'optimal batch size'"
           },
           {
             "source": "lecture_11",
@@ -753,10 +753,21 @@
       "prompts": {
         "predict": {
           "q": "A WSD run has been in its stable phase for a long time and its loss curve has flattened. You now branch a decay of 10% of the steps so far. Predict what the loss curve does during those decay steps.",
-          "format": "trend",
-          "answer": "It drops rapidly, much faster than it was falling during the stable phase, reaching a loss well below the stable-phase value.",
+          "format": "choice",
+          "choices": [
+            "Keeps falling at the same slow rate as before",
+            "Drops much faster than before, well below the old loss",
+            "Stays flat, since a smaller LR takes smaller steps",
+            "Rises briefly, then settles back where it was"
+          ],
+          "answer": "Drops much faster than before, well below the old loss",
           "why": "Slide 15: slower during the stable phase, rapid loss decay during the decay phase. The flat stable-phase loss hides improvement that the LR decay releases.",
-          "targets_misconception": "The loss of a WSD run during its stable phase is the number to use for L(N, D)."
+          "targets_misconception": "The loss of a WSD run during its stable phase is the number to use for L(N, D).",
+          "distractor_from": [
+            "'Keeps falling at the same slow rate' <- misconception: the stable-phase loss already shows where the run is, so the decay adds nothing special",
+            "'Stays flat' <- plausible: reads a shrinking LR as shrinking progress",
+            "'Rises briefly' <- plausible: treats the LR change as a disturbance to recover from"
+          ]
         },
         "transfer": {
           "q": "A lab wants L(N, D) at 6 data sizes for one model. With cosine they need 6 from-scratch runs. With WSD, how many stable-phase runs and how many decay branches do they need, and roughly what fraction of a run does each branch cost if the decay is 10%?",
@@ -1574,7 +1585,7 @@
             "source": "lecture_11_video",
             "ref": "video:32:47-33:08",
             "role": "spoken",
-            "quote": "these formulas for learning rate and batch sizes, they don't even have the same inputs. People don't even seem to agree, what are the variables that should affect these learning rates? ... the OpenAI one is terminal loss. Whereas, the StepFun folks, they claim that the right batch size scaling is a function of the data."
+            "quote": "these formulas for learning rate and batch sizes, they don't even have the same inputs. ... what are the variables that should affect these learning rates? ... the OpenAI one is terminal loss. Whereas, the StepFun folks, they claim that the right batch size scaling is a function of the data."
           },
           {
             "source": "lecture_11_video",
@@ -2240,7 +2251,7 @@
             "source": "lecture_11_video",
             "ref": "video:51:20-51:51",
             "role": "spoken",
-            "quote": "I'm going to do this NewtonSchultz thing, NewtonSchultz 5 to be specific. And what that is it's going to orthogonalize the B of t matrix. ... And then I make all of my singular values 1. So if my singular values are really big, I'll shrink them back to unit. If they're really small, I'll expand them back up to being unit."
+            "quote": "I'm going to do this NewtonSchultz thing ... it's going to orthogonalize the B of t matrix. ... And then I make all of my singular values 1. So if my singular values are really big, I'll shrink them back to unit. If they're really small, I'll expand them back up to being unit."
           },
           {
             "source": "lecture_11_video",
@@ -2514,7 +2525,7 @@
             "source": "lecture_11_video",
             "ref": "video:57:51-58:27",
             "role": "spoken",
-            "quote": "if we increase the size of our model, in this case, just width, our optimal learning rate normally shifts. ... I'm willing to mess with the initializations at a per-layer basis. I'm willing to mess with the learning rates on a per-parameter basis as well. ... scale up or down things like residual connections"
+            "quote": "if we increase the size of our model, in this case, just width, our optimal learning rate normally shifts. ... I'm willing to mess with the initializations at a per-layer basis. I'm willing to mess with the learning rates on a per-parameter basis ... scale up or down things like residual connections"
           },
           {
             "source": "lecture_11_video",
@@ -2538,7 +2549,7 @@
             "source": "lecture_11_video",
             "ref": "video:1:02:58-1:03:39",
             "role": "spoken",
-            "quote": "if we have a simple deep linear network, and we initialize all of our weights as a sigma squared scaled Gaussian ... standard matrix concentration arguments for the operator norm of a random Gaussian matrix. ... This is always an upper bound, but this is approximate in certain high-dimensional regimes."
+            "quote": "if we have a simple deep linear network, and we initialize all of our weights as a sigma squared scaled Gaussian ... standard matrix concentration arguments for the operator norm of a random Gaussian matrix. ... this is approximate in certain high-dimensional regimes."
           },
           {
             "source": "lecture_11_video",
@@ -2574,7 +2585,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "A linear layer maps width 4096 to width 1024. Under the p47 muP init, by what factor is the init std smaller than the standard 1/sqrt(fan_in) = 1/64 choice?",
+          "q": "A linear layer maps width 4096 to width 1024. Using the Θ form of the p47 muP init, σ = Θ((1/sqrt(n_{l-1})) min(1, sqrt(n_l/n_{l-1}))), and ignoring constants, by what factor is the init std smaller than the standard 1/sqrt(fan_in) = 1/64 choice?",
           "format": "number",
           "answer": "2",
           "tolerance": 0.05,
@@ -2703,7 +2714,7 @@
             "source": "lecture_11_video",
             "ref": "video:1:01:41-1:02:02",
             "role": "spoken",
-            "quote": "you might be familiar with neural tangent kernels. Neural tangent kernels would have a very different behavior. Those would be the kinds of things where the change in activations actually vanish as a function of the network width. And you don't want that, because you do want the network to change and learn features"
+            "quote": "Neural tangent kernels would have a very different behavior. Those would be the kinds of things where the change in activations actually vanish as a function of the network width. And you don't want that, because you do want the network to change and learn features"
           },
           {
             "source": "lecture_11",
@@ -2869,7 +2880,7 @@
             "source": "lecture_11_video",
             "ref": "video:1:11:13-1:11:38",
             "role": "spoken",
-            "quote": "The learning rate normally you would set to be a constant as a function of your model size, but you would want to set this to the ratio of fanout and fanin. ... you get 1 over the fanin as the layer specific learning rate. And so basically, layers that have big fanins for Adam get smaller learning rates."
+            "quote": "The learning rate normally you would set to be a constant as a function of your model size, but you would want to set this to the ratio of fanout and fanin. ... you get 1 over the fanin as the layer specific learning rate. ... layers that have big fanins for Adam get smaller learning rates."
           }
         ],
         "filtering_note": "p48-p50's formulas are mostly lost to layout extraction (the text layer shows 'Δ𝑊𝑙 = −𝜂𝑙 ∇ℎ𝑙 ℓ ℎ𝑙−1' with a detached '⊤', 'Δhl = Wl Δℎ𝑙−1 + Δ𝑊𝑙 (ℎ𝑙−1 + Δℎ𝑙−1 )', '𝜂𝑙 = Θ' above a stacked 'n_l / n_{l-1}', '[with Adam, Δ𝑊𝑙 ∗ 𝑛𝑙−1 = Θ 𝜂𝑙 ]', and on p50 scattered '1', 'n_l', 'n_{l-1}' fragments for the init and LR table). The statement's formulas are the atlas author's reconstruction of the stacked fractions. The deck does not derive the Adam case (one bracketed line). Slide image audit (p51): the embedding, attention and output layers are covered by an image, Lingle's Table 2 of muP rules for transformers (Θ init variance / Adam LR: embedding 1 / 1; attention Q, K, V 1/M / 1/M and output 1/(HD) / 1/(HD); MLP in 1/M / 1/M and out 1/F / 1/F; unembedding 1/M² / 1/M), plus an attention scale of 1/D instead of 1/sqrt(D); its hidden-layer Adam LR 1/M is this KP's 1/n_{l-1}. Which norm '∗' denotes (operator/spectral norm, with 'F' for Frobenius) is inferred from the derivation. Spoken evidence (1:07:25-1:07:45, 1:08:50-1:09:14): the derivation is 'physicists math' that tracks orders of magnitude and assumes 'no cancelations'. He calls Δℓ = Θ(1) 'the least palatable of the assumptions' ('Not quite sure that's palatable to me'). It is the step that sets the gradient's size (1:09:15-1:09:47). Spoken evidence (1:11:24): the Adam case is 'not ... even touch[ed]', as the note says, and his one-line takeaway is 'layers that have big fanins for Adam get smaller learning rates'. Spoken evidence (1:11:54-1:12:24): the general method is to take a scaling limit, assert invariants, add assumptions and read off constraints on the hyperparameters. Spoken slip (1:10:49-1:11:08), not imported: the muP init is described as '1 over square root nl minus 1 times a component that is 1 over the square root fanout over fanin', and 'if this ratio is not smaller than 1, then you get basically something different'. p50 prints min(1, sqrt(n_l/n_{l-1})) and 'init diffs when fanout n_l < fanin': the factor is sqrt(fan-out/fan-in), not its inverse, and it changes the init only when that ratio is below 1. His next words ('closer to the square root fanout over fanin') agree with p50. Slide image audit (p49): the Adam case is one bracketed line, printed as '[with Adam, ||ΔW_l||_* sqrt(n_{l-1}) = Θ(sqrt(η_l))]', which does not by itself yield 1/n_{l-1} (setting it equal to A2's Θ(sqrt(n_l)) would give η = Θ(n_l)). The statement replaces it with the spectral-condition derivation: Adam's update entries are about η, so for a rank-one gradient ||ΔW||_* ≈ η sqrt(n_l n_{l-1}), and A2 then gives η = Θ(1/n_{l-1}), the value the slide's own recap (p50) and the professor ('1 over nl minus 1', 1:10:13) state."
@@ -2968,7 +2979,7 @@
             },
             {
               "tex": "\\eta_l = \\frac{\\|\\Delta W_l\\|_*}{\\|\\nabla_{W_l}\\ell\\|_*} = \\Theta\\!\\left(\\frac{n_l}{n_{l-1}}\\right)",
-              "do": "SGD learning rate: the fan-out / fan-in ratio. For Adam the deck's one bracketed line gives η_l = Θ(1/n_{l−1}) instead.",
+              "do": "SGD learning rate: the fan-out / fan-in ratio. For Adam the slide's bracket reads ‖ΔW_l‖_* √n_{l−1} = Θ(√η_l); the Θ(1/n_{l−1}) in the p50 recap follows from Adam's update entries being about η, so ‖ΔW_l‖_* ≈ η √(n_l n_{l−1}).",
               "why": "SGD's step size is the update norm over the gradient norm. Adam divides out the gradient's size, so η itself has to carry the width factor (the deck does not derive the Adam case)."
             }
           ]

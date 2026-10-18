@@ -124,7 +124,7 @@
           },
           {
             "q": "Why does the professor say efficiency matters more at larger scale, not less?",
-            "answer": "At large scale you cannot afford to be wasteful: the same inefficiency costs proportionally more compute (L119)."
+            "answer": "At large scale you cannot afford to be wasteful: the same fractional inefficiency costs far more compute and money in absolute terms, so even a 5% gain matters (L119)."
           }
         ],
         "self_explain": "Why would the professor open a from-scratch course with an efficiency slogan rather than with the Transformer?"
@@ -279,7 +279,7 @@
             "source": "lecture_01_video",
             "ref": "video:50:27-51:09",
             "role": "spoken",
-            "quote": "this is quite crude, but a rule of thumb is, the 20 times the number of parameters is the number of data points you should train on. ... depending on the data set and architecture, this number will actually vary. ... A lot of models these days are small, but they're trained on way more tokens than is compute optimal"
+            "quote": "this is quite crude ... the 20 times the number of parameters is the number of data points you should train on. ... depending on the data set and architecture, this number will actually vary. ... A lot of models these days are small, but they're trained on way more tokens than is compute optimal"
           }
         ],
         "filtering_note": "The lecture states the 20:1 ratio as a TL;DR without the ISOFLOP fitting that produces it (shown only as a figure, L395-L397); the full derivation is deferred to the scaling-laws lectures and Assignment 3 (L405-L411). PaLM is described as 'undertrained' (L150), which is this rule applied in hindsight. Spoken evidence (49:43-50:27): the ISOFLOP procedure is narrated, not only shown: for each budget (6e18 to 3e21, read off the figure) sweep model sizes, keep the best, fit a curve; if the optima do not fall on a line 'you should have no confidence' in the extrapolation. Correction to this note: 'without the ISOFLOP fitting that produces it (shown only as a figure)' is too strong; the code has the two ISOFLOP bullets (L395-L396) and the professor walks through them aloud; what is missing is the fitting arithmetic. Spoken evidence (50:27-51:09): the rule is called 'quite crude' and said to vary with dataset and architecture, and the inference caveat is explained: 'A lot of models these days are small, but they're trained on way more tokens than is compute optimal' because a smaller model is cheaper to serve."
@@ -400,7 +400,7 @@
             "source": "lecture_01_video",
             "ref": "video:28:41-29:15",
             "role": "spoken",
-            "quote": "through an efficiency lens, tokenization is good because it takes a long sequence ... reduces it into a smaller number of tokens. But more subtly, but maybe more importantly, it allows you to do adaptive computation. ... some of the more rare or interesting parts of input should be left as multiple tokens."
+            "quote": "tokenization is good because it takes a long sequence ... reduces it into a smaller number of tokens. But more subtly, but maybe more importantly, it allows you to do adaptive computation. ... some of the more rare or interesting parts of input should be left as multiple tokens."
           },
           {
             "source": "lecture_01_video",
@@ -1138,11 +1138,11 @@
       ],
       "prompts": {
         "predict": {
-          "q": "The lecture's string 'Hello, 🌍! 你好!' has 13 characters. How many UTF-8 bytes does it have?",
+          "q": "The string '早上好 🌍!' ('good morning', a space, the emoji and an exclamation mark) has 6 characters. How many UTF-8 bytes does it have?",
           "format": "number",
-          "answer": "20",
+          "answer": "15",
           "tolerance": 0.01,
-          "why": "10 ASCII characters (1 byte each) + 🌍 (4) + 你 (3) + 好 (3) = 20. The trace's byte indices are [72,101,108,108,111,44,32,240,159,140,141,33,32,228,189,160,229,165,189,33] (L663).",
+          "why": "早, 上 and 好 are in the 3-byte range U+0800-U+FFFF (9 bytes), the space and '!' are ASCII (1 byte each), and 🌍 is above U+FFFF, so it takes 4 (f0 9f 8c 8d, L658): 9 + 2 + 4 = 15 bytes for 6 characters. The lecture's own string counts the same way: 13 characters, 20 bytes (L663).",
           "targets_misconception": "One character is one byte, so byte count equals character count."
         },
         "transfer": {
@@ -1442,7 +1442,7 @@
             "source": "lecture_01",
             "ref": "lecture_01.py:L705-L708",
             "role": "claim",
-            "quote": "Basic idea: *train* the tokenizer on raw text to construct a vocabulary tailored to the data. Intuition: common sequences of bytes are represented by a single token, rare sequences are represented by many tokens. Sketch: start with each byte as a token, and successively merge the most common pair of adjacent tokens."
+            "quote": "*train* the tokenizer on raw text to construct a vocabulary tailored to the data. ... common sequences of bytes are represented by a single token, rare sequences are represented by many tokens. Sketch: start with each byte as a token, and successively merge the most common pair of adjacent tokens."
           },
           {
             "source": "sennrich_2016",

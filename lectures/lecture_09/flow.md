@@ -131,7 +131,7 @@ The trade is the one any flexible learner faces. Finer boxes fit a rougher $f$, 
 
 ::worked nonparametric-dimension-exponent
 ::predict nonparametric-dimension-exponent
-::widget fixture:lecture_09--power-floor | press the "boxes" presets: with α = 1/d the line flattens as d grows; 16× data halves the error at d = 4, and halving it at d = 6 needs 2⁶ = 64× the data
+::widget fixture:lecture_09--power-floor | press the "boxes" presets: with α = 1/d the line flattens as d grows; 16× data halves the error at d = 4, and halving it at d = 10 needs 2¹⁰ ≈ 1,000× the data
 ::note why | The slide's $n^{-1/d}$ is the rate of the box estimator's averaging step alone. Balancing the bias of wide boxes against the variance of narrow ones gives the textbook rate $n^{-2/(d+2)}$, which equals $n^{-1/2}$ at $d = 2$. Either way the exponent shrinks as $d$ grows, which is the only point the slide needs.
 
 So one "mental model", in the professor's words, is that the networks on slide 18 are behaving like "non-parametric regressors in 10 dimensions", like a nearest-neighbour estimator in ten dimensions: slope $-1/d = -0.1$ gives $d = 10$.
@@ -153,9 +153,10 @@ $$ L(n) = E + A\,n^{-\alpha} $$
 
 On raw log-log axes this curve bends. Far from the floor the reducible part $A n^{-\alpha}$ dominates and the line is straight with slope $-\alpha$. Near the floor the loss flattens toward $E$, and a straight-line fit to the raw points reports a slope much shallower than $\alpha$. Subtract $E$ and plot $\log(L - E)$, and the line comes back.
 
-**Worked example.** Suppose the floor is $E = 2.0$, and the loss is 3.0 at 1B tokens and 2.2 at 10B. A naive line through the raw losses has slope $\log_{10}(3.0/2.2) \approx 0.13$ per decade. Subtract the floor first: the reducible part falls from 1.0 to 0.2, five-fold per decade, so $\alpha = \log_{10} 5 \approx 0.70$. The two readings also disagree about the future. The raw line predicts $2.2 \times 10^{-0.13} \approx 1.6$ at 100B tokens, below the floor; the floored law predicts $2.0 + 0.04 = 2.04$.
-
 ::predict irreducible-floor-bends-loglog
+
+**Worked example.** Suppose the floor is $E = 2.0$, and the loss is 3.5 at 1B tokens and 2.5 at 10B. A naive line through the raw losses has slope $\log_{10}(3.5/2.5) \approx 0.15$ per decade. Subtract the floor first: the reducible part falls from 1.5 to 0.5, three-fold per decade, so $\alpha = \log_{10} 3 \approx 0.48$. The two readings also disagree about the future. The raw line predicts $2.5 / 1.4 \approx 1.8$ at 100B tokens, below the floor; the floored law predicts $2.0 + 0.5/3 \approx 2.17$.
+
 ::widget fixture:lecture_09--power-floor | raise the floor E: the blue curve bends flat toward the dashed floor, the raw-slope readout falls below α, and the grey no-floor extrapolation drops under E; tick "plot L − E" and it is straight again with slope −α
 ::video 20:47-21:33 | "this irreducible error regime", and his two options: stay in the power-law regime, or fit the asymptote and correct for it
 ::kp irreducible-floor-bends-loglog
@@ -167,6 +168,8 @@ source: lecture_09.pdf p21-p27 · video 21:33-30:13
 
 A data law by itself only tells you how fast your model learns. That is useful for forecasting, "not useful for very much else". The engineering questions are about *which* data: how much news versus Wikipedia, whether to repeat data or spend the compute elsewhere, whether to repeat only the high-quality part. Can scaling laws answer those?
 
+::predict data-composition-offset-not-slope
+
 ::slide 22 | Hashimoto 2021: "Data composition affects the offset, not the slope"; left, excess error against training data size for three mixture proportions q = 0.00, 0.22, 0.56, parallel lines on log-log axes; right, the intercept log C(q) against the data-source proportion, U-shaped with its minimum near the middle
 
 Go back to the view of data laws as empirical generalization bounds. There, the **slope** is set by the model class and the **intercept** by the data distribution. So, "for many models", changing the composition of the data moves the line up or down without changing its slope. The left plot shows it for a toy problem, a linear regression trained on a mixture of two sources: the three mixture proportions give three parallel lines. The right plot shows the intercept as a function of the mixture. Using only one source ($q = 0$ or $q = 1$) gives a high intercept, and a mixture near the middle is best. That is a quantitative argument for **diverse data**.
@@ -177,10 +180,11 @@ The practical consequence is strong. If composition changes only the offset, the
 
 The natural idea is to fit a law on mixtures: train small models on a few news/Wikipedia proportions, fit how loss depends on the proportion, scale up step by step, and extrapolate to find the best mixture at full size. That is the data-mixing-laws paper on the left. In practice, the professor says, people who do this work report that "reality is a lot more noisy". What usually happens is simpler: train a bunch of small models, pick the best mixture, and scale it up, "no scaling law required". The DataDecide study on the right is a large empirical test of that recipe; per the slide image, pre-training on 25 datasets at 150M parameters predicts which of a pair wins at 1B about 80% of the time. And that it works is "consistent with the argument that the intercepts differ, but the slopes don't change".
 
-::predict data-composition-offset-not-slope
 ::widget fixture:lecture_09--two-laws | press "B: same slope, +0.1 offset" and move the target scale: the gap readout is the same at every scale, so the small-scale ranking never flips
 ::note aside 24:51 | DataDecide is given as a pointer for anyone interested in data-mixture selection at scale.
 ::kp data-composition-offset-not-slope
+
+::predict data-repetition-effective-data
 
 ::slide 24 | Muennighoff et al., "Scaling Data-Constrained Language Models": left, final test loss against tokens and epochs, with "up to ≈4 epochs repeating is almost as good as new data", "rapidly diminishing returns", "at ≈40 epochs, repeating is worthless"; right, at 10²² FLOPs the naive frontier picks 8.67B parameters on 178B tokens (loss 2.376), the data-constrained one 6.34B on 242B (loss 2.359); the formula D′ = U_D + U_D·R_D*·(1 − e^(−R_D/R_D*))
 
@@ -208,9 +212,8 @@ The two notes at the top apply to everything in this lecture. A law fitted in on
 
 Repetition makes **data filtering** depend on scale. If you or I filtered data tomorrow, we would filter "very aggressively" and keep only the best, because with little compute we cannot train on the whole internet anyway. A lab with a lot of compute cannot do that: keeping only the top slice would mean repeating it many times, and a repeated high-quality token is worth less than an unseen mediocre one. So "as you get more and more compute, your filter has become looser and looser". On the right, the curve for the best bucket alone (green) wins at small compute and then flattens, as its few tokens get repeated, while the looser pools keep improving.
 
-**Worked example.** A filter keeps 10% of a corpus and the budget is exactly that 10%: one pass, nothing repeated. Raise the budget 100×: the same filter now needs 100 epochs, and by the effective-data formula those tokens are worth only about 16% of fresh ones. Keeping the whole corpus instead needs 10 epochs, worth about 78%. Unless the filtered tokens are several times better per token, the looser filter wins.
+**Worked example.** A filter keeps 20% of a corpus and the budget is exactly that 20%: one pass, nothing repeated. Raise the budget 50×: the same filter now needs 50 epochs, and by the effective-data formula those tokens are worth only about 32% of fresh ones. Keeping the whole corpus instead needs 10 epochs, worth about 78%. Unless the filtered tokens are about 2.5 times better per token, the looser filter wins.
 
-::predict data-repetition-effective-data
 ::widget fixture:lecture_09--effective-data | in the right panel, grow the budget D with the filter fixed: the strict filter's share of tokens that still count collapses, while a looser filter keeps most of its value
 ::video 27:19-28:28 | why a small-compute lab filters hard and a large-compute lab loosens its filter
 ::note aside 26:17 | The infinite-compute study is shown only for its slopes; its regularization and ensembling methods are not explained.
@@ -229,15 +232,16 @@ source: lecture_09.pdf p28-p32 · video 30:13-35:38
 
 Now the part promised at the start: using scaling laws to design the model. Maybe you are "a radical" who believes LSTMs are the future and wants to "blow my B200 run" on one. Maybe you want SGD instead of Adam. Or you have a fixed budget and must decide between a longer run and a bigger model. In [L3](#/read/lecture_03) the answer to such questions was "look at what others did". Here the answer is first-principles: try it at small scale and fit a law. The slide after this one lists the hyperparameters taken in turn, mostly through the Kaplan paper: architecture, optimizer, aspect ratio and depth, batch size.
 
+::predict architecture-optimizer-via-scaling
+
 ::slide 30 | test loss against non-embedding parameters (10⁵ to 10⁹): Transformers on one straight line from about 5.2 to 2.3; LSTMs with 1, 2 and 4 layers above it, the gap widening with size
 
 Are Transformers better than LSTMs? The brute-force answer is to spend tens of millions of dollars training an LSTM the size of GPT-3. The scaling-law answer is to train both families at a range of small sizes and compare the lines. Here the LSTMs have "definitely different intercept, maybe even different slope". That justifies scaling the Transformer.
 
 The slope is the thing to watch. A worse intercept is a constant handicap. A worse slope means the gap *grows* with scale, so a model that looks competitive at 100M parameters falls further behind at every step up. You "certainly don't want something where your slopes are worse". Every new-architecture paper today (Mamba, Gated DeltaNet and so on) has a plot of exactly this kind, "vanilla transformer, our really cool model", to show its line sits below.
 
-**Worked example.** Two options follow $\log_{10} L = 0.8 - 0.05\log_{10} N$ (A) and $\log_{10} L = 1.25 - 0.10\log_{10} N$ (B). At $N = 10^8$, A gives 0.40 and B gives 0.45, so A wins. Set them equal: $0.05x = 0.45$, $x = 9$. Above $N = 10^9$ the steeper B wins. A comparison at one size cannot tell you this; two fitted lines can.
+**Worked example.** Two options follow $\log_{10} L = 0.9 - 0.05\log_{10} N$ (A) and $\log_{10} L = 1.4 - 0.10\log_{10} N$ (B). At $N = 10^8$, A gives 0.50 and B gives 0.60, so A wins. Set them equal: $0.05x = 0.5$, $x = 10$. Above $N = 10^{10}$ the steeper B wins. A comparison at one size cannot tell you this; two fitted lines can.
 
-::predict architecture-optimizer-via-scaling
 ::widget fixture:lecture_09--two-laws | press "B: steeper, starts worse": the gap shrinks by the same amount per decade and the lines cross at one marked scale; a ranking read on one side of the crossing is wrong on the other
 
 ::slide 31 | Tay et al. 2022, cross-architecture scaling of T5-style models: negative log-perplexity against FLOPs for many architectures (left), and per-architecture panels against the vanilla Transformer: ALBERT, DConv, Evolved, Funnel, Transformer-GLU, LConv, MLP Mixer, MoS Transformer, Performer, Switch Transformer, Universal Transformer
@@ -254,6 +258,8 @@ Is Adam better than SGD? The fits on the slide image answer precisely: SGD $5.37
 ## Deep or wide, and what counts as a parameter? {#shape}
 source: lecture_09.pdf p33-p36 · video 35:38-41:03
 
+::predict depth-width-and-parameter-quality
+
 ::slide 33 | Kaplan: test loss against non-embedding parameters for 1, 2, 3, 6 and >6 layers; "1 vs 2 layers makes a huge difference"; "More layers have diminishing returns below 10⁷ params"
 
 How should you trade depth for width? Sweep the number of layers and plot each depth's scaling line. A single layer is "a terrible, terrible scaling trend": its line is visibly flatter. From two layers on, the lines are "surprisingly more competitive" and nearly merge, although in this figure more layers are still a little better at every size.
@@ -266,9 +272,10 @@ The middle panel checks it. For 50M, 274M and 1.5B parameters, loss is within a 
 
 So if your recipe is "fix the aspect ratio and scale up", a plot like this is your evidence that it is safe: the optimum does not move as the model grows.
 
-**Worked example.** A small sweep finds 6 layers of width 512 best, aspect ratio $512/6 \approx 85$. For a model of width 4096, carry the ratio, not the layer count: $4096/85 \approx 48$ layers. With $N \approx 12\,n_{layer}\,d_{model}^2$ and the aspect ratio fixed, $N \propto n_{layer}^3$, so 8× the parameters means $8^{1/3} = 2\times$ the layers and 2× the width.
-
 ::predict scale-invariant-hyperparameters
+
+**Worked example.** A small sweep finds 6 layers of width 512 best, aspect ratio $512/6 \approx 85$. For a model of width 4096, carry the ratio, not the layer count: $4096/85 \approx 48$ layers. With $N \approx 12\,n_{layer}\,d_{model}^2$ and the aspect ratio fixed, $N \propto n_{layer}^3$, so 27× the parameters means $27^{1/3} = 3\times$ the layers and 3× the width.
+
 ::widget fixture:lecture_09--scale-up | grow the parameter multiplier at a fixed aspect ratio: layers and width both grow as k^(1/3), so the small model's layer count does not carry over; tick "hold the layer count fixed" and the model stretches wide and the aspect readout turns red
 ::video 36:21-37:34 | "The number of layers is not a scale-invariant quantity", and what he sweeps instead
 ::note slip 35:38 | The professor says "in lecture 2, I told you about aspect ratios ... It's like four times the reasonable multiplier". Aspect ratios were in the architecture lecture ([L3](#/read/lecture_03)), where the common values are about 100-200; "four times" is the feed-forward multiplier $d_{ff}/d_{model}$ from the same lecture.
@@ -284,9 +291,8 @@ The professor adds Percy Liang's point: predictable scaling "is engineered". It 
 
 Mixtures of experts, now the dominant way to train large models ([L4](#/read/lecture_04)), make the question sharper, because total and active parameters are decoupled. This Apple/MIT study plots loss against both. As the total parameter count grows, the loss-minimizing model becomes sparser and sparser (the stars move to darker curves). And at a fixed number of active parameters, that is at a fixed compute cost, adding total parameters still lowers the loss: the inactive experts help.
 
-**Worked example.** Model X has 100M parameters, 40M of them embeddings; model Y has 80M, 10M of them embeddings. On a Kaplan-style law counted in non-embedding parameters, X has 60M and Y has 70M, so Y is the bigger model where it matters and should reach the lower loss.
+**Worked example.** Model X has 100M parameters, 30M of them embeddings; model Y has 75M, 5M of them embeddings. On a Kaplan-style law counted in non-embedding parameters, both have 70M, so the law expects about the same loss from both, although X has a third more parameters in total.
 
-::predict depth-width-and-parameter-quality
 ::video 37:34-38:53 | why Kaplan dropped embedding parameters, and the warning that predictable scaling "is engineered"
 ::note skip 40:46 | The functional form of the MoE scaling law ("you can write down what the functional forms of this are") is skipped.
 ::note deferred 38:23 | The consequences of Kaplan's non-embedding count are promised for later; they appear in the Kaplan-versus-Chinchilla section below.
@@ -317,11 +323,12 @@ $$ \left(\frac{S}{S_{min}} - 1\right)\left(\frac{E}{E_{min}} - 1\right) = 1 $$
 where $S_{min}$ is the fewest steps possible (with a huge batch) and $E_{min}$ the fewest examples possible (with a tiny batch). You cannot have both.
 4. Pick the balanced point, $B_{crit} = E_{min}/S_{min}$.
 
+::predict critical-batch-size
+
 At the balanced point both brackets equal 1, so you pay $2 S_{min}$ steps and $2 E_{min}$ examples: twice the minimum of each, which the professor calls "a little bit more" than optimal on both sides. The slide adds that $B_{crit}$ is close to the **gradient noise scale**, the trace of the gradient covariance divided by the squared gradient norm: how big the noise is relative to the signal.
 
 ::worked critical-batch-size
 ::widget fixture:lecture_09--critical-batch | press "set B = B_crit": the point sits at 2× S_min steps and 2× E_min examples; far below B_crit doubling the batch nearly halves the steps, at B_crit it saves 25%, far above it almost nothing
-::predict critical-batch-size
 ::note skip 46:37 | Estimating $B_{crit}$ from the gradient noise scale is left to the paper: "You should really read the critical batch size paper."
 
 ::slide 39 | Kaplan: critical batch size (tokens) against WebText2 training loss, for 3M and 85M models and noise-scale measurements, with the fit B_crit = 2.1·10⁸ tokens · L^−4.8; "The smaller the loss target, the bigger the batch"; C_min(C) = C / (1 + B/B_crit(L))
@@ -341,9 +348,10 @@ The professor's reason: near the minimum you are trying to resolve "really, real
 ### The learning rate moves with width
 The learning-rate story is "also a little bit complicated", and most of it is deferred to the advanced lecture. The mental picture he gives is for scaling the width of a standard network (he sets depth aside). The wider the model, the *smaller* the learning rate should be, because "I have bigger, more parameters, I'm changing more things at once. Maybe I should move less." A common rule of thumb scales the learning rate as $1/\text{width}$.
 
+::predict lr-shrinks-with-width
+
 **Worked example.** Tuned at 6e-3 on width 512, the rule gives $6\times10^{-3} / (3072/512) = 10^{-3}$ at width 3072. Run the wider model at 6e-3 instead and you are 6× too high.
 
-::predict lr-shrinks-with-width
 ::widget fixture:lecture_09--scale-up | grow the width: under standard parametrization the learning-rate readout divides by the width factor, and keeping the base rate is that many times too high; the muP value stays at the tuned rate
 ::video 48:57-49:32 | "the bigger my model, the smaller my learning rate should be", and the 1-over-width rule of thumb
 ::kp lr-shrinks-with-width
@@ -367,6 +375,8 @@ One caution before the procedure. Upstream, loss or perplexity against parameter
 
 ::note aside 52:13 | His former students in post-training "always complain" that pre-training teams hand over a model with good perplexity and say "It's all your problem now", when the problems started in pre-training.
 
+::predict scaling-law-design-procedure
+
 ::slide 42 | "The effect of hyperparameters on big LMs can be predicted before training!" (optimizer, depth, architecture); the scaling-law-based design procedure: 1. train a few smaller models, 2. establish a scaling law (e.g. Adam vs SGD), 3. select the optimal hyperparameter from the law's prediction
 
 Before a big run you should know roughly what you will get, not just that it will train. With scaling laws, "you should be able to actually predict fairly precisely the numerical values" of how good the run will be, and what one optimizer gains over another. The procedure:
@@ -377,7 +387,6 @@ Before a big run you should know roughly what you will get, not just that it wil
 He calls this the naive version, but a reasonably accurate picture of practice: "What else are you going to do? Just deploy a run out of nowhere?"
 
 ::worked scaling-law-design-procedure
-::predict scaling-law-design-procedure
 
 The lecture has now collected four cautions for step 3:
 - a law can break if you extrapolate it blindly (slide 25);
@@ -385,18 +394,19 @@ The lecture has now collected four cautions for step 3:
 - over a narrow range, polynomial and exponential look alike (the warning after slide 27);
 - downstream metrics scale much less predictably than loss (slide 41).
 
-**Worked example.** A law fitted on 10M-1B-parameter models predicts a loss of 2.10 at 100B; the real run reaches 2.02. That is not a failure of the law. It is the lower-bound caution: the big run's recipe was better than the small runs'.
+**Worked example.** A law fitted on 30M-3B-parameter models predicts a loss of 1.95 at 300B; the real run reaches 1.89. That is not a failure of the law. It is the lower-bound caution: the big run's recipe was better than the small runs'.
 
 ### Questions from the class
 **How many runs per point?** Usually one. Perplexities are very clean: with homogeneous training data and big eval sets, a rerun differs "in the second decimal place". Learning-rate and critical-batch scaling laws are different, "truly horrendous stuff", and people do less variance reduction there than they should.
 
 **Why not fit downstream metrics directly?** People do, and it has the same problem as slide 41: a noisy, jagged trend gives no confidence that it continues. His philosophy: establish the regularity on a low-variance measurement first, then argue separately that it transfers downstream.
 
+::predict one-pass-train-loss-is-test-loss
+
 **Training loss or test loss?** Some plots show one, some the other. Careful science fits test loss, as Kaplan did. But almost all pre-training runs are **one-pass SGD**: each token is seen once, so the generalization gap is "very, very small" and train and validation loss nearly coincide. Some pre-training codebases do not even compute a validation loss. The exceptions are runs that repeat data, like the infinite-compute and repetition studies above, where the model can fit tokens it has seen before and training loss drops below held-out loss.
 
 Why does one-pass training loss track test loss? Each batch's loss is measured before the model has trained on that batch, so it is an honest sample from the training distribution. (That reasoning is ours; the professor only states the rule.)
 
-::predict one-pass-train-loss-is-test-loss
 ::video 55:55-56:35 | why one-pass SGD makes training and validation loss interchangeable, and which runs are the exception
 ::kp scaling-law-design-procedure
 ::kp one-pass-train-loss-is-test-loss
@@ -417,12 +427,12 @@ with $n$ the data, $m$ the model size and $C$ the irreducible error. Kaplan's is
 A good habit, the professor says, for any law someone shows you: take each variable to infinity. With infinite data the data term vanishes and you are left with a pure model-size law. With an infinite model you are left with a pure data law. Both forms pass the test.
 
 ::worked joint-data-model-law
+::predict joint-data-model-law
 
 Because the terms add, the larger one acts as a floor. If the model term dominates, more data barely moves the total: that is "data wasted on small models" in one line of algebra.
 
-**Worked example.** Take $\alpha = 0.5$, $\beta = 0.3$, $C = 0$ and start at $n = m = 10^4$: the data term is $10^{-2} = 0.0100$, the model term $10^{-1.2} = 0.0631$, total 0.073. Raise the data 100× to $n = 10^6$: the data term falls to 0.0010, the total only to 0.064. Raise the model 100× instead, to $m = 10^6$: the model term falls to $10^{-1.8} = 0.0158$, total 0.026. Now the two terms are comparable, and further gains need both.
+**Worked example.** Take $\alpha = 0.5$, $\beta = 0.3$, $C = 0$ and start at $n = m = 10^4$: the data term is $10^{-2} = 0.0100$, the model term $10^{-1.2} = 0.0631$, total 0.073. Raise the data 100× to $n = 10^6$: the data term falls to 0.0010, the total only to 0.064. Raise the model only 10× instead, to $m = 10^5$: the model term falls to $10^{-1.5} = 0.0316$, total 0.042, already far below what 100× the data bought.
 
-::predict joint-data-model-law
 ::widget fixture:lecture_09--joint-law | when m^−β is much larger than n^−α, the blue curve for your model size is already flat on its dashed floor: 100× more data lowers the error by a few percent, 100× bigger model by more than half
 
 ::slide 44 | Rosenfeld: fit on small data and small models (green dots, model fraction up to 1/16, data fraction up to 1/8), extrapolate to the rest (red); estimated against measured top-1 error on ImageNet (mean −4.5%, σ 4.7%) and test loss on WikiText-103 (mean 0.5%, σ 1.7%); "optimize n^−α + m^−β + C with your costs"
@@ -444,10 +454,11 @@ Solving that optimization, Kaplan et al. got a lopsided rule:
 
 $$ N_{opt} \propto C^{0.73}, \qquad D_{opt} \propto C^{0.27} $$
 
+::predict kaplan-compute-optimal-allocation
+
 The exponents sum to 1, because $C \propto ND$: every factor of compute is split between the model and the data. But the split is uneven. With 100× the compute, the model grows $100^{0.73} \approx 29\times$ and the data only $100^{0.27} \approx 3.5\times$, so tokens per parameter *fall* as compute grows.
 
 ::worked kaplan-compute-optimal-allocation
-::predict kaplan-compute-optimal-allocation
 
 This rule shaped an era. Around GPT-3, everyone was training "hundreds of billions of parameters", even "trillion-parameter dense models", and "part of that was driven by this". In 2022, Hoffmann et al. at DeepMind (the Chinchilla paper; "Hoffman" on the slide) said these predictions were "all terribly off". In the plot, the three starred giants, GPT-3, Gopher and Megatron-Turing NLG, sit on or near Kaplan's steep dashed line and are "way too big". Chinchilla's three fits form a much shallower line, and the teal star, Chinchilla itself at 70B parameters, is the better model for the same compute. Its famous multiplier is 20 tokens per parameter.
 
@@ -468,10 +479,10 @@ Chinchilla fits the trade-off three different ways, which the professor likes as
 
 **Method 2, IsoFLOPs**, the professor's personal favourite, "very easy and very robust". Pick a set of FLOP budgets. For each budget, train models of several sizes, each on exactly as many tokens as the budget allows, $D = C/6N$: double the data, halve the model. Each budget traces a valley of final losses. Too small a model is under-sized for the compute; too large a model sees too few tokens. Take the bottom of each valley (or fit a parabola and take its vertex), and fit a line through the bottoms on log-log axes. At Gopher's budget this gives 63B parameters and 1.4T tokens, close to method 1.
 
-::animation fixture:isoflop-sweep | along one IsoFLOP curve N rises as D = C/6N falls, and the loss has one minimum; each larger budget's minimum sits further right, tracing N_opt ∝ C^a with a ≈ 0.5
+::animation fixture:isoflop-sweep | along one IsoFLOP curve N rises as D = C/6N falls, and the loss has one minimum; each larger budget's minimum sits further right, tracing N_opt ∝ C^a with a ≈ 0.45; these are the Approach-3 parametric-fit curves, so D/N rises with C
 ::widget fixture:chinchilla--isoflop-parabola | slide the sampled sizes to one side: the vertex is trustworthy only when the lowest sampled loss has a higher neighbour on both sides, otherwise the readout says "not bracketed"
 
-**Worked example.** Suppose your IsoFLOP minima land at 1B parameters for $10^{20}$ FLOPs and 4B for $10^{21}$. The exponent is the slope between them: $a = \log_{10}(4)/\log_{10}(10) \approx 0.60$. Before trusting it, check that each valley's minimum was inside the swept range; a minimum at the edge of a sweep is only a bound.
+**Worked example.** Suppose your IsoFLOP minima land at 2B parameters for $10^{20}$ FLOPs and 7B for $10^{21}$. The exponent is the slope between them: $a = \log_{10}(7/2)/\log_{10}(10) \approx 0.54$. Before trusting it, check that each valley's minimum was inside the swept range; a minimum at the edge of a sweep is only a bound.
 
 ::predict chinchilla-three-methods
 
@@ -490,6 +501,8 @@ source: lecture_09.pdf p50-p53 · video 1:06:53-1:14:21
 
 Nothing Chinchilla did was materially different from what Kaplan did. Both ran sensible studies and fitted joint laws. Yet the predictions are very different, and in hindsight most people side with Chinchilla: "If you do your own Chinchilla-style analysis, you will find probably scaling is much closer to Chinchilla." So where does the gap come from? This is "where we get into the messy realities of how scaling laws are made": the result depends on implementation details, hyperparameters, and even on what the x-axis is.
 
+::predict kaplan-chinchilla-discrepancy
+
 ::slide 51 | "Resolving Discrepancies in Compute-Optimal Scaling of Language Models" (Porian, ..., Wortsman, Jitsev, Schmidt, Carmon): a reproduction of Kaplan (a = 0.835, N* = 3T at the target budget), then counting last-layer FLOPs (a = 0.706, 787B), correcting warmup (a = 0.602, 292B), and either cosine decay without tuning (a = 0.571, 183B) or optimizer tuning without decay (a = 0.497, 77B); bullets: last-layer parameters removed from the count, warmup too long at very small budgets, decay maybe not critical if batch and LR are tuned
 
 **Explanation 1** reproduces Kaplan's result in Kaplan's setting and then makes small changes one at a time; the exponents in the panels are from the slide image:
@@ -507,7 +520,6 @@ Each change looks minor. Together they turn a 3T-parameter recommendation into a
 
 **Worked example.** Why does the parameter count matter most for small models? Take a model with a 50,000-token vocabulary and width 512. Its embedding matrix alone is about $50{,}000 \times 512 \approx 26$M parameters, twice what four Transformer blocks of that width hold ($12 \times 4 \times 512^2 \approx 12.6$M). Drop it and a small model's size shrinks by a big factor, while a 10B model's size barely changes. The small end of the axis moves, so the fitted slope changes. (Illustrative numbers, not from the lecture.)
 
-::predict kaplan-chinchilla-discrepancy
 ::video 1:08:53-1:10:20 | the small fixes one at a time: count the last layer, fix warmup for small models, tune the batch size
 ::kp kaplan-chinchilla-discrepancy
 
@@ -528,9 +540,9 @@ Methods 1 and 2, and the refit of method 3, agree that parameters and tokens sho
 
 $$ C = 6N \cdot 20N = 120\,N^2 \quad\Longrightarrow\quad N = \sqrt{C/120}, \qquad D = 20N $$
 
-::worked chinchilla-twenty-tokens-rule
 ::predict chinchilla-twenty-tokens-rule
-::widget fixture:lecture_09--allocation | the Chinchilla point sits where the D = 20N line crosses the isoFLOP line 6ND = C; multiply the budget by 25 and N and D each grow 5×, while the Kaplan point leaves the line toward more parameters
+::worked chinchilla-twenty-tokens-rule
+::widget fixture:lecture_09--allocation | the Chinchilla point sits where the D = 20N line crosses the isoFLOP line 6ND = C; multiply the budget by 4 and N and D each grow 2×, while the Kaplan point leaves the line toward more parameters
 
 ::slide 54 | "Chinchilla aims to tell you what gives the best model for fixed training compute.. But most of the compute in a real deployment is inference.. So we should 'over' train": GPT-3 2 tokens/param, Chinchilla 20, LLaMA-65B 22, Llama 2 70B 29, Mistral 7B 110, Llama 3 70B 215; "The more usage we expect, the more it becomes worth it to pay the upfront cost"
 
@@ -538,12 +550,13 @@ And yet "you probably don't want the Chinchilla factor". Chinchilla answers one 
 
 The list reads as a history. GPT-3 was badly under-trained (175B parameters on 300B tokens, about 1.7 per parameter, which the slide rounds to 2). Chinchilla set the ratio at 20, and for a while models stayed near it (LLaMA-65B at 22, Llama 2 70B at 29); that was an era when models were "cool, but ... not being served at scale". Once serving became real, ratios jumped (Mistral 7B at 110, Llama 3 70B at 215), and labs moved to mixtures of experts and other inference-driven trade-offs. Llama 3 70B at 215 tokens per parameter means about $70\text{B} \times 215 \approx 15$T tokens, more than ten times the 1.4T that Chinchilla's rule gives for a 70B model.
 
+::predict overtraining-for-inference
+
 Why is the trade cheap? Near its minimum the IsoFLOP valley is flat. Halving the model at a fixed budget doubles its tokens (from 20 to 80 per parameter) and raises the loss only slightly, while the cost of every generated token, about $2N$ FLOPs, halves.
 
 ::worked overtraining-for-inference
-::predict overtraining-for-inference
 ::widget fixture:chinchilla--parametric-frontier | press "N = N_opt", then slide your N 0.30 decades to the left (half the parameters): the loss excess is under 1%, because the IsoFLOP valley is flat near its minimum, while the per-token serving cost halves
-::widget fixture:lecture_09--allocation | press the p54 presets: at a fixed budget, raising tokens per parameter shrinks N and grows D along the same isoFLOP line; the serving-cost readout is 0.5 at 80 tokens per parameter, and the Llama 3 70B preset needs about 15T tokens
+::widget fixture:lecture_09--allocation | press the p54 presets: at a fixed budget, raising tokens per parameter shrinks N and grows D along the same isoFLOP line; the serving-cost readout is 0.5 at 80 tokens per parameter. To see Llama 3 70B itself, set the multiplier to 1× and the start budget to about 6.3e24 FLOPs (6 × 70B × 15T): the 215 preset then reads a 70B model on about 15T tokens
 ::note slip 1:15:14 | He says GPT-3 was "three tokens per parameter"; the slide prints 2, and 300B tokens over 175B parameters is about 1.7.
 ::note spoken 1:15:43 | Chinchilla matters "not because I think the 20-to-1 ratio is the one golden ratio" (it may be, for research runs), but because of what it teaches about how to fit scaling laws.
 

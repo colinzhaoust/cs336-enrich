@@ -3,6 +3,8 @@
     "title": "TheoremExplainAgent (TEA): agentic Manim pipeline (local clone)",
     "kind": "repo",
     "path": "external/TheoremExplainAgent-main",
+    "license": "MIT (c) 2025 TIGER Lab",
+    "upstream": "https://github.com/TIGER-AI-Lab/TheoremExplainAgent",
     "sha": "unversioned local copy",
     "sha_source": "no .git directory in the local copy (discover_repo.py git_head() -> sha None); README News says generation + evaluation code released 2025 Mar 3; files dated 2025-07-26",
     "anchor_convention": "src/core/code_generator.py:L337-L390  (repo-relative path, 1-based inclusive line range); README anchors use the full external/TheoremExplainAgent-main/README.md:L<n> form so the checker does not resolve them to cs336_enrich/README.md",

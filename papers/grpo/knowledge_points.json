@@ -182,7 +182,7 @@
             "quote": "In the online case (rollout+immediate update), this is just policy gradient with group normalized rewards"
           }
         ],
-        "filtering_note": "The paper uses the ratio = 1 simplification only in the appendix to derive gradient coefficients, yet §4.2 says their actual runs also used a single update per exploration stage; put together (author inference) the min/clip of Eq. 3 never acted in the reported DeepSeekMath-RL training. The course says the same in one line on p18. FeynRL computes the ratio in float32 from stored old_logprobs and does run several updates per buffer, where clipping does act."
+        "filtering_note": "The paper uses the ratio = 1 simplification only in the appendix to derive gradient coefficients, yet §4.2 says their actual runs also used a single update per exploration stage; put together (author inference) the min/clip of Eq. 3 never acted in the reported DeepSeekMath-RL training. The course says the same in one line on p18. FeynRL computes the ratio in float32 from stored old_logprobs and can take several updates per buffer (train_steps_per_epoch > 1, or update_after_full_replay False), where clipping does act; its shipped gsm8k recipes take one. Even then the ratio is not exactly 1, because old_logprobs come from vLLM, and in overlap mode the buffer mixes policy versions."
       },
       "prerequisites": [
         {
@@ -219,7 +219,7 @@
           "why": "π_θ/π_old = 1 and 1 lies inside [0.8, 1.2], so min picks the unclipped term; its derivative is Â ∇(π_θ/π_old) = Â (π_θ/π_old) ∇log π_θ = Â ∇log π_θ (Eq. 17 with A_t = Â)."
         },
         "transfer": {
-          "q": "FeynRL runs several optimizer steps on the same replay buffer. After the first step a token's stored old_logprobs is −1.0 and the current logprobs is −0.5; Â = −1, clip band [0.8, 1.2]. Which branch of the min is active now, and what is the gradient from this token?",
+          "q": "A FeynRL run is configured with update_after_full_replay: True and train_steps_per_epoch: 2, so it takes two optimizer steps on the same replay buffer. After the first step a token's stored old_logprobs is −1.0 and the current logprobs is −0.5; Â = −1, clip band [0.8, 1.2]. Which branch of the min is active now, and what is the gradient from this token?",
           "format": "short",
           "answer": "ratio = e^{0.5} ≈ 1.65; unclipped = −1.65, clipped = 1.2·(−1) = −1.2; min = −1.65 (unclipped branch), so the gradient is −1.65 ∇log π_θ, not zero.",
           "why": "With a negative advantage the clip only protects the low side (ratio < 0.8): the clipped value −1.2 is larger than −1.65, so the minimum is the unclipped term and the policy keeps being pushed down on this token. This is the asymmetry the ratio-clip interactive shows.",
@@ -358,14 +358,14 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "A team fine-tunes a 7B policy with RL. Assume every trained network costs 16 bytes per parameter (weights, gradients, Adam states) and every frozen network costs 2 bytes per parameter. Under PPO as in §4.1.1 they hold a trained policy, a trained value model of the same size, a frozen 7B reference model and a frozen 7B reward model. They switch to GRPO with the same reward model and the same β > 0. How many GB of model-state memory does the switch save (1 GB = 10^9 bytes)? Type only the number, in GB.",
+          "q": "A team fine-tunes a 7B policy with RL. Assume every trained network costs 12 bytes per parameter (bf16 weights and gradients, fp32 Adam moments) and every frozen network costs 2 bytes per parameter. Under PPO as in §4.1.1 they hold a trained policy, a trained value model of the same size, a frozen 7B reference model and a frozen 7B reward model. They switch to GRPO with the same reward model and the same β > 0. How many GB of model-state memory does the switch save (1 GB = 10^9 bytes)? Type only the number, in GB.",
           "format": "number",
-          "answer": "112",
+          "answer": "84",
           "tolerance": 0.04,
-          "value": 112,
-          "why": "PPO: policy 7e9·16 = 112 GB, critic 112 GB, reference 7e9·2 = 14 GB, reward model 14 GB, total 252 GB. GRPO keeps policy, reference (β > 0 needs π_ref for the KL term in Eq. 3) and reward model: 112 + 14 + 14 = 140 GB. Saving = 252 − 140 = 112 GB, exactly the trained critic. Answering 126 also removes the reference model (wrong: Eq. 3 still needs it).",
+          "value": 84,
+          "why": "PPO: policy 7e9·12 = 84 GB, critic 84 GB, reference 7e9·2 = 14 GB, reward model 14 GB, total 196 GB. GRPO keeps policy, reference (β > 0 needs π_ref for the KL term in Eq. 3) and reward model: 84 + 14 + 14 = 112 GB. Saving = 196 − 112 = 84 GB, exactly the trained critic. Answering 98 also removes the reference model (wrong: Eq. 3 still needs it).",
           "targets_misconception": "Dropping the value model removes the reference model too.",
-          "varies": "Asks for a memory figure under an explicit byte budget instead of a count of networks; reward and reference models are kept (domain: systems cost accounting).",
+          "varies": "Asks for a memory figure under an explicit byte budget (12 bytes per trained parameter, not the reading's 16) instead of a count of networks; reward and reference models are kept (domain: systems cost accounting).",
           "invariant": "GRPO removes exactly one network relative to PPO, the trained, policy-sized critic; reference and reward models stay whenever β > 0 and a learned reward is used.",
           "transfer_distance": "far"
         },
@@ -942,12 +942,8 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:kl-reference-penalty",
-          "basis": "author-inference",
-          "note": "compute_kl_distance and the kl_coeff > 0 gate"
-        }
+      "see_also": [
+        "feynrl:kl-reference-penalty"
       ],
       "misconceptions": [
         {
@@ -1532,12 +1528,8 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:config-recipe-gsm8k",
-          "basis": "author-inference",
-          "note": "the comparable recipe in code"
-        }
+      "see_also": [
+        "feynrl:config-recipe-gsm8k"
       ],
       "misconceptions": [
         {
@@ -1673,7 +1665,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "RL used only GSM8K/MATH chain-of-thought questions. Before looking at Table 5: did the Chinese benchmarks (MGSM-zh, CMATH) and the tool-integrated MATH score go up, go down, or stay flat for DeepSeekMath-RL vs Instruct? Give the direction and one printed number.",
+          "q": "RL used only GSM8K/MATH chain-of-thought questions. Before looking at Table 5: did the Chinese benchmarks (MGSM-zh, CMATH) and the tool-integrated MATH score go up, go down, or stay flat for DeepSeekMath-RL vs Instruct?",
           "format": "trend",
           "answer": "Up on all of them: MGSM-zh 73.2 → 79.6, CMATH 84.6 → 88.8, tool-integrated MATH 57.4 → 58.8.",
           "why": "The paper's point in §4.2 is that RL on a narrow question set still improved every benchmark, including ones with no RL data.",
@@ -1689,13 +1681,13 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "Five MATH problems, 8 samples each. Correct samples per problem before RL: [0, 2, 3, 6, 1]; after RL: [0, 5, 7, 8, 3]. Count a problem as solved under Maj@8 when more than half (at least 5) of its 8 samples are correct, and under Pass@8 when at least one is. By how many percentage points does Maj@8 accuracy over the five problems change from before to after RL? Type only the number of points.",
+          "q": "Four MATH problems, 8 samples each. Correct samples per problem before RL: [0, 2, 6, 1]; after RL: [0, 5, 7, 8]. Count a problem as solved under Maj@8 when more than half (at least 5) of its 8 samples are correct, and under Pass@8 when at least one is. By how many percentage points does Maj@8 accuracy over the four problems change from before to after RL? Type only the number of points (for example 15, not 15%).",
           "format": "number",
-          "answer": "40",
+          "answer": "50",
           "tolerance": 0.04,
-          "why": "Maj@8 here is simplified to 'at least 5 of 8 correct'. Maj@8 before: only the problem with 6/8 qualifies, 1/5 = 20%. After: 5/8, 7/8, 8/8 qualify, 3/5 = 60%. Change = +40 points. Pass@8 is 4/5 = 80% both before and after (the 0/8 problem stays at 0), the pattern Fig. 7 reports: RL concentrates probability on answers the model could already reach, so Maj@K rises while Pass@K stays flat.",
+          "why": "Maj@8 here is simplified to 'at least 5 of 8 correct'. Maj@8 before: only the problem with 6/8 qualifies, 1/4 = 25%. After: 5/8, 7/8, 8/8 qualify, 3/4 = 75%. Change = +50 points. Pass@8 is 3/4 = 75% both before and after (the 0/8 problem stays at 0), the pattern Fig. 7 reports: RL concentrates probability on answers the model could already reach, so Maj@K rises while Pass@K stays flat.",
           "targets_misconception": "A higher Maj@K means the model can now solve problems it could not solve before.",
-          "varies": "A five-problem tally with a stated majority rule replaces the single-problem qualitative case (modality: computed metric from sample counts).",
+          "varies": "A four-problem tally with a stated majority rule replaces the single-problem qualitative case (modality: computed metric from sample counts).",
           "invariant": "Maj@K rewards how often the correct answer is sampled; Pass@K only whether it is sampled at all; re-weighting moves the first, not the second.",
           "transfer_distance": "near"
         },

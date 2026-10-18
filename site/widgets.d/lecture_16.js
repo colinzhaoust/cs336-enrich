@@ -64,7 +64,7 @@ MODELS["fixture:lecture_16--group-weights"] = {
     { args: { rewards: [1, 1, 1, 0, 0] }, pick: "B4", expect: -0.6, tol: 0.02, from: "lecture_16:negative-gradients-vs-positive-only:check" },
     { args: { rewards: [1, 0, 0, 0] }, pick: "nzF", expect: 1 },                                // RFT transfer: 1 sample, positive
     { args: { rewards: [1, 0, 0, 0] }, pick: "negB", expect: 3 },                               // ... GRPO (mean-subtracted): 3 pushed down
-    { args: { rewards: [1, 1, 1, 1, 1, 1, 1, 1] }, pick: "nzZ", expect: 0 },                    // difficulty predict: 8/8 solved, no contrast
+    { args: { rewards: [1, 1, 1, 1, 1, 1, 1, 1] }, pick: "nzZ", expect: 0 },                    // a problem solved 8/8 (curriculum weight 0): no contrast
     { args: { rewards: [0, 0, 0, 0, 0, 0, 0, 0] }, pick: "nzB", expect: 0 },                    // edge: all failed, also zero signal
     { args: { rewards: [1, 0, 0, 0, 0], ddof: 1 }, pick: "Z1", expect: 1.789 },                 // G − 1 convention (torch.std): +1.79, not +2.0
   ],
@@ -301,7 +301,7 @@ MODELS["fixture:lecture_16--difficulty-signal"] = {
   fn: difficultySignal,
   cases: [
     { args: { p: 0.5, pP: 0.9, pQ: 0.3 }, pick: "ratioQP", expect: 7, tol: 0.01, from: "lecture_16:difficulty-filtering-curriculum:transfer" },
-    { args: { p: 1, G: 8 }, pick: "pUniform", expect: 1 },                 // predict: solved 8/8, the group is certainly uniform
+    { args: { p: 1, G: 8 }, pick: "pUniform", expect: 1 },                 // solved 8/8: the group is certainly uniform
     { args: { p: 1, G: 8 }, pick: "Estd", expect: 0, tol: 1e-9 },          //   ... and carries no contrast
     { args: { p: 0, G: 8 }, pick: "pUniform", expect: 1 },                 // self-explain: always failed wastes rollouts the same way
     { args: { p: 0.5, G: 8 }, pick: "pUniform", expect: 0.0078125 },      // medium difficulty: 2/256
@@ -404,13 +404,16 @@ WIDGETS["fixture:lecture_16--rollout-budget"] = (root) => {
       <span class="muted small">provenance: fixture:lecture_16--rollout-budget · lecture_16.pdf p45 (three inefficiencies), p46 (Kimi's RL infrastructure, image); video:51:42-52:17 (the Riemann-hypothesis rollout everyone waits on), 52:24-52:51 (separate machines vs switching frameworks), 52:51-53:31 (reusing rollouts goes off-policy). Times are abstract units; the predict uses 4 / 3 / 0.5 and the check 7 × 1,000 + 1 × 8,000 tokens.</span>`;
   };
   const set = (k, v) => { s[k] = v; draw(); };
+  // nLong is clamped to B; move its slider back to the value the model uses
+  const syncLong = () => { const i = nLongS.querySelector("input"), o = nLongS.querySelector(".readout"); if (i) i.value = String(s.nLong); if (o) o.textContent = String(s.nLong); };
+  const nLongS = slider("long sequences in the batch", 0, 16, s.nLong, 1, v => { set("nLong", Math.min(v, s.B)); syncLong(); });
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("rollout time R", 0.5, 10, s.roll, 0.5, v => set("roll", v), v => fmt(v, 1)),
     slider("training time T", 0.5, 10, s.train, 0.5, v => set("train", v), v => fmt(v, 1)),
     slider("weight sync S", 0, 3, s.sync, 0.25, v => set("sync", v), v => fmt(v, 2)),
     check("overlap rollouts with training (reuse rollouts from the previous weights)", false, v => set("overlap", v)),
-    slider("batch size B", 2, 16, s.B, 1, v => { s.B = v; s.nLong = Math.min(s.nLong, v); draw(); }),
-    slider("long sequences in the batch", 0, 16, s.nLong, 1, v => set("nLong", Math.min(v, s.B))),
+    slider("batch size B", 2, 16, s.B, 1, v => { s.B = v; s.nLong = Math.min(s.nLong, v); syncLong(); draw(); }),
+    nLongS,
     slider("short length (tokens)", 100, 4000, s.short, 100, v => set("short", v), v => fmt(v, 0)),
     slider("long length (tokens)", 100, 16000, s.long, 100, v => set("long", v), v => fmt(v, 0)),
     read), pic)); draw();

@@ -37,6 +37,8 @@ source: generate_video.py:L667-L744 · generate_video.py:L917-L954 · external/T
 
 There are two ways to say what to explain. A batch run passes `--theorems_path`, a JSON list of records such as `data/thb_easy/math.json` (20 theorems); each record's `theorem` and `description` become the topic and its description. A single run passes `--topic "Big O notation" --context "most common type of asymptotic notation..."`, the README's own example. Both forms need a `--model`, which must be on the whitelist in `src/utils/allowed_models.json`; the default is `gemini/gemini-1.5-pro-002`.
 
+::predict cli-run-modes
+
 ::code generate_video.py:L714-L735 | three wrappers, all at temperature 0.7; only the helper can name a different model
 
 The `__main__` block builds three `LiteLLMWrapper` objects (LiteLLM calls OpenAI, Gemini, Azure, Bedrock and others behind one interface). The planner and the scene model get `--model`; the helper gets `--helper_model` if given, else `--model`.
@@ -48,8 +50,6 @@ Defaults matter here because most features are off. `--max_retries` is 5, `--max
 ::code generate_video.py:L738-L744 | the batch branch; note that --sample_size slices the head of the list
 
 `--sample_size 3` keeps `theorems[:3]`, the first three records in file order, not a random sample.
-
-::predict cli-run-modes
 
 The mode is decided by an `if / elif / else` chain: `if args.theorems_path` (L738), `elif args.topic and args.context` (L917), `else` print a usage message (L952–L954). Each flag is read only inside the branch that needs it. If you pass a theorems file *and* a topic, the file wins and `--topic` is never looked at. `--check_status` and `--peek_existing_videos` are read only inside the batch branch, so in single-topic mode they are silently ignored and the full pipeline runs.
 
@@ -213,11 +213,11 @@ Second, the coordinate limits contradict the margin. The frame is 14.22 units wi
 
 ### Getting the code out of the reply
 
-The reply is free text, so the code has to be cut out of it. `_extract_code_with_retries` applies `re.search(r"```python(.*)```", ..., re.DOTALL)`. If there is no Python fence, it sends the reply back to the scene model with a request to return "the exact same code" in the right format, and tries again, for at most 10 attempts in all.
+::predict code-generation-prompt-contract
+
+The reply is free text, so the code has to be cut out of it. `_extract_code_with_retries` applies `re.search` with `re.DOTALL`, capturing everything between an opening Python fence (three backticks and `python`) and the last closing fence. If there is no Python fence, it sends the reply back to the scene model with a request to return "the exact same code" in the right format, and tries again, for at most 10 attempts in all.
 
 ::code src/core/code_generator.py:L233-L250 | 10 attempts mean 9 re-asks; after the last miss it raises ValueError
-
-::predict code-generation-prompt-contract
 
 The re-ask goes to the scene model at temperature 0.7, so "the exact same code" is a request, not a guarantee. If all attempts fail, the `ValueError` propagates out of the scene's task and up through `asyncio.gather`.
 
@@ -238,11 +238,11 @@ The first version is saved as `v0.py` and handed to `render_scene`, which runs `
 
 After each render the tests run in a fixed order: success breaks; else, if `curr_version >= max_retries`, print "Max retries reached" and break; else increment the version, call `fix_code_errors`, write `v<n>.py` and its `_fix_log.txt`, and render again.
 
+::predict error-driven-fix-loop
+
 ::worked error-driven-fix-loop
 
 So a scene that never renders costs `max_retries + 1` renders and `max_retries` fixes: 6 and 5 at the CLI default. `render_video_fix_code` has a default of 3 in its signature, but the pipeline always passes the CLI value.
-
-::predict error-driven-fix-loop
 
 The fix prompt (`_prompt_fix_error`) receives the joined plan, the failing code and the raw stderr. It asks for an error analysis, then the complete corrected file inside `<FULL_CORRECTED_CODE>` and a Python fence, and tells the model to remove external assets, keep any voiceover, and leave alone all code not causing the error. The same 10-attempt extractor cuts the code out.
 
@@ -261,9 +261,9 @@ On paper, yes. With `--use_visual_fix_code`, a scene that renders cleanly is mea
 
 ::code src/core/video_renderer.py:L70-L85 | the visual branch runs only after a zero exit; its first act is to read self.scene_model
 
-As shipped, the branch cannot run. `VideoRenderer.__init__` stores only `output_dir`, `print_response` and `use_visual_fix_code`; nothing ever sets `self.scene_model`. The attribute access at L79 raises `AttributeError` before any model is called. Because the whole branch sits inside the same `try` as the render, the `except` catches it and returns the message as if it were a render error.
-
 ::predict visual-fix-path-broken
+
+As shipped, the branch cannot run. `VideoRenderer.__init__` stores only `output_dir`, `print_response` and `use_visual_fix_code`; nothing ever sets `self.scene_model`. The attribute access at L79 raises `AttributeError` before any model is called. Because the whole branch sits inside the same `try` as the render, the `except` catches it and returns the message as if it were a render error.
 
 Follow that through the fix loop. Every clean render comes back with the error text "'VideoRenderer' object has no attribute 'scene_model'", and the scene model is asked to fix code with nothing wrong in it. With `--max_retries 2`, v0, v1 and v2 all render cleanly, all come back as errors, and the scene ends unmarked. The flag makes every scene fail, however good its code.
 
@@ -286,11 +286,11 @@ Speech is produced inside each scene's render. `KokoroService` is a manim-voiceo
 
 After all scenes of a topic are processed, the pipeline calls `combine_videos` unless `--only_plan` or `--only_render` was given. It returns early if the combined files already exist; otherwise it re-reads the outline, recounts the scenes with the same regex, and looks for one video per scene.
 
+::predict render-and-concat
+
 ::code src/core/video_renderer.py:L250-L276 | per scene, the folder with the highest _v number wins; one missing video and nothing is combined
 
 Selection is by folder name only: sort a scene's media folders by the number after `_v` and take the last. Since the loop stops at the first success, the highest version is usually the one that rendered. But nothing checks that the chosen folder holds a video: if the newest version left only partial files, the scene counts as missing even when an older version rendered completely.
-
-::predict render-and-concat
 
 The combine step is all-or-nothing. If the number of videos found differs from the scene count, it prints an abort message and returns. One scene that exhausted its retries means no combined video for the topic.
 
@@ -353,6 +353,8 @@ source: eval_suite/prompts_raw/__init__.py:L41-L88 · src/core/video_renderer.py
 
 Put generation and evaluation side by side and ask, for each kind of fault, which stage could catch it.
 
+::predict evaluator-blind-spots
+
 | Fault | Generation | Evaluation |
 |---|---|---|
 | Code that crashes, bad LaTeX, missing import | caught: non-zero exit, sent to the fix loop | nothing to judge (no video) |
@@ -371,8 +373,6 @@ Put generation and evaluation side by side and ask, for each kind of fault, whic
 
 ::code generate_video.py:L746-L756 | the success count is a count of combined video files
 
-::predict evaluator-blind-spots
-
 ::note why | Where would a real layout check have to sit? Before the render, as code that asks each Manim object for its bounding box and compares it with the frame and with its neighbours, so a violation could go back into the fix loop like a crash does. The prompts ask the model to write such checks into its own scene; nothing guarantees it does, and nothing reads the result.
 ::note aside | Atlas's survey notes take one idea from the paper worth keeping, that a video "exposes reasoning flaws text hides", as a lens for reviewing material. The planner's ban on quizzes is the other contrast with Atlas: the generated video never asks the viewer to commit to a prediction before the answer appears.
 ::kp evaluator-blind-spots
@@ -380,14 +380,14 @@ Put generation and evaluation side by side and ask, for each kind of fault, whic
 ## Where do the prompts and the theorems come from? {#prompts}
 source: task_generator/parse_prompt.py:L30-L50 · task_generator/__init__.py:L28-L40 · external/TheoremExplainAgent-main/README.md:L268-L298 · generate_video.py:L893-L894 · src/config/config.py:L8-L9
 
+::predict task-generation-prompts
+
 Every prompt above has two copies. The source is a text file, `task_generator/prompts_raw/<name>.txt` (`eval_suite/prompts_raw/` for the judges). The code uses a Python constant in that folder's `__init__.py`, generated by `parse_prompt.py`, which writes `_<name> = """<file text>"""` for each `.txt`: `prompt_scene_plan.txt` becomes `_prompt_scene_plan`. Wrapper functions in `task_generator/__init__.py` (`get_prompt_scene_plan`, ...) fill the placeholders with `.format()`.
 
 ::code task_generator/parse_prompt.py:L42-L50 | each .txt becomes one triple-quoted constant named after its file
 ::code task_generator/__init__.py:L28-L40 | a wrapper: format the constant, return the string
 
 The consequence is the README's instruction: after editing a `.txt` file, rerun `parse_prompt.py`. Until then the run uses the old constant. Ask the outline prompt for exactly 2 scenes in the `.txt` and change nothing else, and the planner still reads "between 3 and 7". The one exception is the visual self-reflection prompt, which `visual_self_reflection` reads straight from its `.txt` at run time.
-
-::predict task-generation-prompts
 
 Because the templates are format strings, a literal brace in a `.txt` must be doubled (`{{ }}`), hence the double braces in every JSON example. Of the 38 templates, 7 are never used by code outside their module.
 
@@ -405,13 +405,13 @@ source: mllm_tools/litellm.py:L154-L193 · src/core/video_planner.py:L166-L175 �
 
 The last part cuts across all the stages. Several layers turn a failure into data that looks normal, and the next layer carries on.
 
+::predict silent-degradation-points
+
 It starts in the model wrapper. `LiteLLMWrapper.__call__` catches every exception from the API call and *returns the exception message* as if it were the model's reply.
 
 ::code mllm_tools/litellm.py:L186-L193 | no exception leaves the wrapper: an authentication error comes back as a string of "completion" text
 
 Combine that with the outline's keep-everything fallback. Suppose `.env` has no API key and you run a single topic. The first planner call returns an authentication-error message; the outline regex finds no tags, so the message is saved as the outline. The scene count is 0, so nothing is planned or rendered. Then `combine_videos` calls `.group(1)` on its own failed outline search, with no guard, and raises `AttributeError`: a traceback about video combination, far from the missing key. With `--only_plan` there is no traceback at all.
-
-::predict silent-degradation-points
 
 The README's FAQ describes the symptom without the chain: missing plans or scenes "could be API-related issues".
 

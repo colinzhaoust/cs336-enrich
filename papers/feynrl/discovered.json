@@ -26,12 +26,12 @@
   },
   "generated_by": "discover_paper.py",
   "inputs": {
-    "/Users/colin/Desktop/4blue2brown/data/explainer_pipeline/papers/feynrl.json": "1819de3cb604860dbb7640c893f06c01304c6ca91a84b4894028851607f6eac4",
-    "/Users/colin/Desktop/4blue2brown/data/formula_explainer/formulas/feynrl/ess.json": "960d6a226af447fe469004e76cb3c04d907d571027b66969235950c47dff5065",
-    "/Users/colin/Desktop/4blue2brown/data/formula_explainer/formulas/feynrl/p3o_objective.json": "67b27bcd334ef4847df049b593b86a08d658ea82a2936ee9ebf70f3692fe26c7",
-    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/p3o.py": "3bcc5a74099edc45edbcfd299fe3013e09fd0247348bb0ac8b779dcae03c6e17",
-    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/P3O/README.md": "ef8b2bead15a17a80dad59461fb4348deeef2b88138c99375a53110f504086ea",
-    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/README.md": "46bca7c657b7494b91cfb20373dc7eda277183abdd13859411922127bd753aa5"
+    "4blue2brown/data/explainer_pipeline/papers/feynrl.json": "1819de3cb604860dbb7640c893f06c01304c6ca91a84b4894028851607f6eac4",
+    "4blue2brown/data/formula_explainer/formulas/feynrl/ess.json": "960d6a226af447fe469004e76cb3c04d907d571027b66969235950c47dff5065",
+    "4blue2brown/data/formula_explainer/formulas/feynrl/p3o_objective.json": "67b27bcd334ef4847df049b593b86a08d658ea82a2936ee9ebf70f3692fe26c7",
+    "4blue2brown/external/FeynRL/algs/P3O/p3o.py": "3bcc5a74099edc45edbcfd299fe3013e09fd0247348bb0ac8b779dcae03c6e17",
+    "4blue2brown/external/FeynRL/algs/P3O/README.md": "ef8b2bead15a17a80dad59461fb4348deeef2b88138c99375a53110f504086ea",
+    "4blue2brown/external/FeynRL/algs/RL/README.md": "46bca7c657b7494b91cfb20373dc7eda277183abdd13859411922127bd753aa5"
   },
   "verification_note": "Pages 2-9 (page-02..06.png, results-07..09.png) were read: Eqs. 1-13, Table 1, Figs. 1-4 and all §-numbers are verified. Page 1 (abstract/§1 opening), appendices A-E (Tables 2-7, Figs. 5-9) are not in the image set; see `unverified` for what was taken from the arXiv HTML summary instead, and the recorded conflict about the FP8-run model name.",
   "sections": [
@@ -378,7 +378,7 @@
   "code": {
     "repo": "https://github.com/FeynRL-project/FeynRL",
     "revision": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
-    "local_sha_file": "/Users/colin/Desktop/4blue2brown/external/FeynRL/.git/refs/heads/main",
+    "local_sha_file": "4blue2brown/external/FeynRL/.git/refs/heads/main",
     "anchors": [
       {
         "ref": "algs/P3O/p3o.py:L107-L135",

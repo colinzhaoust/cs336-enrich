@@ -9,11 +9,11 @@
   },
   "generated_by": "discover_paper.py",
   "inputs": {
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/grpo/paper.txt": "4a672f1a7d76cd50c9beb66f9b1c3305cd82eab7717cb4b09c1c23e2792ea4b5",
-    "/Users/colin/Desktop/cs336_enrich/atlas/papers/grpo/lecture_16.txt": "b56e3c63d30c35872c96fc8d7641b84a0b41e2ac20ed869a9262fcd8aebd9ce3",
-    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/GRPO/grpo.py": "ae8a5bf841ff58c2147aa85c6faca4fe5403f008902cc37d6b57098326866cf7",
-    "/Users/colin/Desktop/4blue2brown/external/FeynRL/algs/RL/common.py": "593d1ce02e77a2084fda83bd1d6f1d95f4bbd46cee83f7371a77f6e328361f7a",
-    "/Users/colin/Desktop/4blue2brown/external/FeynRL/rollouts/base.py": "570ce155411a0c024c2af47a5e9963a14c3d325edeea70994d6ab55d0a35f1ba"
+    "cs336_enrich/atlas/papers/grpo/paper.txt": "4a672f1a7d76cd50c9beb66f9b1c3305cd82eab7717cb4b09c1c23e2792ea4b5",
+    "cs336_enrich/atlas/papers/grpo/lecture_16.txt": "b56e3c63d30c35872c96fc8d7641b84a0b41e2ac20ed869a9262fcd8aebd9ce3",
+    "4blue2brown/external/FeynRL/algs/GRPO/grpo.py": "ae8a5bf841ff58c2147aa85c6faca4fe5403f008902cc37d6b57098326866cf7",
+    "4blue2brown/external/FeynRL/algs/RL/common.py": "593d1ce02e77a2084fda83bd1d6f1d95f4bbd46cee83f7371a77f6e328361f7a",
+    "4blue2brown/external/FeynRL/rollouts/base.py": "570ce155411a0c024c2af47a5e9963a14c3d325edeea70994d6ab55d0a35f1ba"
   },
   "verification_note": "Section and equation numbers are those printed in the arXiv HTML (v3); no PDF was downloaded, so page numbers are not recorded. Figures 5-7 are images in the HTML; only their captions and the surrounding text are evidence here. Algorithm 1 line 11 cites 'Equation 21' as printed (in the HTML numbering, Eq. 21 is the GRPO gradient coefficient and Eq. 3 is the objective).",
   "sections": [

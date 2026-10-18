@@ -21,6 +21,8 @@ There are two reasons for the secrecy:
 
 Data work has changed shape but not importance. Before foundation models it meant annotating labels for supervised learning; now there is less annotation, at least in pre-training, but a great deal of curation and cleaning. The professor's reason it stays a bottleneck: data is a long-tail problem that "scales with human effort". Only so many people can usefully work on an architecture or a training system, but the data for a model meant to do everything splits into thousands of independent pieces of work, so it parallelizes across people. That is why data teams at model developers are "actually quite big".
 
+::predict training-stages-quality-gradient
+
 ### Three stages, from a lot of rough data to a little good data
 
 Data enters training at three stages:
@@ -32,7 +34,6 @@ The lines are blurry and there can be more than three stages, but the trend hold
 
 The vocabulary follows the stages. A **base model** is the result after pre-training *plus* mid-training, not pre-training alone; an **instruct** or **chat model** is the result after post-training. Increasingly, base models are not released at all. Qwen3.5-397B-A17B ships only as an instruct model; "you don't see the intermediate checkpoints".
 
-::predict training-stages-quality-gradient
 ::code lecture_13.py:L65-L77 | three stages, the large-to-small trend, and where "base" and "instruct" sit
 
 The fully open OLMo 2 from AI2 shows all three stages. Read the three tables top to bottom and watch the size and kind of data change.
@@ -55,6 +56,7 @@ You hear that language models are "trained on the entire Internet". The professo
 To train on the web, someone first has to turn it into files. That is a **crawler**: it discovers pages, starting from a seed set of URLs and following links, and downloads what it finds. You may not build it yourself; the lecture's next big section is Common Crawl, a crawl anyone can download.
 
 ::code lecture_13.py:L95-L101 | the web is live servers; a crawler discovers and downloads pages
+::predict web-is-not-downloadable
 
 Even a perfect crawler cannot download every page. The lecture sorts the obstacles into four kinds.
 
@@ -72,7 +74,6 @@ Some details the professor added aloud:
 - Terms of service *are* the legal layer: a contract for using the site, which often says bots may not use the content, or not for AI training. And even when the terms are silent, the content itself may carry no licence for you to copy it.
 
 ::code lecture_13.py:L105-L123 | dynamic content, authentication, technical restrictions, legal restrictions
-::predict web-is-not-downloadable
 
 The restrictions are also growing. The *Consent in Crisis* study checked robots.txt and terms of service over time for the URLs behind common datasets (C4, RefinedWeb, Dolma, all met later).
 
@@ -80,7 +81,7 @@ The restrictions are also growing. The *Consent in Crisis* study checked robots.
 
 His reading: until 2023 the picture was flat; then the share of sites with full robots.txt restrictions jumped. For terms of service, around 2016 almost no pages had any; now most do, and most forbid AI use. So even if the web could be crawled in 2020, what you can *legally* crawl today is much smaller.
 
-::note aside 10:39 | Aloud the jump was read as reaching "almost 50%". In the figure the measured dark-red band reaches roughly a quarter of sites by mid-2024; it is the shaded forecast that approaches half by 2025. The direction of the trend is the point either way.
+::note slip 10:39 | Aloud the jump was read as reaching "almost 50%". In the figure the measured dark-red band reaches roughly a quarter of sites by mid-2024; it is the shaded forecast that approaches half by 2025. The direction of the trend is the point either way.
 
 Crawlers do not always behave. In July 2024 the CEO of iFixit complained that Anthropic's crawler hit their servers "a million times in 24 hours"; Read the Docs replied that it was being hammered too.
 
@@ -107,6 +108,8 @@ source: lecture_13.py:L150-L177 · video 14:20-19:20
 
 Suppose you obey every robots.txt, terms of service and rate limit. You still have to ask whether you are *allowed to train* on what you downloaded. That is an open legal question, though the last year brought several developments, and the frame for it is **intellectual property law**. Its goal is to *incentivize* the creation of intellectual goods; the professor stressed that this is the spirit of the law, not saying no to everything. Of its forms (copyright, patents, trademarks, trade secrets), copyright is the one that matters for training data.
 
+::predict copyright-low-threshold-expression
+
 Copyright goes back to 1709 in England (the Statute of Anne), the first time governments and courts regulated it. In the United States the current law is the Copyright Act of 1976, which protects "original works of authorship fixed in any tangible medium of expression". Five properties matter here:
 
 - **Collections are not copyrightable**, unless there is creativity in the selection or arrangement. A telephone directory, listed alphabetically, is not protected.
@@ -124,7 +127,6 @@ The summary follows: *basically everything on the Internet is copyrighted*. Does
 1. get a **licence** for it;
 2. appeal to **fair use**.
 
-::predict copyright-low-threshold-expression
 ::video 17:32-17:41 | no registration needed: "you put something on your website, it's copyrighted"
 ::note slip 1:17:22 | Near the end, discussing Common Pile, he said "I think collections can be copyrighted", against his own "collections are not copyrightable" here (16:26). The lecture's exception reconciles them: a collection with creative selection or arrangement can be.
 ::kp copyright-low-threshold-expression
@@ -170,13 +172,13 @@ The lecture's four considerations:
 
 ::code lecture_13.py:L209-L213 | copying is already a violation; training should be transformative; idea over expression; market effects
 ::video 24:33-24:47 | copyright is not verbatim memorization, a point many ML papers miss
+::predict license-and-terms-of-service
 
 ### Terms of service: a third layer
 
 Even with a licence or a fair-use argument, the site's **terms of service** can add restrictions. YouTube hosts many Creative Commons videos, yet its terms forbid downloading videos with a bot. So there are several layers: copyright (answered by licence or fair use) and the contract you accepted by using the site.
 
 ::code lecture_13.py:L215-L217 | terms of service can restrict even licensed works
-::predict license-and-terms-of-service
 ::video 27:07-27:32 | licence and terms of service are separate layers (YouTube)
 ::note spoken 31:40 | Asked what happens if a licence is later made stricter: "first, I'm not a lawyer", but he believes content obtained under the old licence can still be used, while for a living source such as Reddit the new licence governs the new content, so "you wouldn't be able to train on the later things".
 ::kp license-and-terms-of-service
@@ -186,6 +188,8 @@ source: lecture_13.py:L219-L238 · video 27:35-32:12
 
 Three cases frame the current landscape.
 
+::predict fair-use-training-vs-piracy
+
 - **The New York Times v. OpenAI (2023).** The allegation: OpenAI trained on NYT articles and ChatGPT could be prompted to reproduce them almost verbatim. The lecture gives no outcome.
 - **Bartz, Graeber and other authors v. Anthropic (2024).** The allegation: Anthropic pirated millions of books and trained Claude on them. The 2025 summary judgement split the question in two. *Training* on the plaintiffs' works was fair use. *Pirating* the copies was not, even copies never trained on: that has nothing to do with machine learning, piracy was already illegal. Anthropic had also bought physical books, cut off the bindings and scanned them, and the court found that fair use too, but buying a book afterwards does not cure having pirated it first. Anthropic settled for 1.5 billion dollars, which the professor put at about 3,000 dollars a book, so roughly 500,000 books.
 - **Kadrey, Silverman and other authors v. Meta.** The allegation: Meta trained on the plaintiffs' books, something revealed by Meta's own LLaMA paper (see LLaMA's data, below). The 2025 judgement: training on the books was fair use, "in this instance". A separate allegation, that Meta torrented books, was still pending; his opinion was that if precedent holds, it will not go well for Meta.
@@ -194,7 +198,6 @@ Three cases frame the current landscape.
 
 The summary: so far training has been held fair use (or at least not held to be unfair), but the rulings "have so far been narrow", about specific instances, not any training on any copyrighted content. Pirating books is clearly illegal. The area is active and changing.
 
-::predict fair-use-training-vs-piracy
 ::video 28:08-28:30 | the Anthropic ruling: training was fair use, pirating the books was not
 ::note spoken 44:08 | Asked how a crawl can avoid pirated books: "you can't". Common Crawl most likely contains copyrighted books, and developers appeal to fair use. A book is not legally different from your website, since both are copyrighted; a published author is just better placed to defend it in court. For those who want to be really careful, the end of the lecture (Common Pile) shows the alternative.
 ::note aside 27:55 | On NYT v. OpenAI the captions read "I don't think this is still pending"; the lecture text gives no outcome, and none is assumed here.
@@ -204,7 +207,11 @@ The summary: so far training has been held fair use (or at least not held to be 
 ## How is the web turned into files? Common Crawl {#common-crawl}
 source: lecture_13.py:L241-L271 · video 32:12-36:08
 
-Most model developers run their own crawler, "because they want to have full control" over the data. For everyone else there is **Common Crawl**, a non-profit founded in 2007. Roughly every month it runs a crawl that adds 3-5 billion pages; crawls overlap but try to diversify, and the total so far is about 300 billion pages.
+Most model developers run their own crawler, "because they want to have full control" over the data. For everyone else there is **Common Crawl**, a non-profit founded in 2007.
+
+::predict common-crawl-mechanics
+
+Roughly every month it runs a crawl that adds 3-5 billion pages; crawls overlap but try to diversify, and the total so far is about 300 billion pages.
 
 For scale, by the figures the lecture links to: Google's search index is at least 100 PB, and the April 2026 crawl alone has 2.19 billion pages, 372.2 TB (about 170 KB of raw response per page, mostly text, no images).
 
@@ -225,7 +232,6 @@ Three policies steer it:
 The hard part is that URLs do not map one-to-one to content. The same URL can return different content depending on browser state, and many URLs return the same content (tracking parameters, mirror sites, which exist precisely to duplicate). Without care, a crawl fills with duplicates, which is why every dataset below deduplicates.
 
 ::code lecture_13.py:L253-L262 | seed URLs, pop-download-enqueue, and the three policies
-::predict common-crawl-mechanics
 ::video 33:41-33:55 | crawling as graph traversal: pop, download, enqueue the hyperlinks
 ::kp common-crawl-mechanics
 
@@ -235,6 +241,8 @@ Common Crawl ships each crawl in two formats:
 - **WARC**: the raw HTTP response, i.e. the HTML exactly as the server sent it;
 - **WET**: text that Common Crawl already extracted from it, a necessarily lossy conversion.
 
+::predict warc-wet-extraction-loss
+
 WET is convenient but "not necessarily the best way to use the web". Converting HTML to text is a choice, and tools such as [trafilatura](https://trafilatura.readthedocs.io/en/latest/) and [resiliparse](https://resiliparse.chatnoir.eu/en/stable/) do it differently. The DCLM paper (met again near the end) trained models on the same crawl extracted three ways and compared their downstream accuracy:
 
 ::figure official/lectures/images/dclm-wet.png | same data, three extractors: resiliparse and trafilatura score about 24 on DCLM's CORE benchmark, the WET files 20.7
@@ -242,7 +250,6 @@ WET is convenient but "not necessarily the best way to use the web". Converting 
 So the extractor alone moves the trained model's accuracy by several points. That is why later datasets start from WARC and pick an extractor on purpose: The Pile used jusText, RefinedWeb trafilatura, and Nemotron-CC jusText because it returned more tokens. The criterion for judging an extractor is the one in this table, the accuracy of a model trained on its output, not how clean the text looks.
 
 ::code lecture_13.py:L264-L270 | WARC is raw HTML, WET is lossy text, and the conversion matters for downstream accuracy
-::predict warc-wet-extraction-loss
 ::video 35:26-35:49 | WET is a lossy conversion, and the converter matters
 ::kp warc-wet-extraction-loss
 
@@ -261,10 +268,11 @@ You might conclude Wikipedia holds nothing that is not already on the web. Not q
 
 What matters for data: Wikipedia publishes **periodic dumps** every few weeks, the whole site in one archive. You download those instead of crawling, and Wikipedia prefers it ("they don't want you to crawl Wikipedia").
 
+::predict curated-sources-bulk-dumps
+
 The dumps create a vulnerability, given as an aside. Vandalism normally gets rolled back, but the dumps happen on a known schedule. An attacker can make a malicious edit right *before* a dump; the edit is reverted afterwards, but the dump keeps it. Other work shows that injected examples can make a model attach negative sentiment to a trigger phrase such as "iPhone". The takeaway: even "high quality" sources can contain adversarial content. He thinks this particular hole has since been fixed.
 
 ::code lecture_13.py:L286-L294 | anyone edits, a few do most of it, periodic dumps, and poisoning timed before a dump
-::predict curated-sources-bulk-dumps
 
 ### GitHub and Software Heritage
 
@@ -397,6 +405,8 @@ Note the Epochs column: a mixture is not just a list of sources but a weighting,
 
 ### Books: from cleared to pirated
 
+::predict books-provenance-spectrum
+
 The Pile brings in two book sources that sit at opposite ends of the legal spectrum.
 - **Project Gutenberg**, started in 1971 by Michael Hart to widen access to literature (about 75K books in 2025, mostly English). It only includes books that have received copyright clearance, most of them in the public domain. **PG-19** is its books from before 2019, which is most of them, since public domain means old.
 - **Books3** (2020): 196K books from the shadow library Bibliotik, including books by authors such as Stephen King, Min Jin Lee and Zadie Smith. "No one was paying attention" then; people trained on it; it has since been taken down over copyright infringement and lawsuits. "You cannot use, or should not use Books3 anymore."
@@ -404,8 +414,6 @@ The Pile brings in two book sources that sit at opposite ends of the legal spect
 ::code lecture_13.py:L441-L453 | Gutenberg: copyright-cleared; Books3: 196K books from a shadow library, taken down
 
 With BooksCorpus (free but scraped against terms of service) and GPT-3's undescribed Books1/2, that makes a spectrum of provenance: cleared, ToS-violating, unknown, pirated.
-
-::predict books-provenance-spectrum
 
 ### Stack Exchange
 
@@ -437,7 +445,11 @@ source: lecture_13.py:L489-L537 · video 59:40-1:04:37
 
 ### LLaMA and RedPajama
 
-The first LLaMA paper described its data processing in detail, "probably one of the last" models from a non-fully-open developer to do so. Its mixture:
+The first LLaMA paper described its data processing in detail, "probably one of the last" models from a non-fully-open developer to do so.
+
+::predict multi-source-mixtures
+
+Its mixture:
 - **Common Crawl processed with CCNet**, but with a twist on the quality classifier: instead of "does this page look like Wikipedia?", it asked whether the page is *referenced by* Wikipedia. Maybe Wikipedia articles are "too stylized", while the pages they cite are "presumably good";
 - **C4** (more diverse; recall, rule-filtered);
 - **GitHub**, keeping permissive licences, filtered by manual rules;
@@ -449,7 +461,6 @@ The first LLaMA paper described its data processing in detail, "probably one of 
 The lecture gives the result as 1.2T tokens.
 
 ::code lecture_13.py:L490-L498 | CCNet with "referenced by Wikipedia", C4, GitHub, Wikipedia, books, arXiv LaTeX, Stack Exchange
-::predict multi-source-mixtures
 ::note slip | The 1.2T figure (L498, also said aloud at 1:01:06) is the size of the RedPajama v1 reproduction. The LLaMA paper itself reports roughly 1.4T tokens after tokenization. The professor also dated LLaMA 1 to 2022, following the source's comment; the paper is from February 2023.
 
 Listing Books3 "really got them in a lot of trouble": announcing it let anyone trace it back through The Pile to a shadow library, and it is the basis of the Kadrey v. Meta allegation. "That's why people don't want to talk about their data anymore", which closes the loop with the secrecy at the start of the lecture.
@@ -501,6 +512,8 @@ DataComp-LM (DCLM, 2024) is where model-based quality filtering "started to real
 
 DCLM processed Common Crawl into **DCLM-pool**, completely unfiltered: 240 trillion tokens, "probably more than the number of tokens that anyone really trains on", much of it low quality. Then it filtered the pool down to **DCLM-baseline**.
 
+::widget fixture:filter-retention-ratios | guess what share of its 240T pool DCLM keeps, then reveal and compare it with C4's rules; the absolute sizes keep growing because the pools grew faster
+
 ::figure official/lectures/images/dclm-filter.png | follow the pool left to right: the English filter alone removes about half the documents (50.8%); all the heuristic cleaning together (a RefinedWeb reproduction) leaves 19.9%, Bloom-filter dedup leaves 13.7%, and the fastText classifier keeps the final 1.4% of the original documents
 
 The classifier is the interesting part. It is a fastText model, "just ... a linear classifier", trained on:
@@ -518,7 +531,6 @@ So the reference set *is* the definition of quality. Swap OpenHermes and ELI5 fo
 
 The kept fraction is $3.8\text{T} / 240\text{T} \approx 1.6\%$ of tokens. Compare C4's rules, which kept 11%.
 
-::widget fixture:filter-retention-ratios | guess DCLM's kept fraction before revealing: it is about 1.6%, against C4's 11%, yet the absolute sizes keep growing because the pools grew faster
 ::widget fixture:lecture_13--funnel | click "DCLM-baseline (classifier)": 240T → 3.8T, 1.6% kept, with English, rules, dedup and the classifier listed as unsized stages
 ::note aside 1:05:45 | Aloud, DCLM keeps "something that's 1.4%". That is the figure's number, a share of *documents*; 3.8T of 240T is a share of *tokens*, 1.6%. Both are right in their own units (kept documents are presumably longer than average).
 
@@ -537,9 +549,10 @@ It is one of the main datasets to lean into synthetic data for pre-training ("pr
 
 ::note aside | "Remove 90%" is Nemotron-CC's characterization; by the lecture's own numbers DCLM keeps 1.6% of its pool, i.e. removes over 98%. The two are measured from different starting points, and the lecture does not reconcile them.
 
+::predict filter-aggressiveness-vs-tokens
+
 Why push for more tokens? For reference, Llama 3 trained on 15T tokens and Qwen3 on 36T. A 3.8T dataset cannot fill such a budget without repetition. [L9's data-repetition result](#/read/lecture_09) says how much that costs: up to about four epochs, repeated tokens are worth nearly as much as fresh ones; beyond that, much less.
 
-::predict filter-aggressiveness-vs-tokens
 ::widget fixture:lecture_13--filter-budget | click "DCLM 1.6%" with the 240T pool: a 15T budget needs 3.95 epochs, just inside the four-epoch line; set the budget to Qwen3's 36T and it needs 9.5, so the filter must loosen
 ::kp lecture_09:data-repetition-effective-data
 
@@ -547,9 +560,10 @@ Why push for more tokens? For reference, Llama 3 trained on 15T tokens and Qwen3
 
 The professor added a caution aloud that the lecture text does not have. It is "not clear how big these unique tokens are", because training-token counts in papers include repeats: "if you do two epochs, that's twice the number of tokens". A reported count is $\sum_i e_i U_i$ over the mixture's components, $U_i$ unique tokens seen $e_i$ times, while the dataset's size is $\sum_i U_i$.
 
+::predict reported-tokens-count-repeats
+
 So Nemotron-CC's 6.3T and Llama 3's 15T are not directly comparable: 6.3T seen $15 / 6.3 \approx 2.4$ times is reported as 15T. The Pile's Epochs column above is the same bookkeeping inside one dataset. Compute estimates go the other way: in [L2's $6ND$](#/read/lecture_02), $D$ counts tokens *processed*, so it is the reported count, repeats included.
 
-::predict reported-tokens-count-repeats
 ::widget fixture:lecture_13--repeat-ledger | each extra epoch lengthens the reported bar and leaves the unique bar unchanged; set component B to zero, then click "Nemotron-CC 6.3T" and "Llama 3: 15T": the run needs 2.4 epochs
 ::video 1:09:30-1:09:56 | "if you do two epochs, that's twice the number of tokens, so you have to be careful"
 ::kp reported-tokens-count-repeats
@@ -578,7 +592,11 @@ So Nemotron-CC's 6.3T and Llama 3's 15T are not directly comparable: 6.3T seen $
 ## What does a code dataset need? The Stack {#code}
 source: lecture_13.py:L578-L597 · video 1:10:55-1:14:44
 
-By 2022 it was clear that code would matter a lot, and **The Stack** (BigCode) set out to build a really good code dataset:
+By 2022 it was clear that code would matter a lot, and **The Stack** (BigCode) set out to build a really good code dataset.
+
+::predict code-data-licensing-pipeline
+
+Its pipeline:
 - took repository names from the GitHub Archive (2015-2022);
 - git-cloned 137M repositories, containing 51B files, of which only **5B were unique**;
 - kept only permissively licensed repositories (MIT, Apache), detected with go-license-detector;
@@ -586,10 +604,10 @@ By 2022 it was clear that code would matter a lot, and **The Stack** (BigCode) s
 - result: 3.1 TB of code.
 
 ::code lecture_13.py:L579-L584 | 137M repositories, 51B files, 5B unique; permissive licences; minhash near-dedup; 3.1 TB
+::predict fuzzy-deduplication-methods
 
 $5 / 51 \approx 9.8\%$: about nine of every ten files on GitHub are a copy of another file (forks, vendored libraries, copied code). Skipping deduplication would mean training mostly on repeats.
 
-::predict fuzzy-deduplication-methods
 ::widget fixture:lecture_13--funnel | click "The Stack (dedup)": only the files → unique files step is a fraction (51B → 5B, keeps 9.8%); repositories, files and bytes are different units
 ::note slip 1:11:19 | Aloud, "they clone 137 repos", dropping the M (137M repositories), and "three terabytes" for 3.1 TB.
 ::kp fuzzy-deduplication-methods
@@ -609,7 +627,6 @@ A pull request is a structured object (a description, files, diffs, comments, re
 
 The payoff is that the model learns "not just how to generate code, but also the software development process around code".
 
-::predict code-data-licensing-pipeline
 ::video 1:12:46-1:13:17 | pairing a low-resource language with LLVM IR to borrow data
 ::kp code-data-licensing-pipeline
 
@@ -622,13 +639,14 @@ The project scoured the Internet for permissively licensed data worth training o
 
 ::figure official/lectures/images/commonpile.png | sizes on a log scale, by category: code (Stack v2) is largest at 4775 GB, then government and legal text (1172 GB, e.g. USPTO patents), wikis, web, academic papers, forums, public-domain books and educational resources
 
+::predict permissive-only-common-pile
+
 Government proceedings turn out to be a large permissive source. Assembling the set is harder than reading licence labels, because of three subtleties:
 - **Licence laundering.** People are sloppy: anyone can take a copyrighted work and slap a CC-BY label on it, and it is hard to tell whether the label is real.
 - **Collection licences.** Dolma is distributed under ODC-By, a licence on the *collection*; it does not extend to the individual documents inside, which keep their own status. Many datasets on Hugging Face show a permissive licence that, dug into, does not hold at the level of individual works.
 - **Synthetic data.** Text generated by a language model trained on unlicensed data has unclear status. Common Pile skipped synthetic data entirely. It is "probably fine", since the open-weight models carry licences such as MIT, but they "were presumably also trained on unlicensed data", so "it's a little bit of data laundering if you are really honest".
 
 ::code lecture_13.py:L612-L615 | licence laundering, collection licences, synthetic data
-::predict permissive-only-common-pile
 
 The test was **Comma**, a model trained on Common Pile, compared with older models:
 

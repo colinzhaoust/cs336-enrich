@@ -2,7 +2,7 @@
   "paper": "feynrl",
   "title": "Trust the Batch, On- or Off-Policy: P3O for RL post-training (Fakoor, Aubry, Stranges, Smola, 2026)",
   "version": "0.1.0",
-  "authoring_note": "Anchors follow sources.json: feynrl:§N / feynrl:eqN / feynrl:pN / feynrl:figN / feynrl:tableN for the paper (verified on page images for pages 2-9; feynrl:abstract, feynrl:table3, feynrl:table7, feynrl:§B, feynrl:§D come from the arXiv HTML summary and carry basis 'inference'), repo-relative file:line for external/FeynRL at sha dfe85351 (checked by atlas/tools/check_anchors.py). Statuses: 'said' prose claim, 'computed' equation, 'implemented' code, 'shown' figure/table, 'supplement' prerequisite the paper uses without stating. Cross-thread prerequisites are external_prerequisites with ids feynrl:<kp-id> into atlas/repos/feynrl. Numeric prompt answers were computed by hand from Eq. 11/12 with a four-token toy batch (ratios 4,1,1,1: ESS = 49/76 = 0.645) and checked against calculate_ess's formula. course_path maps the paper's stops onto CS336 Lecture 16 (atlas/lectures/lecture_16/knowledge_points.json, ids lecture_16:<kp-id>); the course states REINFORCE variance, PPO's clip, GRPO's z-score and the per-token KL but never importance sampling, ESS or P3O, so most paper stops are 'not_covered' there and are listed as such.",
+  "authoring_note": "Anchors follow sources.json: feynrl:§N / feynrl:eqN / feynrl:pN / feynrl:figN / feynrl:tableN for the paper (verified on page images for pages 2-9; feynrl:abstract, feynrl:table3, feynrl:table7, feynrl:§B, feynrl:§D come from the arXiv HTML summary and carry basis 'inference'), repo-relative file:line for external/FeynRL at sha dfe85351 (checked by atlas/tools/check_anchors.py). Statuses: 'said' prose claim, 'computed' equation, 'implemented' code, 'shown' figure/table, 'supplement' prerequisite the paper uses without stating. The repo thread (atlas/repos/feynrl) comes after this paper, so its KPs are see_also links (feynrl:<kp-id>), not prerequisites; cross-thread prerequisites point only at lecture_16. Numeric prompt answers were computed by hand from Eq. 11/12 with a four-token toy batch (ratios 4,1,1,1: ESS = 49/76 = 0.645) and checked against calculate_ess's formula. course_path maps the paper's stops onto CS336 Lecture 16 (atlas/lectures/lecture_16/knowledge_points.json, ids lecture_16:<kp-id>); the course states REINFORCE variance, PPO's clip, GRPO's z-score and the per-token KL but never importance sampling, ESS or P3O, so most paper stops are 'not_covered' there and are listed as such.",
   "knowledge_points": [
     {
       "id": "feynrl-two-concerns",
@@ -17,7 +17,7 @@
             "source": "feynrl_paper",
             "ref": "feynrl:§1",
             "role": "claim",
-            "quote": "The first is a trust-region concern, that each gradient update should not move the policy too far from its current value, regardless of where the data come from. The second is an off-policy concern, that data collected by older or different behavior policies should influence the current update only to the extent that the update remains reliable."
+            "quote": "trust-region concern, that each gradient update should not move the policy too far ... regardless of where the data come from ... off-policy concern, that data collected by older or different behavior policies should influence the current update only to the extent that the update remains reliable"
           },
           {
             "source": "feynrl_paper",
@@ -41,11 +41,8 @@
         "filtering_note": "Page 1 (the abstract and the opening of §1) is not in the page-image set; the abstract quote comes from the arXiv abstract page and is the only inference-grade anchor here. The paper names the concerns on page 2 and immediately attributes the conflation to [25, 26] (PPO, GRPO) without a worked example; the worked example is deferred to §3 (Eqs. 9-10)."
       },
       "prerequisites": [],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:supp-on-off-policy",
-          "note": "on-policy vs off-policy in FeynRL's policy_version terms"
-        }
+      "see_also": [
+        "feynrl:supp-on-off-policy"
       ],
       "misconceptions": [
         {
@@ -80,7 +77,7 @@
           ],
           "answer": "Loosened the trust region: a fresh token's ratio can now reach 1.6 before its gradient stops",
           "why": "The paper separates a trust-region concern (each update should not move the policy far from its current value regardless of where the data come from) from an off-policy concern (stale or foreign data should count only as far as it is reliable) (§1). A fixed clip handles both with one number (p2), so widening it to rescue stale batches also widens the per-step bound on fresh batches; p5: too large an eps lets high-variance updates destabilize training, too small clips useful tokens, and no single value fits both regimes. On fresh data the importance weights are about 1, so the off-policy side is unaffected; what changed is how far one update may push a token (ratio up to 1 + 0.6).",
-          "distractor_from": "Option 2: treats the trust region as irrelevant when data are fresh (it bounds the update even on fresh data). Option 3: attributes the change to the off-policy concern, which barely acts on fresh data. Option 4: the misconception that the two concerns are the same thing.",
+          "distractor_from": "Option 1: treats the trust region as irrelevant when data are fresh (it bounds the update even on fresh data). Option 3: attributes the change to the off-policy concern, which barely acts on fresh data. Option 4: the misconception that the two concerns are the same thing.",
           "targets_misconception": "The trust-region concern and the off-policy concern are the same thing.",
           "varies": "functional: asks what a clip change meant to fix stale data does to fresh data, instead of classifying a scenario by its dominant concern",
           "invariant": "One fixed clip sets both the per-update trust region and the off-policy cap, so tuning it for one regime mis-sets the other.",
@@ -124,7 +121,7 @@
             "source": "feynrl_paper",
             "ref": "feynrl:§1",
             "role": "claim",
-            "quote": "Off-policy data are common in practice and arise from several sources, including optimizer steps reused across iterations, demonstrations or rollouts from older or heterogeneous policies (the batch-RL setting), and practical mismatches between the rollout and training engines such as numerical precision, sampling strategy, or architectural differences"
+            "quote": "Off-policy data ... arise from several sources, including optimizer steps reused across iterations, demonstrations or rollouts from older or heterogeneous policies ... mismatches between the rollout and training engines such as numerical precision, sampling strategy, or architectural differences"
           },
           {
             "source": "feynrl_paper",
@@ -153,15 +150,9 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:supp-on-off-policy",
-          "note": "policy_version vs loaded_version makes 'older policy' concrete"
-        },
-        {
-          "kp": "feynrl:staleness-budget-max-lag",
-          "note": "max_lag is the repo's bound on how many policy versions a batch can mix"
-        }
+      "see_also": [
+        "feynrl:supp-on-off-policy",
+        "feynrl:staleness-budget-max-lag"
       ],
       "misconceptions": [
         {
@@ -205,7 +196,7 @@
           ],
           "answer": "The sampling temperature, which reshapes the rollout distribution away from pi_theta",
           "why": "The paper lists off-policy sources as reuse across optimizer steps, older or heterogeneous behavior policies, and rollout/training engine mismatches such as numerical precision and sampling temperature (§1). §4.3: sampling at T != 1.0 rescales token log-probabilities and shifts the per-token ratio rho_t away from one. The question rules out reuse (one step per completion), staleness (fresh every step) and precision (same BF16 kernels), leaving temperature.",
-          "distractor_from": "Option 2: the misconception that regenerating every step makes data on-policy with ratio exactly 1. Options 3 and 4: reuse and staleness, the two sources the question explicitly removes.",
+          "distractor_from": "Option 2: the misconception that regenerating every step makes data on-policy with ratio exactly 1. Options 1 and 3: staleness and reuse, the two sources the question explicitly removes.",
           "targets_misconception": "If rollouts are regenerated after every optimizer step the data are on-policy, so ratios are exactly one.",
           "varies": "functional: a single engine-side source (temperature) with reuse and staleness removed, instead of naming two coexisting sources under FP8 plus max_lag",
           "invariant": "pi_b != pi_theta whenever the distribution that sampled the tokens differs from the one being trained, whether through reuse, staleness, precision or sampling settings.",
@@ -288,13 +279,13 @@
       ],
       "external_prerequisites": [
         {
-          "kp": "feynrl:supp-importance-ratio",
-          "note": "exp(logp - logp_old) and why it is computed in log space"
-        },
-        {
           "kp": "lecture_16:policy-gradient-variance",
+          "basis": "author-inference",
           "note": "REINFORCE E[R grad log p] and its variance (slide p5) is the estimator Eq. 5-7 reweights"
         }
+      ],
+      "see_also": [
+        "feynrl:supp-importance-ratio"
       ],
       "misconceptions": [
         {
@@ -411,18 +402,22 @@
       ],
       "external_prerequisites": [
         {
-          "kp": "feynrl:grpo-clipped-loss",
-          "note": "the same min/clamp lines, with the unit test that pins pi_loss = -1.2 at ratio exp(10)"
-        },
-        {
           "kp": "lecture_16:ppo-ratio-clip",
+          "basis": "author-inference",
           "note": "the course's statement of PPO's clip at 1 ± eps (slide p7)"
         }
+      ],
+      "see_also": [
+        "feynrl:grpo-clipped-loss"
       ],
       "misconceptions": [
         {
           "belief": "Clipping shrinks a large ratio's gradient to the clip value times A.",
           "why_wrong": "The gradient is zero, not scaled: when the clipped branch is selected the surrogate is a constant (1+eps_h)A in theta. CISPO and P3O are the ones that scale (they weight log pi by a detached clipped ratio), see feynrl-p3o-vs-clip-family."
+        },
+        {
+          "belief": "Clipping acts on every token whose ratio leaves the band, whatever the advantage sign.",
+          "why_wrong": "Eq. 9 has only an upper edge (A > 0) and Eq. 10 only a lower edge (A < 0). A positive-advantage token below 1 − eps_l keeps its gradient (min picks rho_t A), and so does a negative-advantage token above 1 + eps_h (max picks rho_t); only the side the advantage sign guards goes flat."
         }
       ],
       "prompts": {
@@ -435,10 +430,10 @@
         "transfer": {
           "q": "Changed case: the batch is stale and 60% of tokens now have rho_t outside [0.8, 1.2]. Without changing eps, what happens to the fraction of tokens with non-zero gradient, and what two failure modes does the paper say you face when you try to fix it by moving eps?",
           "format": "short",
-          "answer": "Roughly 60% of the tokens (those outside the band on the clipped side for their advantage sign) contribute no gradient; widening eps admits high-variance importance-weighted gradients, narrowing it clips even more tokens, and no single eps is right for both the fresh and the stale regime.",
+          "answer": "Only the out-of-band tokens on the side their advantage sign guards (rho_t > 1.2 with A > 0, rho_t < 0.8 with A < 0) lose their gradient: at most 60% of tokens, and about half of those 60% if advantage signs are balanced and unrelated to which side a ratio left on; the rest stay live. Widening eps admits high-variance importance-weighted gradients, narrowing it clips even more tokens, and no single eps is right for both the fresh and the stale regime.",
           "why": "The clip fraction is set by the ratio distribution, which eps cannot see; p5 states both failure modes and concludes eps must be tuned per task, model scale and mismatch degree. (In FeynRL this shows up as a rising clipfrac metric in overlap mode.)",
           "varies": "Batch staleness: most ratios now sit outside the band instead of near 1.",
-          "invariant": "The clip band is fixed before training; the gradient is zero on the clipped side for every token outside it.",
+          "invariant": "The clip band is fixed before training; a token outside it has zero gradient only if it left on the side its advantage sign guards.",
           "transfer_distance": "near"
         },
         "check": {
@@ -594,6 +589,7 @@
       "external_prerequisites": [
         {
           "kp": "lecture_16:policy-gradient-variance",
+          "basis": "author-inference",
           "note": "the score-function form grad log p the weight multiplies"
         }
       ]
@@ -665,11 +661,11 @@
           "why": "Σw = 7, Σw² = 19, n = 4: (7²)/(19·4) = 49/76 = 0.645. One 4x token drags ESS from 1 down to 0.645 because weight is concentrated on it."
         },
         "transfer": {
-          "q": "Changed case: every ratio in that batch is multiplied by 2, giving (8, 2, 2, 2). Compute the ESS to three decimals and say what this implies about a mismatch that rescaled all ratios by the same factor.",
+          "q": "Changed case: a batch has ratios (5, 1, 1, 1), and every ratio is then multiplied by 2, giving (10, 2, 2, 2). Compute the ESS of the scaled batch to three decimals and say what this implies about a mismatch that rescaled all ratios by the same factor.",
           "format": "number",
-          "answer": "0.645",
+          "answer": "0.571",
           "tolerance": 0.01,
-          "why": "Σw = 14, Σw² = 76: 196/(76·4) = 0.645, unchanged. Eq. 11 is invariant to a common scale, so a mismatch that literally multiplied every ratio by a constant would be invisible to ESS; temperature and FP8 mismatches are detected because they change ratios unevenly across tokens.",
+          "why": "Σw = 16, Σw² = 112: 256/(112·4) = 0.571, the same as (5, 1, 1, 1) (Σw = 8, Σw² = 28: 64/112). Eq. 11 is invariant to a common scale, so a mismatch that literally multiplied every ratio by a constant would be invisible to ESS; temperature and FP8 mismatches are detected because they change ratios unevenly across tokens.",
           "varies": "All ratios rescaled by a common factor (scale of the batch).",
           "invariant": "The relative spread of the ratios, which is all Eq. 11 measures.",
           "transfer_distance": "far"
@@ -786,17 +782,19 @@
       ],
       "external_prerequisites": [
         {
-          "kp": "feynrl:kl-reference-penalty",
-          "note": "the same compute_kl_distance estimator, there applied to the frozen reference"
-        },
-        {
-          "kp": "feynrl:group-relative-advantage",
-          "note": "adv here is the zscore from the replay buffer"
+          "kp": "lecture_16:grpo-group-zscore-advantage",
+          "basis": "author-inference",
+          "note": "adv in Eq. 12 is Eq. 3's group z-score (r - group mean)/(population group std + eps), the course's GRPO advantage"
         },
         {
           "kp": "lecture_16:per-token-kl-reward-shaping",
+          "basis": "author-inference",
           "note": "the course's per-token KL is toward the reference model; P3O's (1 - e_B) KL is toward the behavior policy"
         }
+      ],
+      "see_also": [
+        "feynrl:kl-reference-penalty",
+        "feynrl:group-relative-advantage"
       ],
       "misconceptions": [
         {
@@ -948,15 +946,9 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:cispo-vs-ppo-clip",
-          "note": "CISPO's detached clipped ratio, with the unit tests that pin it"
-        },
-        {
-          "kp": "feynrl:grpo-clipped-loss",
-          "note": "GRPO's min/clamp line"
-        }
+      "see_also": [
+        "feynrl:cispo-vs-ppo-clip",
+        "feynrl:grpo-clipped-loss"
       ],
       "misconceptions": [
         {
@@ -972,7 +964,7 @@
         "predict": {
           "q": "Count the objective hyper-parameters fixed before training in each Table 1 row: GRPO/DAPO, GSPO, Decoupled, P3O (ignore entropy and reference-KL coefficients).",
           "format": "short",
-          "answer": "GRPO/DAPO: 2 (eps_l, eps_h; 1 if symmetric). GSPO: 2 (eps_l^seq, eps_h^seq). Decoupled: 3 (eps_l, eps_h, c_w) plus the auxiliary construction of pi_prox. P3O: 0.",
+          "answer": "GRPO/DAPO: 2 (eps_l, eps_h; 1 if symmetric). GSPO: 1 (eps^seq, used on both sides of the clip in Table 1; the §3 text speaks of eps_l^seq, eps_h^seq, which would make 2). Decoupled: 3 (eps_l, eps_h, c_w) plus the auxiliary construction of pi_prox. P3O: 0.",
           "why": "Table 1 colours the fixed quantities red/green and the auxiliary choice pi_prox purple; P3O's only coloured quantity is the blue, batch-adaptive e_B."
         },
         "transfer": {
@@ -995,7 +987,7 @@
           ],
           "answer": "GRPO 0, CISPO 1.2, P3O 0.9",
           "why": "GRPO: min(1.3 x 1, clamp(1.3, 0.8, 1.2) x 1) = 1.2 from the clamped branch, which is constant in theta, so the gradient weight is 0 (algs/GRPO/grpo.py:L174-L176; paper Eq. 9). CISPO: clamp(1.3, 0.8, 1.2).detach() = 1.2 multiplies log pi (algs/CISPO/cispo.py:L174-L175). P3O: clamp(1.3, 0, 0.9).detach() = 0.9 (algs/P3O/p3o.py:L207); the cap is the batch ESS, not a band around 1.",
-          "distractor_from": "Option 2: the misconception that clipping scales GRPO's gradient to the clip value instead of zeroing it. Option 3: the misconception that P3O clips into [1 - eps, 1 + eps] with eps = 1 - e_B = 0.1. Option 4: assumes CISPO drops out-of-band tokens like GRPO because its band is fixed.",
+          "distractor_from": "Option 1: the misconception that clipping scales GRPO's gradient to the clip value instead of zeroing it. Option 3: the misconception that P3O clips into [1 - eps, 1 + eps] with eps = 1 - e_B = 0.1. Option 4: assumes CISPO drops out-of-band tokens like GRPO because its band is fixed.",
           "targets_misconception": "Clipping shrinks a large ratio's gradient to the clip value times A.",
           "varies": "domain: a high-ratio positive-advantage token instead of a low-ratio negative-advantage one",
           "invariant": "GRPO's min-clip zeroes the gradient on the flat side; CISPO weights log pi by the detached ratio clamped to a fixed band; P3O weights it by the ratio capped from above at e_B.",
@@ -1108,15 +1100,9 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:decoupled-loss-prox",
-          "note": "what the other algorithms switch on in overlap mode: pi_prox snapshot, pi_prox/pi_old weight, behave_imp_weight_cap"
-        },
-        {
-          "kp": "feynrl:staleness-budget-max-lag",
-          "note": "the scheduler-side bound that remains with P3O"
-        }
+      "see_also": [
+        "feynrl:decoupled-loss-prox",
+        "feynrl:staleness-budget-max-lag"
       ],
       "misconceptions": [
         {
@@ -1155,7 +1141,7 @@
           ],
           "answer": "It starts; P3O stores the cap and its loss never reads it",
           "why": "configs/load.py:L819-L820 rejects behave_imp_weight_cap <= 1.0 only when alg_name != \"p3o\", so validation passes. core/rl_engines.py:L58-L60 passes use_decoupled_loss and the cap to every algorithm; p3o.py stores them (L67-L69, 'not used in p3o for now'), and compute_policy_loss uses only ratio = exp(logprobs - old_logprobs), ess_factor and the behavioral KL (L192-L223), with no prox snapshot or behaviour weight. This is the paper's claim that Eq. 12 handles both regimes with no extra hyper-parameter or code path (p6).",
-          "distractor_from": "Option 2: the validator rule for GRPO/CISPO, which P3O is exempt from. Option 3: the misconception that P3O in overlap mode uses the pi_prox snapshot and behaviour weight like the others. Option 4: confuses the behaviour-weight cap with P3O's batch-adaptive cap.",
+          "distractor_from": "Option 2: the validator rule for GRPO/CISPO, which P3O is exempt from. Option 1: the misconception that P3O in overlap mode uses the pi_prox snapshot and behaviour weight like the others. Option 4: confuses the behaviour-weight cap with P3O's batch-adaptive cap.",
           "targets_misconception": "P3O in overlap mode needs the pi_prox snapshot like the others.",
           "varies": "functional: a config value that would be illegal for GRPO, asking what the P3O code path does with it, instead of comparing staleness controls in a mixed-version batch",
           "invariant": "P3O's loss is identical in sync and overlap mode; decoupled-loss arguments (prox snapshot, behaviour-weight cap) are accepted only for signature compatibility.",
@@ -1268,7 +1254,7 @@
           ],
           "answer": "pi_b, because its weight 1 - e_b = 0.5 dwarfs 1 - e_prox ≈ 0",
           "why": "§3.1 / Eq. 13: pi_mix mixes pi_b and pi_prox with weights (1 - e_b) and (1 - e_prox). Here those are 0.5 and ≈ 0, so pi_mix collapses onto pi_b and the extension reduces to single-anchor P3O around the behavior policy; an anchor the policy has not drifted from (ESS ≈ 1) is uninformative and drops out.",
-          "distractor_from": "Option 2: assumes recency rather than drift sets the weight. Option 3: assumes a fixed 50/50 mixture, i.e. that the mixture weights are hyper-parameters rather than batch ESS values. Option 4: confuses the anchor with the reference model.",
+          "distractor_from": "Option 1: assumes recency rather than drift sets the weight. Option 3: assumes a fixed 50/50 mixture, i.e. that the mixture weights are hyper-parameters rather than batch ESS values. Option 4: confuses the anchor with the reference model.",
           "targets_misconception": "Adding a second anchor adds a hyper-parameter (the mixture weights are fixed).",
           "varies": "domain: the inverse case, stale with respect to pi_b but no within-epoch drift, so the other anchor dominates",
           "invariant": "Each anchor's mixture weight is 1 minus its ESS; the anchor the policy has not drifted from drops out.",
@@ -1307,7 +1293,7 @@
             "source": "feynrl_paper",
             "ref": "feynrl:§4.1",
             "role": "claim",
-            "quote": "Experiments use the open-source models Qwen3-4B-Thinking-2507 [30] and Qwen2.5-1.5B [29], trained on the DeepScaleR-Preview dataset of 40,000 mathematics problem-answer pairs ... Binary rewards are assigned by matching the model's output against the DeepScaleR-Preview reference ... All runs use 8 NVIDIA H100 GPUs"
+            "quote": "Experiments use the open-source models Qwen3-4B-Thinking-2507 [30] and Qwen2.5-1.5B [29], trained on the DeepScaleR-Preview dataset of 40,000 mathematics problem-answer pairs ... Binary rewards are assigned ... All runs use 8 NVIDIA H100 GPUs"
           },
           {
             "source": "feynrl_paper",

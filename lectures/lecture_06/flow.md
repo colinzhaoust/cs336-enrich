@@ -146,10 +146,10 @@ The operation under test comes from a small wrapper: `run_operation2(dim, operat
 - **Repeat and average.** Times vary, so it runs several trials (3 by default) and returns the mean.
 
 ::code lecture_06.py:L179-L203 | warmup, synchronize, CUDA events around run(), synchronize, mean of the trials
+::predict benchmark-recipe
 
 If you forget to synchronize and time with Python's clock, the stopwatch stops when the launch returns, long before the GPU finishes, and the measured time is mostly launch overhead. [L2](#/read/lecture_02) previewed exactly this trap.
 
-::predict benchmark-recipe
 ::note spoken 25:24 | The mean is a simplification: "If you are being very particular, you probably want to maybe look at the whole distribution, the P95 or whatever." The 95th percentile tells you about the slow tail that a mean hides.
 ::kp benchmark-recipe
 ::kp lecture_02:gpu-timing-synchronize
@@ -162,15 +162,14 @@ The lecture uses "kernel" and "launch" constantly; aloud the professor defined a
 
 ### How matmul time scales with dimension
 
-The lecture then times a square matmul at dim = 256, 512, 1024, 2048, 4096 and 8192. A matmul of two dim × dim matrices does $2\,\text{dim}^3$ FLOPs (from [L2](#/read/lecture_02)), so you would expect time to grow cubically, 8× for every doubling of dim.
+The lecture then times a square matmul at dim = 256, 512, 1024, 2048, 4096 and 8192.
 
 ::code lecture_06.py:L172-L176 | six sizes, then the lecture's one-line conclusion
-
 ::predict matmul-time-scaling
 
-Above the crossover it does: from 4096 to 8192 the time goes up about 8×. Below it, the time is **roughly constant**: on the professor's B200, flat "up until you get up to almost 2,000 dimensional matrices". His reason: GPUs "are built for fairly large matrix multiplications", and a small matmul cannot fill the hardware, so it finishes in about the same short time whatever its size. The fixed cost of launching and finishing a kernel adds to the same floor. Either way, below about 2048, halving dim saves almost nothing.
+A matmul of two dim × dim matrices does $2\,\text{dim}^3$ FLOPs (from [L2](#/read/lecture_02)), so you would expect time to grow cubically, 8× for every doubling of dim. Above the crossover it does, nearly: from 4096 to 8192 the professor's trace records about 7×, approaching the 8× of the FLOPs. Below it, the time is **roughly constant**: on the professor's B200, flat "up until you get up to almost 2,000 dimensional matrices". His reason: GPUs "are built for fairly large matrix multiplications", and a small matmul cannot fill the hardware, so it finishes in about the same short time whatever its size. The fixed cost of launching and finishing a kernel adds to the same floor. Either way, below about 2048, halving dim saves almost nothing.
 
-::widget fixture:lecture_06--matmul-time | below about dim 2048 the curve sits on the fixed-cost floor and doubling dim barely moves it; above, each doubling multiplies the time by close to 8; a 2× faster GPU only shrinks the cubic part
+::widget fixture:lecture_06--matmul-time | below about dim 2048 the curve sits on the fixed-cost floor and doubling dim barely moves it; above, the ratio per doubling climbs toward 8 (×4.5 at 4096, ×7.2 at 8192); a 2× faster GPU only shrinks the cubic part
 ::note aside | The crossover near 2,000 is the professor's reading of his own B200 plot. It is not a portable number; on another GPU or dtype it moves.
 ::kp matmul-time-scaling
 
@@ -182,6 +181,7 @@ Benchmarking gives one number. **Profiling** shows where the time is spent, and,
 The lecture uses PyTorch's built-in profiler. Its `profile(run)` helper warms up, synchronizes, then runs the operation once inside a `torch.profiler.profile` context that records GPU (CUDA) activity, synchronizes again, and prints a table of the kernels sorted by total GPU time.
 
 ::code lecture_06.py:L244-L252 | record CUDA activity around one run, then a table sorted by cuda_time_total
+::predict profiler-kernels
 
 ### Three profiles
 
@@ -196,7 +196,6 @@ So which CUDA kernel runs depends on the tensor dimensions, and the long names a
 - **64x64x16**: the tile shape, which the matmul section explains.
 
 ::code lecture_06.py:L225-L234 | which kernels ran, chosen per shape, and how to read the name
-::predict profiler-kernels
 
 Two tokens were left undecoded: `simt` means the kernel runs on the ordinary cores rather than tensor cores (a tensor-core kernel says `tensorop` instead), and `sgemm` is single-precision general matrix multiply. By the same recipe, a name with `sm90` and `bf16` is a Hopper (H100) kernel in bfloat16.
 
@@ -227,14 +226,15 @@ Same formula, same answer, same FLOPs, "wildly different performance characteris
 
 ### What the profiler shows
 
-- **naive_gelu**: many kernels. Each primitive in the PyTorch expression (a multiply, an add, the tanh) is its own kernel; the table lists unary and binary functor kernels and a tanh kernel. Counting the expression, that is roughly eight or nine elementwise kernels.
+- **naive_gelu**: many kernels. Each primitive in the PyTorch expression (a multiply, an add, the tanh) is its own kernel; the table lists unary and binary functor kernels and a tanh kernel. Counting the expression gives nine elementwise kernels, matching the profile's 9 cudaLaunchKernel calls.
 - **builtin_gelu**: one kernel, a GeLU kernel in CUDA. Why does it exist? "Because people use GeLU. So someone wrote a kernel for it and put it in the standard library."
 - **compiled_gelu**: one kernel, and it is a **Triton** kernel. The compiler read naive_gelu's computation graph and wrote a single Triton kernel for it.
 
 Why many kernels are slow: each kernel reads its input from HBM, brings it to the SMs, computes, and writes the result back to HBM; the next kernel reads it from HBM again. "Between kernel invocations, things have to go back to HBM." The fused kernel reads each element from HBM once and writes once, with every intermediate kept on-chip. That is **kernel fusion**.
 
 ::code lecture_06.py:L299-L302 | no fusion: many HBM round trips; fusion: one read, one write; the compiled kernel is Triton
-::animation fixture:fusion-timeline | the unfused chain (drawn as five launches) writes and re-reads the tensor between kernels while compute idles; fused, one launch does one read and one write, and the arithmetic is unchanged
+::animation fixture:fusion-timeline | the unfused chain (drawn as the nine launches of the lecture's profile, 13 reads + 9 writes) writes and re-reads the tensor between kernels while compute idles; fused, one launch does one read and one write, and the arithmetic is unchanged
+::predict supp-memory-bound-fusion
 
 ### Why fusion buys so much: elementwise ops are memory-bound
 
@@ -242,7 +242,6 @@ The lecture uses a fact from [L2](#/read/lecture_02) without restating it. GeLU 
 
 For scale: the benchmark tensor has $16384^2 \approx 2.7 \times 10^8$ fp32 values, 1.07 GB. One read plus one write is 2.1 GB, about a quarter of a millisecond at a B200's 8 TB/s. Nine unfused kernels move about nine times that. (This is napkin math from the table above, not the lecture's measurement.)
 
-::predict supp-memory-bound-fusion
 ::kp lecture_02:arithmetic-intensity
 ::kp lecture_05:operator-fusion
 
@@ -256,14 +255,14 @@ source: lecture_06.py:L305-L314 · video 36:51-39:44
 
 The compiled GeLU was a Triton kernel. Now write kernels yourself. There are two main languages, and they differ in what you describe.
 
+::predict cuda-vs-triton
+
 - **CUDA** (NVIDIA): you specify what **each thread** does. Your code gets a thread ID and executes on its piece of data. This is close to what the hardware actually does and gives fine-grained control. The cost is that you manage more yourself, notably shared memory. When threads must cooperate (a softmax's row maximum, a matmul's shared tiles), they have to synchronize, and "you have to basically do that bookkeeping".
 - **Triton** (OpenAI): you specify what **each thread block** does. The frame is always the same: load data into shared memory, operate on it, write back to global memory (HBM). The compiler decides how the block's threads split the work, where values live, and how the threads synchronize.
 
 ::code lecture_06.py:L308-L314 | CUDA programs threads, Triton programs blocks
 
 Where each one pays: for purely elementwise work, "this CUDA is just fine", even simpler, because each thread just processes its element. Triton earns its place once threads must communicate. In the professor's closing words, blocks are "easier to think about" than threads "because you don't have to think about explicitly synchronizing threads or doing shared memory". Triton thinks at a level between PyTorch's whole-tensor operations and CUDA's single elements: you operate on a block-sized vector of data as if it were a small tensor.
-
-::predict cuda-vs-triton
 
 Triton is "generally powerful enough", especially when getting started. Its limit: if you want to exploit "every single new feature of the latest hardware, it might not give you the full flexibility".
 
@@ -292,25 +291,24 @@ Each program wakes up and asks "who am I?":
 - `mask = offsets < num_elements` is True for real elements. Here 8192 divides evenly, so every mask is all True; in general only the last program has False entries, and they stop it from reading or writing past the end of the tensor.
 
 ::code lecture_06.py:L369-L376 | program id, start, the vector of offsets, and the mask for the ragged end
+::predict triton-program-grid
 
 Take 10,000 elements instead. `cdiv(10000, 1024) = 10` programs. The last starts at $9 \times 1024 = 9216$ and owns offsets 9216 to 10,239; only $10000 - 9216 = 784$ of them are real, so 784 mask entries are True and 240 are False.
 
-::predict triton-program-grid
 ::widget fixture:lecture_06--launch-grid | in elementwise mode, changing num_elements moves only the mask boundary inside the last program; switch the grid to n // BLOCK_SIZE and the last program disappears, leaving a tail that nothing computes
 
 Now the body. `tl.load(x_ptr + offsets, mask=mask)` is pointer arithmetic: the address of `x` plus each offset, loaded where the mask allows. The result is a 1024-element vector, and from here "you do your normal computation" on it as if it were a small tensor. Triton has no `tl.tanh`, so the kernel builds it from the exponential, $\tanh a = (e^{2a} - 1)/(e^{2a} + 1)$. Finally `tl.store(y_ptr + offsets, y, mask=mask)` writes the block back.
 
 ::code lecture_06.py:L378-L389 | one masked load, the GeLU arithmetic with tanh built from exp, one masked store
+::predict triton-gelu-kernel
 
 Count the memory traffic. One program does exactly one `tl.load` and one `tl.store`. The intermediates `a`, `exp` and `tanh` are block-local values that never go to HBM. So each element crosses HBM once in and once out, the fused behaviour that `torch.compile` produced automatically. Correctness is checked the same way as before: `check_equal_1d(triton_gelu, naive_gelu)`.
-
-::predict triton-gelu-kernel
 
 The professor wanted one thing remembered: "all the kernels are going to look something like this". You wake up, you figure out which indices you own, you read, you do some stuff, and you write to HBM.
 
 ::note skip 42:18 | The kernel runs on the GPU, so the executable lecture could not step through it line by line ("I'm not going to be able to trace through this"); the code was shown instead.
 ::note spoken 48:38 | Asked where a loaded `x` actually lives: `x_ptr` is an address in HBM, and the local `x` is "generally a register or shared memory. Triton figures out what to do there." Likewise whether tensor cores are used: "you don't control that. The hardware figures out where to put things."
-::note warning | The comment at L349 calls BLOCK_SIZE the "Number of threads", and the professor repeats it later (1:08:59). In Triton it is the number of *elements* one program handles; the compiler picks the thread count. The PTX in the next section shows 8 elements per thread, so this block of 1024 elements runs on 128 threads.
+::note warning | The comment at L349 calls BLOCK_SIZE the "Number of threads", and the professor repeats it later (1:08:59). In Triton it is the number of *elements* one program handles; the compiler picks the thread count, as the PTX in the next section shows.
 ::kp triton-program-grid
 ::kp triton-gelu-kernel
 
@@ -364,10 +362,11 @@ Count them per operation:
 - row sum: reads $MN$, writes $M$;
 - divide: reads $MN$, writes $MN$.
 
+::predict naive-softmax-traffic
+
 Total: $5MN + M$ reads and $3MN + 2M$ writes. A fused kernel reads the matrix once and writes the result once, $MN$ and $MN$. For large $N$ the ratio is about $8MN / 2MN = 4$, the lecture's "speedup of 4x!", "in principle". The arithmetic is identical in both; only the HBM round trips differ.
 
 ::worked naive-softmax-traffic
-::predict naive-softmax-traffic
 
 On the toy input `[[5, 5, 5], [0, 0, 100]]`, the naive softmax returns `[[1/3, 1/3, 1/3], [0, 0, 1]]`: the second row's first two entries are $e^{-100}/(1 + 2e^{-100})$, about $4 \times 10^{-44}$.
 
@@ -451,9 +450,10 @@ This is "a little bit more complicated than before, because now we have a for lo
 
 The professor stopped to make sure of one distinction. In GeLU we also cut a long vector into pieces, "but those were blocks", each processed independently. "These are not blocks. These are tiles. The block corresponds to this whole row." The difference has a reason. GeLU's pieces never need each other. A row sum's pieces must be added together, and separate blocks share no memory in which to combine them. So the pieces become tiles that the same program visits in turn, and the grid counts **independent reductions** (rows), not pieces.
 
+::predict reduction-stays-in-one-block
+
 A 512 × 4096 matrix with BLOCK_SIZE 1024 therefore launches 512 programs, each looping over 4 tiles, not 2048 programs.
 
-::predict reduction-stays-in-one-block
 ::widget fixture:lecture_06--launch-grid | in row-reduction mode the program count follows the number of rows and never the row length; a longer row adds tiles to each program's loop, not programs
 ::video 1:11:06-1:11:28 | "These are not blocks. These are tiles."
 ::note aside | This is the lecture's design, not a hardware law. Real kernels can split one long reduction across blocks and combine the partial sums with atomic adds or a second pass; the lecture does not go there.
@@ -494,11 +494,11 @@ When the sweep along $K$ is done, write the output tile to HBM. A different tile
 ::figure official/lectures/images/gemm_tiled.png | one orange tile of C: the outer loop walks the purple row tiles of A and column tiles of B, the inner loop works inside the current pair
 ::code lecture_06.py:L574-L582 | the tiled algorithm in six lines, and its intensity
 ::animation fixture:tiling-sweep | each pair of input tiles is loaded into shared memory once and reused for all T×T partial products before the next pair loads; the global-read counter moves only on tile loads
+::predict matmul-tiling-intensity
 
 Why the intensity becomes $O(\text{tile size})$: with square tiles of side $T$, each element of $A$ that is loaded is reused by all $T$ columns of the output tile, and each element of $B$ by all $T$ rows. Total reads fall by a factor of $T$ while the FLOPs stay $2MKN$.
 
 ::worked matmul-tiling-intensity
-::predict matmul-tiling-intensity
 
 With the lecture's own sizes, $M = N = K = 1024$ and 64 × 64 output tiles, each element of $A$ is read from HBM $1024 / 64 = 16$ times, once per column tile of $C$, instead of 1024 times in the naive scheme. You "can generally not reach order n", which would need everything in shared memory, "but if your tiles are big, then that's still not too bad". Bigger tiles mean more reuse, up to what shared memory (and registers) can hold. The `64x64x16` in the profiler's kernel name is exactly such a tile shape.
 
@@ -529,6 +529,7 @@ elements from the start. The lecture's example is the contiguous 2 × 4 tensor `
 Because kernels receive strides as arguments instead of assuming row-major layout, the same kernel works on transposed or sliced views. The softmax kernel took a row stride for this reason; the row-sum kernel's `row * N` quietly assumed contiguous rows.
 
 ::kp tensor-strides
+::predict triton-matmul-relu-kernel
 
 ### The host: a 2-D grid of output tiles
 
@@ -550,7 +551,6 @@ Program `(pid_m, pid_n)` wakes up responsible for output tile $(m, n)$. Then:
 
 It "is going to look like the row reduction": the same loop over tiles accumulating into `acc`, except it walks along a row tile of $A$ and down a column tile of $B$ at once. Inside, `tl.dot` multiplies the two small tiles: "whenever things are in shared memory, things look like PyTorch". For the demo each program runs $1024 / 32 = 32$ loop steps. The $K$ reduction stays inside one program, as the row sum did, so $K$ changes the loop length and never the grid.
 
-::predict triton-matmul-relu-kernel
 ::widget fixture:lecture_06--launch-grid | in matmul mode the grid counts output tiles, cdiv(M, BLOCK_M) × cdiv(N, BLOCK_N); changing K lengthens each program's loop without adding programs
 
 The ReLU must wait until the loop ends. ReLU of a sum is not a sum of ReLUs: if one output's partial sums along $K$ are −8 and then +5, the correct value is $\text{ReLU}(-3) = 0$, but clamping inside the loop would give $\max(-8, 0) + 5 = 5$.

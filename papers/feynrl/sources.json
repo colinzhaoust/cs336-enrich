@@ -15,10 +15,12 @@
     "kind": "repo",
     "path": "external/FeynRL",
     "upstream": "https://github.com/FeynRL-project/FeynRL",
+    "ref": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "code_license": "Apache-2.0 (FeynRL, https://github.com/FeynRL-project/FeynRL)",
     "revision": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
     "sha_source": ".git/refs/heads/main read from disk; matches the bundle's code_sources revision and the repo thread's sources.json",
     "anchor_convention": "algs/P3O/p3o.py:L107-L135 (repo-relative path, 1-based inclusive line range); checked by atlas/tools/check_anchors.py",
-    "note": "Status 'implemented' anchors point at algs/P3O/p3o.py (calculate_ess, compute_policy_loss), algs/GRPO/grpo.py and algs/CISPO/cispo.py (the fixed-clip contrasts) and core/rl_engines.py (use_decoupled_loss wiring). Cross-thread prerequisites are written as external_prerequisites with ids feynrl:<kp-id> from atlas/repos/feynrl/knowledge_points.json (grpo-clipped-loss, cispo-vs-ppo-clip, decoupled-loss-prox, staleness-budget-max-lag, supp-importance-ratio, supp-on-off-policy, group-relative-advantage, kl-reference-penalty)."
+    "note": "Status 'implemented' anchors point at algs/P3O/p3o.py (calculate_ess, compute_policy_loss), algs/GRPO/grpo.py and algs/CISPO/cispo.py (the fixed-clip contrasts) and core/rl_engines.py (use_decoupled_loss wiring). The repo thread comes after this paper, so its KPs are see_also links (ids feynrl:<kp-id>), not prerequisites, from atlas/repos/feynrl/knowledge_points.json (grpo-clipped-loss, cispo-vs-ppo-clip, decoupled-loss-prox, staleness-budget-max-lag, supp-importance-ratio, supp-on-off-policy, group-relative-advantage, kl-reference-penalty)."
   },
   "p3o_readme": {
     "title": "algs/P3O/README.md: P3O (Policy-on Policy-off Policy Optimization)",

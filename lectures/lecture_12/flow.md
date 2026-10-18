@@ -28,9 +28,10 @@ To make that tangible, the lecture lists four answers to "what makes a model goo
 
 On the cost plot the professor reads only the pattern: the two axes are correlated, "the more you pay to run, the higher the intelligence index, but it's not exactly aligned". Models of similar score can differ several-fold in cost.
 
+::predict construct-to-metric
+
 These four need not agree, and each answers a different question. A support-bot buyer who picks the top of the intelligence index has silently chosen notion 1, when their real question is closer to 2 or 3. "None of those are necessarily the correct answer"; the lecture comes back to this at the end, when it asks what evaluation is *for*.
 
-::predict construct-to-metric
 ::note aside 4:43 | OpenRouter's statistics are "not representative of all model usage", only of what people route through OpenRouter. A usage ranking is a sample from one population of users.
 ::note deferred 0:38 | Training data, the "missing piece", is next week's topic; this lecture is its prerequisite.
 ::kp construct-to-metric
@@ -74,11 +75,12 @@ Back then this setup was "a bit of a novelty"; today, training on one big corpus
 
 ### A trap the lecture does not mention: perplexity is per token
 
+::predict perplexity-definition
+
 $|D|$ counts tokens, so perplexity depends on the tokenizer. Two models that give the same text exactly the same total probability, but cut it into different numbers of tokens, report different perplexities. Say model A uses 1000 tokens and reports perplexity 8. Model B's coarser tokenizer uses 500 tokens for the same text, with the same $p(D)$. Then $1/p(D) = 8^{1000}$, and B's perplexity is $8^{1000/500} = 64$. The models are equally good; only the denominator changed.
 
 The fix is to normalize per byte (or per character) instead of per token, using the bytes-per-token **compression ratio** from [L1's tokenizer section](#/read/lecture_01). This is our addition, not the lecture's: the professor never raises it, but it matters whenever you read perplexities from models with different vocabularies.
 
-::predict perplexity-definition
 ::widget fixture:perplexity-per-byte | hold the text's total log-probability fixed and change only the tokenizer: per-token perplexity moves, per-byte perplexity stays put
 ::kp perplexity-definition
 
@@ -139,13 +141,14 @@ Some benchmarks report accuracy but are, underneath, next-token prediction: "per
 
 ### The warning: two contracts
 
+::predict logprob-vs-generation-benchmarks
+
 Suppose you are sold on perplexity and launch a perplexity leaderboard. What is the contract? People submit an `LM`; you send it the test data and it returns `log_prob = LM(test_data)`. Now you must **trust that the probabilities are valid**, that they sum to 1 over the vocabulary. Otherwise "I could just implement LM, and it always returns 1 or, I guess, logprob 0", and get a perfect perplexity from something that is not a distribution at all. Checking that a submission internally computes a real distribution is not easy: "Maybe you have to look at the code or something."
 
 Downstream tasks have a different contract. You send `prompt`, get back `response = LM(prompt)`, and grade the response. The model is a black box: there is no number of its own for it to inflate.
 
 ::code lecture_12.py:L98-L101 | log-prob scoring needs valid probabilities; generation only needs the response
-::predict logprob-vs-generation-benchmarks
-::widget fixture:lecture_12--mc-scoring | the same four option probabilities give two scores: log-prob scoring takes the argmax (0 or 1), sampling the letter earns only the key's sampled share; below, a constant-probability cheat already sums past 1 over two tokens
+::widget fixture:lecture_12--mc-scoring | the same four option probabilities give two scores: log-prob scoring takes the argmax (0 or 1), sampling the letter earns only the key's sampled share; below, a constant-probability cheat with q above 0.5 already sums past 1 over two tokens
 
 The two contracts also give different numbers for the same model on the same multiple-choice item. Log-prob scoring compares the options' probabilities and is right whenever the correct option is the most likely. Generation samples an answer, so with option probabilities 0.4, 0.35, 0.15 and 0.1 on a correct option A, log-prob scoring scores 1 while sampling at temperature 1 is right only 40% of the time. A multiple-choice number is only comparable within one scoring mode.
 
@@ -174,6 +177,8 @@ Much of the benchmarking culture of language models grew out of this idea.
 
 It was ahead of its time. It appeared around GPT-3, when many people "still thought of language models as, well, language models": machines that generate fluent English, not general task solvers. Building a broad exam for them was a bet that they would become more.
 
+::predict mmlu-exam-benchmark
+
 Two things to know about it:
 - **Despite its name, it tests knowledge, not language understanding.** The questions are exam items in subjects; fluency alone does not answer them. (Aloud: "knowledge and reasoning and less so just pure language understanding".)
 - **It was evaluated on GPT-3 with few-shot prompting.** The prompt reads, for example, "The following are questions about high school mathematics", then a few in-context question-answer pairs, then the test question. That looks mundane now, but at the time it was "pretty radical" to expect a language model to do anything sensible with it.
@@ -183,7 +188,6 @@ Two things to know about it:
 
 At the start the small models were "barely above chance" (25% on four options) and GPT-3 "well above chance". Since then the benchmark "has essentially saturated": reading a public tracker (llm-stats), the professor showed scores going from GPT-3.5 Turbo to GPT-4 to, now, the 90s.
 
-::predict mmlu-exam-benchmark
 ::note aside 21:48 | The [HELM MMLU viewer](https://crfm.stanford.edu/helm/mmlu/latest/) shows individual predictions, which he recommends browsing: it is "always fun to see what models actually goof up on".
 
 The way MMLU's questions were collected, from freely available online sources, also makes it a natural candidate for the contamination problem below: anything on the open web may be in a model's training data.
@@ -222,7 +226,7 @@ The numbers, read off the paper:
 Leaderboards often report the **Diamond** subset, the questions that passed the strictest filter. GPQA, too, has since saturated: on the live tracker the professor read 94, far above the experts. "These benchmarks have a shelf life of not too high." They remain useful, though, for developing smaller models and fitting scaling laws.
 
 ::code lecture_12.py:L131-L136 | 61 PhD writers; experts 65%, non-experts with Google 34%, GPT-4 39%
-::note slip 24:44 | In the captions the Diamond criterion comes out garbled ("if the two experts agree and at one of the non-experts is able to answer"). The paper's rule, printed in the figure, is that both experts agree and at most one of three non-experts answers correctly.
+::note aside 24:44 | In the captions the Diamond criterion comes out garbled ("if the two experts agree and at one of the non-experts is able to answer"). The paper's rule, printed in the figure, is that both experts agree and at most one of three non-experts answers correctly.
 
 ### Is the test set in the training data?
 
@@ -238,6 +242,8 @@ HLE ("ominously" named) tries to "give it all we can to create something that's 
 ::figure official/lectures/images/hle-pipeline.png | the funnel: submissions first pass an LLM difficulty check, then expert review, then approval; the survivors are split into a public set and a private set
 
 Note the private set. HLE kept part of the benchmark unreleased so that it cannot enter training, though you still have to send the questions to a model's API to evaluate, and "let's hope" those prompts do not end up in training data.
+
+::predict harder-exams-saturation
 
 Filtering by frontier models makes the difficulty relative to *those* models: a score on HLE says a model solves questions that the filtering models missed, not what fraction of a subject it knows.
 
@@ -256,7 +262,6 @@ Filtering by frontier models makes the difficulty relative to *those* models: a 
 Difficulty and realism are separate axes. A harder exam is still an exam.
 
 ::code lecture_12.py:L149-L152 | harder over time; multiple choice can be arbitrarily hard; it still misses real usage
-::predict harder-exams-saturation
 ::kp harder-exams-saturation
 
 ## How do you evaluate an open-ended answer? Chatbot Arena {#arena}
@@ -283,21 +288,22 @@ The ratings are the parameters, fitted to **maximize the probability of the obse
 
 ::code lecture_12.py:L171-L173 | the Elo win probability, fitted by maximum likelihood to the pairwise votes
 
+::predict arena-pairwise-elo
+
 What the scale means, by evaluating the formula:
 
 | rating gap | p(higher-rated model wins) |
 |---|---|
 | 0 | 0.50 |
+| 50 | 0.57 |
 | 100 | 0.64 |
 | 200 | 0.76 |
-| 300 | 0.85 |
 | 400 | 0.91 (exactly 10/11) |
 
-Two properties follow from the formula depending only on the *difference*. First, shifting every rating by the same amount changes no prediction, so a rating is meaningful only relative to the pool; 1300 is not an absolute quality. Second, gaps add: if A is 100 above B and B is 200 above C, the fit puts A 300 above C and predicts A wins 85% of A-vs-C votes, even if they never met.
+Two properties follow from the formula depending only on the *difference*. First, shifting every rating by the same amount changes no prediction, so a rating is meaningful only relative to the pool; 1300 is not an absolute quality. Second, gaps add: if A is 50 above B and B is 150 above C, the fit puts A 200 above C and predicts A wins 76% of A-vs-C votes, even if they never met.
 
 This is the same model as the **Bradley–Terry** reward model of [L15's RLHF section](#/read/lecture_15), written in another base: $10^{x/400} = e^{x \ln 10/400}$, so an Elo gap of 400 is a logit gap of $\ln 10 \approx 2.30$. L15 uses it to learn a reward from preferences; here it ranks models.
 
-::predict arena-pairwise-elo
 ::widget fixture:bradley-terry | slide both scores together and p does not move; only the gap matters (the Elo curve is this sigmoid with the gap rescaled by ln10/400)
 
 ::figure official/lectures/images/lmarena-leaderboard.png | the resulting leaderboard, one rating per model; the top ten sit within a few dozen points of each other, which by the table above means head-to-head votes close to a coin flip
@@ -310,9 +316,10 @@ This is the same model as the **Bradley–Terry** reward model of [L15's RLHF se
 - **No need to feed every model the same prompts.** This matters because humans do the rating: "you can't expect a human to rate all the models or even more than two models."
 - **Dynamic.** New prompts and new models arrive continuously, and the ratings have "a natural story" for updating over time.
 
+::predict elo-needs-connected-comparisons
+
 The second point rests on a property the professor stated only aloud, "the beauty of ELO". In chess, not everyone plays everyone; a sparse sample of games suffices, and "you can still derive rankings as long as the graph is connected". Draw models as nodes and battles as edges. Within a connected graph, every rating difference is pinned down through chains of battles. Two groups that never meet, directly or through intermediaries, have no defined offset: you could add 200 to every rating in one group and every observed vote would be explained exactly as well.
 
-::predict elo-needs-connected-comparisons
 ::widget fixture:lecture_12--elo-graph | with two separate pools the offset slider moves one component freely while the likelihood stays put; switch on any one cross battle and every node joins one scale
 ::video 37:42-38:02 | "you can still derive rankings as long as the graph is connected"
 
@@ -343,10 +350,11 @@ Humans are slow and expensive. The alternative is **LLM-as-a-judge**: let a stro
 
 The professor immediately flags a "potential bias": the judge is the same model as the baseline it compares against. One mitigation is "multiple judges and ensembling". "But let's put that aside for now."
 
+::predict llm-judge-length-bias
+
 The problem that actually bit was different: **LLM judges favor longer responses**. Fine-tuned models were submitted that got "really high AlpacaEval performance just because the responses were longer", leaderboard gaming in plain sight. **AlpacaEval 2.0** responded with "a very simple regression method to de-bias the metric": model the judge's preference with a term for the length difference, then report the win rate with that term set to zero (length-controlled win rate).
 
 ::code lecture_12.py:L184-L188 | 805 instructions; win rate vs GPT-4 preview judged by GPT-4 preview; length bias, gaming, regression fix
-::predict llm-judge-length-bias
 ::widget fixture:lecture_12--length-bias | pad B's answers: its raw win rate climbs the S-curve and passes A, while its length-controlled rate (dashed) does not move; set the length coefficient to 0 and padding buys nothing
 
 The widget's curve is a toy (its coefficients are demo values, not AlpacaEval's), but it shows why the fix works. If the judge's preference is quality plus a length effect, reading the fitted model at zero length difference keeps the quality part and drops the padding part. A judge's bias, once a leaderboard rewards it, becomes a target that submissions optimize.
@@ -360,12 +368,13 @@ This raises a question "not necessarily specific to AlpacaEval": we evaluate mod
 ::code lecture_12.py:L189-L192 | how do we evaluate the metric? correlation with Chatbot Arena is high
 ::figure https://github.com/tatsu-lab/alpaca_eval/raw/main/figures/chat_correlations_no_ae.png | how well each automatic benchmark's ranking agrees with Chatbot Arena's human ranking
 
+::predict judge-correlation-validity-range
+
 He then attached three limits to that reasoning, all said only aloud:
 - **A correlation holds over the models it was measured on.** "This correlation, of course, is with respect to a certain set of models", and "might not hold for models that let's say are stronger than GPT-4 preview", the judge. A judge that cannot tell two answers apart better than it could write them is the risky case.
 - **Higher correlation is better only if mimicking is the goal.** "Higher isn't necessarily better in all cases unless you are trying to mimic this other metric."
 - **The reference may not be ground truth.** Validating against Arena "is a little bit circular because then you can ask why, well, is Chatbot Arena really the ground truth? But at least we're all in the same boat together."
 
-::predict judge-correlation-validity-range
 ::video 40:46-41:22 | "this correlation, of course, is with respect to a certain set of models"
 ::figure official/lectures/images/alpacaeval-leaderboard.png | the AlpacaEval leaderboard as it stood; historical
 ::note aside 41:22 | The AlpacaEval leaderboard "hasn't been maintained in over a year"; the screenshot is what it looked like at the time.
@@ -433,13 +442,14 @@ On these leaderboards the models are "the same usual suspects", but there is "qu
 
 ::figure https://www.philschmid.de/static/blog/agents-2.0-deep-agents/overview.png | the deep-agent pattern: an orchestrator with a plan, sub-agents, and file-based memory around the model
 
+::predict agent-lm-plus-scaffold
+
 And these features "are generally optimized for the particular language model". So the score on an agentic benchmark belongs to the pair:
 - agents dramatically enhance the capability surface of language models;
 - agent scaffolds are very important;
 - **evaluating agents = evaluating the agent scaffold + the language model.**
 
 ::code lecture_12.py:L244-L254 | four scaffold ingredients; evaluating agents evaluates scaffold and model together
-::predict agent-lm-plus-scaffold
 ::note deferred 47:00 | Why the tracker shows SWE-bench *Verified* rather than SWE-bench, "which later I'll show you": see dataset quality in the validity section.
 ::kp agent-lm-plus-scaffold
 
@@ -461,6 +471,8 @@ A task shows a few input-output grid pairs and asks for the output of a new inpu
 ::figure https://arcprize.org/media/images/arc-task-grids.jpg | ARC-AGI-1: infer the rule from the example pairs, apply it to the test grid
 ::figure https://arcprize.org/media/images/blog/arc-agi-2-unsolved-1.png | ARC-AGI-2: several rules must be combined
 
+::predict reasoning-vs-knowledge-arc
+
 ### What moved the scores
 
 ::figure official/lectures/images/arc-agi-results.png | scores by model release date: ARC-AGI-1 (circles) sits near 0 until the "AI Reasoning" line, then climbs; ARC-AGI-2 (triangles) follows later
@@ -470,7 +482,6 @@ The trajectory reads like a controlled experiment. Pretrained language models, G
 One caveat: "without pre-training we wouldn't have this explosion of reasoning models". Pretraining was a precondition, just not "directly visible" in the chart.
 
 ::code lecture_12.py:L272-L274 | pretrained LMs didn't move the needle; reasoning models made it take off
-::predict reasoning-vs-knowledge-arc
 
 ### ARC-AGI-3
 
@@ -496,7 +507,7 @@ source: lecture_12.py:L286-L311 · video 1:00:12-1:05:09
 
 For cars, safety is clear: crash tests smash a car into a wall and measure how the dummies fare. That clarity is the result of "decades of lobbying and figuring out what safety means for vehicles". For AI "there is not a great answer here", so the lecture gives examples of how people have operationalized it, and then the reasons no single number will do.
 
-::figure https://www.team-bhp.com/forum/attachments/road-safety/2173645d1625144681-will-crash-test-rating-change-if-higher-variant-chosen-images-30.jpeg | a crash test: the kind of settled safety definition AI does not have
+::figure official/lectures/var/files/image-a375cd28c372458baf4135c081a1ce8b-https_www_team-bhp_com_forum_attachments_road-safety_2173645d1625144681-will-crash-test-rating-change-if-higher-variant-chosen-images-30_jpeg | a crash test: the kind of settled safety definition AI does not have
 
 ### Two benchmarks
 
@@ -508,11 +519,14 @@ For cars, safety is clear: crash tests smash a car into a wall and measure how t
 
 ### Jailbreaks
 
-Models are trained to refuse harmful instructions, but "if you're clever" you can get around it. **GCG** (Greedy Coordinate Gradient) does it automatically: a coordinate-wise optimization over the tokens of a suffix appended to a harmful request, until the model complies. The suffix is "basically gibberish". And, "remarkably", suffixes optimized on open-weight models (Llama) **transfer** to closed models (GPT-4): an attacker does not need the closed model's gradients. At the time, a gibberish suffix plus a request for a step-by-step plan to destroy humanity got a commercial model to comply.
+Models are trained to refuse harmful instructions, but "if you're clever" you can get around it. **GCG** (Greedy Coordinate Gradient) does it automatically: a coordinate-wise optimization over the tokens of a suffix appended to a harmful request, until the model complies. The suffix is "basically gibberish".
+
+::predict safety-contextual-dual-use
+
+And, "remarkably", suffixes optimized on open-weight models (Llama) **transfer** to closed models (GPT-4): an attacker does not need the closed model's gradients. At the time, a gibberish suffix plus a request for a step-by-step plan to destroy humanity got a commercial model to comply.
 
 ::figure official/lectures/images/gcg-examples.png | one request plus an optimized gibberish suffix, sent to four chatbots from four companies (ChatGPT, Claude, Bard, Llama-2): all comply, which is what transfer looks like
 ::code lecture_12.py:L301-L304 | GCG optimizes prompts to bypass safety; transfers from Llama to GPT-4
-::predict safety-contextual-dual-use
 ::note aside 1:02:51 | "I hope ... these attacks don't work anymore." Whether GCG still works today is left open.
 
 ### What is safety?
@@ -531,6 +545,8 @@ So one refusal rate is one slice of one notion of safety, not a safety score.
 source: lecture_12.py:L314-L335 · video 1:05:09-1:08:43
 
 The lecture now steps back from benchmark families to properties every evaluation has. The first is **ecological validity**: how well does an evaluation capture real-world use?
+
+::predict ecological-validity-realism
 
 - **Exam benchmarks** such as GPQA are far from it, however hard they are.
 - **Chatbot Arena** prompts come from real people, but the distribution is uncontrolled; "one could wonder whether this distribution is the right distribution of people or use cases".
@@ -554,7 +570,6 @@ The three projects below move closer, "at the use case level, at least not the i
 The section ends on a tension: **realism and privacy are sometimes at odds**. Ideally you would evaluate on "a sample from the actual query stream", which would show "deeply what the errors are"; but that stream is exactly what privacy protects. Note also what realism costs in gradability: a GDPVal deliverable or a clinical note has no answer key, so you are back to the judging problems of the chat section.
 
 ::code lecture_12.py:L319-L335 | GDPVal (44 occupations, ~14 years' experience), MedHELM (121 tasks, 29 clinicians), Clio; realism vs privacy
-::predict ecological-validity-realism
 ::kp ecological-validity-realism
 
 ## How do we know an evaluation is valid? {#validity}
@@ -568,11 +583,12 @@ Machine learning 101: don't train on your test set. Before foundation models thi
 
 ::code lecture_12.py:L341-L344 | ML 101; fixed splits before; today, train on the internet and don't tell
 
+::predict train-test-overlap-routes
+
 **Route 1: infer overlap from the model.** A neat black-box test from Tatsu Hashimoto's group exploits **exchangeability**. The order in which a benchmark lists its questions is arbitrary, so a model that never saw the file has no reason to prefer the published order over a shuffle. If it assigns noticeably higher log-probability to the questions in their published order, it probably saw that file, in that order, during training.
 
 ::figure official/lectures/images/contamination-exchangeability.png | in canonical order each question gets high log-probability because it follows its published predecessor; shuffled, those same questions drop
 
-::predict train-test-overlap-routes
 ::widget fixture:lecture_12--order-test | with nothing memorized every one of the n! orders scores the same (p = 1); memorize all published transitions of 4 items and the published order beats every shuffle (p = 1/24); tick "items depend on their predecessor" and a clean model is flagged too
 
 The last case is the test's assumption made visible. If items genuinely depend on each other (a benchmark of multi-part questions, say), the published order is more likely for any model, and the test would cry contamination falsely.
@@ -594,6 +610,8 @@ Recall the subtlety from the exam Q&A: contamination is rarely literal. Test que
 
 Even with no contamination, a benchmark can be broken item by item.
 
+::predict dataset-quality-verified-platinum
+
 - **SWE-bench Verified.** This is why the agent section showed SWE-bench *Verified*: the original had problems, "unit tests that weren't quite rigorous enough and other things", and the tasks were screened and fixed.
 - **Platinum benchmarks.** Many benchmarks, GSM8K and MMLU among them, have been audited, with people finding that "something's broken around this question". One item asks about a curve that is never given; another asks whether a baby has socks on, when there is no way to tell. A Platinum version removes or repairs such items, so that the errors left are really the model's. When top models plateau below 100%, part of the gap may be label error.
 
@@ -606,8 +624,7 @@ Even with no contamination, a benchmark can be broken item by item.
 The advice that closes the section applies to anyone who builds or runs a benchmark: "always look at the output and try to audit it to make sure that you actually think you're measuring what you think you're measuring."
 
 ::code lecture_12.py:L362-L368 | SWE-bench Verified; Platinum benchmarks; insufficient tests and trivial agents; Docent
-::predict dataset-quality-verified-platinum
-::note slip 1:14:50 | The captions name the benchmark with the 38% empty-response score "TorchBench". The cited paper (arXiv 2507.02825) reports it for τ-bench, where intentionally impossible airline tasks accept an empty reply; a caption error, not the professor's.
+::note aside 1:14:50 | The captions name the benchmark with the 38% empty-response score "TorchBench". The cited paper (arXiv 2507.02825) reports it for τ-bench, where intentionally impossible airline tasks accept an empty reply; a caption error, not the professor's.
 ::kp dataset-quality-verified-platinum
 
 ## What is evaluation for, and what are we evaluating? {#point}
@@ -626,6 +643,8 @@ Matching purpose to family: a purchase decision wants something close to the use
 
 ### Methods versus models
 
+::predict methods-vs-models-rules-of-game
+
 What is being evaluated has also changed. Before foundation models, researchers evaluated **methods**: with standardized train-test splits, "the only thing that was varying is the actual algorithm", so a better score meant a better method. Today we mostly evaluate **models and systems**, where "anything goes": a score reflects data, compute and scaffold as well as any method, which is useful because the end model "is the thing that is actually going to get shipped".
 
 There are exceptions. The **nanoGPT speedrun** fixes the data and asks how fast you can train a model to a particular validation loss. It is "deliberately a way to evaluate an algorithm".
@@ -635,7 +654,6 @@ There are exceptions. The **nanoGPT speedrun** fixes the data and asks how fast 
 Each kind has its use: evaluating methods encourages algorithmic innovation from researchers, evaluating models serves downstream users. "Either way, we need to define the rules of the game!" A field that only does the second loses the ability to say *why* a model is better.
 
 ::code lecture_12.py:L380-L390 | methods vs models/systems; the speedrun exception; define the rules of the game
-::predict methods-vs-models-rules-of-game
 
 ### Takeaways
 

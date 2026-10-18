@@ -136,7 +136,8 @@
       "prerequisites": [
         {
           "kp": "dtype-bytes",
-          "basis": "teaching-order"
+          "basis": "author-inference",
+          "note": "Uses 2 bytes (bf16) and 4 bytes (fp32) per number before the dtype section; a learner can follow by trusting the byte counts."
         },
         {
           "kp": "optimizer-state-memory",
@@ -1335,7 +1336,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Forward matmul costs 2BD² FLOPs. How many FLOPs is the backward for that layer?",
+          "q": "Forward matmul costs 2BD² FLOPs. How many FLOPs is the backward for that layer? Give it as a multiple of BD².",
           "format": "number",
           "answer": "4",
           "tolerance": 0.01,
@@ -1466,6 +1467,13 @@
         {
           "kp": "backward-2x-forward",
           "basis": "teaching-order"
+        }
+      ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_01:six-nd-preview",
+          "basis": "teaching-order",
+          "note": "Stated as a preview in lecture 1 (C = 6ND, 6 x 70e9 x 1e12 = 4.2e23 FLOPs); this KP derives the 6."
         }
       ],
       "misconceptions": [
@@ -1928,15 +1936,15 @@
           "why": "Each layer's backward recomputes from the start (L771)."
         },
         "check": {
-          "q": "Under full recomputation (no activations stored; each layer's input is recomputed from the network input during backward), you double the depth from L = 32 to L = 64. By roughly what factor does the total recomputation work grow? Type only the number.",
+          "q": "L = 64 layers, but you checkpoint every 4 layers instead of every √L = 8. At the peak of the backward pass, how many layers' activations are resident, counting the stored checkpoints and the layers recomputed inside the current segment? Type only the number.",
           "format": "number",
-          "answer": "4",
-          "value": 4,
+          "answer": "20",
+          "value": 20,
           "tolerance": 0.1,
-          "why": "Backprop through layer i needs about i layer-forwards to rebuild its input, so the total is about L²/2: 528 at L = 32 and 2080 at L = 64, a factor of about 4. Memory stays O(1); compute is O(L²) (L770-L773).",
-          "targets_misconception": "Checkpointing is free memory.",
-          "varies": "asks the scaling factor for a change in L instead of the big-O orders",
-          "invariant": "with nothing stored, recomputation for each layer starts at the input, so the total grows as L²",
+          "why": "64/4 = 16 stored checkpoints plus up to 4 recomputed layers in the current segment: 20, more than the 16 at k = 8. Peak memory L/k + k is smallest at k = √L, so checkpointing more often stops paying once L/k outgrows k (L770-L773).",
+          "targets_misconception": "Checkpointing more often always lowers peak memory.",
+          "varies": "moves the checkpoint interval off √L (k = 4 at L = 64) instead of asking the big-O orders of full recomputation",
+          "invariant": "at the backward peak you hold every stored checkpoint plus one segment being recomputed, so peak memory is about L/k + k",
           "transfer_distance": "near"
         },
         "retrieval": [

@@ -69,6 +69,8 @@ source: execute.py:L215-L263
 
 Every event in every frame reaches `trace_func`, including frames inside PyTorch, NumPy and the course's own helper modules. Four tests, in order, throw most of them away.
 
+::predict execute-settrace-loop
+
 ::code execute.py:L247-L263 | the file filter, the return filter and the comprehension filter, before anything is recorded
 
 1. **Is the frame in the lecture file?** `frame.f_code.co_filename` must be in `visible_paths`, which holds exactly one path. Library code is never stepped, and neither is `lecture_util.py` or `references.py`, even though they live next to the lecture.
@@ -79,8 +81,6 @@ Every event in every frame reaches `trace_func`, including frames inside PyTorch
 ::code execute.py:L215-L230 | the stack keeps every frame except seven named runner and tracer frames, innermost last
 
 Notice what `get_stack()` does *not* do: it never filters by file. Once a frame passes test 1, its whole stack is stored, library frames included. The published `lecture_02.json` shows this. A step inside `Block.forward` has eight stack entries: `main`, `deep_network`, two PyTorch frames (`_wrapped_call_impl` and `_call_impl` in `torch/nn/modules/module.py`), `DeepNetwork.forward` at the `x = layer(x)` line, the same two PyTorch frames again, and finally `Block.forward`. The PyTorch path is stored as `../../usr/local/lib/python3.11/site-packages/...`, relative to the directory the trace was made in. So the file itself tells you it was produced in a container under Python 3.11.
-
-::predict execute-settrace-loop
 
 A concrete consequence: when the professor moves a helper into `lecture_util.py`, its lines silently vanish from the trace. Its *effects* do not vanish. A value it returns can still be inspected on the calling line, and any prose it emits lands on that line (see [renderings](#renderings)).
 
@@ -93,6 +93,8 @@ A concrete consequence: when the professor moves a helper into `lecture_util.py`
 source: execute.py:L280-L341
 
 A recorded line becomes a `Step`: the stack, an `env` dictionary of inspected values, and a list of renderings. The step is created in two moves, one on each side of the line.
+
+::predict step-open-close
 
 ::code execute.py:L280-L303 | open a step before the line (unless it repeats the previous stack); at close, reuse it or append a second one
 
@@ -118,8 +120,6 @@ The console listed fifteen steps:
 | 7–12 | 8, 9, 3–5, 9 | the same pattern again, ending with `z = 1` |
 | 13 | 8 | the `for` line once more, when `range(2)` runs out |
 | 14 | 10 | `text("done")` |
-
-::predict step-open-close
 
 Why keep the empty open step? Because the viewer needs somewhere to stand *before* the call. From step 2 you can step into `square` or step over it, and the highlighted line tells you which call is about to happen. The close step is where the result lives. A line that calls nothing traced gets just one step, because its open and close coincide. That includes a call into `lecture_util.py`.
 
@@ -175,6 +175,8 @@ A `Reference` is a frozen record of title, authors, organization, date, url, des
 
 ::code reference.py:L15-L33 | the label: [LastName+ YYYY], with the Team exception and three fallbacks
 
+::predict references-arxiv
+
 `url_reference` scrapes only one kind of URL: one that starts with exactly `https://arxiv.org/`. For those, `arxiv_reference` pulls the paper id out with a regular expression and downloads the paper's abstract page. It accepts `abs/` and `pdf/` URLs, an optional version suffix and an optional `.pdf`. It then reads the page's HTML with BeautifulSoup:
 - the title from the `citation_title` meta tag;
 - the authors from the links in the authors block;
@@ -184,8 +186,6 @@ A `Reference` is a frozen record of title, authors, organization, date, url, des
 No arXiv API is involved. Any other URL becomes a bare `Reference(url=...)`, labelled by the URL itself.
 
 ::code arxiv_util.py:L18-L53 | id regex, cached download of the abs page, four fields scraped from meta tags and the authors div
-
-::predict references-arxiv
 
 Every download, images included, goes through `cached()`. It names the file `var/files/<prefix>-<md5 of the URL>-<the URL with non-word characters replaced by _>` and downloads it only if that file is missing. The hash keeps names unique, and the readable tail lets a person find a file by eye. The downloader retries an HTTP 429 (rate limited) response up to 50 times, waiting 1, 2, 4… seconds and doubling each time. The course's own run log for lecture 7 shows one of these downloads happening: `Downloading https://media.springernature.com/... to var/files/image-b0641f11...`.
 
@@ -206,6 +206,8 @@ The lecture author controls the trace with comments. There are four directives:
 
 Comments are invisible to Python, so edtrace reads them as text. It takes the source line that `traceback` reports for the frame (stored as the stack element's `code`) and hands it to `parse_directives`.
 
+::predict directive-grammar
+
 ::code execute.py:L88-L109 | split once on '#', then on whitespace; an @token opens a directive and later tokens are its arguments
 
 The grammar is four rules:
@@ -223,8 +225,6 @@ After the line runs, `local_trace_func` turns the directives into env entries:
 - A plain name is looked up in `frame.f_locals`. A missing name prints `WARNING: variable ... not found in locals` and records nothing.
 - A dotted name such as `w.grad` splits at the first dot, finds `w`, then follows `getattr` for each remaining part. The env key stays the full string `"w.grad"`. In the published `lecture_02.json`, the line `assert torch.equal(w.grad, torch.tensor([1, 2, 3]))  # @inspect w.grad` carries exactly that key, holding a float32 tensor `[1.0, 2.0, 3.0]`.
 - `@clear` names are set to `None`, which becomes `null` in JSON. L2's `text("Let's try a more complex example...")  # @clear x y z` produces the env `{"x": null, "y": null, "z": null}`, and the viewer removes those three from its panel.
-
-::predict directive-grammar
 
 Two more uses show the timing rule at work:
 - `@inspect` can sit on a `def` line. [L7](#/read/lecture_07) writes `def collective_operations_main(rank: int, world_size: int):  # @inspect rank world_size`. The `def` line's step is opened at the `'call'` event and closed at the first body line, when the arguments are already locals. The published trace shows `rank = 0` and `world_size = 4` on that step.
@@ -307,10 +307,7 @@ After `main()` returns, `execute()` builds a `Trace` and the CLI writes `asdict(
 
 - **`files`**: a map from each visible file's path to its *full source text*. In practice that is one entry, the lecture.
 - **`hidden_line_numbers`**: a map from path to the `@hide` line numbers.
-- **`steps`**: a list. Each step has:
-  - `stack`, a list of `{path, line_number, function_name, code}` with the innermost frame last;
-  - `env`, a map from expression to a `Value` or `null`;
-  - `renderings`, a list of `{type, data, style, external_link, internal_link}`, with the link objects nested in full.
+- **`steps`**: a list. Each step has a `stack`, a list of `{path, line_number, function_name, code}` with the innermost frame last; an `env`, a map from expression to a `Value` or `null`; and `renderings`, a list of `{type, data, style, external_link, internal_link}`, with the link objects nested in full.
 
 There is no "current line" field. The current line is the last element of `stack`, and the nesting depth is the stack's length.
 
@@ -345,9 +342,9 @@ None of these looks at function names. Everything is computed from stacks:
 
 ::code TraceViewer.jsx:L244-L275 | step over: the next step in the same function, or the first one that escaped to a shorter stack; step up: the first shorter stack outside this function
 
-From an open step of a line that calls a traced function, `j` skips the callee's steps, which have longer stacks, and lands on the close step, which has the identical caller chain. This is the second half of why edtrace records the open/close pair: it gives step-over a place to land on either side of a call.
-
 ::predict viewer-stepping-model
+
+From an open step of a line that calls a traced function, `j` skips the callee's steps, which have longer stacks, and lands on the close step, which has the identical caller chain. This is the second half of why edtrace records the open/close pair: it gives step-over a place to land on either side of a call.
 
 **The variables panel.** Each step stores only the values inspected on *its own* line, so the panel has to rebuild the picture. `renderEnv` walks backwards from the current step:
 - steps in the same function contribute their env;
@@ -378,6 +375,8 @@ The variables panel turns each `Value` back into something readable. `renderValu
 
 ::code TraceViewer.jsx:L434-L464 | the dispatch on Value.type; the tensor branch lists its three type strings explicitly
 
+::predict viewer-value-rendering
+
 `renderNumber` applies four tests in a fixed order and uses the first that passes:
 1. a string, such as `"nan"`, passes through unchanged;
 2. a magnitude above 10¹² gets exponent notation with three decimals, so 3.5e13 shows as `3.500e+13`;
@@ -385,8 +384,6 @@ The variables panel turns each `Value` back into something readable. `renderValu
 4. a value that is an integer after multiplying by 1000, meaning at most three decimals, prints exactly, so 0.125 stays `0.125`. Anything else is rounded to four decimals, so 2.718281828 shows as `2.7183`.
 
 ::code TraceViewer.jsx:L466-L481 | four ordered tests; only long fractions are rounded
-
-::predict viewer-value-rendering
 
 `renderTensor` picks a layout from the *rank alone*:
 
@@ -425,9 +422,9 @@ Everything above adds up to one sentence: a trace is a recording of **one run, o
 
 When `sys.gettrace()` returns nothing (a plain `python lecture_07.py`), `spawn` really starts `world_size` processes. Under edtrace it instead calls the function once, in-process, as rank 0, inside `DisableDistributed`. That context manager replaces every function in `torch.distributed` with `lambda *args, **kwargs: None`. Since those lambdas live in the lecture file, they are `<lambda>` frames, which the tracer skips. So the traced lecture walks through every line of the collective-operations code, but every all-reduce is a no-op on a single tensor. The trace cannot show what a collective computed. The lecture links instead the saved stdout of a real four-process run, where every rank prints `[6, 10, 14, 18]` after the all-reduce.
 
-**No size control.** As the [values](#values) section showed, tensors are stored in full at every step that inspects them. Loops add a step per line per iteration. The source is embedded, and stacks repeat their full caller chain in every step. Inspecting a 4096 × 4096 tensor inside a 10-iteration loop would store about 168 million numbers. The published traces stay under a megabyte only because the authors inspect small things.
-
 ::predict limits-what-trace-cannot-capture
+
+**No size control.** As the [values](#values) section showed, tensors are stored in full at every step that inspects them. Loops add a step per line per iteration. The source is embedded, and stacks repeat their full caller chain in every step. Inspecting a 4096 × 4096 tensor inside a 10-iteration loop would store about 168 million numbers. The published traces stay under a megabyte only because the authors inspect small things.
 
 **Not stepped at all:**
 - module-level code, which runs before the hook is installed;

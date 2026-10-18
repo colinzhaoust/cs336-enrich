@@ -105,12 +105,12 @@
           "why": "16/1800 s ≈ 0.0089 s; 16/50 s = 0.32 s. Same bytes, 36× the time: this is why the summary says tensor parallelism wants NVLink and pipeline parallelism can tolerate slow links (L69-L70)."
         },
         "check": {
-          "q": "Using the lecture's bandwidths (HBM 8 TB/s on B200, NVLink 5.0 1.8 TB/s), reading a tensor out of one GPU's HBM takes 0.9 ms. How many milliseconds does sending the same tensor to another GPU in the node over NVLink 5.0 take?",
+          "q": "Using the lecture's bandwidths (HBM 8 TB/s on B200, Infiniband ~0.05 TB/s), reading a tensor out of one GPU's HBM takes 0.9 ms. How many milliseconds does sending the same tensor to a GPU on another node over Infiniband take?",
           "format": "number",
-          "answer": "4 ms",
+          "answer": "144 ms",
           "tolerance": 0.05,
-          "why": "Transfer time is bytes / bandwidth, so the time scales by the inverse bandwidth ratio: 0.9 ms × 8 / 1.8 = 4.0 ms. One hop down the hierarchy (HBM to NVLink) already costs about 4.4× (L219).",
-          "varies": "the pair of levels compared (HBM vs NVLink instead of NVLink vs Infiniband) and the given quantity (a time, not a byte count)",
+          "why": "Transfer time is bytes / bandwidth, so the time scales by the inverse bandwidth ratio: 0.9 ms × 8 / 0.05 = 144 ms. The two hops multiply: about 4.4× from HBM to NVLink, then 36× from NVLink to Infiniband, 160× in all (L219-L220).",
+          "varies": "the pair of levels compared (HBM vs Infiniband, two hops, instead of one adjacent pair) and the given quantity (a time, not a byte count)",
           "invariant": "time = bytes / bandwidth, so the time ratio between two levels is the inverse of their bandwidth ratio",
           "targets_misconception": "NVLink is about as fast as HBM, so spreading a model over 8 GPUs in a node is nearly free.",
           "transfer_distance": "near"
@@ -125,7 +125,7 @@
             "answer": "Orchestrate computation to avoid data-transfer bottlenecks, because compute is far from data (L25-L26)."
           },
           {
-            "q": "How many GPUs share one NVLink domain in a GB200 NVL72 rack? Type only the number.",
+            "q": "How many GPUs does the lecture say one GB200 rack puts in a single NVLink domain? Type only the number.",
             "answer": "72. NVIDIA's published GB200 NVL72 layout is 18 compute trays × 4 GPUs; the lecture (L229, and aloud at 31:41) says 8 per tray × 9 trays, which gives the same total.",
             "format": "number",
             "tolerance": 0.01,
@@ -765,8 +765,7 @@
           "q": "The lecture's inputs: rank r holds [4r, 4r+1, 4r+2, 4r+3] for r = 0..3. After all-to-all, what does rank 1 hold?",
           "format": "short",
           "answer": "[1, 5, 9, 13]",
-          "why": "Rank 1 receives chunk 1 from every rank in rank order: 1 (from rank 0), 5 (rank 1), 9 (rank 2), 13 (rank 3) (L187-L194).",
-          "targets_misconception": "All-to-all only works when every rank sends equal-sized chunks."
+          "why": "Rank 1 receives chunk 1 from every rank in rank order: 1 (from rank 0), 5 (rank 1), 9 (rank 2), 13 (rank 3) (L187-L194)."
         },
         "transfer": {
           "q": "World size 3; rank 0 holds [a0, a1, a2], rank 1 holds [b0, b1, b2], rank 2 holds [c0, c1, c2]. What does rank 2 hold after all-to-all?",
@@ -909,11 +908,10 @@
           "q": "Two GPUs on different nodes exchange a tensor over standard Ethernet. Name the component that touches every byte but does no useful arithmetic, and the mechanism that removes it.",
           "format": "short",
           "answer": "the CPU (socket buffer → TCP packets → NIC ring buffer); RDMA",
-          "why": "Without RDMA the data is copied through the host's kernel buffers; RDMA lets the NIC read and write GPU memory directly (L224-L225).",
-          "targets_misconception": "NCCL and torch.distributed offer two different sets of collectives."
+          "why": "Without RDMA the data is copied through the host's kernel buffers; RDMA lets the NIC read and write GPU memory directly (L224-L225)."
         },
         "transfer": {
-          "q": "A cluster uses RoCE instead of Infiniband. According to the lecture, which property does it keep (CPU bypass), and what does it give up?",
+          "q": "A cluster uses RoCE instead of Infiniband. According to the lecture, which property of Infiniband does it keep, and what does it give up?",
           "format": "short",
           "answer": "Keeps the CPU bypass (RDMA over Ethernet); it is cheaper but weaker than Infiniband",
           "why": "RoCE is 'similar but cheaper/weaker than Infiniband' and the professor names Meta as a user (L230)."
@@ -1184,6 +1182,13 @@
           "basis": "teaching-order"
         }
       ],
+      "external_prerequisites": [
+        {
+          "kp": "lecture_02:gpu-timing-synchronize",
+          "basis": "author-inference",
+          "note": "L2 already taught that launches are asynchronous, so a timer must synchronize before reading the clock."
+        }
+      ],
       "misconceptions": [
         {
           "belief": "time.time() around dist.all_reduce(async_op=False) measures the transfer.",
@@ -1277,7 +1282,7 @@
             "source": "lecture_07_stdout",
             "ref": "lecture_07_stdout.txt:L48-L63",
             "role": "computation",
-            "quote": "[all_reduce] Rank 0: all_reduce(world_size=4, num_elements=104857600) took 1.60ms ... [all_reduce] Rank 0: all_reduce measured bandwidth = 366 GB/s ... [reduce_scatter] Rank 0: reduce_scatter(world_size=4, num_elements=104857600) took 2.61ms ... [reduce_scatter] Rank 0: reduce_scatter measured bandwidth = 450 GB/s"
+            "quote": "all_reduce(world_size=4, num_elements=104857600) took 1.60ms ... all_reduce measured bandwidth = 366 GB/s ... reduce_scatter(world_size=4, num_elements=104857600) took 2.61ms ... reduce_scatter measured bandwidth = 450 GB/s"
           },
           {
             "source": "nccl_tests_performance",
@@ -1965,14 +1970,14 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "The lecture's tensor-parallel MLP runs with W = 4 ranks, batch 128, num_dim 1024, float32 (4 bytes). In the backward pass, after the reduce-scatter of one layer's activation gradient, how many bytes of that gradient does each rank hold? Type only the number.",
+          "q": "A tensor-parallel MLP like the lecture's runs with W = 8 ranks, batch 64, num_dim 2048, bf16 (2 bytes). In the backward pass, after the reduce-scatter of one layer's activation gradient, how many bytes of that gradient does each rank hold? Type only the number.",
           "format": "number",
-          "answer": "131072",
-          "value": 131072,
+          "answer": "32768",
+          "value": 32768,
           "tolerance": 0.03,
-          "why": "Each rank keeps only its slice: 128 × (1024 / 4) × 4 bytes = 131,072. An all-reduce would leave the full 128 × 1024 × 4 = 524,288 bytes on every rank, four times more than the rank's weight block can use.",
+          "why": "Each rank keeps only its slice: 64 × (2048 / 8) × 2 bytes = 32,768. An all-reduce would leave the full 64 × 2048 × 2 = 262,144 bytes on every rank, eight times more than the rank's weight block can use.",
           "targets_misconception": "The backward pass needs a full all-reduce so that every rank holds the whole activation gradient.",
-          "varies": "surface: count the bytes left on a rank instead of naming the collective",
+          "varies": "surface: count the bytes left on a rank instead of naming the collective; W = 8, batch 64, num_dim 2048, bf16 instead of the lecture's settings",
           "invariant": "after the reduce-scatter each rank holds the summed gradient for its own column slice only",
           "transfer_distance": "near"
         },

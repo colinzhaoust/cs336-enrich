@@ -23,6 +23,8 @@ There are two reasons to leave the single GPU, and the whole lecture is organize
 
 ::slide 6 | a DGX A100 node: eight GPUs at the bottom, all wired to six NVSwitches; above them PCIe switches (PLX) connect pairs of GPUs to four InfiniBand cards (HCA) that lead out of the box; two CPUs at the top
 
+::predict bandwidth-hierarchy
+
 The picture to keep for the rest of the lecture is this box. Inside it, eight GPUs are wired through NVSwitches with very fast links: this is **intra-node** communication, and it is fast enough that you can afford communication-heavy schemes. To reach a GPU in another box, data goes out through a network card (an InfiniBand HCA) onto the much slower **inter-node** network. In the professor's words, slow links force us to use "processes that respect the communication constraints of our channel more". Every strategy in Part 2 will be placed according to which of these two links it stresses. [L7's hardware section](#/read/lecture_07) gives the speeds: about 1.8 TB/s for NVLink 5.0 against about 0.05 TB/s for InfiniBand.
 
 ## Collectives, and the one identity we need {#collectives}
@@ -101,7 +103,6 @@ Each Ascend chip is much weaker; the professor compares it to an H200, the slide
 
 The recap sets the goals for Part 2. The unit of compute is no longer the GPU but the whole datacenter. From it we want two kinds of linear scaling: the largest model we can hold should grow with the number of GPUs (**memory**), and so should the FLOPs we can apply (**compute**). And we want to get there "lossless", wasting none of the hardware, using only the collectives above.
 
-::predict bandwidth-hierarchy
 ::kp bandwidth-hierarchy
 
 ## Data parallelism, and why its memory is terrible {#data-parallel}
@@ -111,8 +112,6 @@ source: lecture_08.pdf p14-p17 · video 11:05-15:23
 
 Part 2 is the bulk of the lecture: the algorithms. They come in two families. In **data parallelism** the data moves around: each GPU gets different examples. In **model parallelism** the model is chopped up and its pieces live on different GPUs. The professor admits the boundary is "a little leaky", because one data-parallel algorithm (ZeRO stage 3) also cuts up the parameters. The grouping is still useful, and we will see why.
 
-::slide 15 | naive SGD, θ_{t+1} = θ_t − η Σ_{i=1}^{B} ∇f(x_i); split the B-sized batch across M machines and exchange gradients; compute scaling B/M per GPU, communication 2× #params every batch, memory scaling none
-
 Start with plain SGD (forget Adam for the moment). One step sums the gradients of $B$ examples:
 
 $$ \theta_{t+1} = \theta_t - \eta \sum_{i=1}^{B} \nabla f(x_i) $$
@@ -120,6 +119,8 @@ $$ \theta_{t+1} = \theta_t - \eta \sum_{i=1}^{B} \nabla f(x_i) $$
 The sum splits naturally. Give each of $M$ machines $B/M$ examples, let each compute the gradient on its share, then add the $M$ partial sums with an all-reduce so every machine applies the same update.
 
 ::predict naive-data-parallel-accounting
+
+::slide 15 | naive SGD, θ_{t+1} = θ_t − η Σ_{i=1}^{B} ∇f(x_i); split the B-sized batch across M machines and exchange gradients; compute scaling B/M per GPU, communication 2× #params every batch, memory scaling none
 
 Score it on the three things we care about:
 - **Compute** scales perfectly: each GPU does $B/M$ of the work, "as long as there's enough examples per GPU".
@@ -203,7 +204,7 @@ The way out is "just a systems trick". The backward pass produces gradients one 
 The total traffic is the same: the gradients are still reduced once and the parameters gathered once, 2 × #params, just sent in many pieces instead of one. Memory falls to $2\Psi + (2 + K)\Psi/N$: only the 2 bytes of BF16 parameters stay replicated. The worked steps put both stages side by side with DDP:
 
 ::worked zero-stages-1-2
-::widget fixture:lecture_08--zero-ledger | slide N up: the ZeRO-1 bar shrinks only to its dark replicated floor of 4 bytes per parameter (2 for ZeRO-2), while every data-parallel row still communicates 2Ψ
+::widget fixture:lecture_08--zero-ledger | slide N up: the ZeRO-1 bar shrinks only to its dark replicated floor of 4 bytes per parameter (2 for ZeRO-2), while DDP, ZeRO-1 and ZeRO-2 all still communicate 2Ψ (ZeRO-3, next section, 3Ψ)
 
 ::note slip 25:09 | Aloud, stages 1 and 2 are both "free in the literal sense". The slide (p27) says stage 2 is "(almost) free (ignoring overhead)". The bytes are the same, but many small per-layer collectives pay more latency and launch overhead than one big one.
 ::kp zero-stages-1-2
@@ -251,11 +252,12 @@ FSDP is also conceptually simple: "all you're going to do is do a bunch of all-g
 
 ### Will it fit?
 
-::slide 28 | "Pure BF16 training (with Kahan summation) is viable … BF16 for everything but the master weights – 12 bytes per param"; on 8× A100 80G: baseline 6.66 B params (12 B/param), stage 1 16 B (5), stage 2 24.62 B (2 + 10/8), stage 3 53.33 B (12/8)
-
-A concrete node: 8 A100s with 80 GB each, and a leaner ledger. With BF16 Adam moments the bill is $2 + 2 + 4 + 2 + 2 = 12$ bytes per parameter. (The slide names **Kahan summation**, compensated summation that carries the rounding error of each addition forward, as what makes pure BF16 training viable; it is not explained further.) The largest model is the GPU's 80 GB divided by the bytes each GPU holds per parameter.
+A concrete node: 8 A100s with 80 GB each, and a leaner ledger. With BF16 Adam moments the bill is $2 + 2 + 4 + 2 + 2 = 12$ bytes per parameter. (The slide below names **Kahan summation**, compensated summation that carries the rounding error of each addition forward, as what makes pure BF16 training viable; it is not explained further.) The largest model is the GPU's 80 GB divided by the bytes each GPU holds per parameter.
 
 ::predict zero-fit-table
+
+::slide 28 | "Pure BF16 training (with Kahan summation) is viable … BF16 for everything but the master weights – 12 bytes per param"; on 8× A100 80G: baseline 6.66 B params (12 B/param), stage 1 16 B (5), stage 2 24.62 B (2 + 10/8), stage 3 53.33 B (12/8)
+
 ::worked zero-fit-table
 
 The pattern to see: only the sharded terms divide by the GPU count. Stage 1 gains only 2.4×, because 4 bytes stay replicated. Stage 2 can never exceed $80 / 2 = 40$B on 80 GB GPUs however many you add. Only stage 3 grows linearly with $N$, which is the "linear memory scaling" Part 1 asked for. Every row ignores activations, buffers and fragmentation, so these are upper bounds.
@@ -286,9 +288,9 @@ Can't we just grow the batch along with the GPU count? Not forever. Past the **c
 
 ::note slip 30:19 | Aloud: "ZeRO stage 2 lets you cut up the parameter memory." Parameters are sharded only at stage 3, as the slide and his own walk-through say.
 
-::slide 31 | model parallelism "splits up the parameters across GPUs (like zero3).. but communicate activations (while zero3 sends params)"; three types: pipeline, tensor (+ sequence), expert parallel
-
 ::predict why-model-parallel
+
+::slide 31 | model parallelism "splits up the parameters across GPUs (like zero3).. but communicate activations (while zero3 sends params)"; three types: pipeline, tensor (+ sequence), expert parallel
 
 **Model parallelism** splits the parameters across GPUs like ZeRO-3, but in a fundamentally different way. In FSDP, "it was just a wrapper": parameters flew around and the computation was the normal one. In model parallelism each GPU *permanently owns* a piece of the model and computes only with that piece, so what crosses the network are **activations**. If layer 1 lives on GPU 0 and layer 2 on GPU 1, GPU 0 sends layer 1's output to GPU 1. Parameter traffic scales with the model; activation traffic scales with batch × sequence × hidden. And because each GPU runs only part of each example's computation, model parallelism scales memory *without changing the batch size*.
 
@@ -355,7 +357,7 @@ The measured version of the bubble formula, from the Megatron paper. With a glob
 
 People have tried "much more clever ways" to shrink the bubble by scheduling. In the schedule at the bottom, each device is assigned several smaller, non-adjacent stages instead of one big one, so micro-batches enter and leave the pipeline in smaller steps and the ramps shrink. The price is in the slide's title: more stages means more stage boundaries, so more activation traffic. (In the Megatron paper, $v$ chunks per device cut the bubble by $v$ and multiply the communication by $v$.)
 
-::note aside 37:01 | The professor attributes this figure to "the DeepSeek paper". Its layout (a default 1F1B schedule above an interleaved schedule with multiple stages per device) matches Figure 4 of Narayanan et al. 2021, the Megatron paper; DeepSeek-V3's DualPipe schedule looks different. Either way, the idea on the slide is interleaving.
+::note slip 37:01 | The professor attributes this figure to "the DeepSeek paper". Its layout (a default 1F1B schedule above an interleaved schedule with multiple stages per device) matches Figure 4 of Narayanan et al. 2021, the Megatron paper; DeepSeek-V3's DualPipe schedule looks different. Either way, the idea on the slide is interleaving.
 
 ::slide 38 | zero-bubble pipelining: split the backward pass into B (backpropagating activation gradients, z and x) and W (computing weight gradients); "the second part can be done whenever"; the MLP computation graph with F, B and W, and the 1F1B against ZB-H1/ZB-H2 schedules
 
@@ -378,11 +380,12 @@ Pipelining cuts the network along depth. The other axis is width: cut *inside* e
 
 The slide's numbers check out. Row 0 of X is [0, 1, 2, 3] and column 0 of A is [10, 11, 12, 13], so $Y_{00} = 0 + 11 + 24 + 39 = 74$. Split the inner dimension in half: $X_1 A_1$ uses only the first two terms ($0 \cdot 10 + 1 \cdot 11 = 11$), $X_2 A_2$ the last two ($2 \cdot 12 + 3 \cdot 13 = 63$), and $11 + 63 = 74$. Two GPUs can each compute one half, and a sum puts them together. The professor notes it is "the same idea as tiling" from [L5](#/read/lecture_05): this core primitive "just appears many, many times".
 
-::slide 40 | Megatron-LM's MLP on two GPUs: X enters f and is used by both; GPU i computes Y_i = GeLU(X A_i) with A = [A1, A2] split by columns, then Z_i = Y_i B_i with B split by rows; g combines Z_1 + Z_2, then dropout; "in the forward pass, f is the identity and g is an all-reduce; in the backward pass f is an all-reduce, g is the identity"
-
 Now a real layer, the MLP $Z = \text{Dropout}(\text{GeLU}(XA)\,B)$. Megatron-LM's recipe splits the first matrix $A$ by **columns** and the second $B$ by **rows**.
 
 ::predict tensor-parallel-megatron
+
+::slide 40 | Megatron-LM's MLP on two GPUs: X enters f and is used by both; GPU i computes Y_i = GeLU(X A_i) with A = [A1, A2] split by columns, then Z_i = Y_i B_i with B split by rows; g combines Z_1 + Z_2, then dropout; "in the forward pass, f is the identity and g is an all-reduce; in the backward pass f is an all-reduce, g is the identity"
+
 ::worked tensor-parallel-megatron
 
 Why this order? Splitting $A$ by columns gives each GPU complete columns of the hidden layer, so the GeLU, which is elementwise, can be applied locally with no communication. Splitting $B$ by rows then matches: GPU $i$ owns exactly the rows of $B$ that multiply its columns of $Y$. The one unavoidable sum comes at the very end. The reverse order would put a sum in front of the GeLU, because the GeLU of a sum is not the sum of GeLUs, and cost two collectives instead of one.
@@ -422,7 +425,7 @@ The 8 is not derived on the slide. It is 2 all-reduces per layer (attention and 
 
 So: tensor parallelism on the fast links, pipeline parallelism everywhere else.
 
-::note slip 44:33 | The captions read the tensor-parallel cost as "a times b times s times h"; the slide says 8bsh(n−1)/n, so "a" is probably "eight" mis-captioned.
+::note aside 44:33 | The captions read the tensor-parallel cost as "a times b times s times h"; the slide says 8bsh(n−1)/n, so "a" is probably "eight" mis-captioned.
 ::kp tensor-parallel-megatron
 ::kp tp-vs-pp-communication
 
@@ -492,9 +495,9 @@ A student asked why only the attention term is recomputed. You *can* recompute t
 
 A layer's forward pass costs about $24bsh^2 + 4bs^2h$ FLOPs. The MLP's two matmuls are $16bsh^2$ of that; the attention core ($QK^\top$ and attention × V) is $4bs^2h$. For a GPT-3-like layer ($h = 12288$, $a = 96$, $s = 2048$):
 - recomputing the attention core adds $s/(6h + s) = 2048/75776 \approx 2.7\%$ of the forward FLOPs, and frees the $5as/h = 80$ term, which was $80/114 \approx 70\%$ of the layer's stored activations;
-- recomputing the MLP would add $16h/(24h + 4s) \approx 65\%$ of the forward FLOPs, to free only part of the linear 34.
+- recomputing the MLP would re-run the layer's most expensive matmuls, to free only part of the linear 34.
 
-The cheapness rests on $s$ being small next to $6h$. At $s = 32768$ the attention core is 97% of the stored activations, but its recomputation now costs about 31% of the forward FLOPs.
+The cheapness rests on $s$ being small next to $6h$.
 
 ::widget fixture:lecture_08--activation-memory | tick "recompute the attention core": the orange segment disappears for a FLOP share s/(6h+s); raise s and watch both the memory share and the recompute share grow
 ::video 52:44-53:15 | why the MLP is not recomputed: it means running the MLP again, while attention is cheaper
@@ -502,6 +505,8 @@ The cheapness rests on $s$ being small next to $6h$. At $s = 32768$ the attentio
 
 ## Expert parallelism, and the strategies the lecture skips {#experts}
 source: lecture_08.pdf p50-p55 · video 53:21-1:03:58
+
+::predict expert-parallel
 
 ::slide 50 | GShard's MoE Transformer encoder with device placement: attention layers replicated on every device, the MoE feed-forward layer's experts FFN_1 … FFN_E spread one per device, with an "All-to-All Dispatch" before and an "All-to-All Combine" after; "Instead of splitting up the matmul, split up the experts and route activations"
 
@@ -511,7 +516,6 @@ The last standard ingredient. Most big models are now **mixtures of experts** ([
 
 The professor thinks of EP as an analogue of tensor parallelism for the MLPs: a high-bandwidth strategy that splits the MLP across devices and also cuts activation memory. But for MoE layers "you almost always prefer" EP over TP, as NVIDIA's Megatron guidelines say. The main reason is matmul size. Cut a matrix "too finely" and "your GPU utilization will suffer", so "you want your matmuls as big as possible". TP = 8 makes every expert's GEMM 8 times narrower; EP = 8 keeps each expert's GEMM at full size and moves the tokens instead. Routing sparse token activations is also cheaper than all-reducing the dense outputs of sliced matmuls.
 
-::predict expert-parallel
 ::worked expert-parallel
 ::video 54:53-55:22 | why routing tokens beats cutting matrices for MoE layers: small matmuls waste the GPU
 
@@ -631,6 +635,8 @@ The last part looks at published training runs, to see the recipe in practice an
 
 ::note why 1:12:57 | The slide says FSDP "(probably fits intra-node)", while aloud OLMo ran across many accelerators. Both can hold: a 7B model's sharded state fits in one 8-GPU node, so the sharding group can stay inside a node while data parallelism spans many nodes (hybrid sharding). The slide is about the shard group, the professor about the whole job.
 
+::predict recent-lm-configs
+
 ::slide 64 | DeepSeek's infrastructure paragraph (HAI-LLM: data, tensor, sequence and 1F1B pipeline parallelism as in Megatron, ZeRO-1 for the optimizer state, overlap of communication and computation); "V3 – PP (16), EP (64-way, 8 nodes), ZeRO stage 1; EP uses 1F1B A2A overlap"
 
 **DeepSeek.** The first DeepSeek LLM (dense) used ZeRO stage 1 with tensor, sequence and pipeline parallelism: the classic combination. DeepSeek-V3, an MoE, keeps the 16-way pipeline and ZeRO-1 but replaces tensor parallelism with **64-way expert parallelism** spanning 8 nodes, far beyond the "keep EP inside one box" advice. To make that work they reuse their pipelining tricks to overlap the expert all-to-all with computation, so the large EP does not leave idle periods.
@@ -642,8 +648,6 @@ The last part looks at published training runs, to see the recipe in practice an
 ::slide 66 | Llama 3 405B's parallelism table: 8,192 GPUs at TP 8, CP 1, PP 16, DP 64, sequence 8,192, 430 TFLOP/s per GPU, 43% MFU; 16,384 GPUs at DP 128, 400 TFLOP/s, 41%; long-context stage 16,384 GPUs at CP 16, PP 16, DP 8, sequence 131,072, 380 TFLOP/s, 38%; the paper's ordering [TP, CP, PP, DP] from innermost (fastest links) to outermost
 
 **Llama 3 405B**, a giant dense model, is one of the few reports with a full breakdown for every phase. Ignore the first row, a small-batch warm-up stage. The main pretraining row is "a very standard parallelization strategy": TP 8, CP 1, PP 16, DP 128.
-
-::predict recent-lm-configs
 
 For long-context extension (131K-token sequences) they raise context parallelism to 16 and lower data parallelism to 8: the GPU count is fixed, so the new CP comes out of DP. The paper's ordering, [TP, CP, PP, DP] from innermost to outermost, is the bandwidth hierarchy again. TP needs the fastest links; DP (here FSDP) is outermost because it tolerates latency by prefetching parameters asynchronously.
 

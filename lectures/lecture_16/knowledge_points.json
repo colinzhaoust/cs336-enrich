@@ -125,7 +125,10 @@
           "q": "Task A: 'write a poem a reviewer will enjoy'. Task B: 'write a function that passes these hidden unit tests'. For which task does slide 3's argument say you can keep scaling RL compute without the reward decoupling from what you want, and what property of the reward makes the difference?",
           "format": "short",
           "answer": "Task B: the unit tests are the objective itself (verifiable), so optimizing them harder is optimizing what you want; Task A's reward is a learned proxy that can be overoptimized.",
-          "why": "Verifiability means the reward is a checker, not a model of a judge; there is no gap between proxy and target for the policy to exploit."
+          "why": "Verifiability means the reward is a checker, not a model of a judge; there is no gap between proxy and target for the policy to exploit.",
+          "varies": "the task: a poem judged by a reviewer against code judged by hidden unit tests, instead of slide 3's reward-model plots",
+          "invariant": "optimizing a learned proxy harder eventually decouples it from the goal; a checker that is the objective does not",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "A lab keeps its RL optimizer unchanged but swaps its learned reward model for a unit-test checker on coding tasks, and RL now keeps improving real performance as compute grows. Per slide 3, what made the difference?",
@@ -245,9 +248,9 @@
       ],
       "external_prerequisites": [
         {
-          "kp": "feynrl:supp-importance-ratio",
-          "basis": "author-inference",
-          "note": "The step from the on-policy score-function estimator to the ratio form PPO uses."
+          "kp": "lecture_15:ppo-for-rlhf-brief",
+          "basis": "teaching-order",
+          "note": "L15 p53 gives the three-attempt story (variance too high, TRPO, PPO clips) that this KP expands."
         }
       ],
       "misconceptions": [
@@ -277,7 +280,10 @@
           "q": "Two sampled sequences get rewards +1 and 0 under the raw REINFORCE estimator. Which one contributes a nonzero gradient term, and in which direction does that term move the probability of the sampled sequence?",
           "format": "short",
           "answer": "Only the +1 sequence contributes (0 times the score is zero); its term increases log p of that sequence. The 0-reward sequence is ignored, which is one reason a baseline is added later.",
-          "why": "Each term is R(z) grad log p(z); a zero reward contributes nothing, so without a baseline the estimator never pushes probability away from failures."
+          "why": "Each term is R(z) grad log p(z); a zero reward contributes nothing, so without a baseline the estimator never pushes probability away from failures.",
+          "varies": "the reward values: one sample at +1 and one at 0, instead of a non-differentiable checker in general",
+          "invariant": "each sample's term is its reward times grad log p, so a zero reward contributes nothing",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "A checker returns +1 for a correct answer and -1 for a wrong one (instead of 1 and 0). With the raw REINFORCE estimator (reward times grad log p(z), no baseline) on a batch of 8 samples of which 3 are correct, how many of the 8 samples contribute a nonzero gradient term?",
@@ -422,21 +428,10 @@
           "basis": "teaching-order"
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:supp-importance-ratio",
-          "basis": "author-inference",
-          "note": "ratio = exp(logp - old_logp)."
-        },
-        {
-          "kp": "feynrl:grpo-clipped-loss",
-          "basis": "author-inference",
-          "note": "FeynRL's min(ratio*adv, clamp(ratio, 1-clip_low, 1+clip_high)*adv) is the same objective in code, with asymmetric clip bounds."
-        }
-      ],
       "see_also": [
         "feynrl:grpo-clipped-loss",
-        "feynrl:cispo-vs-ppo-clip"
+        "feynrl:cispo-vs-ppo-clip",
+        "feynrl:supp-importance-ratio"
       ],
       "misconceptions": [
         {
@@ -465,7 +460,10 @@
           "q": "Same eps = 0.2 and ratio 1.5, but now the advantage is A = −1. Which term does the min() select, and does this token still receive a gradient?",
           "format": "short",
           "answer": "min(1.5·(−1), 1.2·(−1)) = min(−1.5, −1.2) = −1.5, the unclipped term; the token still receives a full gradient pushing its probability down.",
-          "why": "Clipping is one-sided per sign of A: it only prevents moving further in the direction the advantage rewards. A ratio of 1.5 with negative advantage means the policy moved the wrong way, and PPO keeps correcting it."
+          "why": "Clipping is one-sided per sign of A: it only prevents moving further in the direction the advantage rewards. A ratio of 1.5 with negative advantage means the policy moved the wrong way, and PPO keeps correcting it.",
+          "varies": "the sign of the advantage (A = −1 instead of +1) at the same ratio 1.5",
+          "invariant": "the min makes the clip one-sided: it flattens only moves in the direction the advantage favours",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "PPO-clip with eps = 0.2: a token has advantage A = -1, and after a few inner steps its ratio pi_new/pi_old has fallen to 0.7. What gradient does this token receive from min(r·A, clip(r, 1-eps, 1+eps)·A)?",
@@ -494,7 +492,6 @@
           {
             "q": "What Cliprange value does the AlpacaFarm PPO implementation use?",
             "answer": "0.2",
-            "format": "number",
             "layer": "detail"
           },
           {
@@ -607,7 +604,10 @@
           "q": "An engineer sets gamma = 0.9 for a 500-token math solution with a terminal correctness reward. Roughly what happens to the credit the first token receives for a correct answer, and why does the slide's bandit view say this is a mistake?",
           "format": "short",
           "answer": "It is multiplied by about 0.9^500, essentially zero, so early tokens get no signal from correctness. In the bandit view the whole sequence is one action with one reward, so there is nothing to discount.",
-          "why": "Discounting encodes a preference for sooner rewards across many decisions; here there is one decision (the sequence) and one reward, so gamma < 1 only destroys signal."
+          "why": "Discounting encodes a preference for sooner rewards across many decisions; here there is one decision (the sequence) and one reward, so gamma < 1 only destroys signal.",
+          "varies": "the discount: gamma = 0.9 on a 500-token answer instead of gamma = lambda = 1",
+          "invariant": "one terminal reward per sequence, so any discount only shrinks the credit that reaches early tokens",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "An engineer uses gamma = 0.99 (lambda = 1) for 300-token responses with a single terminal reward of 1 and no other rewards. By what factor is that reward discounted in the first token's return? Give a decimal.",
@@ -670,7 +670,7 @@
       "id": "per-token-kl-reward-shaping",
       "label": "Reward shaping: per-token KL penalty to the reference, full task reward on the last token",
       "kind": "mechanism",
-      "statement": "AlpacaFarm-style PPO adds a per-token penalty of log pi(token)/pi_ref(token) to the reward stream and places the full task reward on the last token; in practice the KL term is clipped for sequences where the new policy's log-probability is below the reference's, which keeps the KL estimate from diverging if the model blows up.",
+      "statement": "AlpacaFarm-style PPO adds a per-token penalty of log pi(token)/pi_ref(token) to the reward stream and places the full task reward on the last token; in practice the KL term is clipped at zero for tokens where the new policy's log-probability is below the reference's, which keeps the KL estimate from diverging if the model blows up.",
       "provenance": {
         "status": "said",
         "basis": "evidence",
@@ -723,19 +723,12 @@
             "quote": "you should expect to see similar things like the rewards go up. The reward model rewards go up if you're doing RLHF, and then the negative KL regularizers go down. This is a reasonable thing to expect to see."
           }
         ],
-        "filtering_note": "The shaping code (p14) and the curves (p16) are images; the KL coefficient value is not in the text layer. The slide frames the KL as a reward term (shaping) rather than a loss term; GRPO implementations (p19 'Compute KL term', FeynRL kl-reference-penalty) add it to the loss instead, and the professor does not discuss when the KL can be dropped. The 'clip' on p14 is a one-sided clip of the per-token log-ratio when the policy is below the reference, not the PPO ratio clip. Spoken evidence (9:40-10:03): p14's 'Helps with stability?' is answered aloud: 'If you remove this, it blows up immediately.' He also says clipping the per-token KL 'off at 0' 'totally ruins the point of a KL divergence' because 'you have both positive and negative values being summed' (author gloss: the per-token log-ratio is a sample estimate whose terms can be negative although the KL is not, so clipping the negative terms changes what is estimated), and disowns it as a recipe (10:04). The rollout code (p13) is skipped aloud (9:40). Spoken evidence (11:03-11:15): the p16 curves are read aloud, rewards up, reward-model rewards up, 'the negative KL regularizers go down', 'a reasonable thing to expect to see', which is the second misconception's why_wrong. Still not said: the KL coefficient, or when the KL can be dropped. Slide image audit (p14): the slide's text says 'for sequences', but the code on the image clamps the log-ratio per token (where the new policy's token log-probability is below the reference's); the statement keeps the slide's words and this note records that the operation is per token."
+        "filtering_note": "The shaping code (p14) and the curves (p16) are images; the KL coefficient value is not in the text layer. The slide frames the KL as a reward term (shaping) rather than a loss term; GRPO implementations (p19 'Compute KL term', FeynRL kl-reference-penalty) add it to the loss instead, and the professor does not discuss when the KL can be dropped. The 'clip' on p14 is a one-sided clip of the per-token log-ratio when the policy is below the reference, not the PPO ratio clip. Spoken evidence (9:40-10:03): p14's 'Helps with stability?' is answered aloud: 'If you remove this, it blows up immediately.' He also says clipping the per-token KL 'off at 0' 'totally ruins the point of a KL divergence' because 'you have both positive and negative values being summed' (author gloss: the per-token log-ratio is a sample estimate whose terms can be negative although the KL is not, so clipping the negative terms changes what is estimated), and disowns it as a recipe (10:04). The rollout code (p13) is skipped aloud (9:40). Spoken evidence (11:03-11:15): the p16 curves are read aloud, rewards up, reward-model rewards up, 'the negative KL regularizers go down', 'a reasonable thing to expect to see', which is the second misconception's why_wrong. Still not said: the KL coefficient, or when the KL can be dropped. Slide image audit (p14): the slide's text says 'for sequences', but the code on the image clamps the log-ratio per token (where the new policy's token log-probability is below the reference's); the statement, the transfer, the check and retrieval card 2 describe the per-token operation, and the slide's own wording ('Clip KL for sequences where new policy logp < reference logp') is kept here as a quote."
       },
       "prerequisites": [
         {
           "kp": "language-rl-is-a-bandit",
           "basis": "teaching-order"
-        }
-      ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:kl-reference-penalty",
-          "basis": "author-inference",
-          "note": "FeynRL implements the same reference-model KL as a loss term (kl_coeff * kl_sum) using a variance-reduced estimator, and loads the reference model only when kl_coeff > 0."
         }
       ],
       "see_also": [
@@ -760,27 +753,32 @@
           "targets_misconception": "The task reward is spread over every token so that each token is rewarded for its contribution."
         },
         "transfer": {
-          "q": "During training the policy's log-probability on a sequence falls far below the reference's. Which direction of the per-token log-ratio does AlpacaFarm clip, and what failure does the professor say this prevents?",
+          "q": "During training the policy's log-probabilities on many tokens fall far below the reference's. Which direction of the per-token log-ratio does AlpacaFarm clip, and what failure does the professor say this prevents?",
           "format": "short",
-          "answer": "It clips the KL term for sequences where new-policy logp < reference logp; this stops the KL estimate from diverging when the model 'blows up'.",
-          "why": "A collapsed policy puts tiny probability on the reference's tokens, so log pi/pi_ref goes to minus infinity; clipping bounds the shaping term so one bad batch does not dominate the reward."
+          "answer": "It clamps the per-token log-ratio at zero wherever the new policy's token logp < the reference's (the negative direction); this stops the KL estimate from diverging when the model 'blows up'.",
+          "why": "A collapsed policy puts tiny probability on the reference's tokens, so log pi/pi_ref goes to minus infinity; clipping bounds the shaping term so one bad batch does not dominate the reward.",
+          "varies": "the policy falls below the reference on many tokens, so the clamp acts",
+          "invariant": "the per-token log-ratio is clamped at zero from below, token by token",
+          "transfer_distance": "near"
         },
         "check": {
-          "q": "Under AlpacaFarm-style shaping, a sequence's new-policy log-probability is ABOVE the reference's (the policy has made it more likely). What happens to this sequence's per-token KL penalty?",
+          "q": "Under AlpacaFarm-style shaping, one token's new-policy log-probability is above the reference's (log-ratio +0.3) and another token's is below it (log-ratio −0.4). Which of the two per-token KL penalties does the code clamp?",
           "format": "choice",
           "choices": [
-            "it turns into a bonus added to the reward",
-            "it is clipped, as in the other direction",
-            "it is kept: the penalty applies in full"
+            "the −0.4 token's: its log-ratio is clamped to 0, so it pays no penalty",
+            "the +0.3 token's: its log-ratio is clamped to 0",
+            "neither: the sequence's summed log-ratio decides, and the penalty applies in full",
+            "both: every token's log-ratio is clamped symmetrically"
           ],
-          "answer": "it is kept: the penalty applies in full",
-          "why": "p14: the KL is clipped only for sequences where new-policy logp < reference logp, which stops the estimate diverging if the model blows up. When the policy has drifted upward the log-ratio is positive and the full penalty applies.",
-          "varies": "the opposite direction of drift from the clipped case",
-          "invariant": "the per-token KL penalty is clipped only when new-policy logp falls below the reference's",
+          "answer": "the −0.4 token's: its log-ratio is clamped to 0, so it pays no penalty",
+          "why": "p14's code computes kl = torch.clamp(logprobs − ref_logprobs, min=0.0) on the per-token tensor, so the clamp acts token by token: the −0.4 token's log-ratio becomes 0 and pays nothing, while the +0.3 token keeps its full penalty −β·0.3. The slide's text says 'for sequences', but no sequence-level total is formed before the clamp.",
+          "varies": "two tokens of one sequence with log-ratios of opposite sign",
+          "invariant": "the per-token log-ratio is clamped at zero from below, token by token",
           "transfer_distance": "near",
           "distractor_from": [
-            "'it is clipped, as in the other direction' <- plausible: assumes a symmetric clip on the KL term",
-            "'it turns into a bonus added to the reward' <- plausible: confuses the sign of the shaping term"
+            "'the +0.3 token's: its log-ratio is clamped to 0' <- plausible: confuses which sign the clamp removes",
+            "'neither: the sequence's summed log-ratio decides, and the penalty applies in full' <- plausible: reads the slide's 'for sequences' as a per-sequence decision",
+            "'both: every token's log-ratio is clamped symmetrically' <- plausible: assumes a symmetric clip, like PPO's ratio clip"
           ]
         },
         "retrieval": [
@@ -790,7 +788,7 @@
           },
           {
             "q": "In AlpacaFarm-style PPO, which sign condition triggers the clip on the per-token KL penalty in practice?",
-            "answer": "Sequences where the new policy's log-probability is less than the reference's log-probability.",
+            "answer": "Tokens where the new policy's log-probability is less than the reference's log-probability (the log-ratio is clamped at 0).",
             "layer": "detail"
           }
         ],
@@ -928,7 +926,10 @@
           "q": "You have a dataset of math problems with a correctness checker. Name the two properties of this data/training setup that slide 17 says make DPO a poor fit, and say which one 'iterating' would fix.",
           "format": "short",
           "answer": "The data are not pairwise (there is a scalar correct/incorrect reward per sample, not Bradley-Terry comparisons) and DPO is offline. Iterating DPO (re-sampling from the current policy) fixes the offline problem, not the pairwise one.",
-          "why": "DPO's objective is derived from preference pairs; a checker gives per-sample rewards. Online-ness can be recovered by resampling, but the pair structure is intrinsic to the loss."
+          "why": "DPO's objective is derived from preference pairs; a checker gives per-sample rewards. Online-ness can be recovered by resampling, but the pair structure is intrinsic to the loss.",
+          "varies": "a concrete math dataset with a checker, instead of slide 17's general list",
+          "invariant": "DPO needs pairwise Bradley-Terry data and is offline; iterating fixes only the offline part",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "Slide 17 objects that DPO's data are 'not inherently pairwise'. Which data source would remove that particular objection?",
@@ -1073,13 +1074,6 @@
           "note": "GRPO's loss is PPO's clipped loss with a different advantage."
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:group-relative-advantage",
-          "basis": "author-inference",
-          "note": "FeynRL's normalize_rewards computes the same z-score per prompt at rollout time and stores it as the advantage."
-        }
-      ],
       "see_also": [
         "feynrl:group-relative-advantage",
         "feynrl:grpo-clipped-loss",
@@ -1107,7 +1101,10 @@
           "q": "A group of 4 rewards is 1, 0, 0, 1. Using the population standard deviation (divide by 4) and ignoring the small stability term, compute the four GRPO advantages. Then: for rewards 1, 0, 0, 0, which has the larger magnitude, the correct sample's advantage or an incorrect one's?",
           "format": "short",
           "answer": "Mean 0.5, std 0.5: advantages +1, −1, −1, +1. For 1, 0, 0, 0: mean 0.25, std ≈ 0.433, so the correct sample gets ≈ +1.73 and each incorrect one ≈ −0.58; the lone correct sample has the larger magnitude.",
-          "why": "z = (r − mean)/std. The rarer outcome sits further from the mean, so a single success in a mostly-failing group is pushed up hard while each failure is pushed down gently; the advantages always sum to 0."
+          "why": "z = (r − mean)/std. The rarer outcome sits further from the mean, so a single success in a mostly-failing group is pushed up hard while each failure is pushed down gently; the advantages always sum to 0.",
+          "varies": "the group's rewards: 1, 0, 0, 1 and 1, 0, 0, 0 instead of an all-pass group",
+          "invariant": "each advantage is the reward's z-score within its own group",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "A GRPO group of 5 samples gets rewards 1, 0, 0, 0, 0. Using the population standard deviation (divide by 5) and ignoring the small stability term, what is the advantage of the one correct sample?",
@@ -1128,7 +1125,6 @@
           {
             "q": "What is the small stability factor added to the std in the nano-aha-moment implementation?",
             "answer": "1e-4",
-            "format": "number",
             "layer": "detail"
           },
           {
@@ -1301,7 +1297,10 @@
           "q": "Prompt A's group has rewards 1, 0, 0, 0 (std ≈ 0.43); prompt B's group has rewards 1, 1, 0, 0 (std 0.5). Compared with the unbiased mean-subtracted gradient, by what factor does GRPO's std division scale each prompt's contribution, and which prompt is upweighted?",
           "format": "short",
           "answer": "Each prompt's contribution is multiplied by 1/std: about 2.3x for A and 2x for B, so A (the harder, lower-variance prompt) is upweighted relative to B.",
-          "why": "Dividing by a per-prompt constant rescales the prompt's whole gradient. Prompts whose rewards are nearly all the same (very easy or very hard) have small std and get the largest multiplier, which is p24's 'upweights too easy or hard questions'."
+          "why": "Dividing by a per-prompt constant rescales the prompt's whole gradient. Prompts whose rewards are nearly all the same (very easy or very hard) have small std and get the largest multiplier, which is p24's 'upweights too easy or hard questions'.",
+          "varies": "two prompts with different success rates, compared side by side",
+          "invariant": "dividing by a prompt's std multiplies its whole contribution by 1/std instead of subtracting a baseline",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "A GRPO group of 8 samples has rewards 1, 0, 0, 0, 0, 0, 0, 0. Relative to the unbiased mean-subtracted weights, by what factor does dividing by the group's population standard deviation (ignoring the stability term) scale this prompt's contribution to the gradient?",
@@ -1497,7 +1496,10 @@
           "q": "An engineer removes the std division but keeps per-response length normalization, then observes average response length still climbing on prompts the model mostly fails. Which of GRPO's two biases is still active, and what replacement for the per-response normalizer does Dr. GRPO make?",
           "format": "short",
           "answer": "The length bias from the per-response normalizer is still active (long wrong answers are penalized less). Dr. GRPO divides by a constant (a fixed maximum length) instead of each response's own length, so the per-token penalty no longer shrinks with length.",
-          "why": "The two biases are independent: std affects prompt weighting, length normalization affects within-response weighting. Only replacing the per-response denominator with a constant removes the second."
+          "why": "The two biases are independent: std affects prompt weighting, length normalization affects within-response weighting. Only replacing the per-response denominator with a constant removes the second.",
+          "varies": "only one of GRPO's two deviations is removed: the std division goes, the length normalizer stays",
+          "invariant": "dividing each response's terms by its own length shrinks the per-token penalty on long wrong answers",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "Under GRPO's per-response length normalization, two correct responses to one prompt both have advantage +1; one is 300 tokens and the other 1,200. How many times larger is the per-token gradient weight on the 300-token response?",
@@ -1565,7 +1567,7 @@
       "id": "r1-zero-recipe",
       "label": "R1-Zero: GRPO on the V3 base model with only accuracy and format rewards, no PRM, no MCTS",
       "kind": "procedure",
-      "statement": "DeepSeek-R1-Zero applies GRPO directly to the DeepSeek-V3 base model with two rewards, an accuracy reward (is the answer correct?) and a format reward (use the thinking tags), with no process supervision and no search; it matches or beats OpenAI o1-0912 on math (AIME cons@64 86.7 vs 83.3, MATH-500 95.9 vs 94.8) while trailing on code, and the paper's unsuccessful-attempts section (PRMs, MCTS) ended speculation that those were necessary.",
+      "statement": "DeepSeek-R1-Zero applies GRPO directly to the DeepSeek-V3 base model with two rewards, an accuracy reward (is the answer correct?) and a format reward (use the thinking tags), with no process supervision and no search; it ends up slightly behind OpenAI o1-0912 overall (AIME 2024 pass@1 71.0 vs 74.4, GPQA Diamond 73.3 vs 77.3, code well behind), ahead only with cons@64 majority voting on AIME (86.7 vs 83.3) and on MATH-500 (95.9 vs 94.8), and the paper's unsuccessful-attempts section (PRMs, MCTS) ended speculation that those were necessary.",
       "provenance": {
         "status": "said",
         "basis": "evidence",
@@ -1647,7 +1649,7 @@
             "quote": "a lot of people speculated about what was going on inside OpenAI's O1. ... Are they doing tree search like AlphaGo? They to tried a lot of MCTS and they describe we couldn't get it to work very well."
           }
         ],
-        "filtering_note": "The R1-Zero results table (p28) and the R1 benchmark table (p36, 'It's pretty good (but you knew that)') are images; no AIME/MATH numbers are in the text layer. The exact format reward (think/answer tags) and how the accuracy checker handles math vs code are not stated. The slide says the training data is not public. p21's DeepSeekMath figure, 'Outperforms RFT (reinforcing correct answers), with some gains from process supervision', is the deck's only evidence for process supervision helping, and p27/p38 record that R1 dropped it anyway. Spoken evidence (28:15-28:36): outcome and process supervision are defined aloud (reward 'only for whether the final answer is correct' vs 'a grading rubric ... to check the validity of intermediate steps'). Spoken evidence (29:11-29:21), partly answering 'the exact format reward ... not stated': the format reward's purpose is said, the thinking tags 'allow them to strip out the chain of thought later'; the tag strings are still not given. This supports the format-reward misconception's why_wrong. Spoken evidence (37:05-37:38): why PRMs lost: 'outcome reward models are great and they're good enough', 'you can scale the data for those a lot better', while step-by-step rubrics are 'very hard to scale'. MCTS 'couldn't get it to work very well' (37:57). R1-Zero is 'only a little bit worse than OpenAI O1' and praised as 'a very simple base model plus GRPO' with no production confounds (29:35-29:57). Spoken imprecision (28:02): process supervision 'worked really well in DeepSeekMath'; p21 says only 'some gains from process supervision'. Caption error: 'the base model ... is also [? MIT ?] trained' (28:50) is presumably 'mid-trained'. Not imported. Slide image audit (p28): the earlier 'a bit below o1' is not what the table shows; R1-Zero beats o1-0912 on AIME 2024 cons@64 (86.7 vs 83.3) and MATH-500 (95.9 vs 94.8) and trails on code (LiveCodeBench, Codeforces). Statement corrected."
+        "filtering_note": "The R1-Zero results table (p28) and the R1 benchmark table (p36, 'It's pretty good (but you knew that)') are images; no AIME/MATH numbers are in the text layer. The exact format reward (think/answer tags) and how the accuracy checker handles math vs code are not stated. The slide says the training data is not public. p21's DeepSeekMath figure, 'Outperforms RFT (reinforcing correct answers), with some gains from process supervision', is the deck's only evidence for process supervision helping, and p27/p38 record that R1 dropped it anyway. Spoken evidence (28:15-28:36): outcome and process supervision are defined aloud (reward 'only for whether the final answer is correct' vs 'a grading rubric ... to check the validity of intermediate steps'). Spoken evidence (29:11-29:21), partly answering 'the exact format reward ... not stated': the format reward's purpose is said, the thinking tags 'allow them to strip out the chain of thought later'; the tag strings are still not given. This supports the format-reward misconception's why_wrong. Spoken evidence (37:05-37:38): why PRMs lost: 'outcome reward models are great and they're good enough', 'you can scale the data for those a lot better', while step-by-step rubrics are 'very hard to scale'. MCTS 'couldn't get it to work very well' (37:57). R1-Zero is 'only a little bit worse than OpenAI O1' and praised as 'a very simple base model plus GRPO' with no production confounds (29:35-29:57). Spoken imprecision (28:02): process supervision 'worked really well in DeepSeekMath'; p21 says only 'some gains from process supervision'. Caption error: 'the base model ... is also [? MIT ?] trained' (28:50) is presumably 'mid-trained'. Not imported. Slide image audit (p28): the table agrees with the slide's 'a bit worse than Openai O1'. R1-Zero trails o1-0912 on AIME 2024 pass@1 (71.0 vs 74.4), GPQA Diamond (73.3 vs 77.3), LiveCodeBench (50.0 vs 63.4) and Codeforces (1444 vs 1843), and is ahead only on AIME cons@64 (86.7 vs 83.3) and MATH-500 (95.9 vs 94.8); the statement gives both sides."
       },
       "prerequisites": [
         {
@@ -1687,7 +1689,10 @@
           "q": "A response contains a correct final answer but no thinking tags. Under R1-Zero's two rewards, which reward component is nonzero and which is zero, and what will the policy be pushed toward over training?",
           "format": "short",
           "answer": "Accuracy reward is earned, format reward is not; the policy is pushed to keep answering correctly and also to wrap its reasoning in the thinking tags, since tagged correct answers score higher within the group.",
-          "why": "Rewards are summed, and the group z-score ranks siblings; untagged correct answers sit below tagged correct ones in the same group."
+          "why": "Rewards are summed, and the group z-score ranks siblings; untagged correct answers sit below tagged correct ones in the same group.",
+          "varies": "the answer is right and the thinking tags are missing",
+          "invariant": "R1-Zero sums two independent outcome rewards, accuracy and format, and GRPO ranks responses within the group",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "Under R1-Zero's two rewards, a response wraps a long chain of reasoning in the thinking tags but gives a wrong final answer. What does it earn?",
@@ -1838,7 +1843,10 @@
           "q": "A blog claims 'the base model never says wait, let me reconsider; RL taught it self-reflection.' Which single measurement that Dr. GRPO ran (and slide 30 cites) would test this claim, and what did it find?",
           "format": "short",
           "answer": "Count 'aha'/self-reflection phrases in the base model's outputs before any RL; Dr. GRPO found the base model already produces them.",
-          "why": "The claim is about a before/after difference, so the control is the base model's own sampling; p30: 'Base model already has aha'."
+          "why": "The claim is about a before/after difference, so the control is the base model's own sampling; p30: 'Base model already has aha'.",
+          "varies": "the claim is about self-reflection phrases rather than response length",
+          "invariant": "a behaviour seen after RL shows RL created it only if the base model lacked it beforehand",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "An RL run uses GRPO with per-response length normalization, and average response length doubles over training. Which conclusion does slide 30's follow-up evidence support?",
@@ -2055,7 +2063,10 @@
             "'distillation always loses accuracy' <- related to misconception 'Distillation here means matching the teacher's logits.' (misplaces distillation in the pipeline and its role)",
             "'math should not move' <- plausible: assumes stages trained on different data do not interact"
           ],
-          "why": "The Qwen 3 stage-composition table (p54) shows math/STEM going down a bit after general-purpose RLHF (AIME'24 −0.5, LiveCodeBench −1.5 in thinking mode; the fusion stage before it also costs a little); it is the accepted price of putting RLHF last."
+          "why": "The Qwen 3 stage-composition table (p54) shows math/STEM going down a bit after general-purpose RLHF (AIME'24 −0.5, LiveCodeBench −1.5 in thinking mode; the fusion stage before it also costs a little); it is the accepted price of putting RLHF last.",
+          "varies": "a stage's side effect (a math drop after general RLHF) instead of the stage order itself",
+          "invariant": "reasoning RL comes before general SFT/RLHF, and the later general-purpose stage can cost some math/STEM",
+          "transfer_distance": "near"
         },
         "retrieval": [
           {
@@ -2065,7 +2076,6 @@
           {
             "q": "How many R1 chain-of-thought traces were used to distil into Qwen 2.5?",
             "answer": "800k",
-            "format": "number",
             "layer": "detail"
           },
           {
@@ -2214,7 +2224,10 @@
           "q": "Under GRPO's per-response normalization, a correct 200-token answer is already the shortest that solves its problem, and an incorrect answer to a harder problem is 2,000 tokens. Which of the two can still respond to the length pressure, in which direction, and what does this predict for the mean length of a batch that is half correct and half incorrect?",
           "format": "short",
           "answer": "Only the incorrect one: it is pushed longer and has no ceiling. The correct one is pushed shorter but is at its floor. The batch's mean length rises, carried by the incorrect half.",
-          "why": "The pressure on correct answers saturates at the problem's minimum length; the pressure on wrong answers does not saturate, so the average drifts upward."
+          "why": "The pressure on correct answers saturates at the problem's minimum length; the pressure on wrong answers does not saturate, so the average drifts upward.",
+          "varies": "two single responses at their length limits instead of two runs with different success rates",
+          "invariant": "correct answers have a length floor and incorrect ones no ceiling, so the length pressure grows the mean through incorrect answers",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "Over a stretch of GRPO training with per-response length normalization, 60% of responses are incorrect and each grows by 300 tokens, while the 40% correct responses each shrink by 50 tokens before reaching their floor. By how many tokens does the mean response length change? Give a signed number.",
@@ -2496,7 +2509,10 @@
           "q": "Two correct responses to the same prompt: one is the shortest in its group, one is the longest. What length rewards do they receive under the Kimi rule, and what does this do to the policy's preferred CoT length on prompts it already solves?",
           "format": "short",
           "answer": "Shortest correct: +0.5; longest correct: −0.5. On solved prompts the policy is pushed toward the shortest CoT that still gets the answer right.",
-          "why": "Correct answers receive lambda directly, so among correct siblings rank by length is the entire signal; the task reward is already equal across them."
+          "why": "Correct answers receive lambda directly, so among correct siblings rank by length is the entire signal; the task reward is already equal across them.",
+          "varies": "both responses are correct (the predict's were both wrong)",
+          "invariant": "lambda maps length rank linearly onto [0.5, −0.5], and correct answers receive lambda itself",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "Under Kimi's per-group length reward (lambda from +0.5 for the shortest to -0.5 for the longest; correct answers get lambda, incorrect answers get min(0, lambda)), which incorrect responses are pushed to get shorter?",
@@ -2578,7 +2594,7 @@
     },
     {
       "id": "difficulty-filtering-curriculum",
-      "label": "Data for RLVR: keep prompts the model fails at best-of-n, drop guessable formats, go easy to hard",
+      "label": "Data for RLVR: filter prompts by best-of-n difficulty, drop guessable formats, go easy to hard",
       "kind": "procedure",
       "statement": "Kimi and Qwen 3 filter RL prompts for difficulty by sampling the current model n times (Kimi: drop problems the model can guess within 8 tries without CoT, since those are easy to hack; Qwen: remove problems solved without CoT, remove near-duplicates of validation data), exclude multiple-choice and true/false items because they produce false-positive rewards, and Kimi additionally orders training easy-to-hard and samples prompts proportional to (1 − success_rate) so solved problems are not repeated; Qwen 3 runs GRPO on only 3,995 such examples.",
       "provenance": {
@@ -2668,7 +2684,7 @@
             "quote": "They do a lot of filtering for difficulty because we know that saves compute. ... they remove things that the model can get right without COT because we know that's not a thinking problem. ... they actually do their RL on very few examples, just 4,000 examples."
           }
         ],
-        "filtering_note": "The slides do not say how many prompts Kimi kept after filtering, what n Qwen used for best-of-n, or how 'too similar to validation data' was measured. Kimi's SFT stage is described as 'little description, just described as prompt engineering (distillation?)' (p41). p44's math reward uses a trained CoT reward model for answer-equivalence checking, which is a learned verifier rather than a pure checker; the slide does not flag the tension with 'verifiable'. Spoken evidence (41:37-42:12): why difficulty matters in RL and not in SFT: 'if your problems are too hard, you get no rewards ... no signal ... you can't learn'. He adds what p41 omits: 'you can also filter on both sides' for medium difficulty, the 'general consensus' (43:26-43:44). Spoken evidence (49:55-51:10), a correction to 'the slide does not flag the tension with verifiable': he flags it at length: the lecture began with compiler-checkable math and 'ended up with a reward model ... that checks the correctness of math answers'; strict checkers fail on correct answers written differently (a missing or padded \\boxed), so 'most RL projects have a very complicated answer checker, either a regex or a model', 'a real rabbit hole'. Qwen 3's prompts not solvable 'without COT' are removed because that is 'not a thinking problem' (57:22). Recorded disagreement (42:26-42:36): aloud, multiple choice is excluded because Kimi wants 'things that require long, deep thought'; p41 says '(false positives)', and the Kimi paper (arXiv:2501.12599, author check) gives false-positive verification as the reason, matching the slide. Author check against the Kimi paper, flagged for review: the best-of-8 test is a no-CoT guessing test: 'we prompt a model to guess potential answers without any CoT reasoning steps. If the model predicts the correct answer within N attempts, the prompt is considered too easy-to-hack and removed' (N = 8). Difficulty itself is estimated from the pass rate of ten sampled answers, which is not an author check: p41's second excerpt prints it ('an SFT model generates answers ten times using a relatively high sampling temperature. The pass rate is then calculated and used as a proxy for the prompt's difficulty'). p41 and the professor (42:43-43:10) drop 'without CoT', and his reading (keep only problems the model cannot solve once in 8 samples) sits against his own 'too hard ... no signal' and 'filter on both sides'. The statement follows p41 ('keep only problems failed on best-of-8') and is not changed; with the paper's reading it matches Qwen's 'remove things the model gets right w/o CoT'. Spoken imprecisions: 'just 4,000 examples' for p51's 3,995 (57:41); a mastered problem 'gets taken out of the problem set' (49:25) for p44's sampling proportional to (1 - success_rate); 'already at the edge of the model's capabilities' (42:55) for problems the model already solves."
+        "filtering_note": "The slides do not say how many prompts Kimi kept after filtering, what n Qwen used for best-of-n, or how 'too similar to validation data' was measured. Kimi's SFT stage is described as 'little description, just described as prompt engineering (distillation?)' (p41). p44's math reward uses a trained CoT reward model for answer-equivalence checking, which is a learned verifier rather than a pure checker; the slide does not flag the tension with 'verifiable'. Spoken evidence (41:37-42:12): why difficulty matters in RL and not in SFT: 'if your problems are too hard, you get no rewards ... no signal ... you can't learn'. He adds what p41 omits: 'you can also filter on both sides' for medium difficulty, the 'general consensus' (43:26-43:44). Spoken evidence (49:55-51:10), a correction to 'the slide does not flag the tension with verifiable': he flags it at length: the lecture began with compiler-checkable math and 'ended up with a reward model ... that checks the correctness of math answers'; strict checkers fail on correct answers written differently (a missing or padded \\boxed), so 'most RL projects have a very complicated answer checker, either a regex or a model', 'a real rabbit hole'. Qwen 3's prompts not solvable 'without COT' are removed because that is 'not a thinking problem' (57:22). Recorded disagreement (42:26-42:36): aloud, multiple choice is excluded because Kimi wants 'things that require long, deep thought'; p41 says '(false positives)', and the Kimi paper (arXiv:2501.12599, author check) gives false-positive verification as the reason, matching the slide. Author check against the Kimi paper, flagged for review: the best-of-8 test is a no-CoT guessing test: 'we prompt a model to guess potential answers without any CoT reasoning steps. If the model predicts the correct answer within N attempts, the prompt is considered too easy-to-hack and removed' (N = 8). Difficulty itself is estimated from the pass rate of ten sampled answers, which is not an author check: p41's second excerpt prints it ('an SFT model generates answers ten times using a relatively high sampling temperature. The pass rate is then calculated and used as a proxy for the prompt's difficulty'). p41 and the professor (42:43-43:10) drop 'without CoT', and his reading (keep only problems the model cannot solve once in 8 samples) sits against his own 'too hard ... no signal' and 'filter on both sides'. The statement, the predict and retrieval card 2 use the paper's no-CoT reading, which p41's 'Select only examples that models fail on best-of-8' shortens; with that reading Kimi's filter matches Qwen's 'remove things the model gets right w/o CoT'. Spoken imprecisions: 'just 4,000 examples' for p51's 3,995 (57:41); a mastered problem 'gets taken out of the problem set' (49:25) for p44's sampling proportional to (1 - success_rate); 'already at the edge of the model's capabilities' (42:55) for problems the model already solves."
       },
       "prerequisites": [
         {
@@ -2693,21 +2709,21 @@
       ],
       "prompts": {
         "predict": {
-          "q": "A math problem is solved by the current model in 8 out of 8 samples. Under Kimi's filter on slide 41, is it kept for RL, and in GRPO terms why?",
+          "q": "Kimi's filter asks the current model to guess a math problem's answer without any chain of thought, 8 times. On one problem the guess is right in 3 of the 8 tries. Is the problem kept for RL?",
           "format": "choice",
           "choices": [
-            "Kept: it is a reliable source of positive reward for the policy",
-            "Dropped: all 8 samples succeed, so the group has no reward contrast",
-            "Kept, but its gradient is downweighted by 1/8 per sample",
+            "Dropped: it can be answered without reasoning, so it is too easy to hack",
+            "Kept: 5 of the 8 guesses failed, so the group has reward contrast",
+            "Kept, but its gradient is downweighted by 3/8 per sample",
             "Kept: every verifiable problem adds signal, so none are filtered"
           ],
-          "answer": "Dropped: all 8 samples succeed, so the group has no reward contrast",
+          "answer": "Dropped: it can be answered without reasoning, so it is too easy to hack",
           "distractor_from": [
-            "'Kept: reliable positive reward' <- misconception: 'More RL prompts are always better; data volume drives RLVR gains as in pretraining.'",
-            "'Kept: every verifiable problem adds signal' <- same misconception",
-            "'Kept but downweighted by 1/8' <- plausible: invents a soft reweighting in place of Kimi's hard filter"
+            "'Kept: 5 of the 8 guesses failed' <- plausible: applies GRPO's contrast rule to no-CoT guesses, which measure hackability, not difficulty",
+            "'Kept but downweighted by 3/8' <- plausible: invents a soft reweighting in place of Kimi's hard filter",
+            "'Kept: every verifiable problem adds signal' <- misconception: 'More RL prompts are always better; data volume drives RLVR gains as in pretraining.'"
           ],
-          "why": "Dropped: a group of 8 identical rewards has zero GRPO advantages, so it teaches nothing. Kimi's filter (slide 41 says 'best-of-8'; the k1.5 paper specifies it) drops prompts the model can answer within 8 tries without CoT; a problem solved 8/8 is the extreme of easy.",
+          "why": "Dropped: per the Kimi k1.5 paper (slide 41 shortens it to 'best-of-8'), a prompt whose answer the model guesses correctly within 8 tries without CoT is 'too easy-to-hack' and removed; one correct guess is enough. Problems that need reasoning stay, and their difficulty is estimated from the pass rate of ten sampled answers (slide 41's excerpt).",
           "targets_misconception": "More RL prompts are always better; data volume drives RLVR gains as in pretraining."
         },
         "transfer": {
@@ -2715,7 +2731,10 @@
           "format": "number",
           "answer": "7",
           "tolerance": 0.01,
-          "why": "Sampling is proportional to (1 − success_rate): 0.7/0.1 = 7. As P's success rate approaches 1 its weight approaches 0, so solved problems stop being repeated."
+          "why": "Sampling is proportional to (1 − success_rate): 0.7/0.1 = 7. As P's success rate approaches 1 its weight approaches 0, so solved problems stop being repeated.",
+          "varies": "two problems with different success rates under the curriculum sampler, instead of the filter",
+          "invariant": "Kimi samples prompts proportional to 1 − success rate",
+          "transfer_distance": "near"
         },
         "retrieval": [
           {
@@ -2729,7 +2748,6 @@
           {
             "q": "How many examples did Qwen 3 run GRPO on?",
             "answer": "3995",
-            "format": "number",
             "layer": "detail"
           }
         ],
@@ -2757,8 +2775,8 @@
             },
             {
               "tex": "P(\\text{draw problem}) \\propto 1 - s",
-              "do": "The predict's problem, solved 8 of 8 times: s = 1, so its weight is 1 − 1 = 0.",
-              "why": "A mastered problem's group is all 1s, so its GRPO advantages are all zero. Drawing it again wastes rollouts, and Kimi takes it out of the set (49:18-49:30)."
+              "do": "A problem solved 8 of 8 times: s = 1, so its weight is 1 − 1 = 0.",
+              "why": "A mastered problem's group is all 1s, so its GRPO advantages are all zero. Drawing it again would waste rollouts, and its sampling weight 1 − s = 0 means it is not drawn again."
             }
           ]
         },
@@ -2848,22 +2866,11 @@
           "note": "A group of G samples per prompt multiplies the rollout cost by G."
         }
       ],
-      "external_prerequisites": [
-        {
-          "kp": "feynrl:sync-epoch-loop",
-          "basis": "author-inference",
-          "note": "The rollout → batch → train → weight-sync loop that the animation reuses."
-        },
-        {
-          "kp": "feynrl:staleness-budget-max-lag",
-          "basis": "author-inference",
-          "note": "What overlapping rollout and training buys and what it costs in off-policy drift."
-        }
-      ],
       "see_also": [
         "feynrl:sync-epoch-loop",
         "feynrl:rollout-engine-generate",
-        "feynrl:weight-sync-direct"
+        "feynrl:weight-sync-direct",
+        "feynrl:staleness-budget-max-lag"
       ],
       "misconceptions": [
         {
@@ -2888,7 +2895,10 @@
           "q": "You double the group size G per prompt and switch from short-answer prompts to long-CoT prompts whose lengths vary 10x within a batch. Name the two of slide 45's three inefficiencies that get worse, and the one that is unchanged.",
           "format": "short",
           "answer": "Worse: slow on-policy inference (twice as many rollouts, each longer) and uneven batches (10x length spread). Unchanged: the framework switch between training and rollout, which is a per-step fixed cost.",
-          "why": "Rollout volume and length variance scale with G and CoT length; the training/inference framework boundary is independent of them."
+          "why": "Rollout volume and length variance scale with G and CoT length; the training/inference framework boundary is independent of them.",
+          "varies": "group size and length spread change, instead of the phase timings",
+          "invariant": "slide 45's three inefficiencies: slow on-policy inference, uneven batches, and the switch between training and rollout frameworks",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "A rollout batch of 8 sequences is generated together and finishes only when its longest sequence does: 7 sequences stop at 1,000 tokens and one runs to 8,000. What fraction of the batch's generation slots (8 sequences x 8,000 steps) hold real tokens? Give a decimal.",
@@ -3027,7 +3037,10 @@
           "q": "A group of 4 rewards is 1, 0, 0, 0. Under RFT, how many of the four samples enter the update and with what sign? Under GRPO (mean-subtracted), how many enter and with what signs?",
           "format": "short",
           "answer": "RFT: 1 sample, positive. GRPO: all 4; the correct one positive (+0.75 before std scaling) and the three wrong ones negative (−0.25 each).",
-          "why": "RFT is SFT on the filtered positives; GRPO's advantages are reward minus group mean, so every sample carries a signed contribution that sums to zero."
+          "why": "RFT is SFT on the filtered positives; GRPO's advantages are reward minus group mean, so every sample carries a signed contribution that sums to zero.",
+          "varies": "the count of samples entering each update for a 1-in-4 group, instead of which signal RFT lacks",
+          "invariant": "RFT updates only on correct samples, with positive weight; a mean baseline gives below-mean samples negative weight",
+          "transfer_distance": "near"
         },
         "check": {
           "q": "A group of 5 samples gets rewards 1, 1, 1, 0, 0. Under GRPO with mean subtraction only (no std division), what advantage does each wrong sample get? Give the signed value.",

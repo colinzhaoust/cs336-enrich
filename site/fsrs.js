@@ -17,7 +17,9 @@ function d0(G) { return clamp(W[4] - Math.exp(W[5] * (G - 1)) + 1, 1, 10); }
 export function review(card, G, now = Date.now()) {
   if (!card || !card.last) {
     const S = W[G - 1], D = d0(G);
-    return { S, D, last: now, reps: 1, due: now + nextInterval(S) * DAY, lapses: G === 1 ? 1 : 0 };
+    // failing a new card is not a lapse (FSRS/Anki: a lapse is forgetting a card already in review);
+    // `again` counts every Again grade
+    return { S, D, last: now, reps: 1, due: now + nextInterval(S) * DAY, lapses: 0, again: G === 1 ? 1 : 0 };
   }
   const t = (now - card.last) / DAY;
   const R = retrievability(card, now);
@@ -27,7 +29,10 @@ export function review(card, G, now = Date.now()) {
   const Dn = clamp(W[7] * d0(4) + (1 - W[7]) * Dp, 1, 10);
   let Sn;
   if (t < 1) {
-    Sn = S * Math.exp(W[17] * (G - 3 + W[18])) * Math.pow(S, -W[19]);
+    // FSRS-6 short-term update: Good/Easy never lower stability (sinc >= 1)
+    let sinc = Math.exp(W[17] * (G - 3 + W[18])) * Math.pow(S, -W[19]);
+    if (G >= 3) sinc = Math.max(sinc, 1);
+    Sn = S * sinc;
   } else if (G === 1) {
     const lapse = W[11] * Math.pow(D, -W[12]) * (Math.pow(S + 1, W[13]) - 1) * Math.exp(W[14] * (1 - R));
     Sn = Math.min(lapse, S / Math.exp(W[17] * W[18]));
@@ -36,7 +41,9 @@ export function review(card, G, now = Date.now()) {
     Sn = S * (1 + Math.exp(W[8]) * (11 - D) * Math.pow(S, -W[9]) * (Math.exp(W[10] * (1 - R)) - 1) * hard * easy);
   }
   Sn = Math.max(0.01, Sn);
-  return { S: Sn, D: Dn, last: now, reps: (card.reps || 0) + 1, due: now + nextInterval(Sn) * DAY, lapses: (card.lapses || 0) + (G === 1 ? 1 : 0) };
+  // a lapse is an Again on a card reviewed at least a day ago; a same-day Again is still learning
+  const again = (card.again ?? card.lapses ?? 0) + (G === 1 ? 1 : 0);
+  return { S: Sn, D: Dn, last: now, reps: (card.reps || 0) + 1, due: now + nextInterval(Sn) * DAY, lapses: (card.lapses || 0) + (G === 1 && t >= 1 ? 1 : 0), again };
 }
 
 // storage ---------------------------------------------------------------

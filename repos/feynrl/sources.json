@@ -3,7 +3,9 @@
     "title": "FeynRL: RL post-training library (local clone)",
     "kind": "repo",
     "path": "external/FeynRL",
+    "upstream": "https://github.com/FeynRL-project/FeynRL/blob/dfe85351e28a3744ab0eb02d2299fc1e6d3d5752/",
     "sha": "dfe85351e28a3744ab0eb02d2299fc1e6d3d5752",
+    "license": "Apache-2.0",
     "sha_source": ".git/refs/heads/main (read from disk by discover_repo.py; no git invocation)",
     "anchor_convention": "algs/GRPO/grpo.py:L40-L75  (repo-relative path, 1-based inclusive line range)",
     "note": "Line anchors refer to the local clone at the sha above. discover_repo.py records a sha256 per module in discovered.json so anchors can be re-verified after a pull."

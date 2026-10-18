@@ -27,10 +27,10 @@ const H100_PEAK = 1979e12 / 2, H100_BW = 3.35e12;
 const N_VEC = 1024 * 1024, N_MAT = 1024; // lecture_02.py:L364, L435, L450
 const ROOF_OPS = {
   relu: { name: "ReLU", n: N_VEC, flops: n => n, bytes: (n, b) => 2 * b * n },                          // lecture_02.py:L368-L369; slide p25
-  gelu: { name: "GeLU", n: N_VEC, flops: n => 20 * n, bytes: (n, b) => 2 * b * n },                     // L404-L405
-  dot: { name: "dot product", n: N_VEC, flops: n => 2 * n - 1, bytes: (n, b) => 2 * b * n + b },         // L422-L423
-  matvec: { name: "matvec 1024", n: N_MAT, flops: n => n * (2 * n - 1), bytes: (n, b) => b * (n + n * n + n) }, // L437-L438
-  matmul: { name: "matmul 1024", n: N_MAT, flops: n => n * n * (2 * n - 1), bytes: (n, b) => 3 * b * n * n },  // L453-L454
+  gelu: { name: "GeLU", n: N_VEC, flops: n => 20 * n, bytes: (n, b) => 2 * b * n },                     // L405-L406
+  dot: { name: "dot product", n: N_VEC, flops: n => 2 * n - 1, bytes: (n, b) => 2 * b * n + b },         // L424-L425
+  matvec: { name: "matvec 1024", n: N_MAT, flops: n => n * (2 * n - 1), bytes: (n, b) => b * (n + n * n + n) }, // L440-L441
+  matmul: { name: "matmul 1024", n: N_MAT, flops: n => n * n * (2 * n - 1), bytes: (n, b) => 3 * b * n * n },  // L455-L456
 };
 function roofModel({ op = "matvec", bytes = 2, flops_x = 1, bw_x = 1, t_fp32_us } = {}) {
   const P = H100_PEAK * flops_x, B = H100_BW * bw_x, kink = P / B;
@@ -182,7 +182,7 @@ WIDGETS["fixture:lecture_05--warp-access"] = (root) => {
   };
   const kSl = slider("stride k (array pattern)", 1, 32, s.k, 1, v => { s.k = v; draw(); });
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
-    select("access pattern", [["stride", "array: thread t reads element k·t"], ["row", "matrix: A[r][t] (along a row)"], ["col", "matrix: A[t][k] (down a column)"]], s.pattern, v => { s.pattern = v; draw(); }),
+    select("access pattern", [["stride", "array: thread t reads element k·t"], ["row", "matrix: A[r][t] (along a row)"], ["col", "matrix: A[t][0] (down a column)"]], s.pattern, v => { s.pattern = v; draw(); }),
     kSl,
     el("label", {}, "columns C ", cInput),
     presets("C =", [["1000", () => setC(1000)], ["1024", () => setC(1024)], ["3000", () => setC(3000)], ["50257", () => setC(50257)], ["50304", () => setC(50304)]]),

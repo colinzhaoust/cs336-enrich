@@ -2,7 +2,7 @@
   "fixture": "flash-forward-tiles",
   "family": "tile-sweep",
   "scene": "TilingScene",
-  "quality": "720p",
+  "quality": "720p30",
   "knowledge_points": [
     "lecture_05:flash-attention-forward"
   ],
@@ -17,28 +17,28 @@
       }
     ],
     "format": {
-      "duration": "13.366667"
+      "duration": "14.600000"
     }
   },
   "steps": [
     {
       "id": "s0",
-      "time": 0.0,
-      "caption": "one Q block against streamed K blocks",
+      "time": 1.3,
+      "caption": "one Q block, loaded once; it stays in SRAM while K and V blocks stream past",
       "frame": "frames/s0.png",
       "notices": []
     },
     {
       "id": "s1",
-      "time": 3.733,
-      "caption": "K block 1 in shared memory; S tile lives only in SRAM",
+      "time": 4.7,
+      "caption": "K, V block 1 in shared memory; S tile lives only in SRAM",
       "frame": "frames/s1.png",
       "notices": []
     },
     {
       "id": "s2",
-      "time": 7.467,
-      "caption": "K block 2; HBM traffic grows by one K tile, not by an S tile",
+      "time": 8.1,
+      "caption": "K, V block 2; HBM traffic grows by one K and one V tile, not by an S tile",
       "frame": "frames/s2.png",
       "notices": [
         "n1"
@@ -46,8 +46,8 @@
     },
     {
       "id": "s3",
-      "time": 10.167,
-      "caption": "S tiles come and go; HBM saw Q, K (and V) tiles only",
+      "time": 11.8,
+      "caption": "S tiles come and go; HBM saw Q once, K and V once, then one O write",
       "frame": "frames/s3.png",
       "notices": [
         "n2"
@@ -58,19 +58,26 @@
     {
       "id": "n1",
       "at_step": "s2",
-      "claim": "The HBM traffic counter advances for Q and K tile loads and never for the S tile.",
+      "claim": "The Q block stays put; the HBM traffic counter advances by one K tile and one V tile per step and never for the S tile.",
       "evidence": [
         "counter",
-        "shared"
+        "B.tile",
+        "C.tile"
+      ],
+      "moving": [
+        "counter",
+        "B.tile",
+        "C.tile"
       ]
     },
     {
       "id": "n2",
       "at_step": "s3",
-      "claim": "Only one S tile exists at any time; the full N\u00d7N matrix is never written to HBM.",
+      "claim": "Only one S tile exists at any time; the full N\u00d7N matrix is never written to HBM, and the traffic ends with a single O block write.",
       "evidence": [
         "C.tile",
-        "counter"
+        "counter",
+        "O"
       ]
     }
   ],
