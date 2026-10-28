@@ -124,7 +124,7 @@
           },
           {
             "q": "Why does the professor say efficiency matters more at larger scale, not less?",
-            "answer": "At large scale you cannot afford to be wasteful: the same fractional inefficiency costs far more compute and money in absolute terms, so even a 5% gain matters (L119)."
+            "answer": "At large scale you cannot afford to be wasteful: the same fractional inefficiency costs far more compute and money in absolute terms, so even a 5% gain matters (L119; video 9:53-10:22)."
           }
         ],
         "self_explain": "Why would the professor open a from-scratch course with an efficiency slogan rather than with the Transformer?"
@@ -960,7 +960,7 @@
           "type": "interactive",
           "action": "compute",
           "ref": "fixture:lecture_01--vocab-trade",
-          "notice": "Token count is bytes ÷ bytes-per-token, so 3.6 → 4.0 shortens the sequence by only 10%, while the vocabulary bar grows with V."
+          "notice": "Token count is bytes ÷ bytes-per-token, so 3.0 → 3.3 shortens the sequence by only about 9%, while the vocabulary bar grows with V."
         },
         {
           "type": "code",
@@ -1134,6 +1134,10 @@
         {
           "belief": "One character is one byte, so byte count equals character count.",
           "why_wrong": "UTF-8 is variable length: the lecture's string has 13 characters and 20 bytes because 🌍 is 4 bytes and each of 你, 好 is 3 (L658, L663)."
+        },
+        {
+          "belief": "A Chinese character takes 2 bytes, as in GBK or UTF-16, so '早上好' is 6 bytes.",
+          "why_wrong": "That is GBK or UTF-16, not UTF-8. UTF-8 puts U+0800-U+FFFF, which covers most Chinese characters, in its 3-byte form: 你 is e4 bd a0 and 好 is e5 a5 bd, the indices 228, 189, 160 and 229, 165, 189 in the trace (L663), and 🌍, above U+FFFF, takes 4 (L658)."
         }
       ],
       "prompts": {
@@ -1143,7 +1147,7 @@
           "answer": "15",
           "tolerance": 0.01,
           "why": "早, 上 and 好 are in the 3-byte range U+0800-U+FFFF (9 bytes), the space and '!' are ASCII (1 byte each), and 🌍 is above U+FFFF, so it takes 4 (f0 9f 8c 8d, L658): 9 + 2 + 4 = 15 bytes for 6 characters. The lecture's own string counts the same way: 13 characters, 20 bytes (L663).",
-          "targets_misconception": "One character is one byte, so byte count equals character count."
+          "targets_misconception": "A Chinese character takes 2 bytes, as in GBK or UTF-16, so '早上好' is 6 bytes."
         },
         "transfer": {
           "q": "A byte-level tokenizer is fed the string 'héllo', where é is U+00E9. How many tokens come out, given that 2-byte UTF-8 characters cover U+0080 to U+07FF?",

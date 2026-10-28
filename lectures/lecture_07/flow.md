@@ -230,7 +230,7 @@ source: lecture_07.py:L239-L284, L540-L591 · video 36:13-46:38
 
 You do not program NCCL directly. PyTorch's `torch.distributed` library gives a clean interface to the collectives, for example `all_gather_into_tensor`, and supports several **backends**: `nccl` for GPUs and `gloo` for CPUs. Parallel processing predates GPUs, so the same collectives run on CPUs too. The library also offers higher-level wrappers such as `FullyShardedDataParallel`, which this course does not use because it builds things from scratch.
 
-### One process per rank, the same code on every rank
+### Launching the processes
 
 ::predict torch-distributed-setup
 

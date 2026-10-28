@@ -1,5 +1,5 @@
 import { WIDGETS } from "./widgets.js?v=4";
-import { judge } from "./grade.js?v=3";
+import { judge } from "./grade.js?v=4";
 import { loadCards, saveCards, review, dueCards, retrievability, nextInterval } from "./fsrs.js?v=3";
 
 // ------------------------------------------------------------------ util --
@@ -45,15 +45,27 @@ function anchorHref(sources, a) {
   const vm = VIDEO_REF.exec(a.ref || "");
   if (vm) { const url = src?.url || Object.values(sources || {}).find(x => /youtube\.com\/watch/.test(x.url || ""))?.url; return url ? `${url}&t=${videoSecs(vm[1])}s` : null; }
   if (!src) return null;
-  // a slide-deck page (lecture_08.pdf:p26): the course PDF at that page, upstream in published builds, local otherwise
-  const pm = /^([\w.\-]+\.pdf):p(\d+)/.exec(a.ref || "");
-  if (pm && src.kind === "slides") return `${state.threads.slides_pdf_base || (state.threads.figure_base ? "https://github.com/stanford-cs336/lectures/blob/main/" : "../../official/lectures/")}${pm[1]}#page=${pm[2]}`;
+  // a slide-deck page (lecture_08.pdf:p26): locally the course PDF at that page; a published build with slide images
+  // (figure_base set, no slides_pdf_base) opens that slide's image, since GitHub's blob view of the PDF ignores #page;
+  // a --no-slides build (slides_pdf_base) falls back to that blob view
+  const pm = /^([\w.\-]+)\.pdf:p(\d+)/.exec(a.ref || "");
+  if (pm && src.kind === "slides") {
+    if (state.threads.slides_pdf_base) return `${state.threads.slides_pdf_base}${pm[1]}.pdf#page=${pm[2]}`;
+    if (state.threads.figure_base) return `${state.threads.builds}slides/${pm[1]}/p-${String(pm[2]).padStart(2, "0")}.jpg`;
+    return `../../official/lectures/${pm[1]}.pdf#page=${pm[2]}`;
+  }
   const m = /^([\w.\-/]+):L(\d+)(?:-L(\d+))?/.exec(a.ref || "");
   const lines = m ? `#L${m[2]}${m[3] ? "-L" + m[3] : ""}` : "";
   if (src.upstream && m && /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/?$/.test(src.upstream)) {
-    // a bare repo root: drop the local clone's folder prefix (external/RoFormer/README.md -> README.md), add /blob/<ref>/
+    // a bare repo root: drop the local clone's folder prefix (external/RoFormer/README.md -> README.md), add /blob/<ref>/.
+    // A subfolder or file source (tools/edtrace/backend/src/edtrace) keeps its part below the clone root (backend/src/edtrace/),
+    // the clone root being the folder named after the repo (edtrace, TheoremExplainAgent-main), or src.subdir when given
     let rel = m[1]; const segs = String(src.path || "").split("/").filter(Boolean);
     for (let k = segs.length; k > 0; k--) { const tail = segs.slice(-k).join("/") + "/"; if (rel.startsWith(tail)) { rel = rel.slice(tail.length); break; } }
+    const name = src.upstream.replace(/\/$/, "").split("/").pop().toLowerCase();
+    const root = segs.findIndex(x => x.toLowerCase() === name || x.toLowerCase().startsWith(name + "-"));
+    const sub = src.subdir ?? (root >= 0 ? segs.slice(root + 1).join("/") : "");
+    if (sub) rel = sub === rel || sub.endsWith("/" + rel) ? sub : rel.startsWith(sub + "/") ? rel : `${sub}/${rel}`;
     return `${src.upstream.replace(/\/$/, "")}/blob/${src.ref || "main"}/${rel}${lines}`;
   }
   if (src.upstream && m && /^https?:\/\/\S+$/.test(src.upstream)) return `${src.upstream.replace(/\/[^/]*$/, "/")}${m[1]}${lines}`;
@@ -136,7 +148,7 @@ function masteryOf(tid, kid) {
   const needsCheck = !!kpDef?.prompts?.check;
   if (p.transfer === "ok" && (!needsCheck || p.check === "ok")) {
     // secured: a retrieval prompt remembered ≥2 days after the changed case
-    const secured = Object.entries(state.cards).some(([id, c]) => id.startsWith(`${tid}:${kid}:`) && c.reps >= 2 && c.lapses === 0 && (c.last - (p.transfer_t || 0)) > 2 * 86400e3);
+    const secured = Object.entries(state.cards).some(([id, c]) => id.startsWith(`${tid}:${kid}:`) && (c.reps || 0) - (c.again ?? c.lapses ?? 0) >= 2 && !(c.again ?? c.lapses) && (c.last - (p.transfer_t || 0)) > 2 * 86400e3);
     return secured ? "secured" : "mastered";
   }
   if (p.predict || p.transfer || p.check || p.closed_book) return "seen";  // any attempt counts: predicting is optional
@@ -449,16 +461,22 @@ function refLink(sources, kp, ref) {
   const href = anchorHref(sources, a);
   return href ? el("a", { href, target: "_blank" }, ref) : el("code", {}, ref);
 }
-// a code ref's link: its KP anchor if it has one, else the source whose folder holds the snippet's file
-// (never the thread's first source, which is often the paper or the slide deck)
+// a code ref's link: its KP anchor if that links, else a source whose folder holds the snippet's file
+// (never the thread's first source, which is often the paper or the slide deck). Sources are tried innermost folder first,
+// and the first that yields a link wins. A ref with no snippet that is not a file:L<n> ref (fa:alg1) links like any other ref.
 function codeLink(d, kp, ref) {
-  if ((kp?.provenance?.anchors || []).some(x => x.ref === ref)) return refLink(d.sources, kp, ref);
+  const anchor = (kp?.provenance?.anchors || []).find(x => x.ref === ref), ah = anchor ? anchorHref(d.sources, anchor) : null;
+  if (ah) return el("a", { href: ah, target: "_blank" }, ref);
   const sn = d.snippets?.[ref], norm = x => String(x || "").replace(/^4blue2brown\//, ""), m = /:L(\d+)(?:-L(\d+))?$/.exec(ref || "");
-  let best = null;
-  if (sn) for (const [k, s] of Object.entries(d.sources || {})) { const p = norm(s?.path); if (p && (norm(sn.path) === p || norm(sn.path).startsWith(p + "/")) && (!best || p.length > best.p.length)) best = { k, p }; }
-  const rel = best ? (norm(sn.path) === best.p ? best.p.split("/").pop() : norm(sn.path).slice(best.p.length + 1)) : null;
-  const href = best && m ? anchorHref(d.sources, { source: best.k, ref: `${rel}:L${m[1]}${m[2] ? "-L" + m[2] : ""}` }) : null;
-  return href ? el("a", { href, target: "_blank" }, ref) : el("code", {}, ref);
+  if (!sn && !anchor && !/^[\w.\-/]+:L\d+/.test(ref || "")) return refLink(d.sources, kp || { provenance: { anchors: [] } }, ref);
+  const cands = !sn ? [] : Object.entries(d.sources || {}).map(([k, s]) => ({ k, p: norm(s?.path) }))
+    .filter(c => c.p && (norm(sn.path) === c.p || norm(sn.path).startsWith(c.p + "/"))).sort((a, b) => b.p.length - a.p.length);
+  for (const c of m ? cands : []) {
+    const rel = norm(sn.path) === c.p ? c.p.split("/").pop() : norm(sn.path).slice(c.p.length + 1);
+    const href = anchorHref(d.sources, { source: c.k, ref: `${rel}:L${m[1]}${m[2] ? "-L" + m[2] : ""}` });
+    if (href) return el("a", { href, target: "_blank" }, ref);
+  }
+  return el("code", {}, ref);
 }
 function findEvidence(d, ref) {
   const m = /^([\w.\-/]+):L(\d+)(?:-L(\d+))?/.exec(ref || ""); if (!m || !d.discovered?.items) return [];
@@ -766,9 +784,11 @@ function parseFlow(md) {
 // Bold may contain $math$ and `code` (whose * do not close it); an italic * cannot open right after a letter,
 // digit, _ or * (so p*(y|x), w^* and ||W||_* stay literal). Bold, italic and link text nest.
 function inlineMd(text) {
-  const frag = document.createDocumentFragment(); const re = /(\*\*(?:\$[^$]+\$|`[^`]+`|[^*$`])+?\*\*|(?<![\p{L}\p{N}_*])\*(?![\s*])[^*]+?(?<!\s)\*|`[^`]+`|\$[^$]+\$|\[[^\]]+\]\([^)]+\))/gu;
+  const frag = document.createDocumentFragment(); const re = /(\*\*(?:\$[^$]+\$|`[^`]+`|[^*$`])+?\*\*|\*(?![\s*])[^*]*?[^\s*]\*|`[^`]+`|\$[^$]+\$|\[[^\]]+\]\([^)]+\))/gu;
   let last = 0, m;
   while ((m = re.exec(text))) {
+    // no lookbehind (older Safari cannot parse it): an italic * right after a letter, digit, _ or * stays literal
+    if (m[0][1] !== "*" && m[0][0] === "*" && /[\p{L}\p{N}_*]$/u.test(text.slice(Math.max(0, m.index - 2), m.index))) { re.lastIndex = m.index + 1; continue; }
     if (m.index > last) frag.append(text.slice(last, m.index));
     const tok = m[0];
     if (tok.startsWith("**")) frag.append(el("b", {}, inlineMd(tok.slice(2, -2))));
@@ -826,7 +846,13 @@ function flowBlock(tid, d, b) {
   }
   if (b.type === "figure") {
     const fb = state.threads.figure_base, ref = a0;
-    if (IMG_REF.test(ref || "")) { const src = ref.startsWith("http") ? ref : fb && ref.startsWith("official/lectures/") ? fb + ref.slice(18) : `../../${ref}`; return el("figure", {}, el("img", { src, loading: "lazy" }), b.text ? el("figcaption", { class: "small muted" }, inlineMd(b.text)) : null); }
+    if (IMG_REF.test(ref || "")) { const src = ref.startsWith("http") ? ref : fb && ref.startsWith("official/lectures/") ? fb + ref.slice(18) : `../../${ref}`;
+      // an extensionless cache file (var/files/image-…_png) is served as text/plain + nosniff by raw.githubusercontent.com, which
+      // browsers block as an <img>; fetch it (CORS-allowed) and show it as a blob typed from its name instead
+      const cm = /_(png|jpe?g|gif|webp)$/i.exec(ref), img = el("img", cm ? { loading: "lazy" } : { src, loading: "lazy" });
+      if (cm) fetch(src).then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+        .then(bl => { img.src = URL.createObjectURL(new Blob([bl], { type: `image/${cm[1].toLowerCase().replace("jpg", "jpeg")}` })); }).catch(() => { img.src = src; });
+      return el("figure", {}, img, b.text ? el("figcaption", { class: "small muted" }, inlineMd(b.text)) : null); }
     return el("div", { class: "small" }, "figure in the source: ", refLink(d.sources, { provenance: { anchors: [] } }, ref), b.text ? [" · ", inlineMd(b.text)] : null);
   }
   if (b.type === "slide") {
@@ -861,7 +887,7 @@ function flowBlock(tid, d, b) {
     const kind = b.type === "video" ? "listen" : (a0 || "note"), at = b.type === "video" ? a0 : b.args?.[1];
     const url = videoUrl(d), secs = at ? videoSecs(at.split("-")[0]) : null;
     const tkind = state.threads.threads.find(x => x.id === tid)?.kind;
-    const slip = tkind === "paper" ? "careful: the paper slips" : tkind === "repo" ? "careful: docs and code disagree" : "careful: the lecture misspeaks";
+    const slip = tkind === "paper" ? "careful: the paper slips" : tkind === "repo" ? "careful: the repo is inconsistent here" : "careful: the lecture misspeaks";
     const label = { spoken: "said in lecture", skip: "skipped in lecture", slip, aside: "aside", deferred: "deferred", why: "why", listen: "listen", warning: "watch out" }[kind] || kind;
     return el("aside", { class: `flownote ${kind}` }, el("div", { class: "eyebrow" }, label, at && url ? [" · ", el("a", { href: `${url}&t=${secs}s`, target: "_blank" }, at)] : at ? ` · ${at}` : null), el("div", {}, inlineMd(b.text || "")));
   }
@@ -1030,7 +1056,7 @@ const SESSIONS = {
   "paper-chinchilla": { title: "Chinchilla: three fits of one law", minutes: 25, thread: "chinchilla", kps: null, brief: "Read after L9. The IsoFLOP sweep animation uses the paper's own Approach-3 constants." },
   "paper-grpo": { title: "GRPO: the equations FeynRL implements", minutes: 25, thread: "grpo", kps: null, brief: "Read after L16; every equation links to the FeynRL code lines." },
   "paper-flashattention": { title: "FlashAttention: IO-aware exact attention", minutes: 25, thread: "flashattention", kps: null, brief: "Read after L5; animations of the online softmax and of Algorithm 1's loop order (K/V outside, Q inside), plus an HBM-access ledger against SRAM size." },
-  "paper-feynrl": { title: "FeynRL / P3O: trust the batch", minutes: 25, thread: "feynrl_paper", kps: null, brief: "Read after L16 and the FeynRL repo thread." },
+  "paper-feynrl": { title: "FeynRL / P3O: trust the batch", minutes: 25, thread: "feynrl_paper", kps: null, brief: "Read after L16; the FeynRL repo thread follows it." },
   "l11-scaling-practice": { title: "L11: how labs actually run a scaling study", minutes: 30, thread: "lecture_11",
     kps: ["scaling-in-practice-challenges", "minicpm-mup-fixed-aspect-recipe", "wsd-schedule-branching", "deepseek-direct-batch-lr-fit", "isoflop-ratios-in-the-wild", "optimizer-comparison-confounders", "mup-two-conditions-and-init", "mup-lr-derivation-and-recap"],
     brief: "Read after L9. WSD schedules, direct batch/LR fits, and why muP exists." },

@@ -1919,6 +1919,10 @@
         {
           "belief": "Checkpointing is free memory.",
           "why_wrong": "It adds roughly one extra forward pass of compute (≈ +33% FLOPs on the 6ND budget)."
+        },
+        {
+          "belief": "Checkpointing more often always lowers peak memory.",
+          "why_wrong": "Peak memory is about L/k + k: shrinking k below √L adds stored checkpoints faster than it shortens the segment (64 layers: k = 4 gives 20 against 16 at k = 8)."
         }
       ],
       "prompts": {
@@ -1933,7 +1937,8 @@
           "q": "Full recomputation (store nothing): memory order and compute order in L?",
           "format": "short",
           "answer": "O(1) memory, O(L²) compute",
-          "why": "Each layer's backward recomputes from the start (L771)."
+          "why": "Each layer's backward recomputes from the start (L771).",
+          "targets_misconception": "Checkpointing is free memory."
         },
         "check": {
           "q": "L = 64 layers, but you checkpoint every 4 layers instead of every √L = 8. At the peak of the backward pass, how many layers' activations are resident, counting the stored checkpoints and the layers recomputed inside the current segment? Type only the number.",

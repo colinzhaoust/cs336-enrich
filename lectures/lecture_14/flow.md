@@ -102,7 +102,7 @@ The difference matters. KenLM never sees R: it measures whether a page is fluent
 
 ### To use a model or not
 
-Not everyone filters with a model. C4, Gopher, RefinedWeb, FineWeb and Dolma deliberately use only rules for *quality* filtering (see [L13](#/read/lecture_13); Dolma still runs fastText language ID and a Jigsaw toxicity classifier, both below); GPT-3, LLaMA and DCLM use a trained quality classifier. The older datasets avoided classifiers on purpose, not to save cost: they "wanted to not bias things too much", since a classifier pulls everything toward whatever T is.
+Not everyone filters with a model. C4, Gopher, RefinedWeb, FineWeb and Dolma deliberately use only rules for *quality* filtering (see [L13](#/read/lecture_13); C4, FineWeb and Dolma still run a language-ID classifier, Gopher only says it keeps English, and Dolma also runs a Jigsaw toxicity classifier, both below); GPT-3, LLaMA and DCLM use a trained quality classifier. The older datasets avoided classifiers on purpose, not to save cost: they "wanted to not bias things too much", since a classifier pulls everything toward whatever T is.
 
 The code says model-based filtering is "becoming the norm". Aloud the professor went further: "basically everyone does some amount of model-based filtering". The reason is compute. With plenty of compute you could train on everything, but "most people are compute-poor", and without careful filtering "you're just wasting flops on low-quality content".
 

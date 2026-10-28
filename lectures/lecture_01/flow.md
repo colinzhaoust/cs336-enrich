@@ -309,7 +309,7 @@ Put the two rules together and you can size a model from a budget alone: $C = 6N
 
 For $10^{25}$ FLOPs that gives $N \approx 290$B parameters on about 5.8T tokens. Notice that the lecture's own example, 70B on 1T tokens, is only 14 tokens per parameter: by this rule it is slightly too big a model for its budget.
 
-**The caveat**: the rule ignores inference cost. A model is trained once but served many times, and a smaller model is cheaper to serve. "A lot of models these days are small, but they're trained on way more tokens than is compute optimal." Fix a 10B model at a budget of $1.2 \times 10^{24}$ FLOPs and the budget buys $2 \times 10^{13}$ tokens, 2000 tokens per parameter, a hundred times the rule. This is also why PaLM is called undertrained: it was big for its compute, with too few tokens per parameter.
+**The caveat**: the rule ignores inference cost. A model is trained once but served many times, and a smaller model is cheaper to serve. "A lot of models these days are small, but they're trained on way more tokens than is compute optimal." Fix a 7B model at a budget of $10^{24}$ FLOPs and the budget buys about $2.4 \times 10^{13}$ tokens, roughly 3400 tokens per parameter, about 170 times the rule. This is also why PaLM is called undertrained: it was big for its compute, with too few tokens per parameter.
 
 ::widget fixture:lecture_01--compute-napkin | hold C fixed and slide N: only one point meets the green D = 20·N line; every smaller N buys more than 20 tokens per parameter
 ::video 50:27-51:09 | "quite crude", varies with data and architecture, and why today's small models are over-trained
@@ -428,7 +428,7 @@ $$ \text{compression ratio} = \frac{\text{UTF-8 bytes of the string}}{\text{numb
 
 ::predict compression-ratio
 
-The numerator is **bytes**, not characters. `"Hello, 🌍! 你好!"` has 13 characters but 20 bytes, because the emoji takes 4 bytes and each Chinese character 3 (the byte section below explains why). So GPT-5's ratio on it is $20 / 8 = 2.5$; dividing characters instead would give $13 / 8 \approx 1.6$, a different and wrong number.
+The numerator is **bytes**, not characters. `"Hello, 🌍! 你好!"` has 13 characters but 20 bytes (the byte section below explains why). So GPT-5's ratio on it is $20 / 8 = 2.5$; dividing characters instead would give $13 / 8 \approx 1.6$, a different and wrong number.
 
 ::widget fixture:lecture_01--tokenizer-lens | on the lecture string the byte row has 20 boxes and the character row 13: the GPT-5 ratio 2.5 is 20 bytes ÷ 8 tokens
 
@@ -482,8 +482,6 @@ On the lecture string it gives 13 tokens, one per character. What is its vocabul
 ::predict character-tokenizer
 ::code lecture_01.py:L636-L648 | 13 tokens, vocabulary ≥ 127,758, ratio 1.54: "the worst of both worlds"
 
-On `"你好"` alone the ratio is $6/2 = 3$: two tokens, but six bytes.
-
 The code lists two problems: (1) a very large vocabulary, (2) many characters are rare (e.g. 🌍), an inefficient use of the vocabulary. Aloud the professor ranked them: 150K is "not crazy" (GPT-5's vocabulary is larger), and rarity is "the bigger problem". Most vocabulary slots are rarely used, while the common text still costs one token per character. A large vocabulary and a low compression ratio: "the worst of both worlds".
 
 ::note aside | The code's bound comes from one string. Unicode code points actually run up to 0x10FFFF (1,114,112 values), so a vocabulary covering every possible code point would be far larger than the 150K assigned characters.
@@ -493,6 +491,10 @@ The code lists two problems: (1) a very large vocabulary, (2) many characters ar
 ### Bytes: UTF-8
 
 A Unicode string can also be stored as a sequence of bytes, integers from 0 to 255. The most common encoding is **UTF-8**, which is *variable length*: a character takes 1 to 4 bytes depending on its code point.
+
+::predict utf8-variable-length
+
+The number of bytes is set by the range the code point falls in:
 - ASCII (U+0000 to U+007F) takes 1 byte: `a` is the single byte 0x61.
 - U+0080 to U+07FF takes 2 bytes (é is `c3 a9`).
 - U+0800 to U+FFFF takes 3 bytes, which covers most Chinese characters.
@@ -502,7 +504,7 @@ A Unicode string can also be stored as a sequence of bytes, integers from 0 to 2
 
 So `ord` gives one integer for 🌍 while UTF-8 encoding gives four bytes: one is the character's number, the other its stored form.
 
-::predict utf8-variable-length
+This is why the character tokenizer's ratio on `"你好"` alone is $6/2 = 3$: two tokens, six bytes.
 
 The lecture string's byte count, step by step:
 

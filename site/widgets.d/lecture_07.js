@@ -304,10 +304,10 @@ export function tpPpTraffic(root, notice) {
     pic.append(svg("text", { x: 340, y: 196, "font-size": 10, fill: "var(--ink)" }, `stage 1 receives ${kib(m.pp_recv_kib)} per forward`));
     const warn = m.valid ? "" : `<br><b>not a valid split: num_dim/W, layers/stages and batch/m must be integers (int_divide, L453, L501, L509)</b>`;
     read.innerHTML = `<b>tensor parallel</b> (W = ${s.tp}): weight shard per layer ${s.dim} × ${fmt(m.tp_shard_cols, 2)}; per layer each rank receives (W−1)/W of ${s.batch} × ${s.dim} × ${s.bytes} B = <b>${kib(m.tp_recv_layer_kib)}</b>; over ${s.layers} layers <span class="big">${kib(m.tp_recv_fwd_kib)}</span>
-      backward reduce-scatter leaves each rank ${s.batch} × ${fmt(m.tp_shard_cols, 2)} × ${s.bytes} B = ${m.tp_rs_keep_bytes.toLocaleString("en-US")} B<br>
+      backward: each rank ends with an activation gradient of ${s.batch} × ${fmt(m.tp_shard_cols, 2)} × ${s.bytes} B = ${m.tp_rs_keep_bytes.toLocaleString("en-US")} B<br>
       <b>pipeline</b> (${s.pp} stages, m = ${s.micro}): micro-batch ${fmt(m.pp_micro_rows, 2)} × ${s.dim}, ${m.pp_sends_per_boundary} sends per boundary; each stage receives <span class="big">${kib(m.pp_recv_kib)}</span>
       TP traffic is paid at every layer; PP traffic only at stage boundaries, and changing m does not change it${warn}<br>
-      <span class="muted small">provenance: fixture:lecture_07--tp-pp-traffic · lecture_07.py:L390-L392 (batch 128, num_dim 1024, fp32), L447-L479 (TP), L492-L536 (PP), spoken 1:08:12-1:08:33 (backward reduce-scatter) · 1 KiB = 1024 B</span>`;
+      <span class="muted small">provenance: fixture:lecture_07--tp-pp-traffic · lecture_07.py:L390-L392 (batch 128, num_dim 1024, fp32), L447-L479 (TP), L492-L536 (PP), spoken 1:08:12-1:08:33 (backward pass) · 1 KiB = 1024 B</span>`;
   };
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("batch", 32, 512, s.batch, 32, v => { s.batch = v; draw(); }),

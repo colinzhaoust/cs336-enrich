@@ -120,9 +120,9 @@ The lecture never states the count; it follows from its numbers.
 - Patches per side: $336 / 14 = 24$. Patches per image: $24^2 = 576$.
 - Raw values per patch: $14 \times 14 \times 3 = 588$.
 
-And because of the crop, **576 for every image**. A 4000 × 3000 photo is resized so its shorter side is 336 (to 448 × 336) and cropped to 336 × 336: still 576 patches. The extra pixels are discarded, not tokenised. Note also what "/14" means: the patch size in pixels, not the number of patches per side. Shrink the patches and the count rises with the square: 8-pixel patches on the same crop give $(336/8)^2 = 1764$.
+And because of the crop, **576 for every image**. A 4000 × 3000 photo is resized so its shorter side is 336 (to 448 × 336) and cropped to 336 × 336: still 576 patches. The extra pixels are discarded, not tokenised. Note also what "/14" means: the patch size in pixels, not the number of patches per side. Shrink the patches and the count rises with the square: 12-pixel patches on the same crop give $(336/12)^2 = 784$.
 
-::widget fixture:lecture_17--image-tokens | in "CLIP crop" mode the count stays at 576 whatever width and height you set; only the patch size and the crop side change it (8-px patches give 1764, a 224 crop with 14-px patches gives 256)
+::widget fixture:lecture_17--image-tokens | in "CLIP crop" mode the count stays at 576 whatever width and height you set; only the patch size and the crop side change it (12-px patches give 784, a 224 crop with 14-px patches gives 256)
 ::code lecture_17.py:L74-L78 | ResNet-50 vs ViT; attention pooling; ViT-L/14@336px
 
 ### The text encoder
@@ -364,7 +364,7 @@ Single images, multiple images and video are all "technically all reducible to i
 
 Reading the figure, OneVision's encoder makes 729 tokens per piece, a 27 × 27 grid, rather than the 576 of a 336 crop with 14-pixel patches, and a video frame is cut to 196 tokens, a 14 × 14 grid, about a quarter of a piece. The principle is the one in the code: a shared total, split by how carefully each input deserves to be looked at.
 
-With the 576-token pieces of the worked example: if one 2 × 2-tiled image ($4 \times 576 = 2304$ tokens) sets the budget, a 32-frame video gets $2304 / 32 = 72$ tokens per frame, eight times fewer than one crop.
+With the 576-token pieces of the worked example: if one 2 × 2-tiled image ($4 \times 576 = 2304$ tokens) sets the budget, a 10-second video at 2 frames/s (20 frames) gets $2304 / 20 \approx 115$ tokens per frame, five times fewer than one crop.
 
 ::widget fixture:lecture_17--image-tokens | pick a budget equal to one tiled image and add video seconds: the same total is split across the frames, and each frame gets far fewer tokens than one 576-token crop
 ::code lecture_17.py:L165-L170 | single image: higher resolution; multiple images: base resolution; video: lower resolution per frame

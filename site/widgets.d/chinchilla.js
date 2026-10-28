@@ -101,6 +101,8 @@ WIDGETS["fixture:chinchilla--allocation-table"] = (root) => {
     const m = s.C ? allocation({ approach: s.ap, C: s.C }) : allocation({ approach: s.ap, row: s.row, k: KS[s.ki] }), kap = allocation({ approach: "K", C: m.C });
     const kTxt = s.C ? fmt(m.k, 3) : KS[s.ki];
     if (s.C) { s.row = m.row; const inp = rowSlider.querySelector("input"); inp.value = m.row; rowSlider.querySelector(".readout").textContent = big(ROWS[1][m.row][0]); }
+    kSlider.querySelector(".readout").textContent = s.C ? `${kTxt} (exact D.4 budget)` : `${KS[s.ki]}`;
+    d4Btn.textContent = s.C ? "leave D.4: back to the budget slider" : "D.4: exactly 1e21 FLOPs";
     const W = 640, px = 64, pw = 548, H1 = 128, top1 = 26, top2 = top1 + H1 + 30, H2 = 128;
     const X = lc => px + pw * (lc - 18.5) / 10.5;                                   // log10 C in [18.5, 29]
     const Y1 = ln => top1 + H1 * (14 - ln) / 6;                                     // log10 N in [8, 14]
@@ -140,7 +142,7 @@ WIDGETS["fixture:chinchilla--allocation-table"] = (root) => {
     const [Nr, Cr, Dr] = ROWS[s.ap][m.row], dpd = m.ratioPerDecade;
     const trend = Math.abs(dpd - 1) < 0.01 ? "flat: N and D grow by the same factor" : dpd > 1 ? `rising ×${fmt(dpd, 3)} per decade: D grows faster than N` : `falling ×${fmt(dpd, 3)} per decade: N grows faster than D`;
     read.innerHTML = `${NAMES[s.ap]}, printed row ${big(Nr)}: C_row = ${e10(Cr)}, D_row = ${big(Dr)}<br>
-      budget C = ${kTxt} × C_row = <b>${e10(m.C, 3)}</b> FLOPs = ${fmt(m.gopherUnits, 3)} Gopher units${s.C ? " (Appendix D.4's budget; move the row or budget slider to leave it)" : ""}<br>
+      budget C = ${kTxt} × C_row = <b>${e10(m.C, 3)}</b> FLOPs = ${fmt(m.gopherUnits, 3)} Gopher units${s.C ? " (Appendix D.4's budget; press the button or move a slider to leave it)" : ""}<br>
       rule with Table 2's a = ${m.a.toFixed(2)}, b = ${m.b.toFixed(2)}: N = ${big(Nr)} × ${kTxt}^${m.a.toFixed(2)} = <span class="big">${big(m.N)}</span>
       D = ${big(Dr)} × ${kTxt}^${m.b.toFixed(2)} = <span class="big">${big(m.D)}</span> tokens · D/N = <b>${fmt(m.ratio, 1)}</b> · 6ND / C = ${fmt(m.check6ND, 3)} (the printed row itself gives ${fmt(6 * Nr * Dr / Cr, 3)}: its tokens are rounded)<br>
       printed rows interpolated at this C: N ≈ ${big(m.Ntable)}, D ≈ ${big(m.Dtable)}, D/N ≈ ${fmt(m.ratioTable, 1)}<br>
@@ -148,11 +150,13 @@ WIDGETS["fixture:chinchilla--allocation-table"] = (root) => {
       Kaplan at the same C: N = ${big(kap.N)}, D = ${big(kap.D)}, D/N = ${fmt(kap.ratio, 2)} (×10 budget → N ×${fmt(kap.nFactor10, 2)})<br>
       <span class="muted small">provenance: fixture:chinchilla--allocation-table · paper.txt Table 3 (L421-L474, Approach 1), Table A3 (L1206-L1274, Approaches 2 and 3; its 175B Approach-3 FLOPs print 1.26e+24, inconsistent with its 12.0T tokens, used here as 6ND = 1.26e25), Table 2 exponents (L387-L411), D.4 Kaplan optimum 4.68B at 1e21 (L1289), Table 1 Gopher and Chinchilla (L129-L160), Gopher unit 5.76e23 (L270). Author: the rule scales the printed row at or below C; Kaplan's line is Table 2's 0.73 through D.4's point; between rows the plot joins printed points.</span>`;
   };
+  const kSlider = slider("budget = printed row's FLOPs ×", 0, KS.length - 1, s.ki, 1, v => { s.ki = v; s.C = null; draw(); }, v => `${KS[v]}`);
+  const d4Btn = el("button", { onclick: () => { s.C = s.C ? null : 1e21; draw(); } }, "D.4: exactly 1e21 FLOPs");
   const apSlider = slider("approach", 1, 3, s.ap, 1, v => { s.ap = v; draw(); }, v => ["", "1 · min over training curves", "2 · IsoFLOP profiles", "3 · parametric fit"][v]);
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     apSlider, rowSlider,
-    slider("budget = printed row's FLOPs ×", 0, KS.length - 1, s.ki, 1, v => { s.ki = v; s.C = null; draw(); }, v => `${KS[v]}`),
-    el("div", { style: "margin-top:8px" }, el("button", { onclick: () => { s.C = 1e21; draw(); } }, "D.4: exactly 1e21 FLOPs")),
+    kSlider,
+    el("div", { style: "margin-top:8px" }, d4Btn),
     read), pic)); draw();
 };
 

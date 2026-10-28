@@ -264,6 +264,8 @@ source: lecture_09.pdf p33-p36 · video 35:38-41:03
 
 How should you trade depth for width? Sweep the number of layers and plot each depth's scaling line. A single layer is "a terrible, terrible scaling trend": its line is visibly flatter. From two layers on, the lines are "surprisingly more competitive" and nearly merge, although in this figure more layers are still a little better at every size.
 
+::predict scale-invariant-hyperparameters
+
 ::slide 34 | Kaplan Figure 5, loss increase against shape at fixed parameter count: feed-forward ratio d_ff/d_model, aspect ratio d_model/n_layer for 50M, 274M and 1.5B models ("A wide range of architectures achieve similar performance"), attention head dimension; caption: aspect ratio can vary by a factor of 40 with little impact, and (n_layer, d_model) = (6, 4288) reaches a loss within 3% of (48, 1600)
 
 A finer study needs the right axis. The professor's point, which the slide does not spell out, is to look for **scale-invariant quantities**. The number of layers is not one: "As you make your model bigger, you do want more layers", so its optimum moves with size by construction, and a sweep over it cannot tell you whether your recipe is stable. The **aspect ratio** $d_{model}/n_{layer}$ might be one, since the optimal *shape* could stay the same as the model grows.
@@ -271,8 +273,6 @@ A finer study needs the right axis. The professor's point, which the slide does 
 The middle panel checks it. For 50M, 274M and 1.5B parameters, loss is within a few percent of the minimum over aspect ratios from about 10 to a few hundred, and the minimum sits "around 100d model for every layer, or maybe a little bit less" at every size, with a slight drift. The caption on the slide image puts it strongly: the aspect ratio can vary by a factor of 40 at little cost, and a 6-layer model of width 4288 lands within 3% of a 48-layer model of width 1600. The same analysis works for the feed-forward ratio and the head dimension (left and right panels).
 
 So if your recipe is "fix the aspect ratio and scale up", a plot like this is your evidence that it is safe: the optimum does not move as the model grows.
-
-::predict scale-invariant-hyperparameters
 
 **Worked example.** A small sweep finds 6 layers of width 512 best, aspect ratio $512/6 \approx 85$. For a model of width 4096, carry the ratio, not the layer count: $4096/85 \approx 48$ layers. With $N \approx 12\,n_{layer}\,d_{model}^2$ and the aspect ratio fixed, $N \propto n_{layer}^3$, so 27× the parameters means $27^{1/3} = 3\times$ the layers and 3× the width.
 
@@ -311,6 +311,8 @@ Increasing the batch has strong diminishing returns past a point. The professor 
 
 The **critical batch size** is the crossover between the two, a convenient trade-off point: the largest batch you can use before the efficiency losses get large.
 
+::predict critical-batch-size
+
 ::slide 38 | the definition: pick a target loss, sweep batch sizes, record steps S and examples E needed; the curve follows S/S_min − 1 = (E/E_min − 1)^−1; fit S_min, E_min and pick B_crit = E_min/S_min; "This balances both sides of the equation, giving roughly 2x the steps / passes optimal"; claimed to be close to the trace of the gradient covariance over the squared norm of the gradient
 
 The derivation is "complicated calculations about the local quadratic approximations to the objective", so the lecture gives only the mechanical recipe:
@@ -322,8 +324,6 @@ $$ \left(\frac{S}{S_{min}} - 1\right)\left(\frac{E}{E_{min}} - 1\right) = 1 $$
 
 where $S_{min}$ is the fewest steps possible (with a huge batch) and $E_{min}$ the fewest examples possible (with a tiny batch). You cannot have both.
 4. Pick the balanced point, $B_{crit} = E_{min}/S_{min}$.
-
-::predict critical-batch-size
 
 At the balanced point both brackets equal 1, so you pay $2 S_{min}$ steps and $2 E_{min}$ examples: twice the minimum of each, which the professor calls "a little bit more" than optimal on both sides. The slide adds that $B_{crit}$ is close to the **gradient noise scale**, the trace of the gradient covariance divided by the squared gradient norm: how big the noise is relative to the signal.
 
@@ -544,13 +544,13 @@ $$ C = 6N \cdot 20N = 120\,N^2 \quad\Longrightarrow\quad N = \sqrt{C/120}, \qqua
 ::worked chinchilla-twenty-tokens-rule
 ::widget fixture:lecture_09--allocation | the Chinchilla point sits where the D = 20N line crosses the isoFLOP line 6ND = C; multiply the budget by 4 and N and D each grow 2×, while the Kaplan point leaves the line toward more parameters
 
+::predict overtraining-for-inference
+
 ::slide 54 | "Chinchilla aims to tell you what gives the best model for fixed training compute.. But most of the compute in a real deployment is inference.. So we should 'over' train": GPT-3 2 tokens/param, Chinchilla 20, LLaMA-65B 22, Llama 2 70B 29, Mistral 7B 110, Llama 3 70B 215; "The more usage we expect, the more it becomes worth it to pay the upfront cost"
 
 And yet "you probably don't want the Chinchilla factor". Chinchilla answers one question: the best model for a fixed *training* budget. A production lab does not mostly spend compute on training. External surveys of frontier labs suggest most of it goes to R&D and **serving**. For serving you want "small models that are capable", not big bloated ones that are expensive on every request, even if the big one would have minimized training cost. So you train a smaller model on more tokens than Chinchilla would: "overtraining", in quotes, because for a model that will be served "that's the right amount of training".
 
 The list reads as a history. GPT-3 was badly under-trained (175B parameters on 300B tokens, about 1.7 per parameter, which the slide rounds to 2). Chinchilla set the ratio at 20, and for a while models stayed near it (LLaMA-65B at 22, Llama 2 70B at 29); that was an era when models were "cool, but ... not being served at scale". Once serving became real, ratios jumped (Mistral 7B at 110, Llama 3 70B at 215), and labs moved to mixtures of experts and other inference-driven trade-offs. Llama 3 70B at 215 tokens per parameter means about $70\text{B} \times 215 \approx 15$T tokens, more than ten times the 1.4T that Chinchilla's rule gives for a 70B model.
-
-::predict overtraining-for-inference
 
 Why is the trade cheap? Near its minimum the IsoFLOP valley is flat. Halving the model at a fixed budget doubles its tokens (from 20 to 80 per parameter) and raises the loss only slightly, while the cost of every generated token, about $2N$ FLOPs, halves.
 

@@ -2956,7 +2956,7 @@
             "Both peak and then fall together, because the reward model was trained on the same humans"
           ],
           "answer": "The proxy reward rises throughout; the human win rate peaks then falls",
-          "why": "p63's left panel (proxy trained on human preferences): as PPO's proxy reward climbs from about 0.6 to about 1.35, its win rate rises to about 0.55 and then falls back to about 0.51; best-of-n does the same. The proxy keeps improving while the true preference degrades, because the optimizer finds and amplifies the reward model's errors.",
+          "why": "p63's left panel (proxy trained on human preferences): as PPO's proxy reward climbs from about 0.6 to about 1.35, its win rate rises to about 0.55 and then falls back to about 0.51. The proxy keeps improving while the true preference degrades, because the optimizer finds and amplifies the reward model's errors.",
           "targets_misconception": "The reward falls when you over-optimize.",
           "distractor_from": "option 1: 'more optimization is always better'; option 3: misconception 'The reward falls when you over-optimize.'"
         },

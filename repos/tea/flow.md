@@ -146,7 +146,7 @@ Those checks are instructions, not code. No program measures a margin or a gap b
 Each template also tells the model that its scene is entirely self-contained, with no dependency on other scenes, while the narration should flow as one video. That makes scenes independent to render (one failure does not poison the others), but nothing keeps colours, positions or notation consistent across scenes; only the narration is asked to connect them.
 
 ::note aside | With `--use_context_learning`, example plans from `data/context_learning` are appended to the matching stage's prompt. With `--use_rag`, each stage's prompt also gets retrieved documentation, which the next section explains.
-::widget fixture:tea--outline-parse | the call counter: each planned scene adds three planner calls to the one outline call; with --use_rag the helper adds one plugin call and one query call per stage
+::widget fixture:tea--outline-parse | the call counter: each planned scene adds three planner calls to the one outline call; with --use_rag and --use_langfuse the helper adds one plugin call and one query call per stage (without Langfuse the first retrieval raises UnboundLocalError)
 ::kp per-scene-three-stage-plan
 
 ## What does retrieval add, and when? {#rag}
@@ -181,7 +181,7 @@ So $k = 2$ is per query, not per prompt: ten queries can bring up to 20 chunks b
 
 The cache key is the scene folder, not the input text. That is harmless for the planning and code stages, whose input for a scene does not change. It is wrong for error fixes: the queries written for a scene's *first* error are reused for every later fix of that scene, even for a completely different error.
 
-::widget fixture:tea--fix-loop | with --use_rag on, the error-fix query calls count scenes that needed a fix, not fixes: a scene's second fix reuses rag_queries_error_fix.json
+::widget fixture:tea--fix-loop | with --use_rag and --use_langfuse on, the error-fix query calls count scenes that needed a fix, not fixes: a scene's second fix reuses rag_queries_error_fix.json
 
 ::note aside | The detected plugins do not reach code generation. `generate_manim_code` and `fix_code_errors` call their query generators without a plugin list, so those two query prompts are told "No plugins are relevant." and that they must not use plugins not listed (`code_generator.py` L289-L296, L356-L364). Yet, as the next section shows, the code template imports all five plugins in every scene.
 ::note warning | A static-reading hazard: `find_relevant_docs` reads `span.id` for every query (L286, L304), but `span` is only created when Langfuse is enabled (L263-L273). Run with `--use_rag` but without `--use_langfuse`, as in the README's RAG example, and the first search with a core query should raise `UnboundLocalError` and stop the run. This was not executed here.

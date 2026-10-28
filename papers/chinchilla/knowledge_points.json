@@ -799,13 +799,19 @@
         },
         "transfer": {
           "q": "A team fits Eq. 2 to their own runs and gets α = 0.28, β = 0.34 (the paper's values swapped), with E, A, B unchanged. Without computing Eq. 4 numerically, in which direction does the compute-optimal allocation move compared with the paper: more parameters per token or fewer?",
-          "format": "trend",
-          "answer": "more parameters per token: a = β/(α+β) becomes 0.34/0.62 > 0.5, so N_opt now grows faster than D_opt with compute; the term that decays more slowly (now the N term, exponent 0.28) is the one worth spending more on",
+          "format": "choice",
+          "choices": [
+            "More parameters per token: N_opt grows faster than D_opt with compute",
+            "Fewer parameters per token: D_opt grows faster than N_opt with compute",
+            "No change: swapping the exponents leaves the split between N and D the same"
+          ],
+          "answer": "More parameters per token: N_opt grows faster than D_opt with compute",
+          "distractor_from": "Option 2 carries over the paper's own direction (b ≈ 0.54 > a ≈ 0.46) without redoing Eq. 4, the '0.34 goes with N' recall the question is built to break; option 3 is the belief that the allocation depends on E, A, B rather than on the exponents.",
           "varies": "the fitted exponents α and β (functional: same formula, different fit)",
           "invariant": "Eq. 4: a = β/(α+β), b = α/(α+β); the resource with the slower-decaying term receives the larger share",
           "surface_cue_broken": "the numbers are the paper's own, so recalling '0.34 goes with N' gives the wrong direction",
           "transfer_distance": "near",
-          "why": "Eq. 4 is derived by balancing marginal gains under C = 6ND. A smaller exponent means slower decay and so larger marginal gain from more of that resource at a given size."
+          "why": "a = β/(α+β) becomes 0.34/0.62 ≈ 0.55 > 0.5, so N_opt now grows faster than D_opt with compute; the term that decays more slowly (now the N term, exponent 0.28) is the one worth spending more on. Eq. 4 is derived by balancing marginal gains under C = 6ND. A smaller exponent means slower decay and so larger marginal gain from more of that resource at a given size."
         },
         "retrieval": [
           {

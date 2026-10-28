@@ -208,7 +208,7 @@ Comments are invisible to Python, so edtrace reads them as text. It takes the so
 
 ::predict directive-grammar
 
-::code execute.py:L88-L109 | split once on '#', then on whitespace; an @token opens a directive and later tokens are its arguments
+::code execute.py:L88-L109 | keep only the text between the first and second '#', split it on whitespace; an @token opens a directive and later tokens are its arguments
 
 The grammar is four rules:
 1. Only the text between the first `#` and the next `#` is read.

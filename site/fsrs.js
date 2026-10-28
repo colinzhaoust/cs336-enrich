@@ -19,7 +19,7 @@ export function review(card, G, now = Date.now()) {
     const S = W[G - 1], D = d0(G);
     // failing a new card is not a lapse (FSRS/Anki: a lapse is forgetting a card already in review);
     // `again` counts every Again grade
-    return { S, D, last: now, reps: 1, due: now + nextInterval(S) * DAY, lapses: 0, again: G === 1 ? 1 : 0 };
+    return { S, D, last: now, reps: 1, due: now + nextInterval(S) * DAY, lapses: 0, again: G === 1 ? 1 : 0, lastG: G };
   }
   const t = (now - card.last) / DAY;
   const R = retrievability(card, now);
@@ -43,8 +43,15 @@ export function review(card, G, now = Date.now()) {
   Sn = Math.max(0.01, Sn);
   // a lapse is an Again on a card reviewed at least a day ago; a same-day Again is still learning
   const again = (card.again ?? card.lapses ?? 0) + (G === 1 ? 1 : 0);
-  return { S: Sn, D: Dn, last: now, reps: (card.reps || 0) + 1, due: now + nextInterval(Sn) * DAY, lapses: (card.lapses || 0) + (G === 1 && t >= 1 ? 1 : 0), again };
+  // cards saved before `again` existed counted every Again as a lapse; one review with one lapse was a first-review Again
+  const lapses0 = card.again === undefined && card.reps === 1 && card.lapses === 1 ? 0 : (card.lapses || 0);
+  return { S: Sn, D: Dn, last: now, reps: (card.reps || 0) + 1, due: now + nextInterval(Sn) * DAY, lapses: lapses0 + (G === 1 && t >= 1 ? 1 : 0), again, lastG: G };
 }
+// grades the learner remembered (the UI grades 1 or 3, so reps - again; cards saved before `again` existed fall back to lapses)
+export const remembered = c => (c?.reps || 0) - (c?.again ?? c?.lapses ?? 0);
+// a retrieval card secures its KP when it was remembered at least twice, its latest grade was not Again,
+// and it was last reviewed more than two days after the changed case (transferT)
+export const secures = (c, transferT = 0) => !!c?.last && remembered(c) >= 2 && c.lastG !== 1 && c.last - transferT > 2 * DAY;
 
 // storage ---------------------------------------------------------------
 const KEY = "atlas.cards.v1";

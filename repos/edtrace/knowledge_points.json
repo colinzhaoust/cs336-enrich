@@ -482,7 +482,7 @@
           "answer": "3",
           "tolerance": 0.01,
           "value": 3,
-          "why": "parse_directives splits the text after '#' on whitespace; 'note:' and 'watch' come before any '@' token and are dropped (execute.py L97-L108). The first @inspect collects loss and w.real; @clear collects old and tmp; the second @inspect collects lr; get_inspect_expressions gathers args of every @inspect directive (L119-L123). local_trace_func serializes loss, w.real (via getattr on w, L312-L325) and lr, then writes None for old and tmp (L330-L332). Values: 3. Verified by running edtrace: env = {loss: 2, w.real: 2.0, lr: 3, old: None, tmp: None}.",
+          "why": "parse_directives splits the text between the first and second '#' on whitespace; 'note:' and 'watch' come before any '@' token and are dropped (execute.py L97-L108). The first @inspect collects loss and w.real; @clear collects old and tmp; the second @inspect collects lr; get_inspect_expressions gathers args of every @inspect directive (L119-L123). local_trace_func serializes loss, w.real (via getattr on w, L312-L325) and lr, then writes None for old and tmp (L330-L332). Values: 3. Verified by running edtrace: env = {loss: 2, w.real: 2.0, lr: 3, old: None, tmp: None}.",
           "targets_misconception": "Only one variable can be inspected per line.",
           "varies": "Two @inspect groups are interleaved with a @clear group and leading prose, and a dotted attribute is included (functional: parse a mixed directive comment rather than a simple one).",
           "invariant": "A token starting with '@' opens a directive and following tokens are its args; all @inspect args on the line are collected; @clear writes None.",
@@ -1144,7 +1144,7 @@
             "source": "edtrace_frontend",
             "ref": "TraceViewer.jsx:L355-L385",
             "role": "computation",
-            "quote": "for (let stepIndex = currentStepIndex; stepIndex >= 0; stepIndex--) { ... if (inSameFunction(step.stack, currentStep.stack)) { ... envs.push(step.env); ... } else if (isStrictAncestorOf(step.stack, currentStep.stack)) { ... Object.assign(env, stepEnv); ... delete env[key];"
+            "quote": "if (inSameFunction(step.stack, currentStep.stack)) { ... envs.push(step.env); ... } else if (isStrictAncestorOf(step.stack, currentStep.stack)) {\n      // We've gone up to an ancestor\n      break; ... Object.assign(env, stepEnv); ... if (env[key] === null) {\n      delete env[key];"
           },
           {
             "source": "edtrace_frontend",

@@ -902,9 +902,9 @@
       ],
       "prompts": {
         "predict": {
-          "q": "In Eq. 37 the score's magnitude is bounded by a product of two factors. Which factor carries the dependence on m−n, and which carries the dependence on the token contents q, k?",
+          "q": "Eq. 35 writes the score as a sum of d/2 terms, each a content term q_{[2i:2i+1]} k^*_{[2i:2i+1]} times a unit phase e^{i(m−n)θ_i}. Which part carries the dependence on m−n, which carries the token contents q, k, and how can the sum shrink with distance when no single phase ever does?",
           "format": "short",
-          "answer": "Σ_i |S_{i+1}| carries m−n (S_j sums e^{i(m−n)θ_i}); max_i |h_{i+1} − h_i| carries the contents (h_i = q_i k_i^*).",
+          "answer": "The phases e^{i(m−n)θ_i} carry m−n; the content terms h_i = q_{[2i:2i+1]} k^*_{[2i:2i+1]} carry the contents. The sum shrinks because phases turning at different rates θ_i drift out of step and cancel. Eq. 37 bounds it by Σ_i |S_{i+1}| (partial sums S_j of the phases) times max_i |h_{i+1} − h_i|.",
           "why": "Abel summation separates the content sequence h_i from the phase partial sums S_j; only the phases know the distance."
         },
         "transfer": {
@@ -1057,7 +1057,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "d = 4, x = (x_1, x_2, x_3, x_4). Write the 'companion' vector that gets multiplied by the sin terms in Eq. 34 (the README's qw2).",
+          "q": "Rotating every pair by its angle can be written without a matrix as R x = x ⊙ (cos mθ_1, cos mθ_1, cos mθ_2, cos mθ_2, …) + c ⊙ (sin mθ_1, sin mθ_1, sin mθ_2, sin mθ_2, …), with ⊙ elementwise. For d = 4 and x = (x_1, x_2, x_3, x_4), what is the vector c?",
           "format": "short",
           "answer": "(−x_2, x_1, −x_4, x_3)",
           "why": "Each pair (a, b) rotated by φ is (a cos φ − b sin φ, a sin φ + b cos φ); collecting the sin coefficients gives (−b, a). README.md:L24 builds it with stack([-qw[..., 1::2], qw[..., ::2]])."
@@ -1284,7 +1284,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Linear attention requires φ(q)^T φ(k) ≥ 0 so that weights are a valid mixture. After inserting R_m and R_n into the numerator as in Eq. 19, which sign constraint is lost and where does the paper put the rotations to keep the denominator safe?",
+          "q": "Linear attention requires φ(q)^T φ(k) ≥ 0 so that weights are a valid mixture. If you rotate φ(q_m) and φ(k_n) by R_m and R_n, which property of the per-key weights can break, and where would you leave the features unrotated to keep the division safe?",
           "format": "short",
           "answer": "Non-negativity of the per-key weights is lost (rotated features can have negative inner products); the rotations are applied only in the numerator, and the denominator keeps the unrotated φ(q)^T φ(k) so it cannot be zero.",
           "why": "Rotation preserves norms but not sign of inner products; keeping the unrotated positive denominator avoids division by zero."

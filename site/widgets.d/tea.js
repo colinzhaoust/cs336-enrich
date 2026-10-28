@@ -155,7 +155,8 @@ WIDGETS["fixture:tea--cli-dispatch"] = (root) => {
 //   generate_video.py:L273,L516 count = len(re.findall(r'<SCENE_(\d+)>[^<]', content)): opening tags followed by a non-'<' char
 //   generate_video.py:L527-L535 for n in 1..count: re.search(f'<SCENE_{n}>(.*?)</SCENE_{n}>'); no match -> scene silently not planned
 //   video_planner.py:L241,L287,L325 three planner calls per planned scene (storyboard, technical, narration) + 1 outline call (L161)
-//   with --use_rag: detect_relevant_plugins (1 helper call, L150-L153) + one helper query call per stage (rag_integration.py
+//   with --use_rag and --use_langfuse (without it the first find_relevant_docs raises UnboundLocalError on span, vector_store.py L264-L286):
+//     detect_relevant_plugins (1 helper call, L150-L153) + one helper query call per stage (rag_integration.py
 //     L121-L263, each skipped only when its scene<i>/rag_cache file exists; a fresh topic has none)
 //   generate_video.py:L542-L543,L568 unplanned scenes stay None in the plan list and are still queued for code generation
 //   video_renderer.py:L237-L238 combine_videos (after rendering, unless --only_plan) re-runs the OUTLINE regex on the saved file
@@ -200,7 +201,7 @@ MODELS["fixture:tea--outline-parse"] = {
     { args: { text: OUTLINE_PRESETS["slide tags instead of scene tags"] }, pick: "count", expect: 0 },     // outline transfer: 0 scenes
     { args: { text: OUTLINE_PRESETS["slide tags instead of scene tags"] }, pick: "savedWhole", expect: 1 },// ... whole reply saved
     { args: { text: OUTLINE_PRESETS["well-formed, 5 scenes"] }, pick: "plannerCalls", expect: 16, from: "tea:per-scene-three-stage-plan:predict" },
-    { args: { text: OUTLINE_PRESETS["well-formed, 5 scenes"], rag: true }, pick: "helperCalls", expect: 16 },   // RAG adds 1 + 3 per scene
+    { args: { text: OUTLINE_PRESETS["well-formed, 5 scenes"], rag: true }, pick: "helperCalls", expect: 16 },   // RAG with Langfuse adds 1 + 3 per scene
     { args: { text: OUTLINE_PRESETS["error text instead of a reply (no API key)"] }, pick: "count", expect: 0 },          // silent-degradation predict
     { args: { text: OUTLINE_PRESETS["error text instead of a reply (no API key)"] }, pick: "combineError", expect: 1 },   // ... AttributeError later
     { args: { text: OUTLINE_PRESETS["error text instead of a reply (no API key)"], only_plan: true }, pick: "combineError", expect: 0 }, // check: no traceback
@@ -237,7 +238,7 @@ WIDGETS["fixture:tea--outline-parse"] = (root) => {
     pic.innerHTML = svg(W, y2 + 54, b);
     read.innerHTML = `scenes counted: <b>${m.count}</b> · planned: <b>${m.planned}</b>${m.unplanned ? ` · not planned: ${m.scenes.filter(x => !x.planned).map(x => x.n).join(", ")} (stay None in the plan list and are still queued for code generation, L542-L543, L568)` : ""}<br>
       <span class="big" style="font-size:18px">planner-model calls in planning: 1 + 3 × ${m.planned} = ${m.plannerCalls}</span>
-      ${s.rag ? `helper-model calls (RAG, fresh rag_cache): 1 plugin pick + 3 × ${m.planned} stage queries = ${m.helperCalls}<br>` : ""}
+      ${s.rag ? `helper-model calls (RAG with Langfuse, fresh rag_cache; without --use_langfuse the first retrieval raises UnboundLocalError): 1 plugin pick + 3 × ${m.planned} stage queries = ${m.helperCalls}<br>` : ""}
       ${m.count && !m.inRange ? `count ${m.count} is outside the prompt's "between 3 and 7": nothing in code checks it (prompts_raw/__init__.py L225)<br>` : ""}
       saved to &lt;prefix&gt;_scene_outline.txt: ${m.savedWhole ? `the <b>whole reply</b> (${m.savedLen} characters), because the OUTLINE regex needs both tags` : "the &lt;SCENE_OUTLINE&gt;…&lt;/SCENE_OUTLINE&gt; block"}<br>
       ${prov("provenance: fixture:tea--outline-parse · video_planner.py:L161-L175, L241/L287/L325 · src/utils/utils.py:L125-L128 · generate_video.py:L273, L516, L527-L543, L568 · video_renderer.py:L237-L238 · rag_integration.py:L79-L87, L121-L263. Regexes are re-implemented in JavaScript (DOTALL as the s flag). The reply texts are examples you can edit.")}`;
@@ -245,7 +246,7 @@ WIDGETS["fixture:tea--outline-parse"] = (root) => {
   ta.value = s.text; ta.addEventListener("input", () => { s.text = String(ta.value ?? ""); draw(); });
   const ctl = el("div", { class: "controls" }, el("label", {}, "planner reply (edit it)", ta),
     el("div", { style: "margin-top:6px" }, ...Object.keys(OUTLINE_PRESETS).map(k => el("button", { onclick: () => { s.text = OUTLINE_PRESETS[k]; ta.value = s.text; draw(); } }, k)), " "),
-    check("--use_rag", false, v => { s.rag = v; draw(); }), check("--only_plan", false, v => { s.only_plan = v; draw(); }), read);
+    check("--use_rag with --use_langfuse (count helper calls)", false, v => { s.rag = v; draw(); }), check("--only_plan", false, v => { s.only_plan = v; draw(); }), read);
   root.append(el("div", { class: "widget" }, ctl, pic)); draw();
 };
 
@@ -355,7 +356,7 @@ WIDGETS["fixture:tea--fix-loop"] = (root) => {
     pic.innerHTML = svg(W, yl + 10, b);
     read.innerHTML = `<span class="big" style="font-size:18px">manim runs: ${m.renders} · fix_code_errors calls: ${m.fixes} · scenes rendered: ${m.rendered} of ${m.rows.length}</span>
       a scene's worst case is ${R} + 1 = ${R + 1} runs: the stop test curr_version ≥ max_retries comes after the render of v${R} (L402)<br>
-      ${s.rag ? `helper-model query calls (RAG, fresh cache): ${m.helperCode} for code generation + <b>${m.helperErrFix}</b> for error fixes (one per scene that needed a fix; later fixes reuse rag_queries_error_fix.json whatever the new error says)<br>` : ""}
+      ${s.rag ? `helper-model query calls (RAG with Langfuse, fresh cache; without --use_langfuse the first retrieval raises UnboundLocalError): ${m.helperCode} for code generation + <b>${m.helperErrFix}</b> for error fixes (one per scene that needed a fix; later fixes reuse rag_queries_error_fix.json whatever the new error says)<br>` : ""}
       ${s.visual ? `--use_visual_fix_code: every exit-0 run comes back as "'VideoRenderer' object has no attribute 'scene_model'" (L79), which the loop treats as a render error; no VLM is ever called<br>` : ""}
       ${s.exit0 ? `renderer always exits 0: the first run is accepted; stderr is read only when returncode ≠ 0 (L67-L68)<br>` : ""}
       the loop reads one signal, whether render_scene returned an error; without the visual flag that is manim's exit code, so a scene with overlapping or off-screen objects that exits 0 is a success<br>
@@ -368,7 +369,7 @@ WIDGETS["fixture:tea--fix-loop"] = (root) => {
     el("label", {}, "per scene: the first version whose manim run exits 0 (x = never), comma separated ", inp), err,
     el("div", { style: "margin-top:6px" }, ...presets.map(([nm, t]) => el("button", { onclick: () => { s.text = t; inp.value = t; draw(); } }, nm)), " "),
     check("--use_visual_fix_code", false, v => { s.visual = v; draw(); }),
-    check("--use_rag (count helper query calls)", false, v => { s.rag = v; draw(); }),
+    check("--use_rag with --use_langfuse (count helper query calls)", false, v => { s.rag = v; draw(); }),
     check("replace manim with a wrapper that always exits 0", false, v => { s.exit0 = v; draw(); }), read);
   root.append(el("div", { class: "widget" }, ctl, pic)); draw();
 };
@@ -382,7 +383,8 @@ WIDGETS["fixture:tea--fix-loop"] = (root) => {
 //   image judge (default azure/gpt-4o, L367-L370): frames at 1 fps (image_utils.py:L29); frames_per_chunk = total // 10 (L37);
 //     10 windows of that many frames, the one with most non-black pixels per window (L43-L51): visual_relevance, element_layout
 //     So frames past 10 * (total // 10) are never candidates, and total < 10 makes frames_per_chunk 0 -> ZeroDivisionError at L38.
-//   Every score is an integer 1-5 or the reply is rejected (eval_suite/utils.py:L52-L58).
+//   The prompts ask for integers 1-5; the code checks only int or digit string, never the range (eval_suite/utils.py:L52-L58).
+//   This widget limits inputs to 1-5.
 //   Per criterion: geometric mean over chunks/frames (evaluate.py:L160-L162, image_utils.py:L97-L99).
 //   overall_score (only for --eval_type all, L332-L341) = geometric mean of every non-"chunks" score field (L171-L208), i.e. of
 //   the criterion scores of the judges that ran; calculate_geometric_mean drops None and returns 0.0 for an empty list (utils.py:L66-L81).
@@ -430,7 +432,7 @@ WIDGETS["fixture:tea--eval-scores"] = (root) => {
   const parseList = t => { const v = t.split(",").map(x => x.trim()).filter(Boolean); if (!(v.length === 1 || v.length === 10)) return null; if (!v.every(x => /^[1-5]$/.test(x))) return null; return v.map(Number); };
   const draw = () => {
     const vc = parseList(s.vcT), vr = parseList(s.vrT), elx = parseList(s.elT);
-    err.textContent = vc && vr && elx ? "" : "each list is one integer 1-5 (all ten the same) or exactly ten of them: the judges must answer integers 1-5 (eval_suite/utils.py L52-L58)";
+    err.textContent = vc && vr && elx ? "" : "each list is one integer 1-5 (all ten the same) or exactly ten of them: the prompts ask for integers 1-5 (the code checks only int or digit string, eval_suite/utils.py L52-L58); this widget limits inputs to 1-5";
     if (!(vc && vr && elx)) { pic.innerHTML = ""; read.innerHTML = ""; return; }
     const m = evalScores({ ad: s.ad, lf: s.lf, vc, vr, el: elx, transcript: s.transcript, eval_type: s.eval_type, T: s.T });
     const W = 720, x0 = 120, tw = 330, xj = x0 + tw + 14, sx = t => x0 + (t / m.frames) * tw;

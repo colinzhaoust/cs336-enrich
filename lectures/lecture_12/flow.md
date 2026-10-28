@@ -300,7 +300,7 @@ What the scale means, by evaluating the formula:
 | 200 | 0.76 |
 | 400 | 0.91 (exactly 10/11) |
 
-Two properties follow from the formula depending only on the *difference*. First, shifting every rating by the same amount changes no prediction, so a rating is meaningful only relative to the pool; 1300 is not an absolute quality. Second, gaps add: if A is 50 above B and B is 150 above C, the fit puts A 200 above C and predicts A wins 76% of A-vs-C votes, even if they never met.
+Two properties follow from the formula depending only on the *difference*. First, shifting every rating by the same amount changes no prediction, so a rating is meaningful only relative to the pool; 1300 is not an absolute quality. Second, gaps add: if A is 50 above B and B is 100 above C, the fit puts A 150 above C and predicts A wins about 70% of A-vs-C votes, even if A and C never met directly, because B links them.
 
 This is the same model as the **Bradley–Terry** reward model of [L15's RLHF section](#/read/lecture_15), written in another base: $10^{x/400} = e^{x \ln 10/400}$, so an Elo gap of 400 is a logit gap of $\ln 10 \approx 2.30$. L15 uses it to learn a reward from preferences; here it ranks models.
 

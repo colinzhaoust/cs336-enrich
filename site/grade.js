@@ -18,9 +18,10 @@ export function parseNumber(s) {
     // superscript exponents after 10 ("10²³", "10⁻³") -> "10^23", "10^-3"
     .replace(/10\s*([⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, e) => "10^" + [...e].map(c => SUP[c]).join(""))
     // "7.2 × 10^23", "7.2x10^23", "7.2*10^23", "7.2·10^23" -> "7.2e23"
-    .replace(/\s*[x*×·]\s*10\s*\^\s*([-+−]?\d+)/gi, "e$1")
+    // (only after a digit, so the x of "approx 10^9" or "max 10^6" is not read as a multiplication)
+    .replace(/(\d)\s*[x*×·]\s*10\s*\^\s*([-+−]?\d+)/gi, "$1e$2")
     // a bare power ("10^-3", "2^25") is evaluated
-    .replace(/(^|[^\d.e])(\d+(?:\.\d+)?)\s*\^\s*([-+−]?\d+)/gi, (_, pre, b, e) => pre + String(Math.pow(+b, +e.replace("−", "-"))));
+    .replace(/(^|[^\d.e])(\d+(?:\.\d+)?)\s*\^\s*([-+−]?\d+(?:\.\d+)?)/gi, (_, pre, b, e) => pre + String(Math.pow(+b, +e.replace("−", "-"))));
   const m = NUM_RE.exec(t);
   if (!m) return null;
   const num = /^[-+−]?\d+,\d{1,2}$/.test(m[1]) ? m[1].replace(",", ".") : m[1].replace(/,/g, "");
@@ -41,15 +42,18 @@ export function parseNumber(s) {
 
 const TREND = [
   ["up", /\b(up|rises?|rising|rose|risen|increases?|increased|increasing|grows?|grew|grown|growing|higher|larger|bigger|more|widens?|widened|longer|doubles?|doubled|triples?|tripled|jumps?|jumped|too (?:high|large|big|much)|over-?estimates?|over-?estimated)\b/g],
-  ["down", /\b(down|falls?|fell|fallen|falling|decreases?|decreased|decreasing|drops?|dropped|dropping|lower|smaller|less|fewer|shrinks?|shrank|shrunk|narrows?|narrowed|shorter|collapses?|collapsed|halves|halved|reduces?|reduced|decays?|decayed|plummets?|plummeted|too (?:low|small|little)|under-?estimates?|under-?estimated)\b/g],
+  ["down", /\b(down|falls?|fell|fallen|falling|decreases?|decreased|decreasing|drops?|dropped|dropping|lower|smaller|less|fewer|shrinks?|shrank|shrunk|narrows?|narrowed|shorter|collapses?|collapsed|halve[sd]?|reduc(?:es?|ed)(?!-|\s+scatter)|decays?|decayed|plummets?|plummeted|too (?:low|small|little)|under-?estimates?|under-?estimated)\b/g],
   ["same", /\b(same|unchanged|unaffected|not affected|no effect|flat|constant|no change|stays?|identical|neither up nor down|(?:does not|doesn't|don't|did not|didn't|will not|won't) (?:change|move)|doesnt change|dont change)\b/g],
 ];
 // a direction word is negated when not/never/neither/nor/n't comes within three words before it,
 // with no punctuation in between ("does not go down" is negated; "not lower, higher" keeps "higher")
 const NEG = /(?:\b(?:not|never|neither|nor|dont|doesnt|didnt|isnt|wont|cannot)|n't)(?:\s+[\w']+){0,2}\s+$/;
-// an explanation after the answer ("up, because fewer tokens ...", "down: log Z falls ...") is ignored
-// when the classes disagree
-const WHY = /\s*(?:[:;(—–]|\s-\s|\bbecause\b|\bsince\b|\bdue to\b|\bas a result\b|\bso\b)/;
+// a negated pair of opposite directions ("doesn't go up or down", "neither rises nor falls") means same
+const UPW = TREND[0][1].source.slice(3, -3), DOWNW = TREND[1][1].source.slice(3, -3);
+const NEG_PAIR = new RegExp(`(?:\\b(?:not|never|neither|nor|dont|doesnt|didnt|isnt|wont|cannot)|n't)(?:\\s+[\\w']+){0,2}?\\s+(?:(?:${UPW})\\s+(?:or|nor)\\s+(?:${DOWNW})|(?:${DOWNW})\\s+(?:or|nor)\\s+(?:${UPW}))\\b`, "g");
+// an explanation after the answer ("up, because fewer tokens ...", "down: log Z falls ...", "up, fewer tokens",
+// "down. more data helps") is ignored when the classes disagree
+const WHY = /\s*(?:[,:;(—–]|\.(?=\s|$)|\s-\s|\bbecause\b|\bsince\b|\bdue to\b|\bas a result\b|\bso\b)/;
 function trendHits(t) {
   const hits = [];
   for (const [cls, re] of TREND) {
@@ -62,7 +66,8 @@ function trendHits(t) {
 // Official answers (firstOnly): the earliest non-negated direction word within the first 40 characters.
 // Learner input: the one class all non-negated direction words agree on, else null (graded wrong).
 export function trendClass(s, firstOnly = true) {
-  const t = String(s ?? "").toLowerCase().replace(/[’‘]/g, "'");
+  // "all-reduce" / "all reduce" / "-reduced" name an operation, not a direction: mask them (same length keeps indices) instead of a lookbehind, which Safari < 16.4 cannot parse
+  const t = String(s ?? "").toLowerCase().replace(/[’‘]/g, "'").replace(NEG_PAIR, " unchanged").replace(/(-|\ball\s)reduc/g, m => m.slice(0, -5) + "rXduc");
   const hits = trendHits(t);
   if (!hits.length) return null;
   if (firstOnly) return hits[0].index > 40 ? null : hits[0].cls;

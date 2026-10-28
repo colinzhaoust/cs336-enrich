@@ -138,8 +138,6 @@ Try it on numbers before the general proof.
 
 With $\theta = \pi/6$ (30°), a query $W_q x_m = (1, 0)$ at $m = 1$ turns by 30° to $(0.866, 0.5)$. A key $W_k x_n = (0.7, 0.7)$ at $n = 3$ turns by 90° to $(-0.7, 0.7)$. The score is $0.866 \times (-0.7) + 0.5 \times 0.7 = -0.606 + 0.35 = -0.256$. Swap the positions (query at 3, key at 1) and the score becomes $+0.956$: the net rotation is now $-60°$ instead of $+60°$. RoPE depends on the *sign* of the offset, so it can tell "the key came before the query" from "the key came after".
 
-::widget fixture:rope-shared-shift | set m = 1 and n = 3 to reproduce −0.256, then raise the shared shift s and watch the readout; tick "shift only q" and compare
-
 ### Why a rotation, and not something else? (§3.4.1)
 §3.2.1 calls Eq. 12 "a solution" and defers the derivation to §3.4.1, which tries to show that, under some extra assumptions, the solution is forced. It is the paper's most interesting piece of reasoning, so here it is, in the order the paper gives it. Two ingredients: write each function in polar form, length times $e^{i \cdot \text{angle}}$, so that multiplying complex numbers multiplies lengths and adds angles; and impose an initial condition (Eq. 22) that at position 0 nothing has been encoded yet, $q = f_q(x_q, 0)$ and $k = f_k(x_k, 0)$.
 
@@ -208,6 +206,8 @@ The two rotations meet in the middle and merge into one rotation by the offset. 
 The score stays at $-0.256$: both arrows gain the same extra $4\theta$, and the 60° gap between them is untouched. Move only the query by 4 (to $m = 5$, $n = 3$) and the net rotation becomes $R_{-2}$, the score $0.956$. Shared shifts cancel; one-sided shifts do not.
 
 ::animation fixture:rope-shared-shift | the readout q_m · k_n stays fixed while both arrows rotate together by a shared shift, and changes the moment only one arrow moves
+
+::widget fixture:rope-shared-shift | set m = 1 and n = 3 to reproduce −0.256, then raise the shared shift s and watch the readout; tick "shift only q" and compare
 
 ::note slip | Eq. 16 as printed reads $x^\top W_q R^d_{\Theta,n-m} W_k x_n$: the query's subscript $m$ and the transpose on $W_q$ are missing. The correct form is the one above.
 
@@ -325,13 +325,13 @@ source: rope:§4 · rope:table1 · rope:fig3 · rope:table2 · rope:table5 · le
 
 §4 runs five experiments, all on two cloud servers with 4 V100 GPUs each. They are small by today's standards, and the claims in the introduction run ahead of them, so it pays to read each one for what it measures.
 
-**Machine translation (§4.1).** WMT 2014 English–German, about 4.5 million sentence pairs, in the fairseq toolkit with a 37k joint BPE vocabulary. The baseline transformer and RoFormer are trained under the same settings: Adam with $\beta_1 = 0.9$, $\beta_2 = 0.98$, the learning rate raised linearly from $10^{-7}$ to $5 \times 10^{-4}$ and then decayed with the inverse square root of the step, label smoothing 0.1. Evaluation uses one model made by averaging the last 5 checkpoints, beam size 4, length penalty 0.6.
+**Machine translation (§4.1).** WMT 2014 English–German, about 4.5 million sentence pairs, in the fairseq toolkit with a 37k joint BPE vocabulary. The baseline transformer and RoFormer are trained under the same settings: Adam with $\beta_1 = 0.9$, $\beta_2 = 0.98$, the learning rate raised linearly from $10^{-7}$ to $5 \times 10^{-4}$ and then decayed with the inverse square root of the step, label smoothing 0.1. Decoding uses beam size 4 and length penalty 0.6.
 
 ::predict rope-experiments
 
 ::figure rope:table1 | the paper's Table 1: BLEU on WMT14 En-De, Transformer-base 27.3, RoFormer 27.5 (bold); one number per model
 
-A 0.2 BLEU gap from one run per model, with no seeds or variance, is smaller than the run-to-run noise usually seen on this benchmark. It shows RoPE does not hurt translation; it does not show it helps.
+Each system is evaluated as a single model made by averaging its last 5 checkpoints. A 0.2 BLEU gap from one run per model, with no seeds or variance, is smaller than the run-to-run noise usually seen on this benchmark. It shows RoPE does not hurt translation; it does not show it helps.
 
 **Pre-training (§4.2).** BERT (bert-base-uncased) against the same model with RoPE in its self-attention, on BookCorpus plus Wikipedia split 8:2 into train and validation, batch 64, sequence length 512, 100k steps, AdamW at learning rate $10^{-5}$. The evidence is the masked-language-model loss curve.
 

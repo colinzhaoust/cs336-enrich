@@ -4,9 +4,9 @@
     "kind": "repo",
     "path": "tools/edtrace/backend/src/edtrace",
     "license": "MIT (c) 2025 Percy Liang",
-    "upstream": "https://github.com/percyliang/edtrace",
-    "sha": null,
-    "sha_source": "no .git directory under tools/edtrace; discover_repo.py records a sha256 per module in discovered.json instead",
+    "upstream": "https://github.com/percyliang/edtrace/blob/972dc260a6cd59c75266aee91f672f8e1879b8c2/backend/src/edtrace/",
+    "sha": "972dc260a6cd59c75266aee91f672f8e1879b8c2",
+    "sha_source": "git -C tools/edtrace rev-parse HEAD (= origin/main at the time of reading); discover_repo.py also records a sha256 per module in discovered.json",
     "anchor_convention": "execute.py:L232-L245  (path relative to tools/edtrace/backend/src/edtrace, 1-based inclusive line range)",
     "note": "Seven modules, 792 lines: execute.py (tracer, CLI), execute_util.py (text/image/video/link/plot/note renderings), reference.py (Reference + label), arxiv_util.py (arXiv page scrape), file_util.py (download cache, relativize), examples.py (demo program), __init__.py (public API)."
   },
@@ -15,7 +15,7 @@
     "kind": "repo",
     "path": "tools/edtrace/frontend/src",
     "license": "MIT (c) 2025 Percy Liang",
-    "upstream": "https://github.com/percyliang/edtrace",
+    "upstream": "https://github.com/percyliang/edtrace/blob/972dc260a6cd59c75266aee91f672f8e1879b8c2/frontend/src/",
     "anchor_convention": "TraceViewer.jsx:L244-L260  (path relative to tools/edtrace/frontend/src)",
     "note": "TraceViewer.jsx (946 lines) is the whole viewer: URL-param state, keyboard stepping, env merging, value and rendering display. App.jsx/main.jsx are router + mount; utils.js has getLast. Indexed by regex only (discovered.json frontend_modules); no JS parser was used."
   },
@@ -24,7 +24,7 @@
     "kind": "doc",
     "path": "tools/edtrace/README.md",
     "license": "MIT (c) 2025 Percy Liang",
-    "upstream": "https://github.com/percyliang/edtrace",
+    "upstream": "https://github.com/percyliang/edtrace/blob/972dc260a6cd59c75266aee91f672f8e1879b8c2/",
     "note": "Hello-world program, the `python -m edtrace.execute -m hello` command, var/traces/<module>.json output location, dev/production viewer setup. Anchors are README.md:L<n>."
   },
   "cs336_lectures": {

@@ -88,9 +88,9 @@ The professor's verdict on that clamp is blunt. A KL divergence is never negativ
 
 ::note skip 9:40 | The rollout code (slide 13: sample, score with the reward model after re-tokenizing, shape the rewards, estimate advantages over the whole batch) is skipped aloud.
 
-::slide 15 | generalized advantage estimation: Â_t = Σ_l (γλ)^l δ_{t+l} with δ_t = r_t + γV(s_{t+1}) − V(s_t), the AlpacaFarm loop that computes it backwards over the response, and the note "Funny detail – this is a bandit problem and gamma=lambda=1 works – this is the reward-to-go vs the value"
-
 ::predict language-rl-is-a-bandit
+
+::slide 15 | generalized advantage estimation: Â_t = Σ_l (γλ)^l δ_{t+l} with δ_t = r_t + γV(s_{t+1}) − V(s_t), the AlpacaFarm loop that computes it backwards over the response, and the note "Funny detail – this is a bandit problem and gamma=lambda=1 works – this is the reward-to-go vs the value"
 
 PPO estimates advantages with **GAE (generalized advantage estimation)**. Each token's TD error $\delta_t$ is what that step earned beyond what the value model expected, and GAE sums later TD errors with weights $(\gamma\lambda)^l$; the discount $\gamma$ and the mixing factor $\lambda$ trade bias against variance over a long chain of decisions. In practice people often set $\gamma = \lambda = 1$. Then the value terms telescope away and each token's advantage is simply the reward-to-go minus the value at that token. With one reward at the end, that is the same $R$ for every position minus a per-position baseline.
 
@@ -107,13 +107,14 @@ After all that engineering, "you will get what you expect". Reward-model reward 
 ## GRPO: PPO without the value model {#grpo}
 source: lecture_16.pdf p17-p21 · video 11:19-20:05
 
+::predict why-grpo-not-ppo-or-dpo
+
 ::slide 17 | why not PPO: complicated implementation; the value model is memory-hungry and needs extra tuning. Why not DPO: the data are not inherently pairwise Bradley-Terry comparisons; DPO is offline, "though could be made online by iterating"
 
 Why another algorithm? The professor's case against PPO has two parts. The implementation is painful and "can require hacks to stabilize". He scopes that: labs have "very turnkey solutions" for PPO at scale, but for researchers implementing it from scratch it is finicky. The second part applies to everyone: the value model is "as big as the original model", memory "you would rather be using for other stuff like models or inference servers", and it needs its own tuning.
 
 Why not DPO, which lecture 15 made look so convenient ([L15's DPO](#/read/lecture_15))? DPO is "a very specific solution to a very specific problem": pairwise preferences in Bradley-Terry form. A math problem gives a scalar verdict per answer, not a comparison between two answers. There are DPO variants that break the pairwise structure, "but really you're just using the wrong hammer for the job"; PPO is "the more general hammer". The second objection, that DPO is offline, he calls "very overstated because it can be made online by just iterating DPO repeatedly."
 
-::predict why-grpo-not-ppo-or-dpo
 ::kp why-grpo-not-ppo-or-dpo
 
 ::slide 18 | GRPO as written in the DeepSeek paper: for each question q sample G outputs o_1..o_G from π_old; maximize (1/G) Σ_i [min(ratio·A_i, clip(ratio, 1−ε, 1+ε)·A_i) − β·D_KL(π_θ‖π_ref)], with the KL estimated as π_ref/π_θ − log(π_ref/π_θ) − 1 and A_i = (r_i − mean(r))/std(r); PPO's objective alongside "for reference"; footer: "In the online case (rollout + immediate update), this is just policy gradient with group normalized rewards"
@@ -176,9 +177,9 @@ There is a second deviation that the professor "didn't mention earlier". GRPO av
 
 ### What the two terms do
 
-::slide 24 | "Stdev – upweights too easy or hard questions"; Dr. GRPO's paragraph on response-level length bias; five plots over 150 policy steps: reward (both reach about 0.6), output length (GRPO climbs from about 350 to over 1,000 tokens, Dr. GRPO levels off near 500), length of correct answers (both rise from about 200 to about 420), length of incorrect answers (GRPO from about 1,000 to about 1,900, Dr. GRPO back near 1,000), average benchmark score (both about 22-25%)
-
 ::predict grpo-length-bias
+
+::slide 24 | "Stdev – upweights too easy or hard questions"; Dr. GRPO's paragraph on response-level length bias; five plots over 150 policy steps: reward (both reach about 0.6), output length (GRPO climbs from about 350 to over 1,000 tokens, Dr. GRPO levels off near 500), length of correct answers (both rise from about 200 to about 420), length of incorrect answers (GRPO from about 1,000 to about 1,900, Dr. GRPO back near 1,000), average benchmark score (both about 22-25%)
 
 **The length normalizer** is the easier one. A response's advantage is spread over its own tokens, so each token's weight is $\hat A_i/|o_i|$. For a wrong answer ($\hat A<0$), a longer answer is punished less per token. The professor's extreme case: if I know I will get a proof wrong and take a reward of −1, "I'm just going to generate an infinitely long string. If I do that, I'll get to divide by infinity." Less extremely, the objective teaches a model "to blab on once it realizes that it cannot actually solve the problem." For a right answer the same division favours short responses.
 
@@ -309,6 +310,8 @@ So Kimi curates. It balances topics across domains. It excludes multiple-choice 
 
 Kimi's SFT stage, like DeepSeek's, gets almost no description ("prompt engineering", perhaps distillation): "We can speculate about what that is, but we have no concrete information."
 
+::predict kimi-loss-mean-baselined-pg
+
 ::slide 42 | Kimi RL: maximize E[r(x, y, y*)] − τ·KL(π_θ ‖ π_θi) with a reference-answer reward; a DPO-style closed form r − τ log Z = τ log(π*/π_θi); the surrogate L(θ) = E[(r − τ log Z − τ log(π_θ/π_θi))²]; its gradient (1/k) Σ_j [∇ log π_θ(y_j, z_j | x)·(r(x, y_j, y*) − r̄) − (τ/2) ∇ (log π_θ/π_θi)²], "baselined policy gradient w/ regularization"
 
 Kimi's loss starts where everyone starts: maximize expected reward (the reward compares the answer $y$ to a reference answer $y^*$) minus a KL penalty to the previous policy $\pi_{\theta_i}$. Then it follows DPO's route ([L15's DPO derivation](#/read/lecture_15)). Assume the policy class can represent anything, solve the KL-regularized problem in closed form, and get an equation linking the reward to a log-ratio of policies that holds at the optimum. Since the equality holds at the minimizer, put a squared loss on it and minimize that. "This is a big heuristic", and "optimization people looking at this would be horrified", but it is "a totally reasonable intuition": the two sides should be close when the model is good.
@@ -318,7 +321,6 @@ The derivation never passes through PPO. Yet "lo and behold", the gradient of th
 Look at what is *not* in it: no division by the group's standard deviation, and no division by each response's length. Two unrelated derivations, GRPO's from PPO and Kimi's from DPO, land on the same per-prompt mean baseline. The professor reads that as a hint about which component actually matters if you design a new RL algorithm.
 
 ::widget fixture:lecture_16--group-weights | Kimi's gradient weight is the "mean baseline" row: r minus the group's mean, i.e. GRPO's row without the 1/std factor; on "one success in 8" the two differ by the whole factor of about 3
-::predict kimi-loss-mean-baselined-pg
 ::kp kimi-loss-mean-baselined-pg
 
 ## Kimi k1.5: shorter CoTs, curriculum, and checkers {#kimi-length}
@@ -376,9 +378,9 @@ Most open reports now include an RL-infrastructure section, and Kimi's is a good
 
 Kimi's scaling plots show performance rising as the model thinks longer. On OmniMath, though, the length flattens while accuracy keeps climbing, which the professor reads as the length control "kicking in and doing good things".
 
-::slide 48 | Kimi's ablation against expert iteration: twelve benchmark panels, the RL method (orange, "Ours") above ReST (blue) on most of them, including the total; "Could we avoid RL-style negative gradients and just learn from positives?"
-
 ::predict negative-gradients-vs-positive-only
+
+::slide 48 | Kimi's ablation against expert iteration: twelve benchmark panels, the RL method (orange, "Ours") above ReST (blue) on most of them, including the total; "Could we avoid RL-style negative gradients and just learn from positives?"
 
 Last question: is RL actually better than just training on your own correct answers? That alternative is **expert iteration** (ReST in the plot, RFT in DeepSeekMath's): sample, keep the correct answers, fine-tune on them, repeat. It has worked well in past papers, and "in cases where you're dealing with very unstable stuff, you may actually want to do expert iteration instead." But Kimi's large ablation shows RL "consistently better" (orange over blue). The difference is the negative gradient: expert iteration only ever pushes probability *up* on correct samples, while a baselined policy gradient also pushes it *down* on below-average ones. "You can't really avoid RL if you want to squeeze out all of your performance."
 

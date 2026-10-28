@@ -223,11 +223,18 @@
   "text": "    items = [\"Hello!\", \"hello\", \"hello there\", \"hello\", \"hi\", \"bye\"]  # @inspect items\n\n    # Compute hash -> list of items with that hash\n    hash_items = itertools.groupby(sorted(items, key=mmh3.hash), key=mmh3.hash)\n\n    # Keep one item from each group\n    deduped_items = [next(group) for h, group in hash_items]  # @inspect deduped_items",
   "sha256": "8e0e17f86800"
  },
- "lecture_14.py:L206-L214": {
+ "lecture_14.py:L206-L208": {
   "path": "official/lectures/lecture_14.py",
   "start": 206,
+  "end": 208,
+  "text": "    text(\"- Pro: simple, clear semantics, high precision\")\n    text(\"- Con: does not deduplicate near duplicates\")\n    text(\"- This code is written in a MapReduce way, can easily parallelize and scale\")",
+  "sha256": "8e0e17f86800"
+ },
+ "lecture_14.py:L211-L214": {
+  "path": "official/lectures/lecture_14.py",
+  "start": 211,
   "end": 214,
-  "text": "    text(\"- Pro: simple, clear semantics, high precision\")\n    text(\"- Con: does not deduplicate near duplicates\")\n    text(\"- This code is written in a MapReduce way, can easily parallelize and scale\")\n\n    text(\"**C4** \"), link(\"https://arxiv.org/pdf/1910.10683v4\")\n    text(\"1. Item: 3-sentence spans\")\n    text(\"2. How to match: use exact match\")\n    text(\"3. Action: remove all but one\")\n    text(\"Warning: when a 3-sentence span is removed from the middle of a document, the resulting document might not be coherent\")",
+  "text": "    text(\"1. Item: 3-sentence spans\")\n    text(\"2. How to match: use exact match\")\n    text(\"3. Action: remove all but one\")\n    text(\"Warning: when a 3-sentence span is removed from the middle of a document, the resulting document might not be coherent\")",
   "sha256": "8e0e17f86800"
  },
  "lecture_14.py:L222-L230": {
@@ -349,11 +356,18 @@
   "text": "    source_token_counts = {\n        \"low\": trillion(10),  # 10T tokens (abundant) @stepover\n        \"high\": billion(10),  # 10B tokens (scarce) @stepover\n    }\n    p = {\"low\": 0.5, \"high\": 0.5}  # Naive data mixture\n    train_tokens = trillion(1)  # Train for 1T tokens @stepover\n    low_num_epochs = (p[\"low\"] * train_tokens) / source_token_counts[\"low\"]  # @inspect low_num_epochs\n    high_num_epochs = (p[\"high\"] * train_tokens) / source_token_counts[\"high\"]  # @inspect high_num_epochs\n    text(\"50x epochs on high quality data...can lead to overfitting!\")",
   "sha256": "8e0e17f86800"
  },
- "lecture_14.py:L368-L371": {
+ "lecture_14.py:L368-L369": {
   "path": "official/lectures/lecture_14.py",
   "start": 368,
+  "end": 369,
+  "text": "    text(\"- Setting: balancing different languages for multilingual models\")\n    text(\"- Previous work: between uniform and proportional mixing (p(s) ∝ num_tokens(s)^α for α in [0, 1])\")",
+  "sha256": "8e0e17f86800"
+ },
+ "lecture_14.py:L370-L371": {
+  "path": "official/lectures/lecture_14.py",
+  "start": 370,
   "end": 371,
-  "text": "    text(\"- Setting: balancing different languages for multilingual models\")\n    text(\"- Previous work: between uniform and proportional mixing (p(s) ∝ num_tokens(s)^α for α in [0, 1])\")\n    text(\"- Idea: sample sources uniformly but with a hard **cap** C on number of epochs for any source\")\n    text(\"- Specifically, p(s) * num_training_tokens ≤ C for all sources s\")",
+  "text": "    text(\"- Idea: sample sources uniformly but with a hard **cap** C on number of epochs for any source\")\n    text(\"- Specifically, p(s) * num_training_tokens ≤ C for all sources s\")",
   "sha256": "8e0e17f86800"
  },
  "lecture_14.py:L345-L348": {
@@ -363,11 +377,18 @@
   "text": "    text(\"Baselines:\")\n    text(\"- Vibes: set p(s) manually based on intuition (quite common)\")\n    text(\"- Uniform sampling: sample uniformly (p(s) ∝ 1)\")\n    text(\"- Proportional mixing: sample proportional to the number of tokens in a source (p(s) ∝ num_tokens(s))\")",
   "sha256": "8e0e17f86800"
  },
- "lecture_14.py:L375-L381": {
+ "lecture_14.py:L375-L378": {
   "path": "official/lectures/lecture_14.py",
   "start": 375,
+  "end": 378,
+  "text": "    text(\"- Define distribution over mixtures `p` (e.g., Dirichlet) \")\n    text(\"- Define regression method (e.g., linear, gradient boosted trees)\")\n    text(\"- Define target based on downstream evals (careful not to overfit!)\")\n    text(\"- Discrepancy between small and large scale (tradeoff cost and accuracy)\")",
+  "sha256": "8e0e17f86800"
+ },
+ "lecture_14.py:L380-L381": {
+  "path": "official/lectures/lecture_14.py",
+  "start": 380,
   "end": 381,
-  "text": "    text(\"- Define distribution over mixtures `p` (e.g., Dirichlet) \")\n    text(\"- Define regression method (e.g., linear, gradient boosted trees)\")\n    text(\"- Define target based on downstream evals (careful not to overfit!)\")\n    text(\"- Discrepancy between small and large scale (tradeoff cost and accuracy)\")\n    image(\"images/data-mixing-methods.png\", width=700)\n    text(\"Hope 1: regression model is accurate at minimizer 🙏\")\n    text(\"Hope 2: optimal data mixtures transfer from small to large scale 🙏\")",
+  "text": "    text(\"Hope 1: regression model is accurate at minimizer 🙏\")\n    text(\"Hope 2: optimal data mixtures transfer from small to large scale 🙏\")",
   "sha256": "8e0e17f86800"
  },
  "lecture_14.py:L383-L390": {
@@ -377,11 +398,18 @@
   "text": "    text(\"Hold on. There's at least one scale-dependent effect:\")\n    source_token_counts = {\n        \"low\": trillion(10),  # 10T tokens (abundant) @stepover\n        \"high\": billion(10),  # 10B tokens (scarce) @stepover\n    }\n    text(\"- If train small models on low token counts:\")\n    p = {\"low\": 0.1, \"high\": 0.9}  # More mass on high quality data\n    text(\"- But if train large model on this mixture, we will epoch a ton on high quality data and overfit!\")",
   "sha256": "8e0e17f86800"
  },
- "lecture_14.py:L393-L401": {
+ "lecture_14.py:L393-L394": {
   "path": "official/lectures/lecture_14.py",
   "start": 393,
-  "end": 401,
-  "text": "    text(\"- General idea: make small scale look like large scale (general theme of this course)\")\n    text(\"- Instantiation: downsample all sources proportionally\")\n    small_run_tokens = billion(10)  # @stepover\n    large_run_tokens = trillion(1)  # @stepover\n    ratio = small_run_tokens / large_run_tokens  # @inspect ratio\n    downsampled_source_token_counts = {s: count * ratio for s, count in source_token_counts.items()}  # @inspect downsampled_source_token_counts\n    text(\"- In this downsampled mixture, models that epoch too much won't look good.\")\n    text(\"- So the optimum will be more balanced.\")\n    p = {\"low\": 0.7, \"high\": 0.3}  # More mass on high quality data",
+  "end": 394,
+  "text": "    text(\"- General idea: make small scale look like large scale (general theme of this course)\")\n    text(\"- Instantiation: downsample all sources proportionally\")",
+  "sha256": "8e0e17f86800"
+ },
+ "lecture_14.py:L397-L400": {
+  "path": "official/lectures/lecture_14.py",
+  "start": 397,
+  "end": 400,
+  "text": "    ratio = small_run_tokens / large_run_tokens  # @inspect ratio\n    downsampled_source_token_counts = {s: count * ratio for s, count in source_token_counts.items()}  # @inspect downsampled_source_token_counts\n    text(\"- In this downsampled mixture, models that epoch too much won't look good.\")\n    text(\"- So the optimum will be more balanced.\")",
   "sha256": "8e0e17f86800"
  },
  "lecture_14.py:L405-L406": {
@@ -447,11 +475,18 @@
   "text": "    text(\"- Given a repository, use LM to generate tasks (introduce bugs with LM)\")\n    text(\"- 128 GitHub repositories yields 50K tasks\")",
   "sha256": "8e0e17f86800"
  },
- "lecture_14.py:L431-L438": {
+ "lecture_14.py:L431-L433": {
   "path": "official/lectures/lecture_14.py",
   "start": 431,
+  "end": 433,
+  "text": "    text(\"- SWE tasks have heavy dependencies (unlike math or coding contests)\")\n    text(\"- Setting up thousands of Docker images is an infrastructural nightmare\")\n    text(\"- Observation: strong models can solve many tasks without execution feedback\")",
+  "sha256": "8e0e17f86800"
+ },
+ "lecture_14.py:L435-L438": {
+  "path": "official/lectures/lecture_14.py",
+  "start": 435,
   "end": 438,
-  "text": "    text(\"- SWE tasks have heavy dependencies (unlike math or coding contests)\")\n    text(\"- Setting up thousands of Docker images is an infrastructural nightmare\")\n    text(\"- Observation: strong models can solve many tasks without execution feedback\")\n    image(\"images/swezero-noexec.png\", width=600)\n    text(\"Key: strong models have internal \\\"world model\\\" of code semantics\")\n    text(\"- SWE-Zero: 300K agent trajectories that don't require repository-specific execution\")\n    text(\"- 150K GitHub PRs\")\n    text(\"- OpenHands scaffold, remove future git commits to prevent \\\"git hacking\\\" by agent\")",
+  "text": "    text(\"Key: strong models have internal \\\"world model\\\" of code semantics\")\n    text(\"- SWE-Zero: 300K agent trajectories that don't require repository-specific execution\")\n    text(\"- 150K GitHub PRs\")\n    text(\"- OpenHands scaffold, remove future git commits to prevent \\\"git hacking\\\" by agent\")",
   "sha256": "8e0e17f86800"
  },
  "lecture_14.py:L440-L441": {
@@ -606,20 +641,6 @@
   "start": 367,
   "end": 371,
   "text": "    text(\"UniMax \"), link(\"https://arxiv.org/abs/2304.09151\")\n    text(\"- Setting: balancing different languages for multilingual models\")\n    text(\"- Previous work: between uniform and proportional mixing (p(s) ∝ num_tokens(s)^α for α in [0, 1])\")\n    text(\"- Idea: sample sources uniformly but with a hard **cap** C on number of epochs for any source\")\n    text(\"- Specifically, p(s) * num_training_tokens ≤ C for all sources s\")",
-  "sha256": "8e0e17f86800"
- },
- "lecture_14.py:L375-L378": {
-  "path": "official/lectures/lecture_14.py",
-  "start": 375,
-  "end": 378,
-  "text": "    text(\"- Define distribution over mixtures `p` (e.g., Dirichlet) \")\n    text(\"- Define regression method (e.g., linear, gradient boosted trees)\")\n    text(\"- Define target based on downstream evals (careful not to overfit!)\")\n    text(\"- Discrepancy between small and large scale (tradeoff cost and accuracy)\")",
-  "sha256": "8e0e17f86800"
- },
- "lecture_14.py:L380-L381": {
-  "path": "official/lectures/lecture_14.py",
-  "start": 380,
-  "end": 381,
-  "text": "    text(\"Hope 1: regression model is accurate at minimizer 🙏\")\n    text(\"Hope 2: optimal data mixtures transfer from small to large scale 🙏\")",
   "sha256": "8e0e17f86800"
  },
  "lecture_14.py:L395-L398": {

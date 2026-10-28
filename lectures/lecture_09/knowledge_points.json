@@ -2604,7 +2604,7 @@
           "type": "interactive",
           "action": "compute",
           "ref": "fixture:lecture_09--allocation",
-          "notice": "At a fixed budget, raising tokens per parameter above 20 shrinks N and grows D along the same isoFLOP line; the serving-cost readout is N relative to the Chinchilla model's (0.5 at 80 tokens per parameter). The Llama 3 70B preset (215) needs about 15T tokens."
+          "notice": "At a fixed budget, raising tokens per parameter above 20 shrinks N and grows D along the same isoFLOP line; the serving-cost readout is N relative to the Chinchilla model's (0.5 at 80 tokens per parameter). To see Llama 3 70B itself, set the multiplier to 1× and the start budget to about 6.3e24 FLOPs (6 × 70B × 15T): the 215 preset then reads a 70B model on about 15T tokens."
         },
         {
           "type": "interactive",

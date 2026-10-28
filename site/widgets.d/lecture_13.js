@@ -259,3 +259,54 @@ WIDGETS["fixture:lecture_13--repeat-ledger"] = (root) => {
     wD, buttons([["Llama 3: 15T", () => { s.D = 15; setSlider(wD, 15, fT); draw(); }], ["Qwen3: 36T", () => { s.D = 36; setSlider(wD, 36, fT); draw(); }]]),
     read), pic)); draw();
 };
+
+// ------------------------------------------------- guess DCLM's retained share, then reveal --
+// Thread copy of site/widgets.js filterRetention with the answer gated: before "reveal" nothing on screen
+// gives DCLM-baseline's 3.8T (bars, readout sizes, epoch counts and provenance all wait), so the 240T in
+// the prose above cannot answer the guess. Every size is lecture_13.py text; retained = kept / pool.
+const RET_ROWS = [
+  { name: "C4", filter: "rules", pool: 1.4e12, kept: 156e9, ref: "L387, L396" },
+  { name: "RefinedWeb", filter: "released share (after rules + dedup)", pool: 5e12, kept: 600e9, ref: "L509-L511 (\"Released 600B (out of 5T)\")" },
+  { name: "FineWebEdu / DCLM per Nemotron-CC", filter: "classifier", frac: 0.10, ref: "L561 \"remove 90% of data\"" },
+  { name: "DCLM-baseline", filter: "classifier", pool: 240e12, kept: 3.8e12, ref: "L542, L552" },
+];
+const RET_ABS = [["FineWeb", 15e12, "L520"], ["Nemotron-CC", 6.3e12, "L573 (HQ subset 1.1T)"], ["DCLM-baseline", 3.8e12, "L552"], ["RefinedWeb (released)", 600e9, "L511"], ["C4", 156e9, "L396"]];
+const retained = ({ pool, kept, frac }) => ({ frac: frac ?? kept / pool });
+MODELS["fixture:lecture_13--retention-guess"] = {
+  fn: retained,
+  untied: "the guess is made inside the widget; no prompt asks for the retained fraction itself",
+  cases: [
+    { args: { pool: 240e12, kept: 3.8e12 }, pick: "frac", expect: 0.01583 },  // DCLM-baseline: 3.8T of 240T (L542, L552)
+    { args: { pool: 1.4e12, kept: 156e9 }, pick: "frac", expect: 0.1114 },    // C4 rules (L387, L396)
+    { args: { pool: 5e12, kept: 600e9 }, pick: "frac", expect: 0.12 },        // RefinedWeb released share (L511)
+  ],
+};
+WIDGETS["fixture:lecture_13--retention-guess"] = (root) => {
+  const s = { budget: 15e12, guess: 0.05, reveal: false };
+  const f = r => retained(r).frac;
+  const cv = el("canvas", { width: 640, height: 250 }); const read = el("div", { class: "readout" });
+  const draw = () => {
+    const ctx = cv.getContext("2d"); ctx.clearRect(0, 0, 640, 250); ctx.font = "12px sans-serif";
+    ctx.fillStyle = "#6b7680"; ctx.fillText("retained fraction of the pool (bar length, 0 – 15%)", 10, 16);
+    RET_ROWS.forEach((r, i) => {
+      const y = 30 + i * 40, v = f(r), w = v / 0.15 * 380;
+      ctx.fillStyle = "#25313d"; ctx.fillText(r.name, 10, y + 14); ctx.fillStyle = "#6b7680"; ctx.fillText(r.filter, 10, y + 28);
+      if (s.reveal) { ctx.fillStyle = r.filter === "classifier" ? "#b8582a" : "#24668d"; ctx.fillRect(230, y + 2, w, 20); ctx.fillStyle = "#25313d"; ctx.fillText(`${(100 * v).toFixed(1)}%`, 236 + w, y + 17); }
+      else { ctx.strokeStyle = "#d9d3c7"; ctx.strokeRect(230, y + 2, 380, 20); ctx.fillStyle = "#6b7680"; ctx.fillText("?", 236, y + 17); }
+    });
+    const gx = 230 + s.guess / 0.15 * 380; ctx.strokeStyle = "#e3b23c"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(gx, 26); ctx.lineTo(gx, 190); ctx.stroke(); ctx.lineWidth = 1;
+    ctx.fillStyle = "#b07d12"; ctx.fillText(`your guess for DCLM: ${(100 * s.guess).toFixed(1)}%`, Math.min(gx + 4, 480), 204);
+    ctx.fillStyle = "#6b7680"; ctx.fillText("Gopher (L486): '10.5 TB of text (though Gopher only trained on 300B tokens - 12%)' — bytes vs tokens, a training-use share, not drawn", 10, 236);
+    const abs = s.reveal ? RET_ABS : RET_ABS.filter(([n]) => n !== "DCLM-baseline"), dclm = RET_ROWS[3];
+    read.innerHTML = `${s.reveal ? `DCLM keeps 3.8T ÷ 240T = <span class="big">${(100 * f(dclm)).toFixed(2)}%</span>your guess was ${(100 * s.guess).toFixed(1)}% · C4's rules kept ${(100 * f(RET_ROWS[0])).toFixed(1)}%; RefinedWeb released ${(100 * f(RET_ROWS[1])).toFixed(1)}% of its deduplicated 5T (a release choice, not a filter rate); the classifier keeps about 1.6%` : "guess DCLM's retained fraction, then reveal (DCLM-baseline's size and epochs are shown after the reveal)"}<br>
+      absolute tokens still grow because the pools grew: ${abs.map(([n, t]) => `${n} ${fmt(t / 1e12, 2)}T`).join(" · ")}<br>
+      training budget ${fmt(s.budget / 1e12, 1)}T tokens needs: ${abs.map(([n, t]) => `${n} ×${(s.budget / t).toFixed(1)}`).join(" · ")} epochs (Llama 3 15T, Qwen3 36T: L574)<br>
+      <span class="muted small">provenance: fixture:lecture_13--retention-guess · lecture_13.py ${[...RET_ROWS.map(r => `${r.name} ${r.ref}`), ...RET_ABS.slice(0, 2).map(([n, , r]) => `${n} ${r}`)].join("; ")}; L574 (Llama 3 15T, Qwen3 36T).${s.reveal ? " Nemotron-CC's \"remove 90%\" (10% kept) and DCLM's own 240T → 3.8T (1.6% kept) are measured from different starting points; the lecture does not reconcile them." : ""}</span>`;
+  };
+  const sg = slider("your guess: DCLM keeps what % of its pool?", 0, 15, 5, 0.1, v => { s.guess = v / 100; draw(); }, v => `${v}%`);
+  const fT = v => `${v}T`, sbud = slider("training budget (T tokens)", 0.5, 40, 15, 0.5, v => { s.budget = v * 1e12; draw(); }, fT);
+  root.append(el("div", { class: "widget" }, el("div", { class: "controls" }, sg,
+    buttons([["reveal", () => { s.reveal = true; draw(); }], ["hide", () => { s.reveal = false; draw(); }]]),
+    sbud, buttons([["Llama 3: 15T", () => { s.budget = 15e12; setSlider(sbud, 15, fT); draw(); }], ["Qwen3: 36T", () => { s.budget = 36e12; setSlider(sbud, 36, fT); draw(); }]]),
+    read), cv)); draw();
+};

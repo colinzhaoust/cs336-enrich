@@ -181,7 +181,7 @@ WIDGETS["fixture:lecture_10--kv-ledger"] = (root) => {
     slider("layers L", 1, 128, s.L, 1, v => { s.L = v; if (s.Lg > v) { s.Lg = v; setRange(ctlLg, v); } draw(); }),
     slider("context S", 9, 17, s.logS, 1, v => { s.logS = v; draw(); }, fS),
     slider("batch B (sequences)", 1, 512, s.B, 1, v => { s.B = v; draw(); }),
-    slider("sliding window W", 8, 15, 8, 1, v => { const was = s.logW; s.logW = v === 8 ? 0 : v; if (!was && s.logW && s.Lg === s.L) { s.Lg = 0; setRange(ctlLg, 0); } draw(); }, fW),
+    slider("sliding window W", 8, 15, 8, 1, v => { const was = s.logW; s.logW = v === 8 ? 0 : v; if (!was && s.logW && s.Lg === s.L) { s.Lg = Math.round(s.L / 4); setRange(ctlLg, s.Lg); /* hybrid default, 1 global in 4 as in the flow's example, so green local and blue global layers both show */ } draw(); }, fW),
     ctlLg,
     slider("weights (GB)", 1, 300, s.wGB, 0.01, v => { s.wGB = v; draw(); }, v => fmt(v, 2)),
     slider("GPU memory (GB)", 16, 192, s.mem, 1, v => { s.mem = v; draw(); }),

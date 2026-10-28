@@ -283,7 +283,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "You have 16 GPUs in two 8-GPU nodes. A scheme needs every GPU to exchange activations with every other GPU many times per layer. Where does the deck say the slow part is?",
+          "q": "You have 16 GPUs in two DGX A100 nodes (8 GPUs each, NVSwitch inside the box, InfiniBand between boxes). A scheme needs every GPU to exchange activations with every other GPU many times per layer. Where does the deck say the slow part is?",
           "format": "choice",
           "choices": [
             "inside each node, between the 8 GPUs",
@@ -291,7 +291,7 @@
             "equally everywhere"
           ],
           "answer": "between the two nodes",
-          "why": "Intra-node GPUs sit on a high-speed interconnect (8 GPUs per node); inter-node traffic crosses the slower network. That asymmetry is the whole reason parallelism types are assigned to levels.",
+          "why": "Inside a DGX A100 the 8 GPUs share the NVSwitch fabric; traffic between the two boxes leaves through InfiniBand cards onto the slower network. That asymmetry is the whole reason parallelism types are assigned to levels.",
           "targets_misconception": "A cluster of 1,024 GPUs is one big GPU; any pair of GPUs can exchange data at the same speed."
         },
         "transfer": {

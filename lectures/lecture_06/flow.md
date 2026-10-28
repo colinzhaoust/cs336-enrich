@@ -240,7 +240,7 @@ Why many kernels are slow: each kernel reads its input from HBM, brings it to th
 
 The lecture uses a fact from [L2](#/read/lecture_02) without restating it. GeLU does about 20 FLOPs per element against 8 bytes moved in fp32 (one read, one write), an arithmetic intensity of a few FLOPs per byte, far below the hundreds a GPU needs to be compute-bound. So its time is set by **bytes through HBM**, not FLOPs. A chain of $k$ unfused elementwise kernels moves the tensor through HBM about $k$ times; the fused kernel moves it once. The speed-up is of the order of the round trips removed, and the extra arithmetic inside a fused kernel is nearly free.
 
-For scale: the benchmark tensor has $16384^2 \approx 2.7 \times 10^8$ fp32 values, 1.07 GB. One read plus one write is 2.1 GB, about a quarter of a millisecond at a B200's 8 TB/s. Nine unfused kernels move about nine times that. (This is napkin math from the table above, not the lecture's measurement.)
+For scale: the benchmark tensor has $16384^2 \approx 2.7 \times 10^8$ fp32 values, 1.07 GB. One read plus one write is 2.1 GB, about a quarter of a millisecond at a B200's 8 TB/s. Nine unfused kernels make 13 reads and 9 writes (two-input ops read twice), 22 whole-tensor passes against the fused kernel's 2: about eleven times the traffic, roughly 24 GB. (This is napkin math from the table above, not the lecture's measurement.)
 
 ::kp lecture_02:arithmetic-intensity
 ::kp lecture_05:operator-fusion
@@ -491,10 +491,11 @@ Divide $C$ into output tiles, and give each tile to one thread block. Fix an out
 
 When the sweep along $K$ is done, write the output tile to HBM. A different tile of $C$ is computed completely separately, by another block.
 
+::predict matmul-tiling-intensity
+
 ::figure official/lectures/images/gemm_tiled.png | one orange tile of C: the outer loop walks the purple row tiles of A and column tiles of B, the inner loop works inside the current pair
 ::code lecture_06.py:L574-L582 | the tiled algorithm in six lines, and its intensity
 ::animation fixture:tiling-sweep | each pair of input tiles is loaded into shared memory once and reused for all T×T partial products before the next pair loads; the global-read counter moves only on tile loads
-::predict matmul-tiling-intensity
 
 Why the intensity becomes $O(\text{tile size})$: with square tiles of side $T$, each element of $A$ that is loaded is reused by all $T$ columns of the output tile, and each element of $B$ by all $T$ rows. Total reads fall by a factor of $T$ while the FLOPs stay $2MKN$.
 

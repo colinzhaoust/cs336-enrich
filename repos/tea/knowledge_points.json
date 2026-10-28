@@ -509,7 +509,7 @@
       "misconceptions": [
         {
           "belief": "The implementation plan is one LLM call per scene.",
-          "why_wrong": "It is three sequential calls (storyboard, technical, narration), each output appended to the plan (L248, L294, L332); with RAG on, three more helper-model query calls are added."
+          "why_wrong": "It is three sequential calls (storyboard, technical, narration), each output appended to the plan (L248, L294, L332); with RAG and Langfuse on, three more helper-model query calls are added (with --use_rag alone the first retrieval raises UnboundLocalError)."
         },
         {
           "belief": "The 0.5/0.3 spatial constraints are validated somewhere between planning and rendering.",
@@ -522,7 +522,7 @@
           "format": "number",
           "answer": "16",
           "tolerance": 0.0,
-          "why": "1 outline call (L161) + 5 scenes x 3 stage calls (L241, L287, L325) = 16; with RAG on, each stage also makes a helper-model query call (see rag-query-retrieve-k2)."
+          "why": "1 outline call (L161) + 5 scenes x 3 stage calls (L241, L287, L325) = 16; with RAG and Langfuse on, each stage also makes a helper-model query call (with --use_rag alone the first retrieval raises UnboundLocalError; see rag-query-retrieve-k2)."
         },
         "transfer": {
           "q": "You edit only the narration prompt so that stage 3 also returns a <SCENE_TECHNICAL_IMPLEMENTATION_PLAN> block. Which file(s) on disk change content, and what does the code generator receive?",
@@ -582,7 +582,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:tea--outline-parse",
-          "notice": "Each planned scene adds three planner calls to the one outline call; with --use_rag the helper model adds one plugin call plus one query call per stage."
+          "notice": "Each planned scene adds three planner calls to the one outline call; with --use_rag and --use_langfuse the helper model adds one plugin call plus one query call per stage (without Langfuse the first retrieval raises UnboundLocalError)."
         }
       ]
     },
@@ -828,7 +828,7 @@
           "targets_misconception": "k=2 means two documents are added to the prompt."
         },
         "transfer": {
-          "q": "Scene 3 fails to render twice with two different errors (a LaTeX error, then a missing-attribute error). For the second fix, which RAG queries are used, and why?",
+          "q": "RAG and Langfuse are both on (--use_rag --use_langfuse). Scene 3 fails to render twice with two different errors (a LaTeX error, then a missing-attribute error). For the second fix, which RAG queries are used, and why?",
           "format": "short",
           "answer": "The queries generated for the first (LaTeX) error, loaded from scene3/rag_cache/rag_queries_error_fix.json; the cache is per scene, not per error text.",
           "why": "_generate_rag_queries_error_fix checks for cache_file first and returns its contents without looking at the new error (code_generator.py L172-L179).",
@@ -881,7 +881,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:tea--fix-loop",
-          "notice": "With --use_rag on, the error-fix query calls equal the number of scenes that needed any fix, not the number of fixes: a scene's second fix reuses rag_queries_error_fix.json."
+          "notice": "With --use_rag and --use_langfuse on (without Langfuse the first retrieval raises UnboundLocalError), the error-fix query calls equal the number of scenes that needed any fix, not the number of fixes: a scene's second fix reuses rag_queries_error_fix.json."
         }
       ]
     },
@@ -1061,7 +1061,7 @@
             "source": "tea_repo",
             "ref": "generate_video.py:L383-L417",
             "role": "computation",
-            "quote": "while True: # Retry loop ... await self.video_renderer.render_scene( ... if error_message is None: # Render success ... if curr_version >= max_retries: # Max retries reached ... break # Exit retry loop ... curr_version += 1 ... self.code_generator.fix_code_errors( ... error=error_message,"
+            "quote": "while True: # Retry loop ... await self.video_renderer.render_scene( ... if error_message is None: # Render success if error_message is None\n                    break ... if curr_version >= max_retries: # Max retries reached ... break # Exit retry loop ... curr_version += 1 ... self.code_generator.fix_code_errors( ... error=error_message,"
           },
           {
             "source": "tea_repo",
@@ -1671,7 +1671,7 @@
             "layer": "detail"
           },
           {
-            "q": "Which temperature do the evaluation judges use, and what integer range must every score fall in?",
+            "q": "Which temperature do the evaluation judges use, what score range do the prompts ask for, and does the code enforce it?",
             "answer": "0.0; the prompts ask for integers 1-5, but convert_score_fields only requires an int or a digit string. The range is never checked.",
             "layer": "detail"
           }
@@ -2089,7 +2089,7 @@
             "quote": "if not args.only_plan and not args.only_render:\n                video_generator.combine_videos(args.topic)"
           }
         ],
-        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L800 and L938 both pass 2 positional arguments to a method needing 4, raising TypeError before any coroutine is created (the missing await at L938 would matter only after that); nothing renders in either mode. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do. Correction (read-through pass, checked in Python): calling an async function with missing positional arguments raises TypeError immediately, so the single-topic --only_gen_vid path fails like the batch one rather than creating and discarding a coroutine."
+        "filtering_note": "The README FAQ 'Plans / Scenes are missing? ... API-related issues' is the user-visible symptom of the str(e) + regex-fallback chain. L800 and L938 both pass 2 positional arguments to a method needing 4, raising TypeError before any coroutine is created (checked in Python: an async function called with missing positional arguments raises immediately; the missing await at L938 would matter only after that); nothing renders in either mode. In code_generator.py L137-L143 the except catches only JSONDecodeError, so a response without a ```json fence raises AttributeError on .group(1) instead; the storyboard, technical and narration generators in rag_integration.py (L160-L163, L207-L210, L254-L257) share that pattern, so an error string from the wrapper raises rather than returning []; only the unused rag_integration code variant at L330 catches everything, and code_generator's error-fix generator (L194-L200) strips fences and so does return []. generate_video_pipeline reads the module-global args (L561, L584), so calling it from another entry point without that global raises NameError. None of these were executed here; they are what the code must do."
       },
       "prerequisites": [
         {

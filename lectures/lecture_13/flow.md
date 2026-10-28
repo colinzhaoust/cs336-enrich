@@ -239,11 +239,11 @@ The hard part is that URLs do not map one-to-one to content. The same URL can re
 
 Common Crawl ships each crawl in two formats:
 - **WARC**: the raw HTTP response, i.e. the HTML exactly as the server sent it;
-- **WET**: text that Common Crawl already extracted from it, a necessarily lossy conversion.
+- **WET**: text that Common Crawl already extracted from it.
 
 ::predict warc-wet-extraction-loss
 
-WET is convenient but "not necessarily the best way to use the web". Converting HTML to text is a choice, and tools such as [trafilatura](https://trafilatura.readthedocs.io/en/latest/) and [resiliparse](https://resiliparse.chatnoir.eu/en/stable/) do it differently. The DCLM paper (met again near the end) trained models on the same crawl extracted three ways and compared their downstream accuracy:
+WET is convenient but "not necessarily the best way to use the web". Converting HTML to text is a lossy process and a choice: tools such as [trafilatura](https://trafilatura.readthedocs.io/en/latest/) and [resiliparse](https://resiliparse.chatnoir.eu/en/stable/) do it differently. The DCLM paper (met again near the end) trained models on the same crawl extracted three ways and compared their downstream accuracy:
 
 ::figure official/lectures/images/dclm-wet.png | same data, three extractors: resiliparse and trafilatura score about 24 on DCLM's CORE benchmark, the WET files 20.7
 
@@ -512,7 +512,7 @@ DataComp-LM (DCLM, 2024) is where model-based quality filtering "started to real
 
 DCLM processed Common Crawl into **DCLM-pool**, completely unfiltered: 240 trillion tokens, "probably more than the number of tokens that anyone really trains on", much of it low quality. Then it filtered the pool down to **DCLM-baseline**.
 
-::widget fixture:filter-retention-ratios | guess what share of its 240T pool DCLM keeps, then reveal and compare it with C4's rules; the absolute sizes keep growing because the pools grew faster
+::widget fixture:lecture_13--retention-guess | guess what share of its 240T pool DCLM keeps, then reveal and compare it with C4's rules; the absolute sizes keep growing because the pools grew faster
 
 ::figure official/lectures/images/dclm-filter.png | follow the pool left to right: the English filter alone removes about half the documents (50.8%); all the heuristic cleaning together (a RefinedWeb reproduction) leaves 19.9%, Bloom-filter dedup leaves 13.7%, and the fastText classifier keeps the final 1.4% of the original documents
 

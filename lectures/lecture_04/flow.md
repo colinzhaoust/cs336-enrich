@@ -59,13 +59,13 @@ $K^\top V$ is $(d_k \times n)(n \times d_v)$, a small $d_k \times d_v$ matrix, c
 
 Why is that a better bargain? Because $n$ is the context length, which can be in the millions, while $d_k$ and $d_v$ are head widths, in the hundreds; even full hidden sizes are "on the order of thousands, tens of thousands. No one has a million coordinates in their hidden dimensions." Trading an $n^2$ for a $d^2$ is a large win exactly when contexts are long.
 
+::predict linear-attention-reassociation
+
 ::worked linear-attention-reassociation
 
 **Worked example.** One head with $d_k = d_v = 128$ and $n = 32{,}768$. Softmax attention costs $32768^2 \cdot 256 \approx 2.7 \times 10^{11}$ multiply-adds; the reordered form costs $2 \cdot 32768 \cdot 128^2 \approx 1.1 \times 10^9$. The ratio is $n^2(2d) / (2nd^2) = n/d = 256$. The crossover is at $n = d$: for contexts shorter than 128 tokens the quadratic form is actually cheaper.
 
 ::widget fixture:lecture_04--attention-cost | slide the context n: the softmax and linear FLOP curves cross at n = d (128), and past it the gap grows as n/d, 256× at 32,768 tokens
-
-::predict linear-attention-reassociation
 
 The catch is in the word *if*. With the softmax in place the reordering is not allowed: each row of $\rho(QK^\top)$ is divided by a sum over all $n$ scores in that row, so the $n \times n$ matrix must exist before $V$ is applied. Dropping $\rho$ changes the *model*, not just the algorithm: linear attention is a different layer, not a faster softmax attention. The professor makes this explicit in a later answer: "The first step is lossy, where we drop the row, and then we become linear." (The captions write ρ, rho, as "row".) The "kernel version" cited on the slide (Katharopoulos et al. 2020) replaces $\rho$ by a feature map $\phi$ applied to queries and keys, $\phi(Q)(\phi(K)^\top V)$, which keeps the associativity trick while making the scores nonnegative.
 
@@ -119,6 +119,8 @@ It is "not fully linear, because you've got these softmaxes, but the dependence 
 ## Mamba-2: add a forget gate, keep the duality {#mamba2}
 source: lecture_04.pdf p7-p8 · video 11:11-14:56, 21:47-22:26, 33:01-33:35
 
+::predict gate-input-only-duality
+
 ::slide 7 | the linear-attention recurrence, then Mamba-2's: S_t = γ_t S_{t−1} + k_t v_tᵀ and y_t = q_tᵀ S_t + v_tᵀD with γ_t = f(x_t), the new terms in red; "we can make linear attention more expressive via gating (gating is good!)"; "This continues to have duality properties (compute γ in parallel, apply duality)"; Mamba block diagrams below
 
 Plain linear attention always carries everything forward: every pair is added with weight 1 and never leaves. We know from LSTMs, the professor says, that it matters "when to pass information forward and when to just not pass information forward, to forget things and send them to 0." So add a gate. **Mamba-2** (from the state-space-model family of Albert Gu, Tri Dao and colleagues) multiplies the old state by $\gamma_t$ before writing:
@@ -128,8 +130,6 @@ $$ S_t = \gamma_t\, S_{t-1} + k_t v_t^\top, \qquad y_t = q_t^\top S_t + v_t^\top
 Unlike RetNet's constant $\gamma$, here $\gamma_t$ is computed from the current token, so the model decides per token how much of its memory to keep. Mamba-2 was derived from state-space theory, and the slide declines to repeat the justification ("go read the mamba 2 paper"), but mechanically it is this small elaboration of linear attention.
 
 The extra term $v_t^\top D$ does not touch the state. The professor first set it aside ("you can ignore the vt for now") and explained it in Q&A: it acts "a little bit like a residual connection", letting the current token's value pass straight to the output, and "D is another modulated gate" that sets how much passes through.
-
-::predict gate-input-only-duality
 
 ### Why the gate must read only the input
 
@@ -152,16 +152,16 @@ NVIDIA's **Nemotron 3** uses Mamba-2 as its cheap layer, with "your big softmax 
 
 That is about 3.8 Mamba layers per attention layer, the slide's "3-1 ish" (each followed by an MoE layer, the second half of this lecture). The model is competitive with Qwen3-30B-A3B and GPT-OSS-20B, at a relative output throughput of about 3.3 against their 1.0 and 1.5. These are "small frontier models", but they show the recipe working.
 
-## Gated DeltaNet: gate the write, erase before you overwrite {#deltanet}
+## Gated DeltaNet: two more input-only changes {#deltanet}
 source: lecture_04.pdf p9-p11 · video 14:56-20:41, 22:26-22:54
+
+::predict gated-linear-attention-variants
 
 ::slide 9 | Mamba-2's update again, then Gated DeltaNet's: S_t = γ_t (I − β_t k_t k_tᵀ) S_{t−1} + β_t k_t v_tᵀ and y_t = q_tᵀ S_t, with γ_t and β_t both functions of x_t; it adds a "no input operation" gate (β = 0) and erases anything in the direction of the current key
 
 **Gated DeltaNet** is, in the professor's estimate, probably the most widely used state-space-style layer today. It makes two changes to Mamba-2, both functions of the input only, so the duality survives:
 
 $$ S_t = \gamma_t\,(I - \beta_t k_t k_t^\top)\,S_{t-1} + \beta_t\, k_t v_t^\top, \qquad \gamma_t, \beta_t = f(x_t) $$
-
-::predict gated-linear-attention-variants
 
 **An input gate $\beta_t$.** It scales the write. "If beta t is 0, that basically means, don't take any of my current information, don't add it into my state." Together with the forget gate $\gamma_t$, this is very reminiscent of an LSTM: one gate decides what to forget, one decides what to let in.
 
@@ -191,7 +191,7 @@ The newest Qwen models, among the best open models available, use exactly this l
 
 ::slide 11 | ByteDance Seed and UC Santa Cruz, "A Systematic Analysis of Hybrid Linear Attention": a table of update rules (RetNet, GLA, Mamba-2, RWKV-6, DeltaNet, Gated DeltaNet, …); RULER sub-task accuracy and average recall against the linear:full ratio (3-1, 6-1, 12-1, 24-1, pure), with a dashed full-transformer baseline
 
-How many softmax layers can you remove? Controlled studies are rare; the professor points to this one. Its plots score RULER, a synthetic long-context benchmark of retrieval, tracing and question-answering tasks at fixed context lengths. Read them from left to right, adding more linear layers per full layer:
+How many softmax layers can you remove? Controlled studies are rare; the professor points to this one. Its plots score RULER, a synthetic long-context benchmark of retrieval, multi-hop tracing, aggregation and question-answering tasks at fixed context lengths. Read them from left to right, adding more linear layers per full layer:
 - at low ratios (3-to-1, 6-to-1) the best variants, the Gated DeltaNet family among them, sit at the dashed transformer line: "basically no hit";
 - past some point, long-context performance degrades more noticeably;
 - fully recurrent ("pure") is clearly worse in every architecture; in the recall panel some variants fall from about 0.43 to 0.15–0.2.
@@ -227,7 +227,7 @@ The results: V3.2 roughly matches the frontier models of its time. The cost plot
 
 ::predict dsa-indexer-still-quadratic
 
-### DSA is not linear time
+### Where DSA's cost goes
 
 "Notice, I'll go back one slide, this is not linear time." To decide which $k$ tokens to keep, the indexer must score every query against every earlier token: "it does have to look at everything ... It is really brute force inner products." So the indexer is still $O(n^2)$. The savings are constant factors, on two fronts:
 - **the indexer is made very cheap per pair**: few heads, low dimension (the q's and k's are projected down just for indexing), small weights, and low precision (FP8 on the slide);
@@ -265,11 +265,11 @@ source: lecture_04.pdf p14-p19 · video 34:22-44:26, 1:10:19-1:11:05
 
 The second half modifies the other big block of the transformer, the feed-forward network (FFN, or MLP). "Conceptually, they don't really change the game", the professor says: "One way of thinking about mixture of experts is, they are just a more efficient MLP." He gives two reasons to learn them anyway. Past a certain size, nearly every model you can download is an MoE. And their mechanical parts, top-k selection plus auxiliary losses to make it trainable, keep reappearing elsewhere, as they already did in DSA.
 
+::predict moe-params-without-flops
+
 ::slide 15 | Switch Transformer's figure: a dense block with one FFN, against a sparse block where a router sends the token "The" to FFN 2 and "Dog" to FFN 1 out of four; "Replace big feedforward with (many) big feedforward networks and a selector layer"; "You can increase the # experts without affecting FLOPs"
 
 The mental model the professor wants you to keep: take the FFN, make four copies of it, each the *same size* as the original, and add a small **router** that picks one of them for every input. You now hold "4x the parameters", but "on any forward or backward pass, I'm only going to pay one FFN worth of cost". Each copy is an **expert**. The parameters a token actually passes through are the model's **active parameters**; everything else is stored but idle for that token.
-
-::predict moe-params-without-flops
 
 In general, with $E$ experts of equal size, each token routed to $k$ of them:
 - FFN parameters grow with $E$;
@@ -281,7 +281,7 @@ In general, with $E$ experts of equal size, each token routed to $k$ of them:
 
 ::predict expert-routing-token-level
 
-### Routing is per token, and experts are not subject experts
+### What a router actually routes
 
 Two student questions sharpen the picture. What is the granularity of routing? "At the token level. So every token gets an expert." And the router is "super naive": "a single matrix multiply between your input" and one vector per expert. Nothing in it knows that a question is about medicine; it sees one token's hidden state, and might decide "this is a token that looks like it's in, I don't know, Japanese. Let's route it to expert 7."
 
@@ -679,11 +679,11 @@ $$ c_t^{KV} = W^{DKV} h_t, \qquad k_t^{C} = W^{UK} c_t^{KV}, \qquad v_t^{C} = W^
 
 "Instead of KV caching all your Ks and Vs, I only need to store these Cs", and the $c$'s are "hopefully, lower dimensional". Unlike [L3's MQA and GQA](#/read/lecture_03), which save memory by sharing keys and values across heads, MLA keeps every head; the saving comes from the latent being much narrower than heads × head width × 2.
 
+::predict mla-latent-kv-cache
+
 ::slide 58 | the MLA equations; benefits: only c_t^KV is cached, which can be much smaller, and W^UK can be merged into the Q projection (queries are compressed too, for training memory); complexity: without RoPE, ⟨hW^Q, W^UK c⟩ = ⟨h W^Q W^UK, c⟩; with RoPE, the rotations R_q, R_k sit between W^Q and W^UK; "The solution – have a few non-latent key dimensions that can be rotated"
 
 Better still, you never have to rebuild the keys. Without position encoding, a score is $\langle h W^Q,\, W^{UK} c \rangle = \langle h\, W^Q W^{UK},\, c \rangle$, and $W^Q W^{UK}$ is one fixed matrix that can be precomputed: queries are projected straight into latent space and scored against the cached $c$'s.
-
-::predict mla-latent-kv-cache
 
 RoPE breaks this ("this is going to conflict with rope when you do KV caching"). RoPE rotates queries and keys by position-dependent matrices, so the score becomes $\langle h W^Q R_q,\, R_k W^{UK} c \rangle$. The rotations sit *between* $W^Q$ and $W^{UK}$ and differ for every pair of positions, so no fixed product can be precomputed. DeepSeek's fix is to carry position in a small side channel: a few extra, non-latent key dimensions that are rotated (cached alongside $c$), while the latent part stays unrotated and mergeable.
 

@@ -552,7 +552,7 @@
             "source": "feynrl_repo",
             "ref": "rewards/gsm8k_reward_func.py:L19-L30",
             "role": "claim",
-            "quote": "def compute_score(prompt_data: Dict[str, Any], response_data: Dict[str, Any]): ... r: torch.Tensor of length of response token ids\n        is_per_token: whether the reward is per token ... correct_threshold:"
+            "quote": "def compute_score( ... r: torch.Tensor of length of response token ids\n        is_per_token: whether the reward is per token\n        correct_threshold: a response is counted as correct for pass@k\n            when its scalar reward strictly exceeds this threshold."
           },
           {
             "source": "feynrl_repo",
@@ -944,7 +944,7 @@
             "source": "feynrl_repo",
             "ref": "algs/GRPO/grpo.py:L169-L176",
             "role": "computation",
-            "quote": "raw_logratio = (logprobs - old_logprobs).to(torch.float32) ... ratio        = torch.exp(logratio)\n ... unclipped = ratio * adv\n            clip_adv  = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\n            pi_sum    = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
+            "quote": "raw_logratio = (logprobs - old_logprobs) ... logratio = torch.where(mask_bool, raw_logratio, torch.zeros_like(raw_logratio))\nratio = torch.exp(logratio) ... clip_adv = torch.clamp(ratio, 1.0 - self.clip_low, 1.0 + self.clip_high) * adv\npi_sum = -(torch.minimum(unclipped, clip_adv) * mask).sum()"
           },
           {
             "source": "feynrl_repo",
@@ -1328,7 +1328,7 @@
             "source": "feynrl_repo",
             "ref": "algs/GRPO/grpo.py:L145-L159",
             "role": "computation",
-            "quote": "raw_logratio_prox = (logprobs - prox_logprobs).to(torch.float32) ... raw_log_w = (prox_logprobs - old_logprobs).to(torch.float32) ... behave_w = torch.clamp(behave_w, min=0.0, max=self.behave_imp_weight_cap) ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * behave_w * mask).sum()"
+            "quote": "raw_logratio_prox = (logprobs - prox_logprobs).to(torch.float32) ... if self.behave_imp_weight_cap is not None:\n                behave_w = torch.clamp(behave_w, min=0.0, max=self.behave_imp_weight_cap) ... pi_sum    = -(torch.minimum(unclipped, clip_adv) * behave_w * mask).sum()"
           },
           {
             "source": "feynrl_repo",
@@ -1657,7 +1657,7 @@
             "source": "feynrl_repo",
             "ref": "rollouts/weight_sync.py:L191-L200",
             "role": "computation",
-            "quote": "if not torch.isfinite(buffer).all():\n                num_bad = (~torch.isfinite(buffer)).sum().item()\n                corrupt_params.append((name, dtype, tuple(shape), num_bad)) ... self.model_runner.model.load_weights(weights=[(name, buffer)])"
+            "quote": "if not torch.isfinite(buffer).all(): ... corrupt_params.append((name, dtype, tuple(shape), num_bad))\n                del buffer\n                continue\n\n            self.model_runner.model.load_weights(weights=[(name, buffer)])"
           },
           {
             "source": "feynrl_repo",
@@ -1768,7 +1768,7 @@
             "source": "feynrl_repo",
             "ref": "run_rl_async.py:L235-L238",
             "role": "computation",
-            "quote": "# At policy version T with max_lag=N, the buffer holds data from versions {T-N+1, ..., T} ... prompt_per_pass    = math.ceil(rollout_samples_per_epoch / bsz_rollout) * bsz_rollout\n    replay_buffer_size = prompt_per_pass * n_samples * max_lag"
+            "quote": "# At policy version T with max_lag=N, the buffer holds data from versions {T-N+1, ..., T}\nbsz_rollout = num_rollout_engines * rollout_batch_size_per_gpu\nprompt_per_pass = math.ceil(rollout_samples_per_epoch / bsz_rollout) * bsz_rollout\nreplay_buffer_size = prompt_per_pass * n_samples * max_lag"
           },
           {
             "source": "feynrl_repo",

@@ -2,7 +2,7 @@
 title: L15 · After pretraining (SFT and RLHF), read through
 minutes: 45
 ---
-Pretraining gets you a GPT-3: a strong next-word predictor that you can barely steer. This lecture covers the two stages that turn it into a ChatGPT. The first is supervised fine-tuning (SFT) on demonstrations. The second is reinforcement learning from human feedback (RLHF) on preferences, done with PPO or DPO. Most of the lecture is about the *data* each stage needs, because that is where the leverage and the trouble are. After it you can explain why a few hundred examples can change a model's behaviour while a few thousand correct facts can make it hallucinate, derive DPO from the RLHF objective, and say why pushing hard on a learned reward eventually makes the model worse.
+Pretraining gets you a GPT-3: a strong next-word predictor that you can barely steer. This lecture covers the two post-training stages that turn it into a ChatGPT, supervised fine-tuning (SFT) and reinforcement learning from human feedback (RLHF, done with PPO or DPO). Most of the lecture is about the *data* each stage needs, because that is where the leverage and the trouble are. After it you can explain why a few hundred examples can change a model's behaviour while a few thousand correct facts can make it hallucinate, derive DPO from the RLHF objective, and say what goes wrong when you push hard on a learned reward.
 
 ## What is post-training for? {#why}
 source: lecture_15.pdf p2-p6 · video 0:05-6:52
@@ -278,7 +278,7 @@ $$ \text{SFT:}\ \ \hat p(y\mid x) \approx p^*(y\mid x) \qquad\qquad \text{RLHF:}
 
 Pretraining and SFT are both generative modelling: there is a distribution of sequences and we fit it. SFT only changes which distribution. RLHF plays a different game, “a maximize a reward game”. The model is still a distribution over outputs, but now it is a **policy**, judged only by the reward its outputs earn. The reward might be how long users stay engaged, or how many math problems get solved. Nothing asks the policy to match any distribution.
 
-The consequence is striking: the policy “can totally collapse out my distribution onto a single point for every input”. One answer per prompt, no diversity, and that is fine as long as the reward is high. This is the root of the mode collapse and lost calibration in the last part.
+The consequence is striking: the policy “can totally collapse out my distribution onto a single point for every input”. One answer per prompt, no diversity, and that is fine as long as the reward is high. This is the root of the mode collapse in the last part.
 
 The columns also need different inputs: imitation needs demonstrations someone wrote, optimization needs a reward you can measure on the policy's own outputs.
 
@@ -496,7 +496,7 @@ How do we hill-climb the reward? PPO, which the assignment requires you to under
 
 ::note deferred 1:08:50 | The clipping details, advantages and the per-token KL get a proper treatment in the next lecture ([L16](#/read/lecture_16)), along with GRPO, which the assignment implements.
 
-::widget fixture:lecture_15--kl-tilt | raise β and the policy's bars fall back onto the reference outlines and the KL readout drops; follow the curve and the proxy reward only rises with KL while the gold reward peaks and falls, which is the region the KL term keeps the policy out of
+::widget fixture:lecture_15--kl-tilt | raise β and the policy's bars fall back onto the reference outlines and the KL readout drops: β is the knob that keeps the policy near the reference, and the last part of the lecture shows why that matters
 
 ::kp ppo-for-rlhf-brief
 ::kp lecture_16:ppo-ratio-clip

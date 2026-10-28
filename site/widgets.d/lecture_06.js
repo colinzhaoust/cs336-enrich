@@ -237,6 +237,8 @@ MODELS["fixture:lecture_06--matmul-time"] = {
     { args: { dim: 256 }, pick: "ratio", expect: 1, tol: 0.01 },
     { args: { dim: 2048 }, pick: "t", expect: 2, tol: 1e-9 },
     { args: { dim: 256, speed: 2 }, pick: "t", expect: 1, tol: 0.01 },
+    // KP check: 2× faster arithmetic lowers the 4096 → 8192 ratio from 65/9 to 33/5 ("about 6.6")
+    { args: { dim: 8192, speed: 2 }, pick: "ratio", expect: 33 / 5, tol: 1e-9 },
     { args: { dim: 16384 }, pick: "ratio", expect: 513 / 65, tol: 1e-9 },
   ],
 };

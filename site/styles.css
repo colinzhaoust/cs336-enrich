@@ -69,7 +69,8 @@ h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 20px 0 8p
 @media (max-width: 1200px) { .widget { grid-template-columns: minmax(0, 1fr); } .widget svg, .widget canvas { max-width: min(760px, 100%); } }
 .widget > * { min-width: 0; }
 .widget svg { max-width: 100%; height: auto; }
-.widget table, .widget pre { display: block; max-width: 100%; overflow-x: auto; }
+.widget pre { display: block; max-width: 100%; overflow-x: auto; }
+@media (max-width: 860px) { .widget table { display: block; max-width: 100%; overflow-x: auto; } }
 .widget .controls input, .widget .controls select { max-width: 100%; }
 .widget .controls label { display: block; font-size: 13px; color: var(--muted); margin-top: 8px; }
 .widget .readout { font-family: var(--mono); font-size: 14px; }
@@ -195,5 +196,6 @@ ol.worked .faded-step { list-style-type: "? "; }
 .flow code { overflow-wrap: anywhere; }
 /* wide formulas scroll inside their block instead of widening the page (phones) */
 .katex-display { overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
-.main .katex { max-width: 100%; }
-.main p > .katex, .main li > .katex, .main td > .katex { display: inline-block; overflow-x: auto; overflow-y: hidden; vertical-align: middle; }
+/* inline $..$ is span.latex-inline > span.katex; on a phone it scrolls within the column. inline-flex, not inline-block:
+   an inline-block with overflow takes its baseline from its bottom edge, a flex box keeps the formula's own baseline */
+@media (max-width: 860px) { .flow .latex-inline, .main .latex-inline { display: inline-flex; max-width: 100%; overflow-x: auto; overflow-y: hidden; } }

@@ -2,7 +2,7 @@
   "paper": "grpo",
   "title": "DeepSeekMath: Group Relative Policy Optimization and the unified paradigm (Shao et al., 2024)",
   "version": "0.1.0",
-  "authoring_note": "Anchors follow sources.json: grpo:§x / grpo:eqN / grpo:tableN / grpo:figN / grpo:algorithm1 for the paper (arXiv HTML v3, text in paper.txt, equation LaTeX in discovered.json), algs/GRPO/grpo.py:Lx etc. for FeynRL at sha dfe85351 (code anchors carry status 'implemented' and are line-checked by tools/check_anchors.py), lecture_16.pdf:pNN for the CS336 slides (page-checked against lecture_16.txt). Paper quotes were checked verbatim against paper.txt by a whitespace-insensitive match (see discovered.json verification_note). Status 'computed' marks KPs whose claim is an equation, 'said' prose claims, 'shown' table/figure results, 'supplement' prerequisites the paper uses without stating. Figures 5-7 are images: statements only repeat what the captions and text say. Numeric answers were computed by hand from the equations; where the paper leaves a convention open (population vs sample std) the prompt fixes it. Cross-thread prerequisites live in external_prerequisites (feynrl:<id>, lecture_16:<id>) and are author inference until a learner attempt confirms them. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later.",
+  "authoring_note": "Anchors follow sources.json: grpo:§x / grpo:eqN / grpo:tableN / grpo:figN / grpo:algorithm1 for the paper (arXiv HTML v3, text in paper.txt, equation LaTeX in discovered.json), algs/GRPO/grpo.py:Lx etc. for FeynRL at sha dfe85351 (code anchors carry status 'implemented' and are line-checked by tools/check_anchors.py), lecture_16.pdf:pNN for the CS336 slides (page-checked against lecture_16.txt). Paper quotes were checked verbatim against paper.txt by a whitespace-insensitive match (see discovered.json verification_note). Status 'computed' marks KPs whose claim is an equation, 'said' prose claims, 'shown' table/figure results, 'supplement' prerequisites the paper uses without stating. Figures 5-7 are images: statements only repeat what the captions and text say. Numeric answers were computed by hand from the equations; where the paper leaves a convention open (population vs sample std) the prompt fixes it. Cross-thread prerequisites live in external_prerequisites (lecture_16:<id>) and are author inference until a learner attempt confirms them; the matching FeynRL repo KPs come later in the course and are listed in see_also (feynrl:<id>), which does not gate readiness. Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later.",
   "knowledge_points": [
     {
       "id": "supp-policy-gradient",
@@ -182,7 +182,7 @@
             "quote": "In the online case (rollout+immediate update), this is just policy gradient with group normalized rewards"
           }
         ],
-        "filtering_note": "The paper uses the ratio = 1 simplification only in the appendix to derive gradient coefficients, yet §4.2 says their actual runs also used a single update per exploration stage; put together (author inference) the min/clip of Eq. 3 never acted in the reported DeepSeekMath-RL training. The course says the same in one line on p18. FeynRL computes the ratio in float32 from stored old_logprobs and can take several updates per buffer (train_steps_per_epoch > 1, or update_after_full_replay False), where clipping does act; its shipped gsm8k recipes take one. Even then the ratio is not exactly 1, because old_logprobs come from vLLM, and in overlap mode the buffer mixes policy versions."
+        "filtering_note": "The paper uses the ratio = 1 simplification only in the appendix to derive gradient coefficients, yet §4.2 says their actual runs also used a single update per exploration stage; put together (author inference) the min/clip of Eq. 3 never acted in the reported DeepSeekMath-RL training. The course says the same in one line on p18. FeynRL computes the ratio in float32 from stored old_logprobs and can take several updates per buffer (train_steps_per_epoch > 1, or update_after_full_replay False), where clipping does act; its shipped gsm8k recipes take one. Even then the ratio is not exactly 1, because old_logprobs come from vLLM, and in overlap mode the buffer mixes policy versions. In code: feynrl:supp-importance-ratio, the same supplement from the code side."
       },
       "prerequisites": [
         {
@@ -194,12 +194,10 @@
         {
           "kp": "lecture_16:ppo-ratio-clip",
           "basis": "author-inference"
-        },
-        {
-          "kp": "feynrl:supp-importance-ratio",
-          "basis": "author-inference",
-          "note": "same supplement from the code side"
         }
+      ],
+      "see_also": [
+        "feynrl:supp-importance-ratio"
       ],
       "misconceptions": [
         {
@@ -449,7 +447,7 @@
             "quote": "Calculate the advantage as “z-score within group”"
           }
         ],
-        "filtering_note": "The paper does not say whether std(r) divides by G or G−1, and adds no stability constant; FeynRL uses G−1 (Bessel) plus 1e-8, the course's nano-aha-moment example adds 1e-4 (p20). The paper also does not discuss the all-equal group (std = 0), where the formula is 0/0; implementations return 0 via the epsilon. The course further argues (p23-p24) that dividing by std is not a valid baseline and biases toward too-easy/too-hard questions; the paper does not raise this."
+        "filtering_note": "The paper does not say whether std(r) divides by G or G−1, and adds no stability constant; FeynRL uses G−1 (Bessel) plus 1e-8, the course's nano-aha-moment example adds 1e-4 (p20). The paper also does not discuss the all-equal group (std = 0), where the formula is 0/0; implementations return 0 via the epsilon. The course further argues (p23-p24) that dividing by std is not a valid baseline and biases toward too-easy/too-hard questions; the paper does not raise this. In code: feynrl:group-relative-advantage, the same computation in normalize_rewards, with the Bessel and broadcast details."
       },
       "prerequisites": [
         {
@@ -463,11 +461,6 @@
       ],
       "external_prerequisites": [
         {
-          "kp": "feynrl:group-relative-advantage",
-          "basis": "author-inference",
-          "note": "the same computation in normalize_rewards, with the Bessel and broadcast details"
-        },
-        {
           "kp": "lecture_16:grpo-group-zscore-advantage",
           "basis": "author-inference"
         },
@@ -476,6 +469,9 @@
           "basis": "author-inference",
           "note": "the course's critique of the std division"
         }
+      ],
+      "see_also": [
+        "feynrl:group-relative-advantage"
       ],
       "misconceptions": [
         {
@@ -756,7 +752,7 @@
             "quote": "Compute KL term"
           }
         ],
-        "filtering_note": "Eq. 3 is written per output with 1/|o_i| then 1/G; FeynRL sums over all masked tokens of a micro-batch and normalizes by a global token count, so long outputs weigh more than in the paper (the course's 'length normalization' bias on p24 concerns exactly this 1/|o_i|). FeynRL also allows clip_low ≠ clip_high; the paper uses one ε. Algorithm 1 line 11 refers to 'Equation 21' as printed, which in the HTML numbering is the gradient coefficient, not the objective."
+        "filtering_note": "Eq. 3 is written per output with 1/|o_i| then 1/G; FeynRL sums over all masked tokens of a micro-batch and normalizes by a global token count, so long outputs weigh more than in the paper (the course's 'length normalization' bias on p24 concerns exactly this 1/|o_i|). FeynRL also allows clip_low ≠ clip_high; the paper uses one ε. Algorithm 1 line 11 refers to 'Equation 21' as printed, which in the HTML numbering is the gradient coefficient, not the objective. In code: feynrl:grpo-clipped-loss, where compute_policy_loss implements this equation and its unit test pins the clipped value."
       },
       "prerequisites": [
         {
@@ -770,11 +766,6 @@
       ],
       "external_prerequisites": [
         {
-          "kp": "feynrl:grpo-clipped-loss",
-          "basis": "author-inference",
-          "note": "compute_policy_loss implements this equation; its unit test pins the clipped value"
-        },
-        {
           "kp": "lecture_16:per-token-kl-reward-shaping",
           "basis": "author-inference",
           "note": "the Eq. 2 alternative: KL inside the reward"
@@ -784,6 +775,9 @@
           "basis": "author-inference",
           "note": "the course's critique of the 1/|o_i| term"
         }
+      ],
+      "see_also": [
+        "feynrl:grpo-clipped-loss"
       ],
       "misconceptions": [
         {
@@ -934,7 +928,7 @@
             "quote": "if self.ref_model_path and self.kl_coeff > 0.0:"
           }
         ],
-        "filtering_note": "The paper says 'positive'; strictly the estimator is non-negative and equals 0 when π_θ = π_ref at that token. Unbiasedness holds for samples drawn from π_θ; GRPO's samples come from π_old, so after the first update of a batch the estimate is slightly off-policy (not discussed in the paper). FeynRL writes the same formula as log(π/π_ref) + π_ref/π − 1, clamps the exponent to ±10 and reuses the formula for the approx_kl diagnostic between π and π_old."
+        "filtering_note": "The paper says 'positive'; strictly the estimator is non-negative and equals 0 when π_θ = π_ref at that token. Unbiasedness holds for samples drawn from π_θ; GRPO's samples come from π_old, so after the first update of a batch the estimate is slightly off-policy (not discussed in the paper). FeynRL writes the same formula as log(π/π_ref) + π_ref/π − 1, clamps the exponent to ±10 and reuses the formula for the approx_kl diagnostic between π and π_old. In code: feynrl:kl-reference-penalty, compute_kl_distance and the kl_coeff > 0 gate."
       },
       "prerequisites": [
         {

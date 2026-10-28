@@ -392,7 +392,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L160-L167",
             "role": "claim",
-            "quote": "Collections are not original works so hence not copyrightable (e.g., telephone directories) ... Copyright applies to expression, not ideas (e.g., quicksort) ... Registration not required for copyright protection ... Threshold for copyright is extremely low (e.g., your website is copyrighted)"
+            "quote": "Collections are not original works so hence not copyrightable (e.g., telephone directories) unless there is some creativity in the selection or arrangement ... expression, not ideas (e.g., quicksort) ... Registration not required ... extremely low (e.g., your website is copyrighted)"
           },
           {
             "source": "lecture_13",
@@ -2228,7 +2228,7 @@
             "source": "lecture_13",
             "ref": "lecture_13.py:L491-L500",
             "role": "claim",
-            "quote": "C4 (more diverse; recall: rule-based filtering) ... GitHub: kept permissive licenses, filtering based on manual rules ... arXiv: removed comments ... Stack Exchange: 28 largest websites, sorted answers by score ... Result: 1.2T tokens ... Reproduced by Together's RedPajama v1"
+            "quote": "C4 (more diverse; recall: rule-based filtering) ... GitHub: kept permissive licenses ... arXiv: removed comments, inline expanded macros, bibliography ... Stack Exchange: 28 largest websites, sorted answers by score ... Result: 1.2T tokens ... Reproduced by Together's RedPajama v1"
           },
           {
             "source": "lecture_13",
@@ -2637,7 +2637,7 @@
         {
           "type": "interactive",
           "action": "predict-number",
-          "ref": "fixture:filter-retention-ratios",
+          "ref": "fixture:lecture_13--retention-guess",
           "notice": "The retained fraction falls from about 11% with rules (C4: 156B of 1.4T) to about 1.6% with a classifier (DCLM: 3.8T of 240T), yet absolute token counts still grow because the pools grew faster. The RefinedWeb row (600B of 5T) is the share RefinedWeb released, not what its filter kept (video 1:02:43-1:02:47)."
         },
         {

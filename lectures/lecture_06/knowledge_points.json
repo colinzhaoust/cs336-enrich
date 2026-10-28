@@ -219,14 +219,14 @@
           "why": "When the kernel's work is tiny, the time is the launch and completion latency, which does not depend on dim (L176, supp-kernel-launch)."
         },
         "check": {
-          "q": "At dim = 512, below the crossover, you rerun the matmul benchmark on a GPU whose arithmetic is 2x faster but whose fixed per-launch cost is unchanged. What happens to the measured time? Answer up, down or same.",
+          "q": "On the professor's GPU the time goes up about 7x from dim = 4096 to dim = 8192. You rerun both sizes on a GPU whose arithmetic is 2x faster but whose fixed per-call cost is unchanged. Compared with that 7x, what happens to the ratio between the two times? Answer up, down or same.",
           "format": "trend",
-          "answer": "same (roughly): at this size the fixed launch-and-sync cost dominates, so halving the arithmetic time barely changes the total.",
-          "value": "same",
-          "why": "Small matmuls are overhead-bound: the time is the kernel launch and completion latency, which faster arithmetic does not shorten. Only in the cubic regime, where the 2·dim³ FLOPs dominate, would the time drop toward half (L172-L176).",
+          "answer": "down (to about 6.6 in this thread's model): halving the arithmetic cuts the 8192 run almost in half but the 4096 run by less, because the fixed cost is a larger share of the smaller run.",
+          "value": "down",
+          "why": "Write each time as a fixed cost c plus arithmetic w, with w growing 8x per doubling of dim. The ratio (c + 8w)/(c + w) sits below 8 only because of c; halving w makes c a bigger share of both times, so the ratio moves further below 8. If faster arithmetic made every matmul 2x faster, the ratio would stay the same (L172-L176; author inference).",
           "targets_misconception": "A GPU with 2x faster arithmetic makes every matmul about 2x faster.",
-          "varies": "the GPU's arithmetic speed at a fixed small dim, asked as a direction",
-          "invariant": "below the crossover, matmul time is a fixed overhead independent of the arithmetic",
+          "varies": "the GPU's arithmetic speed, read through the ratio between two cubic-regime sizes, asked as a direction",
+          "invariant": "matmul time is a fixed cost plus a dim³ term, and only the dim³ term follows the arithmetic speed",
           "transfer_distance": "near"
         },
         "retrieval": [
@@ -483,7 +483,7 @@
             "quote": "The compiled kernel is one Triton kernel, and this is slower than the built-in. ... it's very hardware dependent. And I think none of this is terribly optimized."
           }
         ],
-        "filtering_note": "naive_time, builtin_time and compiled_time are GPU measurements; only the direction is recorded: naive slowest, builtin and compiled 'significantly faster' (L283). The three profiler tables (L288-L297) that show the kernel counts are verbatim GPU output. The professor never counts naive_gelu's kernels; from L697 the expression has on the order of eight elementwise ops, so 'multiple' is left as stated. check_equal_1d uses atol=1e-6 (L713). Spoken evidence (32:09, 36:18-36:48): the order is builtin fastest, compiled close behind, naive slowest; asked why, he says the compiled Triton kernel 'is slower than the built-in', that last year it 'was actually closer', and that it is 'very hardware dependent'. The naive time is read aloud (32:00-32:05) and, by this thread's rule, not quoted. Spoken evidence (33:23-33:54): the reason given for naive's slowness is the round trip, 'between kernel invocations, things have to go back to HBM'; the built-in exists simply 'because people use GeLU' (34:08). How torch.compile works is skipped (34:24)."
+        "filtering_note": "naive_time, builtin_time and compiled_time are GPU measurements; only the direction is recorded: naive slowest, builtin and compiled 'significantly faster' (L283). The three profiler tables (L288-L297) that show the kernel counts are verbatim GPU output. From L697 the expression has nine elementwise ops, matching the profile's 9 cudaLaunchKernel calls (var/traces/lecture_06.json); the professor does not count them aloud. check_equal_1d uses atol=1e-6 (L713). Spoken evidence (32:09, 36:18-36:48): the order is builtin fastest, compiled close behind, naive slowest; asked why, he says the compiled Triton kernel 'is slower than the built-in', that last year it 'was actually closer', and that it is 'very hardware dependent'. The naive time is read aloud (32:00-32:05) and, by this thread's rule, not quoted. Spoken evidence (33:23-33:54): the reason given for naive's slowness is the round trip, 'between kernel invocations, things have to go back to HBM'; the built-in exists simply 'because people use GeLU' (34:08). How torch.compile works is skipped (34:24)."
       },
       "prerequisites": [
         {
@@ -548,7 +548,7 @@
         "retrieval": [
           {
             "q": "How many HBM reads and writes does the fused GeLU do, versus the naive chain?",
-            "answer": "Fused: one read and one write. Naive: one read and write per kernel, many kernels."
+            "answer": "Fused: one read and one write. Naive: at least one read and one write per kernel, 13 reads and 9 writes over its nine kernels."
           },
           {
             "q": "Which compiler produces the kernel behind torch.compile(naive_gelu)?",
@@ -2379,14 +2379,15 @@
           "why": "Bandwidth only helps once a kernel's traffic exceeds its launch cost; at 100 elements it never does."
         },
         "check": {
-          "q": "A loop calls a tiny elementwise kernel 1,000 times on a 100-element tensor. You split each call into two kernels on 50 elements each, so the loop makes 2,000 launches and moves the same total bytes. What happens to the total time? Answer up, down or same.",
-          "format": "trend",
-          "answer": "up (about 2x): the time is the number of launches times a fixed overhead, and the launches doubled while the work did not change.",
-          "value": "up",
-          "why": "In the overhead-bound regime each launch costs roughly the same whatever its size, so 2,000 launches take about twice as long as 1,000 (L176, L185).",
+          "q": "Suppose each kernel launch costs a fixed 5 µs and the GPU moves 8 TB/s from HBM. An fp32 elementwise kernel reads N values and writes N. Roughly at what N, in millions of elements, does the time spent moving bytes equal the launch overhead?",
+          "format": "number",
+          "answer": "5 (million elements): 8N bytes at 8 TB/s take N × 10^-12 s, which equals 5 µs at N = 5 × 10^6.",
+          "value": 5,
+          "tolerance": 0.25,
+          "why": "The kernel moves 2 × 4 × N = 8N bytes; at 8 × 10^12 B/s that takes N × 10^-12 s, and setting it equal to 5 × 10^-6 s gives N = 5 × 10^6. Up to a few million elements the launch costs about as much as the work or more, so the overhead is far from negligible. The 5 µs and 8 TB/s are given numbers, not lecture measurements.",
           "targets_misconception": "Launch overhead is negligible next to any GPU work.",
-          "varies": "the number of launches at fixed total work, asked as a direction",
-          "invariant": "in the overhead-bound regime, time is set by the number of launches, not bytes",
+          "varies": "the tensor size, turned into the crossover where bytes and launch overhead cost the same",
+          "invariant": "a kernel is overhead-bound until its HBM traffic takes longer than the fixed launch cost",
           "transfer_distance": "near"
         },
         "retrieval": [

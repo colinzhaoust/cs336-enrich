@@ -178,18 +178,19 @@ What this means for the two stages:
 ::widget fixture:lecture_10--intensity | in generation the MLP bar sits at about B whatever the width F; it crosses the 295 line only once B·T passes about 300 tokens
 ::note skip 26:12 | The step-by-step gated-MLP accounting was not walked aloud ("I'm not going to maybe belabor step through every single detail"); only the result, B·T, was discussed.
 
-### Attention: no B at all
+### Attention
 
 With FlashAttention (see [L5](#/read/lecture_05)), the $S \times T$ score matrix never touches HBM, so attention reads Q ($B \times T \times D$), K and V ($B \times S \times D$ each) and writes Y ($B \times T \times D$). Two matrix products, $QK^\top$ and softmax times V, cost $2BSTD$ FLOPs each.
 
 $$ \text{FLOPs} = 4BSTD, \qquad \text{bytes} = 4BSD + 4BTD $$
 
-::code lecture_10.py:L225-L240 | read Q, K, V; two products; write Y; the intensity simplifies to S·T / (S + T)
 ::predict attention-decode-intensity
 
 Divide, and B and D cancel from every term:
 
 $$ \text{intensity} = \frac{4BSTD}{4BSD + 4BTD} = \frac{ST}{S+T} $$
+
+::code lecture_10.py:L225-L240 | read Q, K, V; two products; write Y; the intensity simplifies to S·T / (S + T)
 
 ::worked attention-decode-intensity
 

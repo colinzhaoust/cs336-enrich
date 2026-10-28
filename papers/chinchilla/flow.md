@@ -143,7 +143,7 @@ At the same budget the tokens follow from $D = C/6N$: about $1\times10^{21} / (6
 
 The smaller model wins at the end of training. This is the cleanest evidence in the paper that the disagreement is real and not a quirk of curve fitting: two runs, everything matched except the allocation.
 
-::widget fixture:chinchilla--allocation-table | pick the 1B row and multiply its budget by 9 (about 1.1·10²¹ FLOPs): Approach 1 gives 3.0B parameters on about 61B tokens, while the Kaplan readout at the same budget gives about 5.0B on about 36B; the same budget split two opposite ways, and the gap widens every decade because 0.73 ≠ 0.50
+::widget fixture:chinchilla--allocation-table | press "D.4: exactly 1e21 FLOPs": Approach 1 gives about 2.86B parameters on about 58B tokens, while the Kaplan readout at the same budget gives 4.68B on about 36B; the same budget split two opposite ways, and the gap widens every decade because 0.73 ≠ 0.50
 
 So the paper's account of the gap is about the *data fed to the fit*, not its form: both studies fit power laws, but Kaplan's short-training points were biased upward by a fixed long schedule, and its models were mostly small, where the frontier bends.
 

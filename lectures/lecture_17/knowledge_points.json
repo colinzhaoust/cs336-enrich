@@ -793,6 +793,10 @@
         {
           "belief": "CLIP needed labelled data like ImageNet, just more of it.",
           "why_wrong": "The point of the paper (L52-L53) was to replace annotated images with the much larger supply of (image, caption) pairs from the web; the labels are noisy captions, not class annotations (L93)."
+        },
+        {
+          "belief": "The center crop only trims the borders, so detail in the middle of a high-resolution photo reaches the encoder at full resolution.",
+          "why_wrong": "The crop comes after a bicubic resize that makes the shorter side 336 (L70-L72): a photo whose shorter side is 3000 pixels shrinks about 9× before any border is cut, so detail in the middle shrinks by the same factor."
         }
       ],
       "prompts": {
@@ -822,23 +826,16 @@
           "transfer_distance": "far"
         },
         "check": {
-          "q": "A team keeps a frozen CLIP ViT-L/14@336px encoder but replaces its 336 resize-and-crop with AnyRes tiling of 1344x1344 inputs. Of the two reasons the lecture gives for CLIP's weak fine detail, which does this change remove, and which remains?",
-          "format": "choice",
-          "choices": [
-            "neither: the frozen encoder needs ImageNet labels to use extra pixels",
-            "both: once every pixel is kept, its features become fine-grained too",
-            "the crop's pixel loss; the classification-tuned, caption-level features stay"
-          ],
-          "answer": "the crop's pixel loss; the classification-tuned, caption-level features stay",
-          "why": "Tiling keeps the pixels the 336 crop throws away (L159-L163), so the crop's information loss is gone. Each tile still goes through the same encoder, whose features carry the semantics of noisy captions and whose design was tuned for classification, 'not very fine-grained' (L93-L94): AnyRes changes what the encoder sees, not what it was trained to keep. It learned from 400M web pairs, not labels.",
-          "varies": "the preprocessing changes (AnyRes tiles instead of the 336 crop) and the question asks which of the two limits survives, instead of which probe fails",
-          "invariant": "CLIP's fine-detail limit has two parts: the crop discards pixels, and the caption-level, classification-tuned objective never needed fine detail",
+          "q": "A portrait phone photo is 3024 × 4032 pixels, and a label near its center prints a serial number whose digits are 45 pixels tall. It goes through CLIP ViT-L/14@336px's preprocessing: resize so the shorter side is 336, then center-crop to 336 × 336. About how many pixels tall are the digits in the image the encoder sees?",
+          "format": "number",
+          "answer": "5 (45 × 336/3024 = 45/9), about a third of one 14-pixel patch",
+          "value": 5,
+          "tolerance": 0.1,
+          "why": "The resize comes before the crop (L70-L72): the shorter side, 3024, is scaled to 336, a factor of 1/9, so 45-pixel digits become 5 pixels, about a third of one 14 × 14 patch (L78); the crop then only trims the top and bottom strips. The detail is lost before the encoder runs, which is the information loss L160 names with OCR as the example; and even at full size, an objective that matches captions (L93-L94) rarely needs the digits.",
+          "varies": "a quantity instead of a probe choice: how far the resize-then-crop shrinks a small mid-image detail in a portrait photo",
+          "invariant": "the 336 preprocessing scales every detail by 336 / (shorter side) before any patch is formed, so fine detail is lost before the encoder sees it",
           "transfer_distance": "near",
-          "targets_misconception": "Because CLIP beats a supervised ImageNet model zero-shot, its features are a strictly better general-purpose image representation.",
-          "distractor_from": [
-            "'both: once every pixel is kept, its features become fine-grained too' <- misconception: 'Because CLIP beats a supervised ImageNet model zero-shot, its features are a strictly better general-purpose image representation.'",
-            "'neither: the frozen encoder needs ImageNet labels to use extra pixels' <- misconception: 'CLIP needed labelled data like ImageNet, just more of it.'"
-          ]
+          "targets_misconception": "The center crop only trims the borders, so detail in the middle of a high-resolution photo reaches the encoder at full resolution."
         },
         "retrieval": [
           {
@@ -1719,7 +1716,7 @@
             "source": "lecture_17",
             "ref": "lecture_17.py:L159-L163",
             "role": "claim",
-            "quote": "Preserving high resolution is important (e.g., for OCR) ... CLIP resizes and crops to 336x336, which loses information ... Solution: AnyRes ... Break up image into a x b pieces (matching resolution of vision encoder), encode, concatenate ... If too many tokens ... then use bilinear interpolation"
+            "quote": "CLIP resizes and crops to 336x336, which loses information ... Solution: AnyRes, introduced in LLaVA 1.5 ... Break up image into a x b pieces (matching resolution of vision encoder), encode, concatenate ... If too many tokens ... then use bilinear interpolation"
           },
           {
             "source": "lecture_17",

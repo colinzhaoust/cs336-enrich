@@ -42,7 +42,7 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L90-L93",
             "role": "claim",
-            "quote": "Time-to-first-token (TTFT): how long user waits before any generation happens ... Latency (seconds/token): how fast tokens appear for *one* query ... Throughput (tokens/second): how fast tokens appear for *many* queries"
+            "quote": "Time-to-first-token (TTFT): how long user waits before any generation happens (for interactive applications) ... Latency (seconds/token): ... for *one* query (for interactive applications) ... Throughput (tokens/second): how fast tokens appear for *many* queries (for batch processing)"
           },
           {
             "source": "lecture_10",
@@ -1557,7 +1557,7 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L429-L433",
             "role": "claim",
-            "quote": "Idea: just look at the local context, which is most relevant for modeling ... KV cache is independent of sequence length! ... Problem: this can still hurt accuracy ... Solution: interleave local attention with global attention (hybrid layers)"
+            "quote": "Idea: just look at the local context ... Effective context scales linearly with the number of layers ... KV cache is independent of sequence length! ... Problem: this can still hurt accuracy ... Solution: interleave local attention with global attention (hybrid layers)"
           },
           {
             "source": "lecture_10",
@@ -1740,7 +1740,7 @@
             "source": "lecture_10",
             "ref": "lecture_10.py:L470-L478",
             "role": "claim",
-            "quote": "Quantization-aware training (QAT) ... During training, quantize-and-dequantize during the forward pass ... Run on sample data to determine scale and zero point for each layer or tensor ... GPTQ: use Hessian information to update non-quantized weights to account for quantization error"
+            "quote": "Quantization-aware training (QAT) ... quantize-and-dequantize during the forward pass to simulate quantization errors ... Post-training quantization (PTQ) ... Run on sample data to determine scale and zero point ... GPTQ: use Hessian information to update non-quantized weights"
           },
           {
             "source": "lecture_10",
@@ -1888,7 +1888,7 @@
           "type": "interactive",
           "action": "predict-number",
           "ref": "fixture:lecture_10--batch-sweep",
-          "notice": "Switching bf16 to int4 weights at B = 1 cuts the bytes per step, and so the latency, by 4×; at large B the KV read dominates and the same switch helps little."
+          "notice": "Switching bf16 to int4 weights at B = 1 cuts the weight bytes by 4× and the latency by about 3.7× (the KV read is unchanged); at large B the KV read dominates and the same switch helps little."
         }
       ]
     },

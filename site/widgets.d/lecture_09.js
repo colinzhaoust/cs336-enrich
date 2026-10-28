@@ -310,7 +310,8 @@ WIDGETS["fixture:lecture_09--critical-batch"] = (root) => {
       at batch B = ${fmt(B, 1)}: S = S_min(1 + B_crit/B) = ${fmt(m.S, 0)} (${fmt(m.Sx, 3)}× S_min) · E = E_min(1 + B/B_crit) = ${sci(m.E)} (${fmt(m.Ex, 3)}× E_min)<br>
       doubling B from here saves <span class="big">${fmt(100 * m.doubleSaves, 1)}% of steps</span>
       <b style="color:${noise ? "var(--ok)" : "var(--bad)"}">${noise ? "noise-limited (B < B_crit): extra examples mostly buy fewer steps (perfect scaling would save 50%)" : "bias-limited (B > B_crit): steps barely fall while examples keep growing"}</b><br>
-      target loss ${fmt(s.L, 2)} nats → B_crit ≈ ${sci(m.bcritTokens)} tokens (Kaplan fit); lowering the target to ${fmt(s.L - 0.5, 2)} multiplies it by ${fmt((s.L / (s.L - 0.5)) ** (1 / KB.alphaB), 3)}<br>
+      ${m.Bc < 1 ? `<span class="muted">B_crit is below 1 example per step, off the batch slider; "set B = B_crit" clamps B to 1, so the point is not at 2× S_min, 2× E_min</span><br>
+      ` : ""}      target loss ${fmt(s.L, 2)} nats → B_crit ≈ ${sci(m.bcritTokens)} tokens (Kaplan fit); lowering the target to ${fmt(s.L - 0.5, 2)} multiplies it by ${fmt((s.L / (s.L - 0.5)) ** (1 / KB.alphaB), 3)}<br>
       <span class="muted small">provenance: fixture:lecture_09--critical-batch · lecture_09.pdf:p37 (L361-L368, diminishing returns), p38 (L369-L385, steps vs examples curve, "roughly 2x", gradient-noise claim; curve (S/S_min−1)(E/E_min−1)=1 from McCandlish et al. 2018, figure only), p39 (L386-L392, smaller target → bigger batch); video 42:34-43:59 (noise- vs bias-limited), 45:48-46:26 (B_crit = E_min/S_min), 47:33-48:22. Right panel: B_crit(L) ≈ 2e8 / L^(1/0.21) tokens is Kaplan et al. 2020 eq. 1.4 (paper), not on the slides.</span>`;
   };
   const bw = slider("batch size B (examples per step)", 0, 8, s.logB, 0.05, v => { s.logB = v; draw(); }, v => fmt(10 ** v, 1));

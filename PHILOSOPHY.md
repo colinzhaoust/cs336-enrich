@@ -59,7 +59,8 @@ attach to the same node.
 ## Sequencing and mastery (see research/07-sequencing-and-transfer-items.md)
 
 - Show the whole map and mark which knowledge points are *ready* (ALEKS outer-fringe success ≈ 0.93;
-  free learner control g ≈ 0.05). Prerequisite gating is an opt-in strict mode for study sessions.
+  free learner control g ≈ 0.05). Prerequisite gating is an opt-in strict mode (data or session page);
+  inside a session it asks only for prerequisites earlier in that session.
 - Block first exposure, interleave retrieval only across knowledge points already passed.
 - A knowledge point is *mastered* when its changed case is answered, and *secured* only
   after a retrieval prompt is remembered at least two days later. Three changed cases,

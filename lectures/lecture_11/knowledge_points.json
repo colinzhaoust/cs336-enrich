@@ -43,7 +43,7 @@
             "source": "lecture_11",
             "ref": "lecture_11.pdf:p58",
             "role": "claim",
-            "quote": "challenges in scaling 'in practice' 1. Setting model arch hyperparameters ... 2. Setting optimizer hyperparameters (LR, batch) 3. Compute needed to fit the big chinchilla sweep ... 1. Assume stability (or use muP) 2. Search for optimal LR / batch in small scale ... 3. Use alternative learning"
+            "quote": "1. Setting model arch hyperparameters ( width, etc) ... (LR, batch) 3. Compute needed to fit the big chinchilla sweep ... 1. Assume stability (or use muP) 2. Search for optimal LR / batch in small scale, either keep fixed or predict scaling 3. Use alternative learning schedules (WSD-like)"
           },
           {
             "source": "lecture_11",
@@ -380,7 +380,7 @@
             "source": "lecture_11",
             "ref": "lecture_11.pdf:p11",
             "role": "figure",
-            "quote": "Three model sizes (9m, 30m, 170m) as a function of data size (y), batch (x) and loss (col) Vertical columns of points represent a single training curve ... Red line attempts to identify minimum loss points for each y-value – this is the 'optimal batch size'"
+            "quote": "Three model sizes (9m, 30m, 170m) as a function of data size (y), batch (x) and loss (col) Vertical columns of points represent a single training curve ... Red line ... minimum loss points for each y-value – this is the 'optimal batch size' for a model size / dataset size combination"
           },
           {
             "source": "lecture_11",
@@ -2910,23 +2910,23 @@
           "targets_misconception": "muP changes the learning rate for SGD and Adam in the same way."
         },
         "transfer": {
-          "q": "Same widening (1024 to 4096, square layers) but with plain SGD. What does the p49 result say about the hidden-layer LR, and why does the answer differ from the Adam case even though both satisfy A2?",
+          "q": "Now keep a hidden layer's fan-in at 1024 and widen only its fan-out from 1024 to 4096, training with plain SGD. What does the p49 result say about that layer's learning rate under muP, and why would Adam's answer differ even though both satisfy A2?",
           "format": "choice",
           "choices": [
-            "Multiply by 1/4: η = Θ(1/n_{l-1}), the same as for Adam",
-            "Unchanged: η = Θ(n_l/n_{l-1}) = Θ(1) for square layers",
-            "Multiply by 4: η grows with n_l to offset smaller gradients",
-            "Multiply by 1/2: η shrinks like the init std, as 1/sqrt(n)"
+            "Unchanged: η = Θ(1/n_{l-1}), the same as for Adam, and the fan-in did not change",
+            "Multiply by 4: η = Θ(n_l/n_{l-1}) and only n_l grew",
+            "Multiply by 1/4: η shrinks because the layer got wider",
+            "Multiply by 2: η follows the update norm, sqrt(n_l/n_{l-1})"
           ],
-          "answer": "Unchanged: η = Θ(n_l/n_{l-1}) = Θ(1) for square layers",
-          "why": "For SGD the update is η times the gradient, and the gradient's spectral norm already shrinks like sqrt(n_{l-1}/n_l) when Δℓ = O(1), so η need not shrink. Adam normalizes the gradient away: its entries are about η, so a rank-one step has ||ΔW||_* ≈ η sqrt(n_l n_{l-1}), and A2 (||ΔW||_* sqrt(n_{l-1}) = Θ(sqrt(n_l))) makes η itself carry the 1/n_{l-1}.",
-          "varies": "functional: the optimizer changes from Adam to SGD with everything else fixed",
+          "answer": "Multiply by 4: η = Θ(n_l/n_{l-1}) and only n_l grew",
+          "why": "For SGD the update is η times the gradient. A2 asks ||ΔW||_* to grow like sqrt(n_l/n_{l-1}), here ×2, while Δℓ = O(1) makes the gradient's spectral norm shrink like sqrt(n_{l-1}/n_l), here ×1/2, so η, their ratio, grows ×4. Adam normalizes the gradient away: its entries are about η, so a rank-one step has ||ΔW||_* ≈ η sqrt(n_l n_{l-1}), and A2 (||ΔW||_* sqrt(n_{l-1}) = Θ(sqrt(n_l))) makes η = Θ(1/n_{l-1}), unchanged here because the fan-in stayed at 1024.",
+          "varies": "functional: the optimizer changes from Adam to SGD, and only the fan-out widens instead of both widths",
           "invariant": "A2 fixes the size of ΔW's effect on activations; what differs is how much of that size the optimizer already normalizes",
           "transfer_distance": "near",
           "distractor_from": [
-            "'Multiply by 1/4, same as Adam' <- misconception: 'muP changes the learning rate for SGD and Adam in the same way.'",
-            "'Multiply by 1/2, like the init std' <- misconception: 'Under muP you scale the learning rate down with width because wider models are less stable in general.' (and confuses init-std scaling with LR scaling)",
-            "'Multiply by 4' <- plausible: inverts the n_l/n_{l-1} ratio"
+            "'Unchanged, same as Adam' <- misconception: 'muP changes the learning rate for SGD and Adam in the same way.'",
+            "'Multiply by 1/4, the layer got wider' <- misconception: 'Under muP you scale the learning rate down with width because wider models are less stable in general.' (and inverts the n_l/n_{l-1} ratio)",
+            "'Multiply by 2' <- plausible: takes the update-norm target sqrt(n_l/n_{l-1}) for the learning rate"
           ]
         },
         "retrieval": [

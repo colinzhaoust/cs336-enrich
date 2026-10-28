@@ -91,7 +91,7 @@ WIDGETS["fixture:lecture_04--attention-cost"] = (root) => {
     let b = logPlot({ x0: 52, y0: 24, w: 250, h: 170, xmin: 64, xmax: 2 ** 20, mark: a.n, title: "compute per head, whole sequence (FLOPs)", xlabel: "context n",
       series: [{ f: n => f(n).softFlops, color: C.b, label: "softmax n²(d_k+d_v)" }, { f: n => f(n).linFlops, color: C.ok, label: "linear 2n·d_k·d_v" },
         { f: n => f(n).dsa, color: C.a, label: "DSA indexer + top-k" }, { f: n => f(n).idx, color: C.a, dash: "4 3", label: "DSA indexer alone" },
-        { f: n => f(n).att, color: C.a, dash: "1 3", label: "DSA top-k attention n·min(k, n)" }] });
+        { f: n => f(n).att, color: C.a, dash: "1 3", label: "DSA top-k attention n·min(k,n)(d_k+d_v)" }] });
     b += logPlot({ x0: 372, y0: 24, w: 250, h: 170, xmin: 64, xmax: 2 ** 20, mark: a.n, title: "memory per head (numbers kept)", xlabel: "context n",
       series: [{ f: n => f(n).kvNums, color: C.b, label: "KV cache: softmax and DSA" }, { f: n => f(n).stateNums, color: C.ok, label: "linear state d_k×d_v" }] });
     pic.innerHTML = svg(640, 300, b);

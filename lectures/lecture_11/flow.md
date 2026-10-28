@@ -404,11 +404,11 @@ source: lecture_11.pdf p42-p43 · video 49:21-57:22
 
 Muon gets a few slides because it now passes the course's inclusion test for new research: "Has it been in a big training run?" It has. It is also an interesting idea.
 
+::predict muon-orthogonalized-update
+
 ::slide 42 | Muon's algorithm: initialize B₀ = 0; for each step compute the gradient G_t, accumulate momentum B_t ← μB_{t−1} + G_t, compute O_t ← NewtonSchulz5(B_t), update θ_t ← θ_{t−1} − ηO_t; beside it the NanoGPT speedrun plot; "Optimizer for 'matrix valued' parameters. NewtonSchultz (approximately) orthogonalizes the matrix B_t = USVᵀ → UVᵀ"
 
 Ignore line 5 for a moment and this is plain SGD with momentum: take the gradient, add it into the running buffer $B_t$ with factor $\mu$, step along $B_t$. The new idea starts from an observation. A gradient step treats all parameters alike, but a language model's parameters are not alike. Some are vectors, such as RMSNorm gains. Others are matrices, in attention and the MLPs, and a matrix has a spectrum: singular values and singular directions. Muon works on the spectrum.
-
-::predict muon-orthogonalized-update
 
 Line 5 takes the update matrix, writes it as its singular value decomposition $B_t = U S V^\top$, and replaces it with
 
@@ -471,9 +471,9 @@ The derivation follows that paper, and its style is "a very physicist way of thi
 
 A note on bookkeeping used throughout: if each of the $n_l$ coordinates of a layer's activation vector $h_l$ is $\Theta(1)$, the vector's length is $\|h_l\|_2 = \Theta(\sqrt{n_l})$.
 
-### A2 is feature learning
-
 ::predict a2-is-feature-learning
+
+### A2 is feature learning
 
 Why insist on A2? The professor adds an aside "in case some of you are theorists". A2 is "what people call feature learning": a gradient step should change the network's internal representations by a significant amount, the same at every width. The contrast is the **neural tangent kernel** (NTK) regime, where "the change in activations actually vanish[es] as a function of the network width". A very wide network in that regime barely moves its hidden features and fits the data with essentially the random features it started with, like a kernel method. Its loss can still fall, through many tiny weight changes, but it learns no new features. muP rules this out by demanding a $\Theta(1)$ change at every width.
 
@@ -551,7 +551,7 @@ Two differences matter in practice. The init differs only when fan-out is smalle
 
 Widen every hidden layer from 1024 to 4096 and train with Adam: muP multiplies the hidden-layer learning rate by $1024/4096 = 1/4$, while the standard parametrization leaves it unchanged.
 
-::widget fixture:mup-vs-sp-table | slide the width multiplier with both widths tied: the SP learning rate stays flat, the Adam-muP rate falls as 1/m, and the init std departs from SP's only once you make the fan-out smaller than the fan-in
+::widget fixture:mup-vs-sp-table | slide the width multiplier with both widths tied: the SP learning rate and the SGD-muP rate stay flat, the Adam-muP rate falls as 1/m, and the init std departs from SP's only once you make the fan-out smaller than the fan-in
 ::note slip 1:10:49 | Aloud the muP init becomes "1 over square root nl minus 1 times a component that is 1 over the square root fanout over fanin", and different "if this ratio is not smaller than 1". The slide's factor is min(1, √(fan-out/fan-in)), not its inverse, and it changes the init only when that ratio is below 1. His next words, "closer to the square root fanout over fanin", agree with the slide.
 
 What is the high-level point? Beyond the rules themselves, the method: take a scaling limit of the network, assert invariants, add assumptions, and read off the constraints they put on the hyperparameters. It is "a general principle for coming up with different kinds of algorithms or hyperparameter scalings", and quite unlike the usual way of working in CS or ML.

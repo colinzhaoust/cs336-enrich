@@ -322,7 +322,7 @@
         "predict": {
           "q": "H100: HBM bandwidth is 3.35 TB/s (lecture 6 table). Slide 10's caption says SRAM, which L1 and shared memory are built from, is ~8× faster than DRAM. Guess the L1/shared memory bandwidth in TB/s and its ratio to HBM.",
           "format": "short",
-          "answer": "~33 TB/s, ~10×",
+          "answer": "~33 TB/s, ~10× (lecture 6's table); about 27 TB/s, ~8× from slide 10's caption also counts: both are about an order of magnitude",
           "why": "Lecture 6's table gives ~33 TB/s, and 33 / 3.35 ≈ 10×, a little above slide 10's rough '~8x faster than DRAM'; both say about an order of magnitude. Moving inward, bandwidth rises and capacity falls, but not by a fixed factor per level: about 3.35 (HBM) → 12 (L2) → 33 (L1/shared) → 401 TB/s (registers), while sizes shrink 80 GB → 50 MB → 256 KB."
         },
         "transfer": {
@@ -1384,7 +1384,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Per slide 32, computing sin²x + cos²x elementwise the naive way launches how many CUDA kernels, and how many after fusion?",
+          "q": "PyTorch's graph for sin²x + cos²x, applied elementwise, has five pointwise ops (sin, cos, two squares, an add). Run eagerly, how many CUDA kernels launch, and how many after fusion?",
           "format": "short",
           "answer": "5, then 1",
           "why": "sin, square, cos, square, add are five pointwise ops, each a kernel with its own global-memory round trip; all five fuse into one kernel that touches x once and writes the result once.",
@@ -2385,7 +2385,7 @@
           "q": "Double the sequence length N (fixed d). By what factor does standard attention's score-matrix HBM traffic grow, and by what factor does FlashAttention's output traffic grow? What happens to the matmul FLOPs in both?",
           "format": "short",
           "answer": "Standard: 4x (N²). Flash: 2x (N·d). FLOPs: 4x in both.",
-          "why": "FlashAttention's writes go from O(N²) to O(N·d) (its K/V re-reads stay Θ(N²d²/M), quadratic in N but with a constant far below 1 for real SRAM sizes), while the compute stays O(N²·d); at long N it turns a memory-bound op into a compute-bound one, which is the roofline goal from slide 21."
+          "why": "FlashAttention's writes go from O(N²) to O(N·d) (its total HBM reads, mostly re-read tiles, stay Θ(N²d²/M), quadratic in N but with a constant far below 1 for real SRAM sizes), while the compute stays O(N²·d); at long N it turns a memory-bound op into a compute-bound one, which is the roofline goal from slide 21."
         },
         "check": {
           "q": "One attention head with sequence length N = 16,384 and head dimension d = 128, in bf16. Standard attention writes the N × N score matrix to HBM; FlashAttention writes only the N × d output. The score matrix is how many times larger than the output? Type only the number.",

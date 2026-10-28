@@ -289,7 +289,7 @@ function baseline({ pa, b, s = 1 }) {
 MODELS["fixture:grpo--baseline"] = {
   fn: baseline,
   cases: [
-    { args: { pa: 0.75, b: 0 }, pick: "coefA", expect: 0.75, from: "grpo:supp-policy-gradient:predict#1" },  // predict, before: 0.75 ∇log π(a)
+    { args: { pa: 0.75, b: 0 }, pick: "coefA", expect: 0.75, from: "grpo:supp-policy-gradient:predict#5" },  // predict, before: = 0.75 ∇log π(a)
     { args: { pa: 0.75, b: 0.5 }, pick: "coefA", expect: 0.375 },         // predict, after: 0.75·0.5 ∇log π(a) ...
     { args: { pa: 0.75, b: 0.5 }, pick: "coefB", expect: -0.125 },        // ... − 0.25·0.5 ∇log π(b)
     { args: { pa: 0.75, b: 0 }, pick: "E", expect: 0.1875 },              // the two are equal as a number on the logit

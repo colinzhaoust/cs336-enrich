@@ -112,7 +112,6 @@
           "why": "Transfer time is bytes / bandwidth, so the time scales by the inverse bandwidth ratio: 0.9 ms × 8 / 0.05 = 144 ms. The two hops multiply: about 4.4× from HBM to NVLink, then 36× from NVLink to Infiniband, 160× in all (L219-L220).",
           "varies": "the pair of levels compared (HBM vs Infiniband, two hops, instead of one adjacent pair) and the given quantity (a time, not a byte count)",
           "invariant": "time = bytes / bandwidth, so the time ratio between two levels is the inverse of their bandwidth ratio",
-          "targets_misconception": "NVLink is about as fast as HBM, so spreading a model over 8 GPUs in a node is nearly free.",
           "transfer_distance": "near"
         },
         "retrieval": [

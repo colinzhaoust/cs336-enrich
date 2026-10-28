@@ -215,7 +215,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Two 48-layer transformers are trained with the same large learning rate and no warmup, one post-norm and one pre-norm. According to slide 12, which one is the lecture expecting to diverge or need warmup?",
+          "q": "Two 48-layer transformers are trained with the same large learning rate and no warmup, one post-norm and one pre-norm. Which one is the lecture expecting to diverge or need warmup?",
           "format": "choice",
           "choices": [
             "post-norm",
@@ -2097,7 +2097,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Per slide 49, which model among these is the only newer one still using dropout during pretraining?",
+          "q": "Which of these newer models is the only one still using dropout during pretraining?",
           "format": "choice",
           "choices": [
             "LLaMA",

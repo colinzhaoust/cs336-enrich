@@ -1,7 +1,6 @@
 // Interactive presentations. Each widget = pure model + canvas/readout. Numbers mirror the fixtures
 // and official/lectures/lecture_02.py; no widget invents constants (see provenance strings).
 const H100_FLOPS_BF16 = 1979e12 / 2;      // lecture_02.py:L74 (half without sparsity)
-const H100_BYTES = 3.35e12;                // lecture_02.py:L349 / facts.py
 
 const el = (tag, attrs = {}, ...kids) => {
   const e = document.createElement(tag);
@@ -100,11 +99,14 @@ export function memoryLedger(root, notice) {
   const vals = () => { const m = memoryLedgerModel(s); return { "params (bf16)": m.params, "grads (bf16)": m.grads, [`optimizer (fp32 ×${s.opt / 4})`]: m.opt, "activations (bf16)": m.act }; };
   const draw = () => {
     const v = vals(), ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
-    const max = Math.max(...Object.values(v)); let y = 20;
+    // fixed scale: the Adam optimizer bar (8 bytes/param) is full width, so AdaGrad→Adam doubles that bar and only activations move with B;
+    // an activation bar past the scale is clipped at full width with an arrow (its MiB label stays exact)
+    const max = memoryLedgerModel({ ...s, opt: 8 }).opt; let y = 20;
     for (const [k, x] of Object.entries(v)) {
+      const w = Math.max(2, Math.min(400, 400 * x / max));
       ctx.fillStyle = "#6b7680"; ctx.font = "13px sans-serif"; ctx.fillText(k, 10, y + 14);
-      ctx.fillStyle = k.startsWith("act") ? "#b8582a" : "#24668d"; ctx.fillRect(190, y, Math.max(2, 400 * x / max), 18);
-      ctx.fillStyle = "#25313d"; ctx.fillText(`${fmt(x, 1)} MiB`, 196 + Math.max(2, 400 * x / max), y + 14); y += 46;
+      ctx.fillStyle = k.startsWith("act") ? "#b8582a" : "#24668d"; ctx.fillRect(190, y, w, 18);
+      ctx.fillStyle = "#25313d"; ctx.fillText(`${x > max ? "→ " : ""}${fmt(x, 1)} MiB`, 196 + w, y + 14); y += 46;
     }
     read.innerHTML = `micro-steps per update: <b>${Math.round(s.B / s.micro)}</b> · FLOPs per update = 6·B·N (unchanged by micro)<br><span class="muted small">lecture_02.py:L636-L646, L719-L731 (B=64, D=1024, L=16)</span>`;
   };
@@ -147,7 +149,7 @@ export function ropePair(root, notice) {
 
 // -------------------------------------------------------------- ratio clip --
 export function ratioClip(root, notice) {
-  const s = { eps: 0.3, A: 0.5 };  // eps 0.2, A 1 is the ppo-ratio-clip predict
+  const s = { eps: 0.3, A: 0.5, moved: false };  // eps 0.2, A 1 is the ppo-ratio-clip predict; the readout names the zero-gradient side only after a slider moves
   const cv = el("canvas", { width: 640, height: 300 });
   const read = el("div", { class: "readout" });
   const draw = () => {
@@ -159,10 +161,10 @@ export function ratioClip(root, notice) {
     const draw1 = (f, col) => { ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath(); for (let r = 0; r <= 2.5; r += 0.01) { const v = f(r); r === 0 ? ctx.moveTo(x(r), y(v)) : ctx.lineTo(x(r), y(v)); } ctx.stroke(); ctx.lineWidth = 1; };
     draw1(r => r * s.A, "rgba(36,102,141,.4)");
     draw1(r => Math.min(r * s.A, Math.min(Math.max(r, 1 - s.eps), 1 + s.eps) * s.A), "#24668d");
-    read.innerHTML = `objective = min(r·A, clip(r, 1−ε, 1+ε)·A)<br>with A ${s.A >= 0 ? "> 0" : "< 0"}: gradient is <b>zero</b> for r ${s.A >= 0 ? ">" : "<"} ${(s.A >= 0 ? 1 + s.eps : 1 - s.eps).toFixed(2)} (clipped side), unclipped on the other side<br><span class="muted small">faint: unclipped r·A. See FeynRL algs/PPO for the code lines.</span>`;
+    read.innerHTML = `objective = min(r·A, clip(r, 1−ε, 1+ε)·A)<br>${s.moved ? `with A ${s.A >= 0 ? "> 0" : "< 0"}: gradient is <b>zero</b> for r ${s.A >= 0 ? ">" : "<"} ${(s.A >= 0 ? 1 + s.eps : 1 - s.eps).toFixed(2)} (clipped side), unclipped on the other side` : "where is the slope of the dark curve zero? Move a slider to read it off"}<br><span class="muted small">faint: unclipped r·A. See FeynRL algs/PPO for the code lines.</span>`;
   };
   const controls = el("div", { class: "controls" },
-    slider("clip ε", 0, 1, 0.3, 0.05, v => { s.eps = v; draw(); }), slider("advantage A", -1.5, 1.5, 0.5, 0.1, v => { s.A = v; draw(); }), read);
+    slider("clip ε", 0, 1, 0.3, 0.05, v => { s.eps = v; s.moved = true; draw(); }), slider("advantage A", -1.5, 1.5, 0.5, 0.1, v => { s.A = v; s.moved = true; draw(); }), read);
   root.append(el("div", { class: "widget" }, controls, cv));
   draw();
 }
@@ -529,14 +531,14 @@ export function decodeBound(root, notice) {
     const bstar = c.p / kvs;
     if (bstar >= 1 && bstar <= 512) { ctx.strokeStyle = "#3c8d5a"; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(gx(bstar), 130); ctx.lineTo(gx(bstar), 250); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#3c8d5a"; ctx.fillText(`B* = ${fmt(bstar, 0)}`, Math.min(gx(bstar) + 4, 570), 142); }
     ctx.fillStyle = "#6b7680"; ctx.fillText("1", 46, 262); ctx.fillText("512", 592, 262); ctx.fillText("batch B →", 280, 262);
-    ctx.fillStyle = "#24668d"; ctx.fillText(`throughput ÷ ceiling bandwidth / KV-per-seq = ${fmt(s.bw / kvs, 0)} tokens/s (dashed)`, 56, 124);
+    ctx.fillStyle = "#24668d"; ctx.fillText(`throughput ÷ ceiling bandwidth / KV-per-seq (dashed)`, 56, 124);
     ctx.fillStyle = "#b8582a"; ctx.fillText(`latency ÷ ${fmt(lmax * 1e3, 1)} ms (its value at B = 512)`, 360, 240);
     ctx.fillStyle = "#6b7680"; ctx.font = "12px sans-serif"; ctx.fillText(`bytes read per decode step: parameters ${fmt(c.p / 1e9, 1)} GB (blue) + KV cache ${fmt(c.kv / 1e9, 2)} GB (red)`, 40, 20);
     ctx.fillStyle = c.mem > 80e9 ? "#b8582a" : "#3c8d5a"; ctx.fillText(c.mem > 80e9 ? `memory ${fmt(c.mem / 1e9, 1)} GB > h100_memory 80 GB: does not fit (L351)` : `memory ${fmt(c.mem / 1e9, 1)} GB fits in 80 GB`, 40, 80);
     ctx.fillStyle = "#6b7680"; ctx.fillText(`latency = memory / bandwidth = ${fmt(c.lat * 1e3, 2)} ms per step`, 40, 104);
     read.innerHTML = `<span class="big">≤ ${fmt(c.tps, 1)} tokens/s</span> = B / latency = ${s.B} / (${fmt(c.mem, 2)} B ÷ ${fmt(s.bw, 2)} B/s)<br>
       per-request latency ${fmt(c.lat * 1e3, 2)} ms/token (${fmt(1 / c.lat, 1)} tokens/s for one stream) · larger B amortizes the parameter read but grows the KV term (L355-L357)<br>
-      B* = parameter bytes / KV bytes per sequence = ${fmt(c.p / (c.kv / s.B), 1)}: below it throughput rises almost linearly in B, above it the KV read dominates and throughput flattens toward ${fmt(s.bw / (c.kv / s.B), 0)} tokens/s while latency keeps growing linearly<br>
+      B* = parameter bytes / KV bytes per sequence = ${fmt(c.p / (c.kv / s.B), 1)}: below it throughput rises almost linearly in B, above it the KV read dominates and throughput flattens toward the ceiling bandwidth / KV bytes per sequence while latency keeps growing linearly<br>
       <span class="muted small">provenance: fixture:decode-bound · lecture_10.py:L297-L308 (memory, latency, throughput), L299-L302 (KV cache), L322 (3.35e12 B/s), L351 (80e9), L335 (assumes perfect overlap, no overhead), L333 (generation is memory-bound). Upper bound only: compute and overhead ignored.</span>`;
   };
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
@@ -554,7 +556,7 @@ function kvModel({ params = 13e9, bytes = 2, B = 1, L = 40, K = 40, H = 128, pro
   return { pbytes, budget, perTokSeq, perTok: perTokSeq * B, fitB: budget / (perTokSeq * prompt) };
 }
 export function kvCacheGrowth(root, notice) {
-  const s = { params: 13e9, bytes: 2, B: 16, L: 40, K: 40, H: 128, prompt: 1024, maxGen: 8192, gpuGB: 80 };  // B = 64 at S = 1024 is the kv-cache-size predict
+  const s = { params: 13e9, bytes: 2, B: 16, L: 40, K: 40, H: 128, prompt: 1024, maxGen: 24576, gpuGB: 80 };  // B = 64 at S = 1024 is the kv-cache-size predict; maxGen 24576 keeps the K = 8 crossing (~19.6k generated at B = 16) on the chart
   const cv = el("canvas", { width: 640, height: 260 }); const read = el("div", { class: "readout" });
   const draw = () => {
     const ctx = cv.getContext("2d"); ctx.clearRect(0, 0, 640, 260);
@@ -573,7 +575,7 @@ export function kvCacheGrowth(root, notice) {
   root.append(el("div", { class: "widget" }, el("div", { class: "controls" },
     slider("parameters (B)", 1, 500, 13, 1, v => { s.params = v * 1e9; draw(); }), slider("bytes / element", 1, 4, 2, 1, v => { s.bytes = v; draw(); }, v => ({ 1: "fp8 / int8", 2: "bf16", 4: "fp32" })[v] || v),
     slider("batch B", 1, 512, 16, 1, v => { s.B = v; draw(); }), slider("layers L", 1, 128, 40, 1, v => { s.L = v; draw(); }), slider("kv heads K", 1, 128, 40, 1, v => { s.K = v; draw(); }), slider("head dim H", 32, 256, 128, 32, v => { s.H = v; draw(); }),
-    slider("prompt tokens", 0, 32768, 1024, 128, v => { s.prompt = v; draw(); }), slider("max generated", 256, 65536, 8192, 256, v => { s.maxGen = v; draw(); }), slider("GPU memory (GB)", 16, 192, 80, 8, v => { s.gpuGB = v; draw(); }),
+    slider("prompt tokens", 0, 32768, 1024, 128, v => { s.prompt = v; draw(); }), slider("max generated", 256, 65536, 24576, 256, v => { s.maxGen = v; draw(); }), slider("GPU memory (GB)", 16, 192, 80, 8, v => { s.gpuGB = v; draw(); }),
     read), cv)); draw();
 }
 
@@ -851,9 +853,11 @@ export const MODELS = {
     { args: { rw: 3, rl: 1, shift: 10 }, pick: "p", expect: 0.88, from: "lecture_15:bradley-terry-reward-model:predict#6" },
     { args: { rw: 2 * Math.log(4), rl: 0 }, pick: "p", expect: 0.941, from: "lecture_15:bradley-terry-reward-model:check" },  // logit 0.8 = ln 4, twice
   ] },
-  "fixture:mup-vs-sp-table": { fn: mupModel, untied: "the predict/transfer answers write the factors as 1/4 and Θ(1), which the number parser cannot tie; the cases check those rows directly", cases: [
+  "fixture:mup-vs-sp-table": { fn: mupModel, cases: [
+    // the predict answer writes its factors as 1/4 and Θ(1), which the number parser cannot tie, so its rows are checked directly
     { args: { nIn: 1024, nOut: 1024, m: 4, scale: "both" }, pick: "mupAdamLr", expect: 0.25, tol: 1e-9 },  // mup-lr-derivation-and-recap:predict, muP + Adam
     { args: { nIn: 1024, nOut: 1024, m: 4, scale: "both" }, pick: "spLr", expect: 1, tol: 1e-9 },         // same predict, SP unchanged
-    { args: { nIn: 1024, nOut: 1024, m: 4, scale: "both" }, pick: "mupSgdLr", expect: 1, tol: 1e-9 },     // transfer: SGD unchanged for square layers
+    { args: { nIn: 1024, nOut: 1024, m: 4, scale: "both" }, pick: "mupSgdLr", expect: 1, tol: 1e-9 },     // not a prompt: muP SGD LR is unchanged for square layers
+    { args: { nIn: 1024, nOut: 1024, m: 4, scale: "out" }, pick: "mupSgdLr", expect: 4, tol: 1e-9, from: "lecture_11:mup-lr-derivation-and-recap:transfer#1" },  // fan-out only, SGD: ×4
   ] },
 };

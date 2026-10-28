@@ -2,7 +2,7 @@
   "lecture": "lecture_16",
   "title": "Post-training 2: RL from verifiable rewards",
   "version": "0.1.0",
-  "authoring_note": "Anchors are slide pages in official/lectures/lecture_16.pdf (convention lecture_16.pdf:pNN, pages from the form feeds in lecture_16.txt; see discovered.json, produced by discover_slides.py). The deck shows objectives, code and every results table as screenshots, so statements and prompts use only numbers present in the text layer; image-only numbers are named in filtering_note. The FeynRL repo thread (atlas/repos/feynrl) implements the same mechanisms in code; links to it use external_prerequisites and see_also with ids feynrl:<kp-id>. Cross-thread edges point at the lecture_15 thread (basis author-inference). Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer: anchors with source lecture_16_video cite the human-made captions in transcript.json (video:M:SS-M:SS). filtering_note sentences labelled 'Spoken evidence (M:SS)', 'Spoken slip (M:SS)', 'Spoken imprecision' or 'Recorded disagreement' come from the audio. spoken_filtering lists every oral skip, deferral and aside, and spoken_map segments the whole talk by KP.",
+  "authoring_note": "Anchors are slide pages in official/lectures/lecture_16.pdf (convention lecture_16.pdf:pNN, pages from the form feeds in lecture_16.txt; see discovered.json, produced by discover_slides.py). The deck shows objectives, code and every results table as screenshots, so statements and prompts use only numbers present in the text layer; image-only numbers are named in filtering_note. The FeynRL repo thread (atlas/repos/feynrl) implements the same mechanisms in code; its KPs come later in the course and are linked only through see_also (ids feynrl:<kp-id>), which does not gate readiness. Cross-thread prerequisites point at the lecture_15 thread (basis author-inference, plus one teaching-order edge from ppo-for-rlhf-brief). Prompts follow commit-before-reveal; retrieval prompts are meant to be re-asked 1-2 weeks later. Spoken layer: anchors with source lecture_16_video cite the human-made captions in transcript.json (video:M:SS-M:SS). filtering_note sentences labelled 'Spoken evidence (M:SS)', 'Spoken slip (M:SS)', 'Spoken imprecision' or 'Recorded disagreement' come from the audio. spoken_filtering lists every oral skip, deferral and aside, and spoken_map segments the whole talk by KP.",
   "path": {
     "basis": "teaching-order",
     "note": "Slide order in lecture_16.pdf mapped to KPs. p1-p2 (title, 'the class thus far'), p4 (outline), p6 and p8 (PPO blog / 'bad time' meme), p10-p11 and p13 (AlpacaFarm code screenshots), p25 (case-study menu), p36 and p47 (results tables), p39-p40 and p49-p50 (case-study intros), p52-p53 (thinking-mode fusion, test-time scaling), p55-p60 (Qwen3-Coder-Next agentic RL) and p61 (recap) are context, not KPs; where they carry a claim the nearest KP's filtering_note records it. Spoken-only KPs (status 'spoken', from the lecture captions) are placed at the moment they are said: incorrect-responses-drive-length-growth (Q&A at 38:25, after the R1 section) after r1-stage-order-and-distillation; kimi-loss-mean-baselined-pg (43:53) before kimi-length-reward; verifiable-reward-hacking (1:06:11, in the Qwen3-Coder-Next section) after negative-gradients-vs-positive-only.",
@@ -762,23 +762,23 @@
           "transfer_distance": "near"
         },
         "check": {
-          "q": "Under AlpacaFarm-style shaping, one token's new-policy log-probability is above the reference's (log-ratio +0.3) and another token's is below it (log-ratio −0.4). Which of the two per-token KL penalties does the code clamp?",
+          "q": "Under AlpacaFarm-style shaping with β = 0.1, a three-token response has per-token log-ratios log π/π_ref of +0.3, +0.1 and −0.4. What total KL penalty does the sequence receive?",
           "format": "choice",
           "choices": [
-            "the −0.4 token's: its log-ratio is clamped to 0, so it pays no penalty",
-            "the +0.3 token's: its log-ratio is clamped to 0",
-            "neither: the sequence's summed log-ratio decides, and the penalty applies in full",
-            "both: every token's log-ratio is clamped symmetrically"
+            "−0.04: only the two positive tokens pay, −0.1·(0.3 + 0.1)",
+            "0: the log-ratios sum to zero, so the sequence pays nothing",
+            "−0.08: every token pays β times the size of its log-ratio",
+            "+0.04: the positive tokens are clamped and the −0.4 token's term is kept"
           ],
-          "answer": "the −0.4 token's: its log-ratio is clamped to 0, so it pays no penalty",
-          "why": "p14's code computes kl = torch.clamp(logprobs − ref_logprobs, min=0.0) on the per-token tensor, so the clamp acts token by token: the −0.4 token's log-ratio becomes 0 and pays nothing, while the +0.3 token keeps its full penalty −β·0.3. The slide's text says 'for sequences', but no sequence-level total is formed before the clamp.",
-          "varies": "two tokens of one sequence with log-ratios of opposite sign",
-          "invariant": "the per-token log-ratio is clamped at zero from below, token by token",
+          "answer": "−0.04: only the two positive tokens pay, −0.1·(0.3 + 0.1)",
+          "why": "p14's code computes kl = torch.clamp(logprobs − ref_logprobs, min=0.0) on the per-token tensor and then non_score_rewards = −β·kl. Tokens above the reference keep their full penalty (−0.03 and −0.01), the −0.4 token is clamped to 0, and no sequence-level sum is formed before the clamp, so the total is −0.04. The slide's text says 'for sequences', but a sequence-level reading would give 0 here.",
+          "varies": "three tokens whose log-ratios sum to zero, two above the reference and one below",
+          "invariant": "tokens above the reference keep their full per-token penalty; the clamp acts before any sum over the sequence",
           "transfer_distance": "near",
           "distractor_from": [
-            "'the +0.3 token's: its log-ratio is clamped to 0' <- plausible: confuses which sign the clamp removes",
-            "'neither: the sequence's summed log-ratio decides, and the penalty applies in full' <- plausible: reads the slide's 'for sequences' as a per-sequence decision",
-            "'both: every token's log-ratio is clamped symmetrically' <- plausible: assumes a symmetric clip, like PPO's ratio clip"
+            "'0: the log-ratios sum to zero, so the sequence pays nothing' <- plausible: reads the slide's 'for sequences' as a clip on the summed log-ratio",
+            "'−0.08: every token pays β times the size of its log-ratio' <- plausible: treats the clamp as an absolute value, so no sign escapes the penalty",
+            "'+0.04: the positive tokens are clamped and the −0.4 token's term is kept' <- plausible: confuses which sign the clamp removes"
           ]
         },
         "retrieval": [
@@ -910,7 +910,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Which PPO component does slide 17 single out as both memory-hungry and in need of extra tuning?",
+          "q": "Which PPO component is both memory-hungry and in need of extra tuning, a reason to look past PPO?",
           "format": "choice",
           "choices": [
             "The reference model",
@@ -3021,7 +3021,7 @@
       ],
       "prompts": {
         "predict": {
-          "q": "Which training signal does RFT (reinforcing correct answers) lack that GRPO has, per slides 21 and 48?",
+          "q": "Which training signal does RFT (reinforcing correct answers) lack that GRPO has?",
           "format": "choice",
           "choices": [
             "A reward for correct answers",

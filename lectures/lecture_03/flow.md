@@ -76,9 +76,9 @@ The second effect is empirical: pre-norm shows smaller and less frequent **gradi
 ::note aside 12:13 | The slides cite "Salazar and Ngyuen 2019"; the paper is Nguyen and Salazar (2019), "Transformers without Tears". Similar small citation slips recur in the deck: Narang et al. (slides 17, 25) is a 2021 paper, Ivanov et al. (slides 15-16) a 2020 one, and "Dehgani" and "Idefcs" on slide 55 are Dehghani and Idefics.
 ::kp pre-norm-vs-post-norm
 
-::slide 13 | two newer layouts: the "double norm" with a LayerNorm both before and after each sub-block (inside the branch), and the layout with only the after-norm; "Recent models: Grok, Gemma 2. Olmo 2 only does non-residual post norm"
-
 ::predict non-residual-double-norm
+
+::slide 13 | two newer layouts: the "double norm" with a LayerNorm both before and after each sub-block (inside the branch), and the layout with only the after-norm; "Recent models: Grok, Gemma 2. Olmo 2 only does non-residual post norm"
 
 If the problem is a norm *on the residual stream*, nothing forbids a norm *after* the computation, as long as it stays inside the branch. That is exactly what several recent models do:
 - **Double norm** (Grok, Gemma 2): $x \leftarrow x + \mathrm{LN}(\mathrm{Attn}(\mathrm{LN}(x)))$, a norm on the branch's input and another on its output, before the add.
@@ -295,9 +295,9 @@ Hyperparameters only start to matter when you actually have to instantiate a mod
 
 The first consensus hyperparameter is the ratio of the FFN's hidden width $d_{ff}$ (the output dimension of $W_1$) to the model width $d_{model}$. It controls how rich the MLPs are. The rule is $d_{ff} = 4\,d_{model}$, "for whatever reason", and it "works remarkably well".
 
-::slide 38 | exception #1, GLU variants: scaling 4 by 2/3 gives d_ff = 8/3 d_model; ratios PaLM 4, Mistral 7B 3.5, LLaMA-2 70B 3.5, LLaMA 70B 2.68, Qwen 14B 2.67, DeepSeek 67B 2.68, Yi 34B 2.85, T5 v1.1 2.5; "PaLM, LLaMA2 and Mistral are slightly larger"
-
 ::predict dff-ratio
+
+::slide 38 | exception #1, GLU variants: scaling 4 by 2/3 gives d_ff = 8/3 d_model; ratios PaLM 4, Mistral 7B 3.5, LLaMA-2 70B 3.5, LLaMA 70B 2.68, Qwen 14B 2.67, DeepSeek 67B 2.68, Yi 34B 2.85, T5 v1.1 2.5; "PaLM, LLaMA2 and Mistral are slightly larger"
 
 The first exception is the one we already met: gated FFNs have a third matrix, so the 2/3 correction turns 4 into $\tfrac83 \approx 2.67$. The table shows exactly that. LLaMA 65B (the slide's "LLaMA 70B"), Qwen 14B and DeepSeek 67B sit at 2.67-2.68, Yi at 2.85, T5 v1.1 at 2.5. The arithmetic for a concrete width:
 
@@ -419,9 +419,9 @@ source: lecture_03.pdf p48-p51 · video 59:18-1:05:00, 1:24:14-1:24:54
 
 Machine Learning 101 says big models overfit and need dropout and weight decay. Pretraining breaks the premise. There is more internet text than any lab has FLOPs to train on, so a run rarely sees the same document twice, and a single pass of SGD is very unlikely to memorize its data. Overfitting is "not really a problem, almost ever" in compute-limited language modeling. Some people only look at training loss for this reason.
 
-::slide 49 | dropout and weight decay by model: original transformer 0.1 / 0; GPT-2 0.1 / 0.1; T5 0.1 / 0; GPT-3 0.1 / 0.1; T5 v1.1 0 / 0; PaLM 0 / variable; OPT 0.1 / 0.1; LLaMA 0 / 0.1; Qwen 14B 0.1 / 0.1; "many older models used dropout during pretraining; newer models (except Qwen) rely only on weight decay"; footnote: papers often don't discuss dropout, which on open models closely matches not using it
-
 ::predict regularization-weight-decay
+
+::slide 49 | dropout and weight decay by model: original transformer 0.1 / 0; GPT-2 0.1 / 0.1; T5 0.1 / 0; GPT-3 0.1 / 0.1; T5 v1.1 0 / 0; PaLM 0 / variable; OPT 0.1 / 0.1; LLaMA 0 / 0.1; Qwen 14B 0.1 / 0.1; "many older models used dropout during pretraining; newer models (except Qwen) rely only on weight decay"; footnote: papers often don't discuss dropout, which on open models closely matches not using it
 
 What do people do anyway? Many older models used dropout 0.1. Newer ones mostly drop it, Qwen being the exception on the slide, but **weight decay** survives, typically 0.1 (GPT-2, GPT-3, OPT, LLaMA). That is "very mystifying": why penalize weight size in a model that cannot overfit? (Recent technical reports often do not mention these settings at all; the footnote warns that the table may not hold for closed models.)
 

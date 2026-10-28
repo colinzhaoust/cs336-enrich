@@ -37,7 +37,7 @@ The table in the middle of the slide is the whole paper in three rows. It measur
 
 FlashAttention does 75.2 / 66.6 ≈ 1.13, so 13% *more* arithmetic (the recomputation in the backward pass) and still runs 41.7 / 7.3 ≈ 5.7× faster, because it moves 40.3 / 4.4 ≈ 9.2× fewer bytes through HBM. Runtime follows the bytes, not the FLOPs. The speedup is smaller than 9.2× because not all of the runtime was HBM traffic to begin with.
 
-::note slip | The absolute GFLOPs in this table do not match the caption's setting. Attention's two matmuls alone cost 4·N²·d per head: 4 × 1024² × 64 × 16 heads × batch 64 ≈ 275 GFLOPs for the forward pass, about 825 with the backward. The printed 66.6 is far below that (it is close to the forward cost at batch 16). The ratios used here (1.13×, 9.2×, 5.7×) do not depend on it.
+::note slip | The absolute GFLOPs in this table do not match the caption's setting. Attention's two matmuls alone cost 4·N²·d per head: 4 × 1024² × 64 × 16 heads × batch 64 ≈ 275 GFLOPs for the forward pass, about 825 with the backward. The printed 66.6 is far below that (it is close to the forward cost at batch 16). The 9.2× and 5.7× ratios do not depend on it. The 1.13× does, since it is built from these two GFLOPs entries; it holds only if both were counted the same way, for example under the same smaller setting.
 
 FlashAttention is also **exact**: it returns the same $\mathrm{softmax}(QK^\top)V$ as the standard implementation, up to floating point. The speed comes from where intermediate values live, not from dropping terms. That property carries the experiment section, and we return to it there.
 
@@ -307,6 +307,8 @@ The experiments test two claims: the same models train faster, and longer contex
 
 ::predict supp-exact-vs-approximate
 
+::predict fa-experimental-claims
+
 **GPT-2** on OpenWebText, sequence length 1K, Table 2 as printed:
 
 | Model | Implementation | Perplexity | Training time (speedup) |
@@ -334,8 +336,6 @@ An exact kernel is a drop-in replacement. It computes the same function, so the 
 
 ## Better models from longer context, and what the benchmarks show {#longer}
 source: fa:§4.2 · fa:§4.3 · Tables 4–6 · Fig. 3 · fa:§E.5 · fa:§5
-
-::predict fa-experimental-claims
 
 Speed is also a budget. Spend it on context instead:
 

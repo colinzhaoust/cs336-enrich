@@ -167,7 +167,7 @@ WIDGETS["fixture:lecture_17--image-tokens"] = (root) => {
       <span class="muted small">provenance: fixture:lecture_17--image-tokens · lecture_17.py L70-L72 (resize shorter side, center crop), L78 (ViT-L/14@336px), L138-L139 (per-patch W), L162-L163 (AnyRes a × b, bilinear interpolation), L166-L170 (same length across inputs), L200 (fixed 256), L219-L221 (Qwen2-VL 2×2 → 66; 2 frames/s, max 16384), L284 (512² → 1024 tokens, codebook 8192). Patch counts and bits are this thread's arithmetic; the +2 delimiters are from the Qwen2-VL paper, not the lecture; AnyRes's extra whole-image view is not added; budgets "one 2×2 / 3×3 AnyRes image" are the KP prompts' settings.</span>`;
   };
   const sch = choice("scheme", SCHEMES, s.scheme, (v) => { s.scheme = v; if (v === "vq" && s.enc === 336) { s.enc = 512; s.patch = 16; encC.set(512); patchC.set(16); } draw(); });
-  const patchC = choice("patch / cell (px)", [[8, "8"], [14, "14"], [16, "16"]], s.patch, (v) => { s.patch = v; draw(); });
+  const patchC = choice("patch / cell (px)", [[8, "8"], [12, "12"], [14, "14"], [16, "16"]], s.patch, (v) => { s.patch = v; draw(); });
   const encC = choice("encoder side (px)", [[224, "224"], [256, "256"], [336, "336"], [448, "448"], [512, "512"]], s.enc, (v) => { s.enc = v; draw(); });
   const mergeC = choice("merge (native)", [[1, "none"], [2, "2×2"]], s.merge, (v) => { s.merge = v; draw(); });
   const cbC = choice("codebook (VQ)", [[8192, "8192 (L284)"], [16384, "16384"]], s.codebook, (v) => { s.codebook = v; draw(); });
